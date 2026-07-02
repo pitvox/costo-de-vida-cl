@@ -1,0 +1,59 @@
+name: Actualizar indices costo de vida
+
+# Corre todos los viernes 16:30 UTC (~12:30 Chile) y permite ejecucion manual.
+# ODEPA publica los viernes 12:00, dejamos margen.
+on:
+  schedule:
+    - cron: "30 16 * * 5"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clonar repo
+        uses: actions/checkout@v4
+
+      - name: Instalar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependencias
+        run: pip install pandas numpy requests
+
+      - name: Calcular indices + generar sitio
+        env:
+          BCCH_USER: ${{ secrets.BCCH_USER }}
+          BCCH_PASS: ${{ secrets.BCCH_PASS }}
+        run: |
+          python indices.py
+          python build_site.py
+          mkdir -p public
+          cp index.html public/index.html
+          cp indices.json public/indices.json
+
+      - name: Preparar artefacto de Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publicar en GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
