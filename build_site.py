@@ -158,8 +158,8 @@ HTML = r"""<!DOCTYPE html>
     });
     sNom = chart.addLineSeries({ color:'#8b8276', lineWidth:1, priceLineVisible:false });
     sReal = chart.addLineSeries({ color:'#e8743b', lineWidth:2, priceLineVisible:false });
-    sCandle = chart.addCandlestickSeries({ upColor:'#e0552f', downColor:'#5bbf7a',
-      borderVisible:false, wickUpColor:'#e0552f', wickDownColor:'#5bbf7a', visible:false });
+    sCandle = chart.addCandlestickSeries({ upColor:'#5bbf7a', downColor:'#e0552f',
+      borderVisible:false, wickUpColor:'#5bbf7a', wickDownColor:'#e0552f', visible:false });
     const fix = () => chart.applyOptions({ width: el.clientWidth, height: el.clientHeight });
     requestAnimationFrame(fix); setTimeout(fix, 250);
   }
