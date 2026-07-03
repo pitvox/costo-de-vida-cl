@@ -287,7 +287,7 @@ def _serie_canasta(df, items, col):
     for (lab, match, qty, uni) in items:
         f, _ = factor_precio(unidad_modal(df, match), uni)
         cols[lab] = precio_semanal(df, match, col) * f * qty
-    return pd.DataFrame(cols).resample("W-MON").mean().ffill(limit=4).sum(axis=1)
+    return pd.DataFrame(cols).resample("W-MON").mean().ffill(limit=4).sum(axis=1, min_count=len(items))
 
 
 def calcular(df: pd.DataFrame, ipc: pd.Series, items):

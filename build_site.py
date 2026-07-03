@@ -118,7 +118,7 @@ HTML = r"""<!DOCTYPE html>
   <div class="comp" id="comp"></div>
 
   <footer>
-    Fuente: precios al consumidor ODEPA (datos.odepa.gob.cl, CC-BY) · deflactado por IPC. Canastas fijas de productos cotizados por kilo (Región Metropolitana).<br>
+    Fuente: precios al consumidor ODEPA (datos.odepa.gob.cl, CC-BY) · deflactado por IPC. Canastas fijas; precios normalizados a kilo, unidad o litro según el envase que cotiza ODEPA (Región Metropolitana).<br>
     <span class="disc">Información de consumo con fines analíticos. No constituye asesoría ni recomendación de inversión.</span>
   </footer>
 
