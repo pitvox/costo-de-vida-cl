@@ -184,9 +184,9 @@ HTML = r"""<!DOCTYPE html>
       const col = document.createElement('div'); col.className = 'mcol';
       const bar = document.createElement('div'); bar.className = 'bar';
       bar.style.height = h + 'px';
-      bar.style.background = dev >= 0 ? '#e8743b' : '#6f8a72';
+      bar.style.background = dev >= 0 ? '#5bbf7a' : '#e0552f';
       bar.title = MESES[m] + ': ' + (dev >= 0 ? '+' : '') + Math.round(dev * 100) + '%';
-      const lab = document.createElement('div'); lab.className = 'ml'; lab.textContent = MESES[m][0];
+      const lab = document.createElement('div'); lab.className = 'ml'; lab.textContent = MESES[m];
       col.appendChild(bar); col.appendChild(lab); cont.appendChild(col);
     }
   }
