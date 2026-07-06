@@ -24,6 +24,7 @@ import io
 import os
 import re
 import json
+import unicodedata
 import requests
 import numpy as np
 import pandas as pd
@@ -346,6 +347,47 @@ def velas_reales(m: pd.DataFrame) -> list:
     return velas
 
 
+# ---------------- Series por producto (vista Productos) ----------------
+def _slug(label: str) -> str:
+    """Normaliza un label a clave: minusculas, sin tildes, espacios -> '_'."""
+    s = unicodedata.normalize("NFKD", label)
+    s = "".join(c for c in s if not unicodedata.combining(c))
+    return s.lower().strip().replace(" ", "_")
+
+
+def series_productos(df: pd.DataFrame, ipc: pd.Series) -> dict:
+    """Serie real semanal de cada producto usado en cualquier canasta,
+    deduplicado por texto de match. Precio por unidad normalizada (kg/un/l),
+    remuestreo W-MON + ffill(limit=4) como el pipeline, deflactado a pesos de
+    hoy con el mismo IPC ya cargado. Solo la serie real, valores enteros."""
+    universo = {}
+    for meta in BASKETS.values():
+        for (lab, match, _qty, uni) in meta["items"]:
+            if match not in universo:
+                universo[match] = (lab, uni)
+
+    ipc_hoy = float(ipc.iloc[-1])
+    der = ipc.rename("ipc").rename_axis("fecha").reset_index().sort_values("fecha")
+    out = {}
+    for match, (lab, uni) in universo.items():
+        ps = precio_semanal(df, match)
+        if ps.empty:
+            continue
+        f, _ = factor_precio(unidad_modal(df, match), uni)
+        s = (ps * f).resample("W-MON").mean().ffill(limit=4).dropna()
+        if s.empty:
+            continue
+        izq = s.rename("nominal").rename_axis("fecha").reset_index().sort_values("fecha")
+        m = pd.merge_asof(izq, der, on="fecha", direction="backward").set_index("fecha")
+        real = m["nominal"] * (ipc_hoy / m["ipc"])
+        out[_slug(lab)] = {
+            "label": lab, "unidad": uni,
+            "real": [{"time": fch.strftime("%Y-%m-%d"), "value": int(round(v))}
+                     for fch, v in real.items() if pd.notna(v)],
+        }
+    return out
+
+
 # ---------------- Velas, estacionalidad, resumen ----------------
 def estacionalidad(real: pd.Series) -> dict:
     s = real.dropna()
@@ -410,6 +452,10 @@ def main() -> None:
             print(f"    · {c['label']:<16} ODEPA[{c['odepa_unit'] or '?'}] x{c['factor']:g}"
                   f" → {c['qty']}{c['unidad']} = {ap}")
     print("=" * 64)
+
+    salida["productos"] = series_productos(df, ipc)
+    print(f"Productos exportados: {len(salida['productos'])} "
+          f"({', '.join(sorted(salida['productos']))})")
 
     with open("indices.json", "w", encoding="utf-8") as fh:
         json.dump(salida, fh, ensure_ascii=False)
