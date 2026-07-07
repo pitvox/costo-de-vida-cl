@@ -137,6 +137,9 @@ HTML = r"""<!DOCTYPE html>
   .ovs { margin-top:8px; }
   .controls { position:absolute; right:clamp(10px,2vw,76px); top:clamp(10px,2vw,26px);
     display:flex; align-items:center; gap:20px; z-index:6; }
+  @media (max-width:759px) {
+    .controls { flex-direction:column; align-items:flex-end; gap:8px; }
+  }
   .legend { display:none; flex-direction:column; align-items:flex-start; gap:4px;
     font:400 10px/1.5 "IBM Plex Mono",monospace; color:var(--ash);
     max-width:min(44vw,420px); text-wrap:pretty; }
