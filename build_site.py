@@ -100,6 +100,9 @@ HTML = r"""<!DOCTYPE html>
     color:var(--ash); }
   .tab:hover { background:#1f1913; }
   .tab.active { background:var(--bone); border-color:var(--bone); color:#17120e; }
+  /* separador fino entre los índices y la pill de sección Productos */
+  .tab-sep { flex:none; width:1px; align-self:stretch; background:var(--line);
+    margin:0 4px; }
 
   @keyframes car-pulse {
     0%,100% { box-shadow:0 0 0 0 rgba(232,116,59,.55); }
@@ -112,9 +115,12 @@ HTML = r"""<!DOCTYPE html>
 
   /* ---- hero ---- */
   #vista { opacity:1; transition:opacity .18s ease; }
-  .hero-wrap { position:relative; height:56vh; min-height:50vh; background:var(--bg);
-    scroll-margin-top:52px; }
-  @media (min-width:760px) { .hero-wrap { height:74vh; min-height:70vh; } }
+  /* el hero termina ~56px antes del borde inferior (descontando ticker,
+     header y tabs): el título de la sección siguiente asoma al cargar */
+  .hero-wrap { position:relative; height:calc(100vh - 266px); min-height:320px;
+    background:var(--bg); scroll-margin-top:52px; }
+  @media (min-width:760px) {
+    .hero-wrap { height:calc(100vh - 220px); min-height:420px; } }
   @media (max-width:759px) { .overlay .oname { max-width:calc(100vw - 160px); } }
   #chart { position:absolute; inset:0; }
   .overlay { position:absolute; left:clamp(12px,2.5vw,32px); top:clamp(12px,2.5vw,26px);
@@ -154,6 +160,15 @@ HTML = r"""<!DOCTYPE html>
   .nomtoggle { border:1px solid var(--line); background:var(--bg); }
   .ref { position:absolute; right:clamp(10px,2vw,76px); top:calc(clamp(10px,2vw,26px) + 42px);
     font:400 10px "IBM Plex Mono",monospace; color:var(--dim); z-index:6; }
+  .scroll-cue { position:absolute; left:50%; bottom:8px; transform:translateX(-50%);
+    z-index:5; pointer-events:none; color:var(--ash);
+    font:400 20px/1 "Space Grotesk",sans-serif;
+    animation:car-cue 2.2s ease-in-out infinite; transition:opacity .5s ease; }
+  .scroll-cue.oculto { opacity:0; }
+  @keyframes car-cue {
+    0%,100% { transform:translate(-50%,0); }
+    50% { transform:translate(-50%,7px); }
+  }
   .tooltip { position:absolute; display:none; z-index:7; pointer-events:none;
     background:#0f0c09; border:1px solid var(--line); padding:8px 12px; white-space:nowrap; }
   .tooltip .tt-d { font:500 10px "IBM Plex Mono",monospace; letter-spacing:.1em; color:var(--ash); }
@@ -185,7 +200,7 @@ HTML = r"""<!DOCTYPE html>
   .comp .chip b { font-weight:600; font-variant-numeric:tabular-nums; }
 
   /* ---- productos ---- */
-  .productos { border-top:1px solid var(--line);
+  .productos { border-top:1px solid var(--line); scroll-margin-top:52px;
     padding:clamp(16px,3vw,24px) clamp(16px,3vw,32px) clamp(20px,3vw,28px); }
   .prod-head { display:flex; align-items:baseline; justify-content:space-between;
     gap:10px; flex-wrap:wrap; }
@@ -255,6 +270,7 @@ HTML = r"""<!DOCTYPE html>
         </div>
       </div>
       <div class="ref" id="ref-velas"></div>
+      <div class="scroll-cue" id="scroll-cue" aria-hidden="true">∨</div>
       <div class="tooltip" id="tooltip">
         <div class="tt-d" id="tt-d"></div>
         <div class="tt-r"><span id="tt-r"></span> <small>pesos de hoy</small></div>
@@ -353,6 +369,16 @@ HTML = r"""<!DOCTYPE html>
         .scrollIntoView({ behavior: reduced ? 'auto' : 'smooth' }); };
       tabsEl.appendChild(b);
     });
+    // pill de sección: no es un índice, va tras un separador fino
+    const sep = document.createElement('span');
+    sep.className = 'tab-sep';
+    tabsEl.appendChild(sep);
+    const p = document.createElement('button');
+    p.className = 'tab';
+    p.textContent = 'Productos';
+    p.onclick = () => document.getElementById('productos')
+      .scrollIntoView({ behavior: reduced ? 'auto' : 'smooth' });
+    tabsEl.appendChild(p);
   }
   function syncTabs() {
     tabsEl.querySelectorAll('.tab').forEach(b =>
@@ -611,6 +637,11 @@ HTML = r"""<!DOCTYPE html>
       cont.appendChild(b);
     });
   }
+
+  // el chevron invita a bajar; se apaga con el primer scroll del usuario
+  window.addEventListener('scroll', () =>
+    document.getElementById('scroll-cue').classList.add('oculto'),
+    { once: true, passive: true });
 
   window.addEventListener('load', () => {
     buildTicker();
