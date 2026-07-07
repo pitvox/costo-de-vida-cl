@@ -55,7 +55,17 @@ HTML = r"""<!DOCTYPE html>
   .ticker-scroll { flex:1; overflow-x:auto; overflow-y:hidden;
     scrollbar-width:none; -webkit-overflow-scrolling:touch; }
   .ticker-scroll::-webkit-scrollbar { display:none; }
-  .ticker-track { display:flex; width:max-content; min-height:44px; }
+  .ticker-track { display:flex; width:max-content; min-height:44px;
+    animation:car-marquee 60s linear infinite; }
+  /* pausa al foco y, en táctil, mientras el dedo esté sobre el ticker
+     (.tocado la pone touchstart y la saca touchend); pausado, el scroll
+     manual sigue disponible. El hover pausa solo donde existe hover real:
+     en táctil queda pegado tras el toque y no reanudaría nunca */
+  .ticker-scroll:focus-within .ticker-track,
+  .ticker-scroll.tocado .ticker-track { animation-play-state:paused; }
+  @media (hover:hover) {
+    .ticker-scroll:hover .ticker-track { animation-play-state:paused; }
+  }
   .titem { display:flex; align-items:center; gap:10px; padding:0 22px; cursor:pointer;
     white-space:nowrap; border-right:1px solid var(--grid); background:none; border-top:0;
     border-bottom:0; border-left:0; min-height:44px; }
@@ -68,9 +78,6 @@ HTML = r"""<!DOCTYPE html>
   @media (min-width:760px) {
     .ticker .tag { display:flex; }
     .ticker-scroll { overflow-x:hidden; }
-    .ticker-track { animation:car-marquee 60s linear infinite; }
-    .ticker-scroll:hover .ticker-track,
-    .ticker-scroll:focus-within .ticker-track { animation-play-state:paused; }
   }
   @keyframes car-marquee { from{transform:translateX(0)} to{transform:translateX(-50%)} }
 
@@ -160,6 +167,12 @@ HTML = r"""<!DOCTYPE html>
   .nomtoggle { border:1px solid var(--line); background:var(--bg); }
   .ref { position:absolute; right:clamp(10px,2vw,76px); top:calc(clamp(10px,2vw,26px) + 42px);
     font:400 10px "IBM Plex Mono",monospace; color:var(--dim); z-index:6; }
+  /* pista de zoom bajo los controles; en móvil el hero ya va cargado
+     (overlay + controles apilados + chevron), ahí se omite */
+  .zoomhint { display:none; position:absolute; right:clamp(10px,2vw,76px);
+    top:calc(clamp(10px,2vw,26px) + 64px);
+    font:400 10px "IBM Plex Mono",monospace; color:var(--ash); z-index:6; }
+  @media (min-width:760px) { .zoomhint { display:block; } }
   .scroll-cue { position:absolute; left:50%; bottom:8px; transform:translateX(-50%);
     z-index:5; pointer-events:none; color:var(--ash);
     font:400 20px/1 "Space Grotesk",sans-serif;
@@ -270,6 +283,7 @@ HTML = r"""<!DOCTYPE html>
         </div>
       </div>
       <div class="ref" id="ref-velas"></div>
+      <div class="zoomhint">zoom: arrastra el eje de años · pinch en táctil</div>
       <div class="scroll-cue" id="scroll-cue" aria-hidden="true">∨</div>
       <div class="tooltip" id="tooltip">
         <div class="tt-d" id="tt-d"></div>
@@ -294,7 +308,7 @@ HTML = r"""<!DOCTYPE html>
   <section class="productos" id="productos">
     <div class="prod-head">
       <div class="ctx-h">PRODUCTOS <span id="prod-rango"></span></div>
-      <div class="prod-note">variación real, no precio</div>
+      <div class="prod-note">variación real, no precio · arrastra el eje de años para acercar</div>
     </div>
     <div class="pchips" id="pchips"></div>
     <div class="pchart-wrap"><div id="pchart"></div></div>
@@ -355,6 +369,12 @@ HTML = r"""<!DOCTYPE html>
       });
     }
   }
+
+  const tscroll = document.querySelector('.ticker-scroll');
+  tscroll.addEventListener('touchstart',
+    () => tscroll.classList.add('tocado'), { passive: true });
+  ['touchend', 'touchcancel'].forEach(ev => tscroll.addEventListener(ev,
+    () => tscroll.classList.remove('tocado'), { passive: true }));
 
   /* ---------- tabs de índice ---------- */
   const tabsEl = document.getElementById('tabs');
