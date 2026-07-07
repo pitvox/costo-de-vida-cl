@@ -374,6 +374,11 @@ HTML = r"""<!DOCTYPE html>
       rightPriceScale: { borderColor: '#2a231c' },
       timeScale: { borderColor: '#2a231c' },
       localization: { priceFormatter: fmt },
+      // la rueda y el swipe vertical quedan para la página; el zoom sigue
+      // disponible arrastrando el eje de tiempo y con pinch en táctil
+      handleScale: { mouseWheel: false, pinch: true, axisPressedMouseMove: true },
+      handleScroll: { mouseWheel: false, vertTouchDrag: false,
+        horzTouchDrag: true, pressedMouseMove: true },
       // crosshair en brasa tenue, acompaña a la línea protagonista
       crosshair: { mode: 0,
         vertLine: { color: 'rgba(232,116,59,0.35)', labelBackgroundColor: '#5c3a24' },
@@ -548,6 +553,10 @@ HTML = r"""<!DOCTYPE html>
       rightPriceScale: { mode: LightweightCharts.PriceScaleMode.Percentage,
         borderColor: '#2a231c' },
       timeScale: { borderColor: '#2a231c' },
+      // misma política que el hero: rueda y swipe vertical scrollean la página
+      handleScale: { mouseWheel: false, pinch: true, axisPressedMouseMove: true },
+      handleScroll: { mouseWheel: false, vertTouchDrag: false,
+        horzTouchDrag: true, pressedMouseMove: true },
       crosshair: { mode: 0,
         vertLine: { color: 'rgba(228,218,204,0.35)', labelBackgroundColor: '#3a3129' },
         horzLine: { color: 'rgba(228,218,204,0.35)', labelBackgroundColor: '#3a3129' } },
