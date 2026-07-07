@@ -26,7 +26,7 @@ HTML = r"""<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Carestía — Índices del costo de vida · Chile</title>
+<title>Carestía: Índices del costo de vida · Chile</title>
 <meta name="description" content="Carestía: índices del costo de vida chileno en pesos de hoy, con datos semanales de ODEPA deflactados por IPC.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -136,8 +136,9 @@ HTML = r"""<!DOCTYPE html>
   .ovs { margin-top:8px; }
   .controls { position:absolute; right:clamp(10px,2vw,76px); top:clamp(10px,2vw,26px);
     display:flex; align-items:center; gap:20px; z-index:6; }
-  .legend { display:none; align-items:center; gap:14px;
-    font:400 11px "IBM Plex Mono",monospace; color:var(--ash); }
+  .legend { display:none; flex-direction:column; align-items:flex-start; gap:4px;
+    font:400 10px/1.5 "IBM Plex Mono",monospace; color:var(--ash);
+    max-width:min(44vw,420px); text-wrap:pretty; }
   @media (min-width:900px) { .legend { display:flex; } }
   .legend .sw { display:inline-block; width:16px; height:0; margin-right:6px;
     vertical-align:middle; }
@@ -240,8 +241,8 @@ HTML = r"""<!DOCTYPE html>
       </div>
       <div class="controls">
         <div class="legend">
-          <span><span class="sw" style="border-top:2px solid #e4dacc"></span>en pesos de hoy</span>
-          <span id="leg-nom"><span class="sw" style="border-top:1px solid #5a5348"></span>nominal</span>
+          <span><span class="sw" style="border-top:2px solid #e4dacc"></span>En pesos de hoy: cuánto valdría hoy ese precio antiguo por la inflación acumulada</span>
+          <span id="leg-nom"><span class="sw" style="border-top:1px solid #5a5348"></span>Nominal: el precio de la boleta de ese día</span>
         </div>
         <button class="vbtn nomtoggle" id="v-nominal">+ nominal</button>
         <div class="vtoggle">
@@ -376,7 +377,7 @@ HTML = r"""<!DOCTYPE html>
     sNom = chart.addLineSeries({ color: '#5a5348', lineWidth: 1,
       priceLineVisible: false, lastValueVisible: false, visible: false });
     sReal = chart.addLineSeries({ color: '#e4dacc', lineWidth: 2, priceLineVisible: false });
-    // C2: convención estándar de trading — verde sube, rojo baja
+    // C2: convención estándar de trading, verde sube y rojo baja
     sCandle = chart.addCandlestickSeries({
       upColor: '#5bbf7a', downColor: '#e0552f', borderVisible: false,
       wickUpColor: '#5bbf7a', wickDownColor: '#e0552f', visible: false });
@@ -495,7 +496,7 @@ HTML = r"""<!DOCTYPE html>
     (d.componentes || []).forEach(c => {
       if (c.aporte == null) return;
       const chip = document.createElement('div'); chip.className = 'chip';
-      chip.innerHTML = c.label + ' (' + fmtQty(c.qty) + ' ' + c.unidad + ') — <b>' +
+      chip.innerHTML = c.label + ' (' + fmtQty(c.qty) + ' ' + c.unidad + '): <b>' +
         fmt(c.aporte) + '</b>';
       comp.appendChild(chip);
     });
@@ -572,7 +573,7 @@ HTML = r"""<!DOCTYPE html>
       y0 = Math.min(y0, +r[0].time.slice(0, 4));
       y1 = Math.max(y1, +r[r.length - 1].time.slice(0, 4));
     });
-    document.getElementById('prod-rango').textContent = '· ' + y0 + '–' + y1;
+    document.getElementById('prod-rango').textContent = '· ' + y0 + ' a ' + y1;
     const cont = document.getElementById('pchips');
     cont.innerHTML = '';
     PKEYS.forEach(k => {
