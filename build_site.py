@@ -167,6 +167,12 @@ HTML = r"""<!DOCTYPE html>
   .nomtoggle { border:1px solid var(--line); background:var(--bg); }
   .ref { position:absolute; right:clamp(10px,2vw,76px); top:calc(clamp(10px,2vw,26px) + 42px);
     font:400 10px "IBM Plex Mono",monospace; color:var(--dim); z-index:6; }
+  /* pista de zoom bajo los controles; en móvil el hero ya va cargado
+     (overlay + controles apilados + chevron), ahí se omite */
+  .zoomhint { display:none; position:absolute; right:clamp(10px,2vw,76px);
+    top:calc(clamp(10px,2vw,26px) + 64px);
+    font:400 10px "IBM Plex Mono",monospace; color:var(--ash); z-index:6; }
+  @media (min-width:760px) { .zoomhint { display:block; } }
   .scroll-cue { position:absolute; left:50%; bottom:8px; transform:translateX(-50%);
     z-index:5; pointer-events:none; color:var(--ash);
     font:400 20px/1 "Space Grotesk",sans-serif;
@@ -277,6 +283,7 @@ HTML = r"""<!DOCTYPE html>
         </div>
       </div>
       <div class="ref" id="ref-velas"></div>
+      <div class="zoomhint">zoom: arrastra el eje de años · pinch en táctil</div>
       <div class="scroll-cue" id="scroll-cue" aria-hidden="true">∨</div>
       <div class="tooltip" id="tooltip">
         <div class="tt-d" id="tt-d"></div>
