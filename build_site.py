@@ -146,6 +146,7 @@ HTML = r"""<!DOCTYPE html>
     border:none; cursor:pointer; background:transparent; color:var(--ash); min-height:34px; }
   .vbtn + .vbtn { border-left:1px solid var(--line); }
   .vbtn.active { background:var(--bone); color:var(--bg); }
+  .nomtoggle { border:1px solid var(--line); background:var(--bg); }
   .ref { position:absolute; right:clamp(10px,2vw,76px); top:calc(clamp(10px,2vw,26px) + 42px);
     font:400 10px "IBM Plex Mono",monospace; color:var(--dim); z-index:6; }
   .tooltip { position:absolute; display:none; z-index:7; pointer-events:none;
@@ -240,8 +241,9 @@ HTML = r"""<!DOCTYPE html>
       <div class="controls">
         <div class="legend">
           <span><span class="sw" style="border-top:2px solid #e4dacc"></span>en pesos de hoy</span>
-          <span><span class="sw" style="border-top:1px solid #5a5348"></span>nominal</span>
+          <span id="leg-nom"><span class="sw" style="border-top:1px solid #5a5348"></span>nominal</span>
         </div>
+        <button class="vbtn nomtoggle" id="v-nominal">+ nominal</button>
         <div class="vtoggle">
           <button class="vbtn active" id="v-linea">LÍNEA</button>
           <button class="vbtn" id="v-velas">VELAS</button>
@@ -294,7 +296,7 @@ HTML = r"""<!DOCTYPE html>
   // colores del semáforo: SOLO veredicto y velas
   const VELA_UP = '#5bbf7a', VELA_DOWN = '#e0552f';
 
-  let cur = CODES[0], vista = 'linea';
+  let cur = CODES[0], vista = 'linea', nomVisible = false;
   let chart, sNom, sReal, sCandle, pchart;
   let realMap = new Map(), nomMap = new Map();
 
@@ -372,7 +374,7 @@ HTML = r"""<!DOCTYPE html>
         horzLine: { color: 'rgba(228,218,204,0.35)', labelBackgroundColor: '#3a3129' } },
     });
     sNom = chart.addLineSeries({ color: '#5a5348', lineWidth: 1,
-      priceLineVisible: false, lastValueVisible: false });
+      priceLineVisible: false, lastValueVisible: false, visible: false });
     sReal = chart.addLineSeries({ color: '#e4dacc', lineWidth: 2, priceLineVisible: false });
     // C2: convención estándar de trading — verde sube, rojo baja
     sCandle = chart.addCandlestickSeries({
@@ -405,17 +407,22 @@ HTML = r"""<!DOCTYPE html>
   function aplicarVista() {
     if (!chart) return;
     const linea = vista === 'linea';
-    sNom.applyOptions({ visible: linea });
+    sNom.applyOptions({ visible: linea && nomVisible });
     sReal.applyOptions({ visible: linea });
     sCandle.applyOptions({ visible: !linea });
     document.getElementById('v-linea').classList.toggle('active', linea);
     document.getElementById('v-velas').classList.toggle('active', !linea);
+    const nb = document.getElementById('v-nominal');
+    nb.classList.toggle('active', nomVisible);
+    nb.style.visibility = linea ? 'visible' : 'hidden';   // solo aplica a la vista Línea
+    document.getElementById('leg-nom').style.opacity = nomVisible ? '' : '.35';
     document.getElementById('ref-velas').textContent =
       linea ? '' : 'velas semanales · mecha = rango mín-máx entre locales encuestados';
     chart.timeScale().fitContent();
   }
   document.getElementById('v-linea').onclick = () => { vista = 'linea'; aplicarVista(); };
   document.getElementById('v-velas').onclick = () => { vista = 'velas'; aplicarVista(); };
+  document.getElementById('v-nominal').onclick = () => { nomVisible = !nomVisible; aplicarVista(); };
 
   /* ---------- count-up del precio (~600ms) ---------- */
   let lastPrice = 0;
