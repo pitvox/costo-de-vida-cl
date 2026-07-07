@@ -6,9 +6,10 @@ autocontenido con cinta ticker, hero con veredicto en overlay, línea/velas,
 franja de contexto (estacionalidad + componentes), vista Productos
 (spaghetti multi-serie en variación real) y footer con atribución.
 
-Identidad: paleta 2c "Hueso protagonista" — hueso/ceniza sobre carbón; la
-brasa #e8743b solo vive en el veredicto y en la í del wordmark. El
-verde/rojo/ámbar del semáforo queda reservado al veredicto y a las velas.
+Identidad: paleta 2c "Hueso protagonista", hueso/ceniza sobre carbón; la
+brasa #e8743b solo vive en el veredicto, en la í del wordmark y en la línea
+"en pesos de hoy" (con su crosshair). El verde/rojo/ámbar del semáforo
+queda reservado al veredicto y a las velas.
 
 Correr:
   python indices.py
@@ -241,8 +242,8 @@ HTML = r"""<!DOCTYPE html>
       </div>
       <div class="controls">
         <div class="legend">
-          <span><span class="sw" style="border-top:2px solid #e4dacc"></span>En pesos de hoy: cuánto valdría hoy ese precio antiguo por la inflación acumulada</span>
-          <span id="leg-nom"><span class="sw" style="border-top:1px solid #5a5348"></span>Nominal: el precio de la boleta de ese día</span>
+          <span><span class="sw" style="border-top:2px solid #e8743b"></span>En pesos de hoy: cuánto valdría hoy ese precio antiguo por la inflación acumulada</span>
+          <span id="leg-nom"><span class="sw" style="border-top:1px solid #8b8276"></span>Nominal: el precio de la boleta de ese día</span>
         </div>
         <button class="vbtn nomtoggle" id="v-nominal">+ nominal</button>
         <div class="vtoggle">
@@ -370,13 +371,14 @@ HTML = r"""<!DOCTYPE html>
       rightPriceScale: { borderColor: '#2a231c' },
       timeScale: { borderColor: '#2a231c' },
       localization: { priceFormatter: fmt },
+      // crosshair en brasa tenue, acompaña a la línea protagonista
       crosshair: { mode: 0,
-        vertLine: { color: 'rgba(228,218,204,0.35)', labelBackgroundColor: '#3a3129' },
-        horzLine: { color: 'rgba(228,218,204,0.35)', labelBackgroundColor: '#3a3129' } },
+        vertLine: { color: 'rgba(232,116,59,0.35)', labelBackgroundColor: '#5c3a24' },
+        horzLine: { color: 'rgba(232,116,59,0.35)', labelBackgroundColor: '#5c3a24' } },
     });
-    sNom = chart.addLineSeries({ color: '#5a5348', lineWidth: 1,
+    sNom = chart.addLineSeries({ color: '#8b8276', lineWidth: 1,
       priceLineVisible: false, lastValueVisible: false, visible: false });
-    sReal = chart.addLineSeries({ color: '#e4dacc', lineWidth: 2, priceLineVisible: false });
+    sReal = chart.addLineSeries({ color: '#e8743b', lineWidth: 2, priceLineVisible: false });
     // C2: convención estándar de trading, verde sube y rojo baja
     sCandle = chart.addCandlestickSeries({
       upColor: '#5bbf7a', downColor: '#e0552f', borderVisible: false,
