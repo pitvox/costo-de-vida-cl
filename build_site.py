@@ -6,9 +6,10 @@ autocontenido con cinta ticker, hero con veredicto en overlay, línea/velas,
 franja de contexto (estacionalidad + componentes), vista Productos
 (spaghetti multi-serie en variación real) y footer con atribución.
 
-Identidad: paleta 2c "Hueso protagonista" — hueso/ceniza sobre carbón; la
-brasa #e8743b solo vive en el veredicto y en la í del wordmark. El
-verde/rojo/ámbar del semáforo queda reservado al veredicto y a las velas.
+Identidad: paleta 2c "Hueso protagonista", hueso/ceniza sobre carbón; la
+brasa #e8743b solo vive en el veredicto, en la í del wordmark y en la línea
+"en pesos de hoy" (con su crosshair). El verde/rojo/ámbar del semáforo
+queda reservado al veredicto y a las velas.
 
 Correr:
   python indices.py
@@ -26,7 +27,7 @@ HTML = r"""<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Carestía — Índices del costo de vida · Chile</title>
+<title>Carestía: Índices del costo de vida · Chile</title>
 <meta name="description" content="Carestía: índices del costo de vida chileno en pesos de hoy, con datos semanales de ODEPA deflactados por IPC.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -88,6 +89,18 @@ HTML = r"""<!DOCTYPE html>
   .semana { font:500 11px "IBM Plex Mono",monospace; color:var(--ash); letter-spacing:.08em;
     text-transform:uppercase; }
   .semana span { color:var(--dim); }
+  /* ---- tabs de índice ---- */
+  .tabs { display:flex; gap:8px; padding:12px clamp(16px,3vw,32px);
+    border-bottom:1px solid var(--line); overflow-x:auto; overflow-y:hidden;
+    scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+  .tabs::-webkit-scrollbar { display:none; }
+  .tab { flex:none; font:600 11px "IBM Plex Mono",monospace; letter-spacing:.1em;
+    padding:8px 16px; min-height:34px; cursor:pointer; white-space:nowrap;
+    background:transparent; border:1px solid var(--line); border-radius:999px;
+    color:var(--ash); }
+  .tab:hover { background:#1f1913; }
+  .tab.active { background:var(--bone); border-color:var(--bone); color:#17120e; }
+
   @keyframes car-pulse {
     0%,100% { box-shadow:0 0 0 0 rgba(232,116,59,.55); }
     50% { box-shadow:0 0 14px 3px rgba(232,116,59,.25); }
@@ -124,8 +137,12 @@ HTML = r"""<!DOCTYPE html>
   .ovs { margin-top:8px; }
   .controls { position:absolute; right:clamp(10px,2vw,76px); top:clamp(10px,2vw,26px);
     display:flex; align-items:center; gap:20px; z-index:6; }
-  .legend { display:none; align-items:center; gap:14px;
-    font:400 11px "IBM Plex Mono",monospace; color:var(--ash); }
+  @media (max-width:759px) {
+    .controls { flex-direction:column; align-items:flex-end; gap:8px; }
+  }
+  .legend { display:none; flex-direction:column; align-items:flex-start; gap:4px;
+    font:400 10px/1.5 "IBM Plex Mono",monospace; color:var(--ash);
+    max-width:min(44vw,420px); text-wrap:pretty; }
   @media (min-width:900px) { .legend { display:flex; } }
   .legend .sw { display:inline-block; width:16px; height:0; margin-right:6px;
     vertical-align:middle; }
@@ -134,6 +151,7 @@ HTML = r"""<!DOCTYPE html>
     border:none; cursor:pointer; background:transparent; color:var(--ash); min-height:34px; }
   .vbtn + .vbtn { border-left:1px solid var(--line); }
   .vbtn.active { background:var(--bone); color:var(--bg); }
+  .nomtoggle { border:1px solid var(--line); background:var(--bg); }
   .ref { position:absolute; right:clamp(10px,2vw,76px); top:calc(clamp(10px,2vw,26px) + 42px);
     font:400 10px "IBM Plex Mono",monospace; color:var(--dim); z-index:6; }
   .tooltip { position:absolute; display:none; z-index:7; pointer-events:none;
@@ -208,6 +226,8 @@ HTML = r"""<!DOCTYPE html>
     <div class="semana">Semana del <span id="fecha"></span> <span>· actualizado viernes</span></div>
   </header>
 
+  <nav class="tabs" id="tabs" aria-label="Índices"></nav>
+
   <div id="vista">
     <section class="hero-wrap" id="hero">
       <div id="chart"></div>
@@ -225,9 +245,10 @@ HTML = r"""<!DOCTYPE html>
       </div>
       <div class="controls">
         <div class="legend">
-          <span><span class="sw" style="border-top:2px solid #e4dacc"></span>en pesos de hoy</span>
-          <span><span class="sw" style="border-top:1px solid #5a5348"></span>nominal</span>
+          <span><span class="sw" style="border-top:2px solid #e8743b"></span>En pesos de hoy: cuánto valdría hoy ese precio antiguo por la inflación acumulada</span>
+          <span id="leg-nom"><span class="sw" style="border-top:1px solid #8b8276"></span>Nominal: el precio de la boleta de ese día</span>
         </div>
+        <button class="vbtn nomtoggle" id="v-nominal">+ nominal</button>
         <div class="vtoggle">
           <button class="vbtn active" id="v-linea">LÍNEA</button>
           <button class="vbtn" id="v-velas">VELAS</button>
@@ -280,7 +301,7 @@ HTML = r"""<!DOCTYPE html>
   // colores del semáforo: SOLO veredicto y velas
   const VELA_UP = '#5bbf7a', VELA_DOWN = '#e0552f';
 
-  let cur = CODES[0], vista = 'linea';
+  let cur = CODES[0], vista = 'linea', nomVisible = false;
   let chart, sNom, sReal, sCandle, pchart;
   let realMap = new Map(), nomMap = new Map();
 
@@ -319,6 +340,25 @@ HTML = r"""<!DOCTYPE html>
     }
   }
 
+  /* ---------- tabs de índice ---------- */
+  const tabsEl = document.getElementById('tabs');
+  function buildTabs() {
+    tabsEl.innerHTML = '';
+    CODES.forEach(code => {
+      const b = document.createElement('button');
+      b.className = 'tab';
+      b.dataset.code = code;
+      b.textContent = INDICES[code].nombre.replace(/^Índice /i, '');
+      b.onclick = () => { render(code); document.getElementById('hero')
+        .scrollIntoView({ behavior: reduced ? 'auto' : 'smooth' }); };
+      tabsEl.appendChild(b);
+    });
+  }
+  function syncTabs() {
+    tabsEl.querySelectorAll('.tab').forEach(b =>
+      b.classList.toggle('active', b.dataset.code === cur));
+  }
+
   /* ---------- hero chart ---------- */
   function initChart() {
     const el = document.getElementById('chart');
@@ -334,14 +374,15 @@ HTML = r"""<!DOCTYPE html>
       rightPriceScale: { borderColor: '#2a231c' },
       timeScale: { borderColor: '#2a231c' },
       localization: { priceFormatter: fmt },
+      // crosshair en brasa tenue, acompaña a la línea protagonista
       crosshair: { mode: 0,
-        vertLine: { color: 'rgba(228,218,204,0.35)', labelBackgroundColor: '#3a3129' },
-        horzLine: { color: 'rgba(228,218,204,0.35)', labelBackgroundColor: '#3a3129' } },
+        vertLine: { color: 'rgba(232,116,59,0.35)', labelBackgroundColor: '#5c3a24' },
+        horzLine: { color: 'rgba(232,116,59,0.35)', labelBackgroundColor: '#5c3a24' } },
     });
-    sNom = chart.addLineSeries({ color: '#5a5348', lineWidth: 1,
-      priceLineVisible: false, lastValueVisible: false });
-    sReal = chart.addLineSeries({ color: '#e4dacc', lineWidth: 2, priceLineVisible: false });
-    // C2: convención estándar de trading — verde sube, rojo baja
+    sNom = chart.addLineSeries({ color: '#8b8276', lineWidth: 1,
+      priceLineVisible: false, lastValueVisible: false, visible: false });
+    sReal = chart.addLineSeries({ color: '#e8743b', lineWidth: 2, priceLineVisible: false });
+    // C2: convención estándar de trading, verde sube y rojo baja
     sCandle = chart.addCandlestickSeries({
       upColor: '#5bbf7a', downColor: '#e0552f', borderVisible: false,
       wickUpColor: '#5bbf7a', wickDownColor: '#e0552f', visible: false });
@@ -372,17 +413,22 @@ HTML = r"""<!DOCTYPE html>
   function aplicarVista() {
     if (!chart) return;
     const linea = vista === 'linea';
-    sNom.applyOptions({ visible: linea });
+    sNom.applyOptions({ visible: linea && nomVisible });
     sReal.applyOptions({ visible: linea });
     sCandle.applyOptions({ visible: !linea });
     document.getElementById('v-linea').classList.toggle('active', linea);
     document.getElementById('v-velas').classList.toggle('active', !linea);
+    const nb = document.getElementById('v-nominal');
+    nb.classList.toggle('active', nomVisible);
+    nb.style.visibility = linea ? 'visible' : 'hidden';   // solo aplica a la vista Línea
+    document.getElementById('leg-nom').style.opacity = nomVisible ? '' : '.35';
     document.getElementById('ref-velas').textContent =
       linea ? '' : 'velas semanales · mecha = rango mín-máx entre locales encuestados';
     chart.timeScale().fitContent();
   }
   document.getElementById('v-linea').onclick = () => { vista = 'linea'; aplicarVista(); };
   document.getElementById('v-velas').onclick = () => { vista = 'velas'; aplicarVista(); };
+  document.getElementById('v-nominal').onclick = () => { nomVisible = !nomVisible; aplicarVista(); };
 
   /* ---------- count-up del precio (~600ms) ---------- */
   let lastPrice = 0;
@@ -455,7 +501,7 @@ HTML = r"""<!DOCTYPE html>
     (d.componentes || []).forEach(c => {
       if (c.aporte == null) return;
       const chip = document.createElement('div'); chip.className = 'chip';
-      chip.innerHTML = c.label + ' (' + fmtQty(c.qty) + ' ' + c.unidad + ') — <b>' +
+      chip.innerHTML = c.label + ' (' + fmtQty(c.qty) + ' ' + c.unidad + '): <b>' +
         fmt(c.aporte) + '</b>';
       comp.appendChild(chip);
     });
@@ -464,6 +510,7 @@ HTML = r"""<!DOCTYPE html>
   const vistaEl = document.getElementById('vista');
   function render(code, primera) {
     cur = code;
+    syncTabs();          // estado activo también al navegar desde el ticker
     if (primera || reduced) { aplicar(code); return; }
     vistaEl.style.opacity = 0;                       // crossfade al cambiar índice
     setTimeout(() => { aplicar(code); vistaEl.style.opacity = 1; }, 180);
@@ -531,7 +578,7 @@ HTML = r"""<!DOCTYPE html>
       y0 = Math.min(y0, +r[0].time.slice(0, 4));
       y1 = Math.max(y1, +r[r.length - 1].time.slice(0, 4));
     });
-    document.getElementById('prod-rango').textContent = '· ' + y0 + '–' + y1;
+    document.getElementById('prod-rango').textContent = '· ' + y0 + ' a ' + y1;
     const cont = document.getElementById('pchips');
     cont.innerHTML = '';
     PKEYS.forEach(k => {
@@ -556,6 +603,7 @@ HTML = r"""<!DOCTYPE html>
 
   window.addEventListener('load', () => {
     buildTicker();
+    buildTabs();
     initChart();
     render(CODES[0], true);
     initPChart();
