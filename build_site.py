@@ -88,6 +88,18 @@ HTML = r"""<!DOCTYPE html>
   .semana { font:500 11px "IBM Plex Mono",monospace; color:var(--ash); letter-spacing:.08em;
     text-transform:uppercase; }
   .semana span { color:var(--dim); }
+  /* ---- tabs de índice ---- */
+  .tabs { display:flex; gap:8px; padding:12px clamp(16px,3vw,32px);
+    border-bottom:1px solid var(--line); overflow-x:auto; overflow-y:hidden;
+    scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+  .tabs::-webkit-scrollbar { display:none; }
+  .tab { flex:none; font:600 11px "IBM Plex Mono",monospace; letter-spacing:.1em;
+    padding:8px 16px; min-height:34px; cursor:pointer; white-space:nowrap;
+    background:transparent; border:1px solid var(--line); border-radius:999px;
+    color:var(--ash); }
+  .tab:hover { background:#1f1913; }
+  .tab.active { background:var(--bone); border-color:var(--bone); color:#17120e; }
+
   @keyframes car-pulse {
     0%,100% { box-shadow:0 0 0 0 rgba(232,116,59,.55); }
     50% { box-shadow:0 0 14px 3px rgba(232,116,59,.25); }
@@ -208,6 +220,8 @@ HTML = r"""<!DOCTYPE html>
     <div class="semana">Semana del <span id="fecha"></span> <span>· actualizado viernes</span></div>
   </header>
 
+  <nav class="tabs" id="tabs" aria-label="Índices"></nav>
+
   <div id="vista">
     <section class="hero-wrap" id="hero">
       <div id="chart"></div>
@@ -317,6 +331,25 @@ HTML = r"""<!DOCTYPE html>
         track.appendChild(b);
       });
     }
+  }
+
+  /* ---------- tabs de índice ---------- */
+  const tabsEl = document.getElementById('tabs');
+  function buildTabs() {
+    tabsEl.innerHTML = '';
+    CODES.forEach(code => {
+      const b = document.createElement('button');
+      b.className = 'tab';
+      b.dataset.code = code;
+      b.textContent = INDICES[code].nombre.replace(/^Índice /i, '');
+      b.onclick = () => { render(code); document.getElementById('hero')
+        .scrollIntoView({ behavior: reduced ? 'auto' : 'smooth' }); };
+      tabsEl.appendChild(b);
+    });
+  }
+  function syncTabs() {
+    tabsEl.querySelectorAll('.tab').forEach(b =>
+      b.classList.toggle('active', b.dataset.code === cur));
   }
 
   /* ---------- hero chart ---------- */
@@ -464,6 +497,7 @@ HTML = r"""<!DOCTYPE html>
   const vistaEl = document.getElementById('vista');
   function render(code, primera) {
     cur = code;
+    syncTabs();          // estado activo también al navegar desde el ticker
     if (primera || reduced) { aplicar(code); return; }
     vistaEl.style.opacity = 0;                       // crossfade al cambiar índice
     setTimeout(() => { aplicar(code); vistaEl.style.opacity = 1; }, 180);
@@ -556,6 +590,7 @@ HTML = r"""<!DOCTYPE html>
 
   window.addEventListener('load', () => {
     buildTicker();
+    buildTabs();
     initChart();
     render(CODES[0], true);
     initPChart();
