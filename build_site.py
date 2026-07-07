@@ -301,7 +301,7 @@ HTML = r"""<!DOCTYPE html>
   <section class="productos" id="productos">
     <div class="prod-head">
       <div class="ctx-h">PRODUCTOS <span id="prod-rango"></span></div>
-      <div class="prod-note">variación real, no precio</div>
+      <div class="prod-note">variación real, no precio · arrastra el eje de años para acercar</div>
     </div>
     <div class="pchips" id="pchips"></div>
     <div class="pchart-wrap"><div id="pchart"></div></div>
