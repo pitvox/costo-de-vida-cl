@@ -451,8 +451,10 @@ HTML = r"""<!DOCTYPE html>
     cont.innerHTML = '';
     if (!e.factores) { frase.textContent = ''; return; }
     const nombre = d.nombre.replace(/^Índice /i, '').toLowerCase();
-    frase.innerHTML = 'El ' + nombre + ' suele estar más barato en <b>' +
-      MESES[e.mes_barato] + '</b> y más caro en <b>' + MESES[e.mes_caro] +
+    const fem = /a$/.test(nombre);   // la ensalada, la fruta / el asado, el desayuno
+    frase.innerHTML = (fem ? 'La ' : 'El ') + nombre + ' suele estar más ' +
+      (fem ? 'barata' : 'barato') + ' en <b>' + MESES[e.mes_barato] +
+      '</b> y más ' + (fem ? 'cara' : 'caro') + ' en <b>' + MESES[e.mes_caro] +
       '</b> respecto de su historia · brecha estacional de ' + e.amplitud + '%.';
     const vals = Object.values(e.factores);
     const maxDev = Math.max(...vals.map(v => Math.abs(v - 1))) || 0.01;
