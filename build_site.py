@@ -88,10 +88,16 @@ HTML = r"""<!DOCTYPE html>
   .brand { display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 18px; }
   .wordmark { font:700 clamp(20px,4vw,26px) "Space Grotesk",sans-serif;
     letter-spacing:.06em; color:var(--bone); display:flex; align-items:baseline; }
+  /* í-brasa: la Í del wordmark es la I del tipo más el acento agudo del
+     propio tipo en brasa. El span superpuesto pinta una Í completa y el
+     clip-path deja visible solo el acento; a tamaño header el glow queda
+     sutil y en móvil (chico) se apaga y la tilde va plana en brasa */
   .wordmark .i { position:relative; display:inline-block; }
-  .wordmark .i .dot { position:absolute; top:-3px; left:50%; transform:translateX(-50%);
-    width:7px; height:7px; border-radius:50%; background:var(--ember);
-    box-shadow:0 0 10px 1px rgba(232,116,59,.8); animation:car-pulse 2.4s ease-in-out infinite; }
+  .wordmark .i .tilde { position:absolute; left:0; top:0; pointer-events:none;
+    color:#e8743b; clip-path:inset(0 0 72% 0); }
+  @media (min-width:760px) {
+    .wordmark .i .tilde { color:#ff9455; text-shadow:0 0 8px #e8743b; }
+  }
   .tagline { font:400 12px "IBM Plex Mono",monospace; color:var(--ash); letter-spacing:.04em; }
   .semana { font:500 11px "IBM Plex Mono",monospace; color:var(--ash); letter-spacing:.08em;
     text-transform:uppercase; }
@@ -248,7 +254,7 @@ HTML = r"""<!DOCTYPE html>
 
   <header>
     <div class="brand">
-      <div class="wordmark">CAREST<span class="i">I<span class="dot"></span></span>A</div>
+      <div class="wordmark">CAREST<span class="i">I<span class="tilde" aria-hidden="true">Í</span></span>A</div>
       <div class="tagline">Índices del costo de vida · Chile</div>
     </div>
     <div class="semana">Semana del <span id="fecha"></span> <span>· actualizado viernes</span></div>
