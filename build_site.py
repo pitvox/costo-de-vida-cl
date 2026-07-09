@@ -96,14 +96,14 @@ HTML = r"""<!DOCTYPE html>
     letter-spacing:.06em; color:var(--bone); display:flex; align-items:baseline; }
   /* í-brasa: la Í del wordmark es la I del tipo más el acento agudo del
      propio tipo en brasa. El span superpuesto pinta una Í completa y el
-     clip-path deja visible solo el acento; a tamaño header el glow queda
-     sutil y en móvil (chico) se apaga y la tilde va plana en brasa */
+     clip-path deja visible solo el acento; al cuerpo del header (20-26px)
+     la tilde va siempre plana, sin glow: a ese tamaño el halo es más
+     grande que el acento y lo vuelve una mancha. El 86% está calibrado
+     al pixel en Chromium a 20 y 26px: menos corta el tallo, más corta
+     el acento */
   .wordmark .i { position:relative; display:inline-block; }
   .wordmark .i .tilde { position:absolute; left:0; top:0; pointer-events:none;
-    color:#e8743b; clip-path:inset(0 0 72% 0); }
-  @media (min-width:760px) {
-    .wordmark .i .tilde { color:#ff9455; text-shadow:0 0 8px #e8743b; }
-  }
+    color:#e8743b; clip-path:inset(0 0 86% 0); }
   .tagline { font:400 12px "IBM Plex Mono",monospace; color:var(--ash); letter-spacing:.04em; }
   .semana { font:500 11px "IBM Plex Mono",monospace; color:var(--ash); letter-spacing:.08em;
     text-transform:uppercase; }
