@@ -177,14 +177,16 @@ HTML = r"""<!DOCTYPE html>
   .vbtn + .vbtn { border-left:1px solid var(--line); }
   .vbtn.active { background:var(--bone); color:var(--bg); }
   .nomtoggle { border:1px solid var(--line); background:var(--bg); }
-  .ref { position:absolute; right:clamp(10px,2vw,76px); top:calc(clamp(10px,2vw,26px) + 42px);
+  /* la referencia de velas y la pista de zoom viven bajo los controles;
+     en móvil el hero ya va cargado (overlay + controles apilados +
+     chevron) y la referencia se superpondría al overlay: ambas se omiten */
+  .ref { display:none; position:absolute; right:clamp(10px,2vw,76px);
+    top:calc(clamp(10px,2vw,26px) + 42px);
     font:400 10px "IBM Plex Mono",monospace; color:var(--dim); z-index:6; }
-  /* pista de zoom bajo los controles; en móvil el hero ya va cargado
-     (overlay + controles apilados + chevron), ahí se omite */
   .zoomhint { display:none; position:absolute; right:clamp(10px,2vw,76px);
     top:calc(clamp(10px,2vw,26px) + 64px);
     font:400 10px "IBM Plex Mono",monospace; color:var(--ash); z-index:6; }
-  @media (min-width:760px) { .zoomhint { display:block; } }
+  @media (min-width:760px) { .ref, .zoomhint { display:block; } }
   .scroll-cue { position:absolute; left:50%; bottom:8px; transform:translateX(-50%);
     z-index:5; pointer-events:none; color:var(--ash);
     font:400 20px/1 "Space Grotesk",sans-serif;
@@ -295,7 +297,7 @@ HTML = r"""<!DOCTYPE html>
         </div>
       </div>
       <div class="ref" id="ref-velas"></div>
-      <div class="zoomhint">zoom: arrastra el eje de años · pinch en táctil</div>
+      <div class="zoomhint">zoom: arrastra el eje de años o el de precios · pinch en táctil</div>
       <div class="scroll-cue" id="scroll-cue" aria-hidden="true">∨</div>
       <div class="tooltip" id="tooltip">
         <div class="tt-d" id="tt-d"></div>
@@ -327,7 +329,7 @@ HTML = r"""<!DOCTYPE html>
   </section>
 
   <footer>
-    <div class="attr">Fuente: precios al consumidor ODEPA (datos.odepa.gob.cl, CC-BY) · deflactado por IPC. Canastas fijas; precios normalizados a kilo, unidad o litro según el envase que cotiza ODEPA (Región Metropolitana).</div>
+    <div class="attr">Fuente: precios al consumidor ODEPA (datos.odepa.gob.cl, CC-BY) · deflactado por IPC. Cada precio es el promedio de los puntos que ODEPA encuesta cada semana en la Región Metropolitana: ferias libres, supermercados y carnicerías. Por eso suele ser menor que el precio de supermercado. Canastas fijas; precios normalizados a kilo, unidad o litro según el envase que cotiza ODEPA.</div>
     <div class="disc">Información de consumo con fines analíticos. No constituye asesoría ni recomendación de inversión.</div>
   </footer>
 
