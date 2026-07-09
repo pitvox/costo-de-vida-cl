@@ -29,6 +29,11 @@ HTML = r"""<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Carestía: Índices del costo de vida · Chile</title>
 <meta name="description" content="Carestía: índices del costo de vida chileno en pesos de hoy, con datos semanales de ODEPA deflactados por IPC.">
+<meta property="og:title" content="Carestía · Índices del costo de vida en Chile">
+<meta property="og:description" content="Cuánto cuesta la vida cotidiana en Chile, en pesos de hoy. Índices propios sobre datos públicos de ODEPA, actualizados cada viernes.">
+<meta property="og:image" content="https://pitvox.github.io/costo-de-vida-cl/og.png">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2317120e'/%3E%3Crect x='28.5' y='28' width='7' height='24' rx='2' fill='%23e4dacc'/%3E%3Cpath d='M29.5 22L39 13.5' stroke='%23e8743b' stroke-width='7' stroke-linecap='round' fill='none'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
