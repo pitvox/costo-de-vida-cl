@@ -29,6 +29,12 @@ HTML = r"""<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Carestía: Índices del costo de vida · Chile</title>
 <meta name="description" content="Carestía: índices del costo de vida chileno en pesos de hoy, con datos semanales de ODEPA deflactados por IPC.">
+<meta property="og:title" content="Carestía · Índices del costo de vida en Chile">
+<meta property="og:description" content="Cuánto cuesta la vida cotidiana en Chile, en pesos de hoy. Índices propios sobre datos públicos de ODEPA, actualizados cada viernes.">
+<meta property="og:image" content="https://pitvox.github.io/costo-de-vida-cl/og.png">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2317120e'/%3E%3Crect x='28.5' y='28' width='7' height='24' rx='2' fill='%23e4dacc'/%3E%3Cpath d='M29.5 22L39 13.5' stroke='%23e8743b' stroke-width='7' stroke-linecap='round' fill='none'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -88,10 +94,16 @@ HTML = r"""<!DOCTYPE html>
   .brand { display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 18px; }
   .wordmark { font:700 clamp(20px,4vw,26px) "Space Grotesk",sans-serif;
     letter-spacing:.06em; color:var(--bone); display:flex; align-items:baseline; }
+  /* í-brasa: la Í del wordmark es la I del tipo más el acento agudo del
+     propio tipo en brasa. El span superpuesto pinta una Í completa y el
+     clip-path deja visible solo el acento; a tamaño header el glow queda
+     sutil y en móvil (chico) se apaga y la tilde va plana en brasa */
   .wordmark .i { position:relative; display:inline-block; }
-  .wordmark .i .dot { position:absolute; top:-3px; left:50%; transform:translateX(-50%);
-    width:7px; height:7px; border-radius:50%; background:var(--ember);
-    box-shadow:0 0 10px 1px rgba(232,116,59,.8); animation:car-pulse 2.4s ease-in-out infinite; }
+  .wordmark .i .tilde { position:absolute; left:0; top:0; pointer-events:none;
+    color:#e8743b; clip-path:inset(0 0 72% 0); }
+  @media (min-width:760px) {
+    .wordmark .i .tilde { color:#ff9455; text-shadow:0 0 8px #e8743b; }
+  }
   .tagline { font:400 12px "IBM Plex Mono",monospace; color:var(--ash); letter-spacing:.04em; }
   .semana { font:500 11px "IBM Plex Mono",monospace; color:var(--ash); letter-spacing:.08em;
     text-transform:uppercase; }
@@ -165,14 +177,16 @@ HTML = r"""<!DOCTYPE html>
   .vbtn + .vbtn { border-left:1px solid var(--line); }
   .vbtn.active { background:var(--bone); color:var(--bg); }
   .nomtoggle { border:1px solid var(--line); background:var(--bg); }
-  .ref { position:absolute; right:clamp(10px,2vw,76px); top:calc(clamp(10px,2vw,26px) + 42px);
+  /* la referencia de velas y la pista de zoom viven bajo los controles;
+     en móvil el hero ya va cargado (overlay + controles apilados +
+     chevron) y la referencia se superpondría al overlay: ambas se omiten */
+  .ref { display:none; position:absolute; right:clamp(10px,2vw,76px);
+    top:calc(clamp(10px,2vw,26px) + 42px);
     font:400 10px "IBM Plex Mono",monospace; color:var(--dim); z-index:6; }
-  /* pista de zoom bajo los controles; en móvil el hero ya va cargado
-     (overlay + controles apilados + chevron), ahí se omite */
   .zoomhint { display:none; position:absolute; right:clamp(10px,2vw,76px);
     top:calc(clamp(10px,2vw,26px) + 64px);
     font:400 10px "IBM Plex Mono",monospace; color:var(--ash); z-index:6; }
-  @media (min-width:760px) { .zoomhint { display:block; } }
+  @media (min-width:760px) { .ref, .zoomhint { display:block; } }
   .scroll-cue { position:absolute; left:50%; bottom:8px; transform:translateX(-50%);
     z-index:5; pointer-events:none; color:var(--ash);
     font:400 20px/1 "Space Grotesk",sans-serif;
@@ -248,7 +262,7 @@ HTML = r"""<!DOCTYPE html>
 
   <header>
     <div class="brand">
-      <div class="wordmark">CAREST<span class="i">I<span class="dot"></span></span>A</div>
+      <div class="wordmark">CAREST<span class="i">I<span class="tilde" aria-hidden="true">Í</span></span>A</div>
       <div class="tagline">Índices del costo de vida · Chile</div>
     </div>
     <div class="semana">Semana del <span id="fecha"></span> <span>· actualizado viernes</span></div>
@@ -283,7 +297,7 @@ HTML = r"""<!DOCTYPE html>
         </div>
       </div>
       <div class="ref" id="ref-velas"></div>
-      <div class="zoomhint">zoom: arrastra el eje de años · pinch en táctil</div>
+      <div class="zoomhint">zoom: arrastra el eje de años o el de precios · pinch en táctil</div>
       <div class="scroll-cue" id="scroll-cue" aria-hidden="true">∨</div>
       <div class="tooltip" id="tooltip">
         <div class="tt-d" id="tt-d"></div>
@@ -315,7 +329,7 @@ HTML = r"""<!DOCTYPE html>
   </section>
 
   <footer>
-    <div class="attr">Fuente: precios al consumidor ODEPA (datos.odepa.gob.cl, CC-BY) · deflactado por IPC. Canastas fijas; precios normalizados a kilo, unidad o litro según el envase que cotiza ODEPA (Región Metropolitana).</div>
+    <div class="attr">Fuente: precios al consumidor ODEPA (datos.odepa.gob.cl, CC-BY) · deflactado por IPC. Cada precio es el promedio de los puntos que ODEPA encuesta cada semana en la Región Metropolitana: ferias libres, supermercados y carnicerías. Por eso suele ser menor que el precio de supermercado. Canastas fijas; precios normalizados a kilo, unidad o litro según el envase que cotiza ODEPA.</div>
     <div class="disc">Información de consumo con fines analíticos. No constituye asesoría ni recomendación de inversión.</div>
   </footer>
 
