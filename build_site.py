@@ -558,6 +558,9 @@ HTML = r"""<!DOCTYPE html>
     realMap = new Map(d.real.map(p => [p.time, p.value]));
     nomMap = new Map(d.nominal.map(p => [p.time, p.value]));
     if (chart) {
+      // si el usuario arrastró el eje de precios, autoScale quedó apagado
+      // y la serie nueva caería fuera del encuadre
+      chart.priceScale('right').applyOptions({ autoScale: true });
       sNom.setData(d.nominal); sReal.setData(d.real);
       sCandle.setData(d.velas || []);
       aplicarVista();
@@ -637,6 +640,7 @@ HTML = r"""<!DOCTYPE html>
         pseries.delete(k);
       }
     });
+    pchart.priceScale('right').applyOptions({ autoScale: true });
     pchart.timeScale().fitContent();
   }
 
