@@ -243,6 +243,40 @@ HTML = r"""<!DOCTYPE html>
   @media (min-width:760px) { .pchart-wrap { height:360px; } }
   #pchart { position:absolute; inset:0; }
 
+  /* ---- tu canasta ---- */
+  .canasta { border-top:1px solid var(--line); scroll-margin-top:52px;
+    padding:clamp(16px,3vw,24px) clamp(16px,3vw,32px) clamp(20px,3vw,28px); }
+  .can-reg { font:400 11px/1.6 "IBM Plex Mono",monospace; color:var(--ash); margin-top:8px; }
+  .ccopy { font:600 11px "IBM Plex Mono",monospace; letter-spacing:.06em; padding:7px 14px;
+    min-height:34px; cursor:pointer; background:transparent; border:1px solid var(--line);
+    color:var(--ash); white-space:nowrap; }
+  .ccopy:hover { background:#1f1913; }
+  .ccopy.copiado { background:var(--bone); border-color:var(--bone); color:#17120e; }
+  .citems { display:flex; flex-wrap:wrap; gap:10px; margin-top:16px; }
+  .citem { display:flex; flex-direction:column; gap:6px; border:1px solid var(--line);
+    background:var(--panel); padding:10px 14px; max-width:100%; }
+  .ci-top { display:flex; align-items:center; justify-content:space-between;
+    gap:8px 14px; flex-wrap:wrap; }
+  .ci-label { font:500 12px "IBM Plex Mono",monospace; color:var(--bone); }
+  .ci-step { display:flex; align-items:stretch; border:1px solid var(--line); background:var(--bg); }
+  .ci-btn { font:600 15px "IBM Plex Mono",monospace; width:38px; min-height:34px; cursor:pointer;
+    background:transparent; border:none; color:var(--bone); }
+  .ci-btn:hover { background:#1f1913; }
+  .ci-q { font:500 12px "IBM Plex Mono",monospace; font-variant-numeric:tabular-nums;
+    color:var(--bone); min-width:66px; display:flex; align-items:center;
+    justify-content:center; padding:0 6px; border-left:1px solid var(--line);
+    border-right:1px solid var(--line); }
+  .ci-eq { font:400 10px "IBM Plex Mono",monospace; color:var(--ash); }
+  .can-resumen { margin-top:20px; }
+  .ccosto { font:700 clamp(30px,5vw,52px)/1 "Space Grotesk",sans-serif;
+    font-variant-numeric:tabular-nums; letter-spacing:-.01em; color:var(--bone); }
+  .cstats { font:400 12px/1.5 "IBM Plex Mono",monospace; color:var(--ash); margin-top:6px;
+    text-wrap:pretty; }
+  .caviso { font:400 11px/1.5 "IBM Plex Mono",monospace; color:var(--ash); margin-top:4px; }
+  .cchart-wrap { position:relative; height:280px; margin-top:14px; }
+  @media (min-width:760px) { .cchart-wrap { height:360px; } }
+  #cchart { position:absolute; inset:0; }
+
   /* ---- footer ---- */
   footer { border-top:1px solid var(--line); padding:18px clamp(16px,3vw,32px);
     display:flex; flex-direction:column; gap:6px; background:var(--bg2); }
@@ -326,6 +360,22 @@ HTML = r"""<!DOCTYPE html>
     </div>
     <div class="pchips" id="pchips"></div>
     <div class="pchart-wrap"><div id="pchart"></div></div>
+  </section>
+
+  <section class="canasta" id="canasta">
+    <div class="prod-head">
+      <div class="ctx-h">TU CANASTA <span>· arma la tuya y compártela</span></div>
+      <button class="ccopy" id="ccopy">copiar link de esta canasta</button>
+    </div>
+    <div class="can-reg">Canasta armada por ti con datos ODEPA · no es un índice oficial Carestía</div>
+    <div class="pchips" id="cchips"></div>
+    <div class="citems" id="citems"></div>
+    <div class="can-resumen">
+      <div class="ccosto" id="ccosto"></div>
+      <div class="cstats" id="cstats"></div>
+      <div class="caviso" id="caviso"></div>
+    </div>
+    <div class="cchart-wrap"><div id="cchart"></div></div>
   </section>
 
   <footer>
@@ -413,6 +463,12 @@ HTML = r"""<!DOCTYPE html>
     p.onclick = () => document.getElementById('productos')
       .scrollIntoView({ behavior: reduced ? 'auto' : 'smooth' });
     tabsEl.appendChild(p);
+    const c = document.createElement('button');
+    c.className = 'tab';
+    c.textContent = 'Tu canasta';
+    c.onclick = () => document.getElementById('canasta')
+      .scrollIntoView({ behavior: reduced ? 'auto' : 'smooth' });
+    tabsEl.appendChild(c);
   }
   function syncTabs() {
     tabsEl.querySelectorAll('.tab').forEach(b =>
@@ -676,6 +732,224 @@ HTML = r"""<!DOCTYPE html>
     });
   }
 
+  /* ---------- vista Tu canasta ---------- */
+  // constructor libre sobre las series de PRODS; el semáforo CARO/NORMAL/
+  // BARATO queda reservado a los índices oficiales y aquí no se usa
+  const QDEF  = { kg: 0.5, un: 1, l: 1 };
+  const QSTEP = { kg: 0.1, un: 1, l: 0.1 };
+  const QMIN  = { kg: 0.1, un: 1, l: 0.1 };
+  const EQUIV = { marraqueta: '0,1 kg ≈ 1 marraqueta',
+                  palta: '0,25 kg ≈ 1 palta mediana',
+                  limon: '0,1 kg ≈ 1 limón' };
+  const CMAX = 8;
+  const canasta = new Map();          // slug -> cantidad
+  const cpaints = [];
+  let cchart, cserie;
+  const redondear = q => Math.round(q * 10) / 10;
+  const fmtCant = (q, uni) => (uni === 'un' ? String(Math.round(q)) :
+    q.toFixed(1).replace(/\.0$/, '').replace('.', ',')) + ' ' + uni;
+
+  function hashCanasta() {
+    if (!canasta.size) return '';
+    return '#canasta=' + [...canasta.entries()]
+      .map(([k, q]) => k + ':' + redondear(q)).join(',');
+  }
+  function guardarHash() {
+    history.replaceState(null, '', location.pathname + location.search + hashCanasta());
+  }
+  // el hash comparte la canasta y tiene prioridad sobre la precarga
+  function leerHash() {
+    const m = location.hash.match(/canasta=([^&]*)/);
+    if (!m) return false;
+    decodeURIComponent(m[1]).split(',').forEach(par => {
+      const [k, qs] = par.split(':');
+      if (!PRODS[k] || canasta.has(k) || canasta.size >= CMAX) return;
+      const uni = PRODS[k].unidad;
+      let q = parseFloat(qs);
+      if (!isFinite(q) || q <= 0) q = QDEF[uni];
+      canasta.set(k, Math.max(QMIN[uni], uni === 'un' ? Math.round(q) : redondear(q)));
+    });
+    return true;
+  }
+
+  // integridad Laspeyres: la serie compuesta existe SOLO en las semanas
+  // donde TODOS los productos elegidos tienen dato (intersección estricta,
+  // como el min_count del pipeline); un producto de historia corta trunca
+  function calcularCanasta() {
+    const keys = [...canasta.keys()].filter(k => PRODS[k] && PRODS[k].real.length);
+    if (!keys.length) return { serie: [], truncada: false, limitante: null };
+    const mapas = keys.map(k => new Map(PRODS[k].real.map(p => [p.time, p.value])));
+    const serie = [];
+    PRODS[keys[0]].real.forEach(p => {
+      let suma = 0;
+      for (let i = 0; i < keys.length; i++) {
+        const v = mapas[i].get(p.time);
+        if (v == null) return;
+        suma += canasta.get(keys[i]) * v;
+      }
+      serie.push({ time: p.time, value: suma });
+    });
+    let limitante = keys[0], tarde = PRODS[keys[0]].real[0].time, temprano = tarde;
+    keys.forEach(k => {
+      const t0 = PRODS[k].real[0].time;
+      if (t0 > tarde) { tarde = t0; limitante = k; }
+      if (t0 < temprano) temprano = t0;
+    });
+    return { serie, truncada: tarde > temprano, limitante };
+  }
+
+  function initCChart() {
+    const el = document.getElementById('cchart');
+    if (!window.LightweightCharts) {
+      el.innerHTML = '<div class="nochart">No se pudo cargar el motor de gráficos.</div>';
+      return;
+    }
+    // misma estética y gestos del hero: línea brasa, pesos en el eje,
+    // rueda y swipe vertical scrollean la página, zoom en ejes y pinch
+    cchart = LightweightCharts.createChart(el, {
+      autoSize: true,
+      layout: { background: { type: 'solid', color: 'transparent' }, textColor: '#8b8276',
+        fontFamily: "'IBM Plex Mono', monospace" },
+      grid: { vertLines: { color: '#221b14' }, horzLines: { color: '#221b14' } },
+      rightPriceScale: { borderColor: '#2a231c' },
+      timeScale: { borderColor: '#2a231c' },
+      localization: { priceFormatter: fmt },
+      handleScale: { mouseWheel: false, pinch: true, axisPressedMouseMove: true },
+      handleScroll: { mouseWheel: false, vertTouchDrag: false,
+        horzTouchDrag: true, pressedMouseMove: true },
+      crosshair: { mode: 0,
+        vertLine: { color: 'rgba(232,116,59,0.35)', labelBackgroundColor: '#5c3a24' },
+        horzLine: { color: 'rgba(232,116,59,0.35)', labelBackgroundColor: '#5c3a24' } },
+    });
+    cserie = cchart.addLineSeries({ color: '#e8743b', lineWidth: 2, priceLineVisible: false });
+  }
+
+  function renderCItems() {
+    const cont = document.getElementById('citems');
+    cont.innerHTML = '';
+    canasta.forEach((q, k) => {
+      const p = PRODS[k];
+      if (!p) return;
+      const it = document.createElement('div'); it.className = 'citem';
+      const top = document.createElement('div'); top.className = 'ci-top';
+      const lab = document.createElement('span'); lab.className = 'ci-label';
+      lab.textContent = p.label;
+      const st = document.createElement('div'); st.className = 'ci-step';
+      const menos = document.createElement('button'); menos.className = 'ci-btn';
+      menos.textContent = '-'; menos.setAttribute('aria-label', 'menos ' + p.label);
+      const val = document.createElement('span'); val.className = 'ci-q';
+      val.textContent = fmtCant(q, p.unidad);
+      const mas = document.createElement('button'); mas.className = 'ci-btn';
+      mas.textContent = '+'; mas.setAttribute('aria-label', 'más ' + p.label);
+      const setQ = nq => { canasta.set(k, nq); val.textContent = fmtCant(nq, p.unidad);
+        guardarHash(); syncCanasta(); };
+      menos.onclick = () => {
+        const nq = Math.max(QMIN[p.unidad], redondear(canasta.get(k) - QSTEP[p.unidad]));
+        if (nq !== canasta.get(k)) setQ(nq);
+      };
+      mas.onclick = () => setQ(redondear(canasta.get(k) + QSTEP[p.unidad]));
+      st.appendChild(menos); st.appendChild(val); st.appendChild(mas);
+      top.appendChild(lab); top.appendChild(st);
+      it.appendChild(top);
+      if (p.unidad === 'kg' && EQUIV[k]) {   // ayuda doméstica solo donde existe
+        const eq = document.createElement('div'); eq.className = 'ci-eq';
+        eq.textContent = EQUIV[k];
+        it.appendChild(eq);
+      }
+      cont.appendChild(it);
+    });
+  }
+
+  function syncCanasta() {
+    const r = calcularCanasta();
+    const costo = document.getElementById('ccosto');
+    const stats = document.getElementById('cstats');
+    const aviso = document.getElementById('caviso');
+    if (!r.serie.length) {
+      costo.textContent = '';
+      stats.textContent = canasta.size ?
+        'sin semanas en común entre los productos elegidos' :
+        'elige productos para armar tu canasta';
+      aviso.textContent = '';
+    } else {
+      const vals = r.serie.map(p => p.value);
+      const ult = vals[vals.length - 1], n = vals.length;
+      costo.textContent = fmt(ult);
+      const pct = Math.round(100 * vals.filter(v => v <= ult).length / n);
+      const prom = vals.reduce((a, b) => a + b, 0) / n;
+      const vsp = Math.round((ult / prom - 1) * 100);
+      stats.textContent = 'percentil ' + pct + ' de ' + n +
+        ' semanas de esta canasta · ' + (vsp >= 0 ? '+' : '') + vsp +
+        '% vs su promedio histórico';
+      aviso.textContent = r.truncada ? 'tu canasta tiene datos desde ' +
+        r.serie[0].time.slice(0, 4) + ' (limitada por ' +
+        PRODS[r.limitante].label + ')' : '';
+    }
+    if (cchart) {
+      // recuperar la autoescala si el usuario arrastró el eje de precios
+      cchart.priceScale('right').applyOptions({ autoScale: true });
+      cserie.setData(r.serie);
+      cchart.timeScale().fitContent();
+    }
+  }
+
+  function buildCanasta() {
+    if (!PKEYS.length) { document.getElementById('canasta').style.display = 'none'; return; }
+    if (!leerHash()) {   // precarga primera visita: un pan con palta generoso
+      if (PRODS.marraqueta) canasta.set('marraqueta', 0.1);
+      if (PRODS.palta) canasta.set('palta', 0.1);
+    }
+    const cont = document.getElementById('cchips');
+    cont.innerHTML = '';
+    PKEYS.forEach(k => {
+      const b = document.createElement('button');
+      b.className = 'pchip';
+      b.innerHTML = '<span class="dot"></span>' + PRODS[k].label;
+      const dot = b.querySelector('.dot');
+      const paint = () => {
+        const on = canasta.has(k);
+        b.classList.toggle('active', on);
+        dot.style.background = on ? '#e8743b' : 'var(--dim)';
+        b.style.borderColor = on ? '#e8743b' : 'var(--line)';
+        b.style.opacity = (!on && canasta.size >= CMAX) ? '.4' : '';
+      };
+      cpaints.push(paint);
+      b.onclick = () => {
+        if (canasta.has(k)) canasta.delete(k);
+        else {
+          if (canasta.size >= CMAX) return;   // máximo 8 productos simultáneos
+          canasta.set(k, QDEF[PRODS[k].unidad]);
+        }
+        cpaints.forEach(f => f());
+        renderCItems(); guardarHash(); syncCanasta();
+      };
+      cont.appendChild(b);
+    });
+    cpaints.forEach(f => f());
+    initCChart();
+    renderCItems();
+    syncCanasta();
+    const btn = document.getElementById('ccopy');
+    btn.onclick = () => {
+      guardarHash();
+      const url = location.href;
+      const listo = () => {
+        btn.textContent = 'copiado';
+        btn.classList.add('copiado');
+        setTimeout(() => { btn.textContent = 'copiar link de esta canasta';
+          btn.classList.remove('copiado'); }, 1400);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(listo, listo);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = url; document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); } catch (e) {}
+        ta.remove(); listo();
+      }
+    };
+  }
+
   // el chevron invita a bajar; se apaga con el primer scroll del usuario
   window.addEventListener('scroll', () =>
     document.getElementById('scroll-cue').classList.add('oculto'),
@@ -689,6 +963,7 @@ HTML = r"""<!DOCTYPE html>
     initPChart();
     buildProductos();
     syncProductos();
+    buildCanasta();
   });
 </script>
 </body>
