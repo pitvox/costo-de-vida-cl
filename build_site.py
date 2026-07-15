@@ -459,20 +459,29 @@ HTML = r"""<!DOCTYPE html>
     tabsEl.appendChild(sep);
     const p = document.createElement('button');
     p.className = 'tab';
+    p.dataset.sec = 'productos';
     p.textContent = 'Productos';
-    p.onclick = () => document.getElementById('productos')
-      .scrollIntoView({ behavior: reduced ? 'auto' : 'smooth' });
+    p.onclick = () => irASeccion('productos');
     tabsEl.appendChild(p);
     const c = document.createElement('button');
     c.className = 'tab';
+    c.dataset.sec = 'canasta';
     c.textContent = 'Tu canasta';
-    c.onclick = () => document.getElementById('canasta')
-      .scrollIntoView({ behavior: reduced ? 'auto' : 'smooth' });
+    c.onclick = () => irASeccion('canasta');
     tabsEl.appendChild(c);
   }
+  // secActiva: pill de sección activo; null → manda el índice actual (hero)
+  let secActiva = null;
   function syncTabs() {
     tabsEl.querySelectorAll('.tab').forEach(b =>
-      b.classList.toggle('active', b.dataset.code === cur));
+      b.classList.toggle('active', secActiva ?
+        b.dataset.sec === secActiva : b.dataset.code === cur));
+  }
+  function irASeccion(sec) {
+    secActiva = sec;
+    syncTabs();
+    document.getElementById(sec)
+      .scrollIntoView({ behavior: reduced ? 'auto' : 'smooth' });
   }
 
   /* ---------- hero chart ---------- */
@@ -636,6 +645,7 @@ HTML = r"""<!DOCTYPE html>
   const vistaEl = document.getElementById('vista');
   function render(code, primera) {
     cur = code;
+    secActiva = null;    // volver a un índice apaga el pill de sección
     syncTabs();          // estado activo también al navegar desde el ticker
     if (primera || reduced) { aplicar(code); return; }
     vistaEl.style.opacity = 0;                       // crossfade al cambiar índice
@@ -950,6 +960,25 @@ HTML = r"""<!DOCTYPE html>
     };
   }
 
+  // deep link: quien abre un link compartido debe aterrizar en la vista
+  // Tu canasta con su pill activo, no en el hero del primer índice
+  function activarDeepLink() {
+    if (!/canasta=/.test(location.hash)) return;
+    irASeccion('canasta');
+  }
+  // y si el hash cambia con la página ya abierta (otro link compartido),
+  // rearmar la canasta desde cero y navegar igual; guardarHash usa
+  // replaceState, así que los cambios propios no disparan este evento
+  window.addEventListener('hashchange', () => {
+    if (!/canasta=/.test(location.hash)) return;
+    canasta.clear();
+    leerHash();
+    cpaints.forEach(f => f());
+    renderCItems();
+    syncCanasta();
+    irASeccion('canasta');
+  });
+
   // el chevron invita a bajar; se apaga con el primer scroll del usuario
   window.addEventListener('scroll', () =>
     document.getElementById('scroll-cue').classList.add('oculto'),
@@ -964,6 +993,7 @@ HTML = r"""<!DOCTYPE html>
     buildProductos();
     syncProductos();
     buildCanasta();
+    activarDeepLink();
   });
 </script>
 </body>
