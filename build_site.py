@@ -986,7 +986,18 @@ HTML = r"""<!DOCTYPE html>
   async function capturarPNG(cual) {
     const ch = cual === 'canasta' ? cchart : chart;
     if (!ch) return;
-    try { await document.fonts.ready; } catch (e) {}
+    // el canvas no dispara la carga perezosa de webfonts: si un peso aún
+    // no se usó en el DOM, fillText caería a la fuente del sistema.
+    // Cargar explícitamente cada peso que dibuja el snapshot (título,
+    // costo, fecha y marca de agua) antes de componer
+    try {
+      await Promise.all([
+        document.fonts.load('400 16px "IBM Plex Mono"'),
+        document.fonts.load('500 16px "IBM Plex Mono"'),
+        document.fonts.load('700 16px "Space Grotesk"'),
+      ]);
+      await document.fonts.ready;
+    } catch (e) {}
     const shot = ch.takeScreenshot();
     if (!shot || !shot.width) return;
     // lienzo de salida legible para compartir: nunca menos de 1200px de
