@@ -247,11 +247,14 @@ HTML = r"""<!DOCTYPE html>
   .canasta { border-top:1px solid var(--line); scroll-margin-top:52px;
     padding:clamp(16px,3vw,24px) clamp(16px,3vw,32px) clamp(20px,3vw,28px); }
   .can-reg { font:400 11px/1.6 "IBM Plex Mono",monospace; color:var(--ash); margin-top:8px; }
-  .ccopy { font:600 11px "IBM Plex Mono",monospace; letter-spacing:.06em; padding:7px 14px;
-    min-height:34px; cursor:pointer; background:transparent; border:1px solid var(--line);
-    color:var(--ash); white-space:nowrap; }
+  /* acción principal de la vista: pill como los tabs, en hueso para que
+     se lea como botón protagonista sin invadir la brasa */
+  .ccopy { font:600 11px "IBM Plex Mono",monospace; letter-spacing:.06em; padding:8px 16px;
+    min-height:34px; cursor:pointer; background:transparent; border:1px solid var(--bone);
+    border-radius:999px; color:var(--bone); white-space:nowrap; }
   .ccopy:hover { background:#1f1913; }
   .ccopy.copiado { background:var(--bone); border-color:var(--bone); color:#17120e; }
+  .can-acciones { display:flex; gap:8px; flex-wrap:wrap; }
   .citems { display:flex; flex-wrap:wrap; gap:10px; margin-top:16px; }
   .citem { display:flex; flex-direction:column; gap:6px; border:1px solid var(--line);
     background:var(--panel); padding:10px 14px; max-width:100%; }
@@ -365,7 +368,9 @@ HTML = r"""<!DOCTYPE html>
   <section class="canasta" id="canasta">
     <div class="prod-head">
       <div class="ctx-h">TU CANASTA <span>· arma la tuya y compártela</span></div>
-      <button class="ccopy" id="ccopy">copiar link de esta canasta</button>
+      <div class="can-acciones">
+        <button class="ccopy" id="ccopy">copiar link de esta canasta</button>
+      </div>
     </div>
     <div class="can-reg">Canasta armada por ti con datos ODEPA · no es un índice oficial Carestía</div>
     <div class="pchips" id="cchips"></div>
