@@ -17,6 +17,7 @@ Correr:
   open index.html
 """
 
+import datetime
 import json
 
 with open("indices.json", encoding="utf-8") as fh:
@@ -28,7 +29,8 @@ HTML = r"""<!DOCTYPE html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Carestía: Índices del costo de vida · Chile</title>
-<meta name="description" content="Carestía: índices del costo de vida chileno en pesos de hoy, con datos semanales de ODEPA deflactados por IPC.">
+<meta name="description" content="Índices del costo de vida en Chile: asado, desayuno, ensalada y fruta en pesos de hoy, con datos públicos de ODEPA desde 2008. Actualizado cada viernes.">
+<link rel="canonical" href="https://carestia.cl/">
 <meta property="og:title" content="Carestía · Índices del costo de vida en Chile">
 <meta property="og:description" content="Cuánto cuesta la vida cotidiana en Chile, en pesos de hoy. Índices propios sobre datos públicos de ODEPA, actualizados cada viernes.">
 <meta property="og:image" content="https://pitvox.github.io/costo-de-vida-cl/og.png">
@@ -1088,10 +1090,31 @@ HTML = r"""<!DOCTYPE html>
 </html>
 """
 
+ROBOTS = """User-agent: *
+Allow: /
+
+Sitemap: https://carestia.cl/sitemap.xml
+"""
+
+SITEMAP = """<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://carestia.cl/</loc>
+    <lastmod>{lastmod}</lastmod>
+  </url>
+</urlset>
+"""
+
 with open("index.html", "w", encoding="utf-8") as fh:
     fh.write(HTML.replace("__DATA__", json.dumps(DATA, ensure_ascii=False)))
 
-print("Listo: index.html")
+with open("robots.txt", "w", encoding="utf-8") as fh:
+    fh.write(ROBOTS)
+
+with open("sitemap.xml", "w", encoding="utf-8") as fh:
+    fh.write(SITEMAP.format(lastmod=datetime.date.today().isoformat()))
+
+print("Listo: index.html + robots.txt + sitemap.xml")
 for c, d in DATA["indices"].items():
     print(f"  {d['nombre']}: {d['veredicto']} (percentil {d['percentil']})")
 if "productos" in DATA:
