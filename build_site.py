@@ -823,8 +823,9 @@ HTML = r"""<!DOCTYPE html>
       el.innerHTML = '<div class="nochart">No se pudo cargar el motor de gráficos.</div>';
       return;
     }
-    // misma estética y gestos del hero: línea brasa, pesos en el eje,
-    // rueda y swipe vertical scrollean la página, zoom en ejes y pinch
+    // mismos gestos del hero (rueda y swipe vertical scrollean la página,
+    // zoom en ejes y pinch) pero la línea va en HUESO: la brasa queda para
+    // los índices oficiales; las canastas de usuario se dibujan en hueso
     cchart = LightweightCharts.createChart(el, {
       autoSize: true,
       layout: { background: { type: 'solid', color: 'transparent' }, textColor: '#8b8276',
@@ -840,7 +841,8 @@ HTML = r"""<!DOCTYPE html>
         vertLine: { color: 'rgba(232,116,59,0.35)', labelBackgroundColor: '#5c3a24' },
         horzLine: { color: 'rgba(232,116,59,0.35)', labelBackgroundColor: '#5c3a24' } },
     });
-    cserie = cchart.addLineSeries({ color: '#e8743b', lineWidth: 2, priceLineVisible: false });
+    // el label de precio del eje toma el color de la serie: acompaña
+    cserie = cchart.addLineSeries({ color: '#e4dacc', lineWidth: 2, priceLineVisible: false });
   }
 
   function renderCItems() {
