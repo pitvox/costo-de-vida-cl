@@ -823,8 +823,9 @@ HTML = r"""<!DOCTYPE html>
       el.innerHTML = '<div class="nochart">No se pudo cargar el motor de gráficos.</div>';
       return;
     }
-    // misma estética y gestos del hero: línea brasa, pesos en el eje,
-    // rueda y swipe vertical scrollean la página, zoom en ejes y pinch
+    // mismos gestos del hero (rueda y swipe vertical scrollean la página,
+    // zoom en ejes y pinch) pero la línea va en HUESO: la brasa queda para
+    // los índices oficiales; las canastas de usuario se dibujan en hueso
     cchart = LightweightCharts.createChart(el, {
       autoSize: true,
       layout: { background: { type: 'solid', color: 'transparent' }, textColor: '#8b8276',
@@ -840,7 +841,8 @@ HTML = r"""<!DOCTYPE html>
         vertLine: { color: 'rgba(232,116,59,0.35)', labelBackgroundColor: '#5c3a24' },
         horzLine: { color: 'rgba(232,116,59,0.35)', labelBackgroundColor: '#5c3a24' } },
     });
-    cserie = cchart.addLineSeries({ color: '#e8743b', lineWidth: 2, priceLineVisible: false });
+    // el label de precio del eje toma el color de la serie: acompaña
+    cserie = cchart.addLineSeries({ color: '#e4dacc', lineWidth: 2, priceLineVisible: false });
   }
 
   function renderCItems() {
@@ -986,7 +988,18 @@ HTML = r"""<!DOCTYPE html>
   async function capturarPNG(cual) {
     const ch = cual === 'canasta' ? cchart : chart;
     if (!ch) return;
-    try { await document.fonts.ready; } catch (e) {}
+    // el canvas no dispara la carga perezosa de webfonts: si un peso aún
+    // no se usó en el DOM, fillText caería a la fuente del sistema.
+    // Cargar explícitamente cada peso que dibuja el snapshot (título,
+    // costo, fecha y marca de agua) antes de componer
+    try {
+      await Promise.all([
+        document.fonts.load('400 16px "IBM Plex Mono"'),
+        document.fonts.load('500 16px "IBM Plex Mono"'),
+        document.fonts.load('700 16px "Space Grotesk"'),
+      ]);
+      await document.fonts.ready;
+    } catch (e) {}
     const shot = ch.takeScreenshot();
     if (!shot || !shot.width) return;
     // lienzo de salida legible para compartir: nunca menos de 1200px de
@@ -996,7 +1009,32 @@ HTML = r"""<!DOCTYPE html>
     const pad = Math.round(W * 0.04);
     const chartW = W - pad * 2;
     const chartH = Math.round(shot.height * chartW / shot.width);
-    const headH = Math.round(W * 0.13), footH = Math.round(W * 0.07);
+    // composición de la canasta bajo el costo (solo en el snapshot del
+    // constructor): "{label} {cantidad} {unidad} · ..." en una línea o
+    // dos si no cabe; el encabezado crece lo que ellas ocupen
+    const compSize = Math.round(W * 0.013), compAlto = Math.round(compSize * 1.5);
+    const compLineas = [];
+    if (cual === 'canasta' && canasta.size) {
+      const mctx = document.createElement('canvas').getContext('2d');
+      mctx.font = '400 ' + compSize + 'px "IBM Plex Mono", monospace';
+      const partes = [...canasta.entries()].filter(([k]) => PRODS[k])
+        .map(([k, q]) => PRODS[k].label + ' ' + fmtCant(q, PRODS[k].unidad));
+      let linea = '';
+      partes.forEach(p => {
+        const cand = linea ? linea + ' · ' + p : p;
+        if (!linea || mctx.measureText(cand).width <= chartW) linea = cand;
+        else { compLineas.push(linea); linea = p; }
+      });
+      if (linea) compLineas.push(linea);
+      if (compLineas.length > 2) {   // nunca más de dos: recorte con …
+        let l2 = compLineas.slice(1).join(' · ');
+        while (l2 && mctx.measureText(l2 + ' …').width > chartW) l2 = l2.slice(0, -1);
+        compLineas.length = 1;
+        compLineas.push(l2 + ' …');
+      }
+    }
+    const compH = compLineas.length * compAlto;
+    const headH = Math.round(W * 0.13) + compH, footH = Math.round(W * 0.07);
     const H = headH + chartH + footH;
     const cv = document.createElement('canvas');
     cv.width = W; cv.height = H;
@@ -1024,8 +1062,11 @@ HTML = r"""<!DOCTYPE html>
     ctx.font = '700 ' + Math.round(W * 0.037) + 'px "Space Grotesk", sans-serif';
     ctx.fillText(precio, pad, Math.round(W * 0.05));
     ctx.fillStyle = '#8b8276';
+    ctx.font = '400 ' + compSize + 'px "IBM Plex Mono", monospace';
+    compLineas.forEach((l, i) =>
+      ctx.fillText(l, pad, Math.round(W * 0.098) + i * compAlto));
     ctx.font = '400 ' + Math.round(W * 0.012) + 'px "IBM Plex Mono", monospace';
-    ctx.fillText('semana del ' + fecha, pad, Math.round(W * 0.098));
+    ctx.fillText('semana del ' + fecha, pad, Math.round(W * 0.098) + compH);
     ctx.drawImage(shot, pad, headH, chartW, chartH);
     marcaDeAgua(ctx, W - pad, H - Math.round(footH * 0.35), Math.round(W * 0.02));
     const nombre = 'carestia_' + (cual === 'canasta' ? 'canasta' : cur) + '_' +
