@@ -1007,7 +1007,32 @@ HTML = r"""<!DOCTYPE html>
     const pad = Math.round(W * 0.04);
     const chartW = W - pad * 2;
     const chartH = Math.round(shot.height * chartW / shot.width);
-    const headH = Math.round(W * 0.13), footH = Math.round(W * 0.07);
+    // composición de la canasta bajo el costo (solo en el snapshot del
+    // constructor): "{label} {cantidad} {unidad} · ..." en una línea o
+    // dos si no cabe; el encabezado crece lo que ellas ocupen
+    const compSize = Math.round(W * 0.013), compAlto = Math.round(compSize * 1.5);
+    const compLineas = [];
+    if (cual === 'canasta' && canasta.size) {
+      const mctx = document.createElement('canvas').getContext('2d');
+      mctx.font = '400 ' + compSize + 'px "IBM Plex Mono", monospace';
+      const partes = [...canasta.entries()].filter(([k]) => PRODS[k])
+        .map(([k, q]) => PRODS[k].label + ' ' + fmtCant(q, PRODS[k].unidad));
+      let linea = '';
+      partes.forEach(p => {
+        const cand = linea ? linea + ' · ' + p : p;
+        if (!linea || mctx.measureText(cand).width <= chartW) linea = cand;
+        else { compLineas.push(linea); linea = p; }
+      });
+      if (linea) compLineas.push(linea);
+      if (compLineas.length > 2) {   // nunca más de dos: recorte con …
+        let l2 = compLineas.slice(1).join(' · ');
+        while (l2 && mctx.measureText(l2 + ' …').width > chartW) l2 = l2.slice(0, -1);
+        compLineas.length = 1;
+        compLineas.push(l2 + ' …');
+      }
+    }
+    const compH = compLineas.length * compAlto;
+    const headH = Math.round(W * 0.13) + compH, footH = Math.round(W * 0.07);
     const H = headH + chartH + footH;
     const cv = document.createElement('canvas');
     cv.width = W; cv.height = H;
@@ -1035,8 +1060,11 @@ HTML = r"""<!DOCTYPE html>
     ctx.font = '700 ' + Math.round(W * 0.037) + 'px "Space Grotesk", sans-serif';
     ctx.fillText(precio, pad, Math.round(W * 0.05));
     ctx.fillStyle = '#8b8276';
+    ctx.font = '400 ' + compSize + 'px "IBM Plex Mono", monospace';
+    compLineas.forEach((l, i) =>
+      ctx.fillText(l, pad, Math.round(W * 0.098) + i * compAlto));
     ctx.font = '400 ' + Math.round(W * 0.012) + 'px "IBM Plex Mono", monospace';
-    ctx.fillText('semana del ' + fecha, pad, Math.round(W * 0.098));
+    ctx.fillText('semana del ' + fecha, pad, Math.round(W * 0.098) + compH);
     ctx.drawImage(shot, pad, headH, chartW, chartH);
     marcaDeAgua(ctx, W - pad, H - Math.round(footH * 0.35), Math.round(W * 0.02));
     const nombre = 'carestia_' + (cual === 'canasta' ? 'canasta' : cur) + '_' +
