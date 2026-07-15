@@ -326,7 +326,7 @@ HTML = r"""<!DOCTYPE html>
       </div>
       <div class="controls">
         <div class="legend">
-          <span><span class="sw" style="border-top:2px solid #e8743b"></span>En pesos de hoy: cuánto valdría hoy ese precio antiguo por la inflación acumulada</span>
+          <span><span class="sw" style="border-top:2px solid #e8743b"></span>En pesos de hoy: cuánto valdría hoy ese precio antiguo por la inflación acumulada · equivale a medirlo en UF</span>
           <span id="leg-nom"><span class="sw" style="border-top:1px solid #8b8276"></span>Nominal: el precio de la boleta de ese día</span>
         </div>
         <button class="vbtn nomtoggle" id="v-nominal">+ nominal</button>
