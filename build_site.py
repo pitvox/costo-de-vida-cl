@@ -332,6 +332,7 @@ HTML = r"""<!DOCTYPE html>
           <button class="vbtn active" id="v-linea">LÍNEA</button>
           <button class="vbtn" id="v-velas">VELAS</button>
         </div>
+        <button class="vbtn nomtoggle" id="shot-hero">captura PNG</button>
       </div>
       <div class="ref" id="ref-velas"></div>
       <div class="zoomhint">zoom: arrastra el eje de años o el de precios · pinch en táctil</div>
@@ -370,6 +371,7 @@ HTML = r"""<!DOCTYPE html>
       <div class="ctx-h">TU CANASTA <span>· arma la tuya y compártela</span></div>
       <div class="can-acciones">
         <button class="ccopy" id="ccopy">copiar link de esta canasta</button>
+        <button class="ccopy" id="shot-canasta">captura PNG</button>
       </div>
     </div>
     <div class="can-reg">Canasta armada por ti con datos ODEPA · no es un índice oficial Carestía</div>
@@ -964,6 +966,87 @@ HTML = r"""<!DOCTYPE html>
       }
     };
   }
+
+  /* ---------- captura PNG compartible (estilo TradingView) ---------- */
+  // la marca va en tres segmentos medidos para pintar SOLO la í en brasa
+  function marcaDeAgua(ctx, xDer, yBase, size) {
+    ctx.font = '500 ' + size + 'px "IBM Plex Mono", monospace';
+    ctx.textBaseline = 'alphabetic';
+    const seg = ['carest', 'í', 'a.cl'];
+    const w = seg.map(s => ctx.measureText(s).width);
+    let x = xDer - (w[0] + w[1] + w[2]);
+    ctx.globalAlpha = 0.4; ctx.fillStyle = '#e4dacc'; ctx.fillText(seg[0], x, yBase);
+    ctx.globalAlpha = 1;   ctx.fillStyle = '#e8743b'; ctx.fillText(seg[1], x + w[0], yBase);
+    ctx.globalAlpha = 0.4; ctx.fillStyle = '#e4dacc'; ctx.fillText(seg[2], x + w[0] + w[1], yBase);
+    ctx.globalAlpha = 1;
+  }
+
+  async function capturarPNG(cual) {
+    const ch = cual === 'canasta' ? cchart : chart;
+    if (!ch) return;
+    try { await document.fonts.ready; } catch (e) {}
+    const shot = ch.takeScreenshot();
+    if (!shot || !shot.width) return;
+    // lienzo de salida legible para compartir: nunca menos de 1200px de
+    // ancho; takeScreenshot ya viene a devicePixelRatio y si aun así es
+    // chico (móvil a DPR bajo) se escala el canvas
+    const W = Math.max(1200, Math.round(shot.width));
+    const pad = Math.round(W * 0.04);
+    const chartW = W - pad * 2;
+    const chartH = Math.round(shot.height * chartW / shot.width);
+    const headH = Math.round(W * 0.13), footH = Math.round(W * 0.07);
+    const H = headH + chartH + footH;
+    const cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    const ctx = cv.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.fillStyle = '#17120e';
+    ctx.fillRect(0, 0, W, H);
+    // contexto arriba a la izquierda: qué es, cuánto vale, de cuándo
+    let titulo, precio;
+    if (cual === 'canasta') {
+      titulo = 'TU CANASTA';
+      precio = document.getElementById('ccosto').textContent || '·';
+    } else {
+      const d = INDICES[cur];
+      titulo = d.nombre.replace(/^Índice /i, '').toUpperCase();
+      precio = fmt(d.costo_real);
+    }
+    const fecha = document.getElementById('fecha').textContent;
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = '#8b8276';
+    ctx.font = '500 ' + Math.round(W * 0.014) + 'px "IBM Plex Mono", monospace';
+    ctx.fillText(titulo, pad, Math.round(W * 0.028));
+    ctx.fillStyle = '#e4dacc';
+    ctx.font = '700 ' + Math.round(W * 0.037) + 'px "Space Grotesk", sans-serif';
+    ctx.fillText(precio, pad, Math.round(W * 0.05));
+    ctx.fillStyle = '#8b8276';
+    ctx.font = '400 ' + Math.round(W * 0.012) + 'px "IBM Plex Mono", monospace';
+    ctx.fillText('semana del ' + fecha, pad, Math.round(W * 0.098));
+    ctx.drawImage(shot, pad, headH, chartW, chartH);
+    marcaDeAgua(ctx, W - pad, H - Math.round(footH * 0.35), Math.round(W * 0.02));
+    const nombre = 'carestia_' + (cual === 'canasta' ? 'canasta' : cur) + '_' +
+      new Date().toISOString().slice(0, 10) + '.png';
+    cv.toBlob(async blob => {
+      if (!blob) return;
+      // en móvil el share sheet nativo (ideal para WhatsApp); si no está
+      // disponible o el archivo no se puede compartir, descarga directa
+      const file = new File([blob], nombre, { type: 'image/png' });
+      if (matchMedia('(pointer:coarse)').matches &&
+          navigator.canShare && navigator.canShare({ files: [file] })) {
+        try { await navigator.share({ files: [file] }); return; }
+        catch (e) { if (e.name === 'AbortError') return; }
+      }
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = nombre;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    }, 'image/png');
+  }
+  document.getElementById('shot-hero').onclick = () => capturarPNG('hero');
+  document.getElementById('shot-canasta').onclick = () => capturarPNG('canasta');
 
   // deep link: quien abre un link compartido debe aterrizar en la vista
   // Tu canasta con su pill activo, no en el hero del primer índice
