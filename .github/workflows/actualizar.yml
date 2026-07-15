@@ -42,6 +42,8 @@ jobs:
           cp index.html public/index.html
           cp indices.json public/indices.json
           cp og.png public/og.png
+          cp robots.txt public/robots.txt
+          cp sitemap.xml public/sitemap.xml
 
       - name: Preparar artefacto de Pages
         uses: actions/upload-pages-artifact@v3

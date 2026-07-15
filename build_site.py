@@ -17,6 +17,7 @@ Correr:
   open index.html
 """
 
+import datetime
 import json
 
 with open("indices.json", encoding="utf-8") as fh:
@@ -28,7 +29,8 @@ HTML = r"""<!DOCTYPE html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Carestía: Índices del costo de vida · Chile</title>
-<meta name="description" content="Carestía: índices del costo de vida chileno en pesos de hoy, con datos semanales de ODEPA deflactados por IPC.">
+<meta name="description" content="Índices del costo de vida en Chile: asado, desayuno, ensalada y fruta en pesos de hoy, con datos públicos de ODEPA desde 2008. Actualizado cada viernes.">
+<link rel="canonical" href="https://carestia.cl/">
 <meta property="og:title" content="Carestía · Índices del costo de vida en Chile">
 <meta property="og:description" content="Cuánto cuesta la vida cotidiana en Chile, en pesos de hoy. Índices propios sobre datos públicos de ODEPA, actualizados cada viernes.">
 <meta property="og:image" content="https://pitvox.github.io/costo-de-vida-cl/og.png">
@@ -247,11 +249,14 @@ HTML = r"""<!DOCTYPE html>
   .canasta { border-top:1px solid var(--line); scroll-margin-top:52px;
     padding:clamp(16px,3vw,24px) clamp(16px,3vw,32px) clamp(20px,3vw,28px); }
   .can-reg { font:400 11px/1.6 "IBM Plex Mono",monospace; color:var(--ash); margin-top:8px; }
-  .ccopy { font:600 11px "IBM Plex Mono",monospace; letter-spacing:.06em; padding:7px 14px;
-    min-height:34px; cursor:pointer; background:transparent; border:1px solid var(--line);
-    color:var(--ash); white-space:nowrap; }
+  /* acción principal de la vista: pill como los tabs, en hueso para que
+     se lea como botón protagonista sin invadir la brasa */
+  .ccopy { font:600 11px "IBM Plex Mono",monospace; letter-spacing:.06em; padding:8px 16px;
+    min-height:34px; cursor:pointer; background:transparent; border:1px solid var(--bone);
+    border-radius:999px; color:var(--bone); white-space:nowrap; }
   .ccopy:hover { background:#1f1913; }
   .ccopy.copiado { background:var(--bone); border-color:var(--bone); color:#17120e; }
+  .can-acciones { display:flex; gap:8px; flex-wrap:wrap; }
   .citems { display:flex; flex-wrap:wrap; gap:10px; margin-top:16px; }
   .citem { display:flex; flex-direction:column; gap:6px; border:1px solid var(--line);
     background:var(--panel); padding:10px 14px; max-width:100%; }
@@ -321,7 +326,7 @@ HTML = r"""<!DOCTYPE html>
       </div>
       <div class="controls">
         <div class="legend">
-          <span><span class="sw" style="border-top:2px solid #e8743b"></span>En pesos de hoy: cuánto valdría hoy ese precio antiguo por la inflación acumulada</span>
+          <span><span class="sw" style="border-top:2px solid #e8743b"></span>En pesos de hoy: cuánto valdría hoy ese precio antiguo por la inflación acumulada · equivale a medirlo en UF</span>
           <span id="leg-nom"><span class="sw" style="border-top:1px solid #8b8276"></span>Nominal: el precio de la boleta de ese día</span>
         </div>
         <button class="vbtn nomtoggle" id="v-nominal">+ nominal</button>
@@ -329,6 +334,7 @@ HTML = r"""<!DOCTYPE html>
           <button class="vbtn active" id="v-linea">LÍNEA</button>
           <button class="vbtn" id="v-velas">VELAS</button>
         </div>
+        <button class="vbtn nomtoggle" id="shot-hero">captura PNG</button>
       </div>
       <div class="ref" id="ref-velas"></div>
       <div class="zoomhint">zoom: arrastra el eje de años o el de precios · pinch en táctil</div>
@@ -365,7 +371,10 @@ HTML = r"""<!DOCTYPE html>
   <section class="canasta" id="canasta">
     <div class="prod-head">
       <div class="ctx-h">TU CANASTA <span>· arma la tuya y compártela</span></div>
-      <button class="ccopy" id="ccopy">copiar link de esta canasta</button>
+      <div class="can-acciones">
+        <button class="ccopy" id="ccopy">copiar link de esta canasta</button>
+        <button class="ccopy" id="shot-canasta">captura PNG</button>
+      </div>
     </div>
     <div class="can-reg">Canasta armada por ti con datos ODEPA · no es un índice oficial Carestía</div>
     <div class="pchips" id="cchips"></div>
@@ -459,20 +468,29 @@ HTML = r"""<!DOCTYPE html>
     tabsEl.appendChild(sep);
     const p = document.createElement('button');
     p.className = 'tab';
+    p.dataset.sec = 'productos';
     p.textContent = 'Productos';
-    p.onclick = () => document.getElementById('productos')
-      .scrollIntoView({ behavior: reduced ? 'auto' : 'smooth' });
+    p.onclick = () => irASeccion('productos');
     tabsEl.appendChild(p);
     const c = document.createElement('button');
     c.className = 'tab';
+    c.dataset.sec = 'canasta';
     c.textContent = 'Tu canasta';
-    c.onclick = () => document.getElementById('canasta')
-      .scrollIntoView({ behavior: reduced ? 'auto' : 'smooth' });
+    c.onclick = () => irASeccion('canasta');
     tabsEl.appendChild(c);
   }
+  // secActiva: pill de sección activo; null → manda el índice actual (hero)
+  let secActiva = null;
   function syncTabs() {
     tabsEl.querySelectorAll('.tab').forEach(b =>
-      b.classList.toggle('active', b.dataset.code === cur));
+      b.classList.toggle('active', secActiva ?
+        b.dataset.sec === secActiva : b.dataset.code === cur));
+  }
+  function irASeccion(sec) {
+    secActiva = sec;
+    syncTabs();
+    document.getElementById(sec)
+      .scrollIntoView({ behavior: reduced ? 'auto' : 'smooth' });
   }
 
   /* ---------- hero chart ---------- */
@@ -636,6 +654,7 @@ HTML = r"""<!DOCTYPE html>
   const vistaEl = document.getElementById('vista');
   function render(code, primera) {
     cur = code;
+    secActiva = null;    // volver a un índice apaga el pill de sección
     syncTabs();          // estado activo también al navegar desde el ticker
     if (primera || reduced) { aplicar(code); return; }
     vistaEl.style.opacity = 0;                       // crossfade al cambiar índice
@@ -950,6 +969,106 @@ HTML = r"""<!DOCTYPE html>
     };
   }
 
+  /* ---------- captura PNG compartible (estilo TradingView) ---------- */
+  // la marca va en tres segmentos medidos para pintar SOLO la í en brasa
+  function marcaDeAgua(ctx, xDer, yBase, size) {
+    ctx.font = '500 ' + size + 'px "IBM Plex Mono", monospace';
+    ctx.textBaseline = 'alphabetic';
+    const seg = ['carest', 'í', 'a.cl'];
+    const w = seg.map(s => ctx.measureText(s).width);
+    let x = xDer - (w[0] + w[1] + w[2]);
+    ctx.globalAlpha = 0.4; ctx.fillStyle = '#e4dacc'; ctx.fillText(seg[0], x, yBase);
+    ctx.globalAlpha = 1;   ctx.fillStyle = '#e8743b'; ctx.fillText(seg[1], x + w[0], yBase);
+    ctx.globalAlpha = 0.4; ctx.fillStyle = '#e4dacc'; ctx.fillText(seg[2], x + w[0] + w[1], yBase);
+    ctx.globalAlpha = 1;
+  }
+
+  async function capturarPNG(cual) {
+    const ch = cual === 'canasta' ? cchart : chart;
+    if (!ch) return;
+    try { await document.fonts.ready; } catch (e) {}
+    const shot = ch.takeScreenshot();
+    if (!shot || !shot.width) return;
+    // lienzo de salida legible para compartir: nunca menos de 1200px de
+    // ancho; takeScreenshot ya viene a devicePixelRatio y si aun así es
+    // chico (móvil a DPR bajo) se escala el canvas
+    const W = Math.max(1200, Math.round(shot.width));
+    const pad = Math.round(W * 0.04);
+    const chartW = W - pad * 2;
+    const chartH = Math.round(shot.height * chartW / shot.width);
+    const headH = Math.round(W * 0.13), footH = Math.round(W * 0.07);
+    const H = headH + chartH + footH;
+    const cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    const ctx = cv.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.fillStyle = '#17120e';
+    ctx.fillRect(0, 0, W, H);
+    // contexto arriba a la izquierda: qué es, cuánto vale, de cuándo
+    let titulo, precio;
+    if (cual === 'canasta') {
+      titulo = 'TU CANASTA';
+      precio = document.getElementById('ccosto').textContent || '·';
+    } else {
+      const d = INDICES[cur];
+      titulo = d.nombre.replace(/^Índice /i, '').toUpperCase();
+      precio = fmt(d.costo_real);
+    }
+    const fecha = document.getElementById('fecha').textContent;
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = '#8b8276';
+    ctx.font = '500 ' + Math.round(W * 0.014) + 'px "IBM Plex Mono", monospace';
+    ctx.fillText(titulo, pad, Math.round(W * 0.028));
+    ctx.fillStyle = '#e4dacc';
+    ctx.font = '700 ' + Math.round(W * 0.037) + 'px "Space Grotesk", sans-serif';
+    ctx.fillText(precio, pad, Math.round(W * 0.05));
+    ctx.fillStyle = '#8b8276';
+    ctx.font = '400 ' + Math.round(W * 0.012) + 'px "IBM Plex Mono", monospace';
+    ctx.fillText('semana del ' + fecha, pad, Math.round(W * 0.098));
+    ctx.drawImage(shot, pad, headH, chartW, chartH);
+    marcaDeAgua(ctx, W - pad, H - Math.round(footH * 0.35), Math.round(W * 0.02));
+    const nombre = 'carestia_' + (cual === 'canasta' ? 'canasta' : cur) + '_' +
+      new Date().toISOString().slice(0, 10) + '.png';
+    cv.toBlob(async blob => {
+      if (!blob) return;
+      // en móvil el share sheet nativo (ideal para WhatsApp); si no está
+      // disponible o el archivo no se puede compartir, descarga directa
+      const file = new File([blob], nombre, { type: 'image/png' });
+      if (matchMedia('(pointer:coarse)').matches &&
+          navigator.canShare && navigator.canShare({ files: [file] })) {
+        try { await navigator.share({ files: [file] }); return; }
+        catch (e) { if (e.name === 'AbortError') return; }
+      }
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = nombre;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    }, 'image/png');
+  }
+  document.getElementById('shot-hero').onclick = () => capturarPNG('hero');
+  document.getElementById('shot-canasta').onclick = () => capturarPNG('canasta');
+
+  // deep link: quien abre un link compartido debe aterrizar en la vista
+  // Tu canasta con su pill activo, no en el hero del primer índice
+  function activarDeepLink() {
+    if (!/canasta=/.test(location.hash)) return;
+    irASeccion('canasta');
+  }
+  // y si el hash cambia con la página ya abierta (otro link compartido),
+  // rearmar la canasta desde cero y navegar igual; guardarHash usa
+  // replaceState, así que los cambios propios no disparan este evento
+  window.addEventListener('hashchange', () => {
+    if (!/canasta=/.test(location.hash)) return;
+    canasta.clear();
+    leerHash();
+    cpaints.forEach(f => f());
+    renderCItems();
+    syncCanasta();
+    irASeccion('canasta');
+  });
+
   // el chevron invita a bajar; se apaga con el primer scroll del usuario
   window.addEventListener('scroll', () =>
     document.getElementById('scroll-cue').classList.add('oculto'),
@@ -964,16 +1083,38 @@ HTML = r"""<!DOCTYPE html>
     buildProductos();
     syncProductos();
     buildCanasta();
+    activarDeepLink();
   });
 </script>
 </body>
 </html>
 """
 
+ROBOTS = """User-agent: *
+Allow: /
+
+Sitemap: https://carestia.cl/sitemap.xml
+"""
+
+SITEMAP = """<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://carestia.cl/</loc>
+    <lastmod>{lastmod}</lastmod>
+  </url>
+</urlset>
+"""
+
 with open("index.html", "w", encoding="utf-8") as fh:
     fh.write(HTML.replace("__DATA__", json.dumps(DATA, ensure_ascii=False)))
 
-print("Listo: index.html")
+with open("robots.txt", "w", encoding="utf-8") as fh:
+    fh.write(ROBOTS)
+
+with open("sitemap.xml", "w", encoding="utf-8") as fh:
+    fh.write(SITEMAP.format(lastmod=datetime.date.today().isoformat()))
+
+print("Listo: index.html + robots.txt + sitemap.xml")
 for c, d in DATA["indices"].items():
     print(f"  {d['nombre']}: {d['veredicto']} (percentil {d['percentil']})")
 if "productos" in DATA:
