@@ -4,9 +4,9 @@ build_site.py - genera el sitio Carestía
 Lee 'indices.json' (lo produce indices.py) y escribe 'index.html': un sitio
 autocontenido con cinta ticker y una sola superficie: el hero es el único
 lienzo de gráfico y las tabs lo cambian de MODO en el lugar (índices con
-veredicto y línea/velas · Comparar productos en spaghetti · Tu canasta),
-con una franja de contexto que acompaña a cada modo y footer con
-atribución.
+veredicto y línea/velas · Comparar productos en spaghetti · Arma tu
+canasta), con una franja de contexto que acompaña a cada modo y footer
+con atribución.
 
 Identidad: paleta 2c "Hueso protagonista", hueso/ceniza sobre carbón; la
 brasa #e8743b solo vive en el veredicto, en la í del wordmark y en la línea
@@ -333,7 +333,7 @@ HTML = r"""<!DOCTYPE html>
         <div class="onote">variación real, no precio</div>
       </div>
       <div class="overlay m-can">
-        <div class="oname">TU CANASTA <span>· arma la tuya y compártela</span></div>
+        <div class="oname">ARMA TU CANASTA <span>· y compártela</span></div>
         <div class="orow"><div class="oprice" id="ccosto"></div></div>
         <div class="cstats" id="cstats"></div>
         <div class="caviso" id="caviso"></div>
@@ -449,7 +449,7 @@ HTML = r"""<!DOCTYPE html>
     const sep = document.createElement('span');
     sep.className = 'tab-sep';
     tabsEl.appendChild(sep);
-    [['productos', 'Comparar productos'], ['canasta', 'Tu canasta']].forEach(([m, label]) => {
+    [['productos', 'Comparar productos'], ['canasta', 'Arma tu canasta']].forEach(([m, label]) => {
       const p = document.createElement('button');
       p.className = 'tab';
       p.dataset.modo = m;
