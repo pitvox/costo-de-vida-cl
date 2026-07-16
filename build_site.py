@@ -2,9 +2,10 @@
 build_site.py - genera el sitio Carestía
 ========================================
 Lee 'indices.json' (lo produce indices.py) y escribe 'index.html': un sitio
-autocontenido con cinta ticker, hero con veredicto en overlay, línea/velas,
-franja de contexto (estacionalidad + componentes), vista Productos
-(spaghetti multi-serie en variación real) y footer con atribución.
+autocontenido con cinta ticker y una sola superficie: el hero es el único
+lienzo de gráfico y las tabs lo cambian de MODO en el lugar (índices con
+veredicto y línea/velas · Productos en spaghetti · Tu canasta), con una
+franja de contexto que acompaña a cada modo y footer con atribución.
 
 Identidad: paleta 2c "Hueso protagonista", hueso/ceniza sobre carbón; la
 brasa #e8743b solo vive en el veredicto, en la í del wordmark y en la línea
@@ -49,7 +50,6 @@ HTML = r"""<!DOCTYPE html>
     --ember:#e8743b; --verdict:#e0552f;
   }
   * { box-sizing:border-box; margin:0; padding:0; }
-  html { scroll-behavior:smooth; }
   body { background:var(--bg); color:var(--bone);
     font-family:"IBM Plex Mono",monospace; min-height:100vh; }
   button { font-family:inherit; }
@@ -131,19 +131,22 @@ HTML = r"""<!DOCTYPE html>
   }
   @media (prefers-reduced-motion: reduce) {
     * { animation:none !important; }
-    html { scroll-behavior:auto; }
   }
 
-  /* ---- hero ---- */
+  /* ---- hero: un solo lienzo con modos ---- */
+  /* cada pieza marcada m-ind / m-prod / m-can pertenece a un modo; el modo
+     activo vive en body[data-modo] y el resto se apaga sin perder su display */
+  body:not([data-modo="indices"])   .m-ind  { display:none !important; }
+  body:not([data-modo="productos"]) .m-prod { display:none !important; }
+  body:not([data-modo="canasta"])   .m-can  { display:none !important; }
   #vista { opacity:1; transition:opacity .18s ease; }
-  /* el hero termina ~56px antes del borde inferior (descontando ticker,
-     header y tabs): el título de la sección siguiente asoma al cargar */
   .hero-wrap { position:relative; height:calc(100vh - 266px); min-height:320px;
-    background:var(--bg); scroll-margin-top:52px; }
+    background:var(--bg); }
   @media (min-width:760px) {
     .hero-wrap { height:calc(100vh - 220px); min-height:420px; } }
-  @media (max-width:759px) { .overlay .oname { max-width:calc(100vw - 160px); } }
-  #chart { position:absolute; inset:0; }
+  @media (max-width:759px) { .overlay .oname, .overlay .cstats, .overlay .caviso,
+    .overlay .can-reg { max-width:calc(100vw - 160px); } }
+  #chart, #pchart, #cchart { position:absolute; inset:0; }
   .overlay { position:absolute; left:clamp(12px,2.5vw,32px); top:clamp(12px,2.5vw,26px);
     pointer-events:none; z-index:5; max-width:88%; }
   .overlay .oname { font:500 clamp(10px,1.4vw,12px) "IBM Plex Mono",monospace;
@@ -162,6 +165,9 @@ HTML = r"""<!DOCTYPE html>
     animation:car-pulse 2.4s ease-in-out infinite; }
   .opct, .ovs { font:400 clamp(10px,1.3vw,12px) "IBM Plex Mono",monospace; color:var(--ash); }
   .ovs { margin-top:8px; }
+  .onote { display:inline-block; font:500 11px "IBM Plex Mono",monospace; color:var(--ash);
+    border:1px solid var(--line); padding:4px 10px; background:var(--panel);
+    margin-top:8px; }
   .controls { position:absolute; right:clamp(10px,2vw,76px); top:clamp(10px,2vw,26px);
     display:flex; align-items:center; gap:20px; z-index:6; }
   @media (max-width:759px) {
@@ -189,15 +195,6 @@ HTML = r"""<!DOCTYPE html>
     top:calc(clamp(10px,2vw,26px) + 64px);
     font:400 10px "IBM Plex Mono",monospace; color:var(--ash); z-index:6; }
   @media (min-width:760px) { .ref, .zoomhint { display:block; } }
-  .scroll-cue { position:absolute; left:50%; bottom:8px; transform:translateX(-50%);
-    z-index:5; pointer-events:none; color:var(--ash);
-    font:400 20px/1 "Space Grotesk",sans-serif;
-    animation:car-cue 2.2s ease-in-out infinite; transition:opacity .5s ease; }
-  .scroll-cue.oculto { opacity:0; }
-  @keyframes car-cue {
-    0%,100% { transform:translate(-50%,0); }
-    50% { transform:translate(-50%,7px); }
-  }
   .tooltip { position:absolute; display:none; z-index:7; pointer-events:none;
     background:#0f0c09; border:1px solid var(--line); padding:8px 12px; white-space:nowrap; }
   .tooltip .tt-d { font:500 10px "IBM Plex Mono",monospace; letter-spacing:.1em; color:var(--ash); }
@@ -228,27 +225,16 @@ HTML = r"""<!DOCTYPE html>
     color:var(--bone); }
   .comp .chip b { font-weight:600; font-variant-numeric:tabular-nums; }
 
-  /* ---- productos ---- */
-  .productos { border-top:1px solid var(--line); scroll-margin-top:52px;
+  /* ---- franja de contexto: productos y canasta ---- */
+  .ctx-solo { border-top:1px solid var(--line);
     padding:clamp(16px,3vw,24px) clamp(16px,3vw,32px) clamp(20px,3vw,28px); }
-  .prod-head { display:flex; align-items:baseline; justify-content:space-between;
-    gap:10px; flex-wrap:wrap; }
-  .prod-note { font:500 11px "IBM Plex Mono",monospace; color:var(--ash);
-    border:1px solid var(--line); padding:4px 10px; background:var(--panel); }
-  .pchips { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+  .pchips { display:flex; flex-wrap:wrap; gap:8px; }
   .pchip { display:flex; align-items:center; gap:8px; font:500 11px "IBM Plex Mono",monospace;
     padding:7px 12px; min-height:34px; cursor:pointer; background:transparent;
     border:1px solid var(--line); color:var(--ash); }
   .pchip .dot { width:8px; height:8px; border-radius:50%; background:var(--dim); flex:none; }
   .pchip.active { background:var(--panel); color:var(--bone); }
-  .pchart-wrap { position:relative; height:280px; margin-top:18px; }
-  @media (min-width:760px) { .pchart-wrap { height:360px; } }
-  #pchart { position:absolute; inset:0; }
-
-  /* ---- tu canasta ---- */
-  .canasta { border-top:1px solid var(--line); scroll-margin-top:52px;
-    padding:clamp(16px,3vw,24px) clamp(16px,3vw,32px) clamp(20px,3vw,28px); }
-  .can-reg { font:400 11px/1.6 "IBM Plex Mono",monospace; color:var(--ash); margin-top:8px; }
+  .can-reg { font:400 11px/1.6 "IBM Plex Mono",monospace; color:var(--ash); margin-top:10px; }
   /* acción principal de la vista: pill como los tabs, en hueso para que
      se lea como botón protagonista sin invadir la brasa */
   .ccopy { font:600 11px "IBM Plex Mono",monospace; letter-spacing:.06em; padding:8px 16px;
@@ -256,7 +242,7 @@ HTML = r"""<!DOCTYPE html>
     border-radius:999px; color:var(--bone); white-space:nowrap; }
   .ccopy:hover { background:#1f1913; }
   .ccopy.copiado { background:var(--bone); border-color:var(--bone); color:#17120e; }
-  .can-acciones { display:flex; gap:8px; flex-wrap:wrap; }
+  .can-acciones { display:flex; gap:8px; flex-wrap:wrap; margin-top:16px; }
   .citems { display:flex; flex-wrap:wrap; gap:10px; margin-top:16px; }
   .citem { display:flex; flex-direction:column; gap:6px; border:1px solid var(--line);
     background:var(--panel); padding:10px 14px; max-width:100%; }
@@ -272,15 +258,9 @@ HTML = r"""<!DOCTYPE html>
     justify-content:center; padding:0 6px; border-left:1px solid var(--line);
     border-right:1px solid var(--line); }
   .ci-eq { font:400 10px "IBM Plex Mono",monospace; color:var(--ash); }
-  .can-resumen { margin-top:20px; }
-  .ccosto { font:700 clamp(30px,5vw,52px)/1 "Space Grotesk",sans-serif;
-    font-variant-numeric:tabular-nums; letter-spacing:-.01em; color:var(--bone); }
-  .cstats { font:400 12px/1.5 "IBM Plex Mono",monospace; color:var(--ash); margin-top:6px;
+  .cstats { font:400 12px/1.5 "IBM Plex Mono",monospace; color:var(--ash); margin-top:8px;
     text-wrap:pretty; }
   .caviso { font:400 11px/1.5 "IBM Plex Mono",monospace; color:var(--ash); margin-top:4px; }
-  .cchart-wrap { position:relative; height:280px; margin-top:14px; }
-  @media (min-width:760px) { .cchart-wrap { height:360px; } }
-  #cchart { position:absolute; inset:0; }
 
   /* ---- footer ---- */
   footer { border-top:1px solid var(--line); padding:18px clamp(16px,3vw,32px);
@@ -292,7 +272,7 @@ HTML = r"""<!DOCTYPE html>
     color:var(--ash); font-size:13px; padding:20px; text-align:center; }
 </style>
 </head>
-<body>
+<body data-modo="indices">
 
   <div class="ticker">
     <div class="tag">ÍNDICES</div>
@@ -307,12 +287,14 @@ HTML = r"""<!DOCTYPE html>
     <div class="semana">Semana del <span id="fecha"></span> <span>· actualizado viernes</span></div>
   </header>
 
-  <nav class="tabs" id="tabs" aria-label="Índices"></nav>
+  <nav class="tabs" id="tabs" aria-label="Índices y herramientas"></nav>
 
   <div id="vista">
     <section class="hero-wrap" id="hero">
-      <div id="chart"></div>
-      <div class="overlay">
+      <div id="chart" class="m-ind"></div>
+      <div id="pchart" class="m-prod"></div>
+      <div id="cchart" class="m-can"></div>
+      <div class="overlay m-ind">
         <div class="oname"><span id="oname"></span> <span id="osub"></span></div>
         <div class="orow">
           <div class="oprice" id="oprice"></div>
@@ -324,21 +306,31 @@ HTML = r"""<!DOCTYPE html>
         </div>
         <div class="ovs" id="ovs"></div>
       </div>
+      <div class="overlay m-prod">
+        <div class="oname">PRODUCTOS <span id="prod-rango"></span></div>
+        <div class="onote">variación real, no precio</div>
+      </div>
+      <div class="overlay m-can">
+        <div class="oname">TU CANASTA <span>· arma la tuya y compártela</span></div>
+        <div class="orow"><div class="oprice" id="ccosto"></div></div>
+        <div class="cstats" id="cstats"></div>
+        <div class="caviso" id="caviso"></div>
+        <div class="can-reg">Canasta armada por ti con datos ODEPA · no es un índice oficial Carestía</div>
+      </div>
       <div class="controls">
-        <div class="legend">
+        <div class="legend m-ind">
           <span><span class="sw" style="border-top:2px solid #e8743b"></span>En pesos de hoy: cuánto valdría hoy ese precio antiguo por la inflación acumulada · equivale a medirlo en UF</span>
           <span id="leg-nom"><span class="sw" style="border-top:1px solid #8b8276"></span>Nominal: el precio de la boleta de ese día</span>
         </div>
-        <button class="vbtn nomtoggle" id="v-nominal">+ nominal</button>
-        <div class="vtoggle">
+        <button class="vbtn nomtoggle m-ind" id="v-nominal">+ nominal</button>
+        <div class="vtoggle m-ind">
           <button class="vbtn active" id="v-linea">LÍNEA</button>
           <button class="vbtn" id="v-velas">VELAS</button>
         </div>
-        <button class="vbtn nomtoggle" id="shot-hero">captura PNG</button>
+        <button class="vbtn nomtoggle" id="shot">captura PNG</button>
       </div>
-      <div class="ref" id="ref-velas"></div>
+      <div class="ref m-ind" id="ref-velas"></div>
       <div class="zoomhint">zoom: arrastra el eje de años o el de precios · pinch en táctil</div>
-      <div class="scroll-cue" id="scroll-cue" aria-hidden="true">∨</div>
       <div class="tooltip" id="tooltip">
         <div class="tt-d" id="tt-d"></div>
         <div class="tt-r"><span id="tt-r"></span> <small>pesos de hoy</small></div>
@@ -346,7 +338,7 @@ HTML = r"""<!DOCTYPE html>
       </div>
     </section>
 
-    <section class="contexto">
+    <section class="contexto m-ind">
       <div class="ctx-box">
         <div class="ctx-h">ESTACIONALIDAD</div>
         <div class="bars" id="season-bars"></div>
@@ -357,35 +349,19 @@ HTML = r"""<!DOCTYPE html>
         <div class="comp" id="comp"></div>
       </div>
     </section>
-  </div>
 
-  <section class="productos" id="productos">
-    <div class="prod-head">
-      <div class="ctx-h">PRODUCTOS <span id="prod-rango"></span></div>
-      <div class="prod-note">variación real, no precio · arrastra el eje de años para acercar</div>
-    </div>
-    <div class="pchips" id="pchips"></div>
-    <div class="pchart-wrap"><div id="pchart"></div></div>
-  </section>
+    <section class="ctx-solo m-prod" aria-label="Selección de productos">
+      <div class="pchips" id="pchips"></div>
+    </section>
 
-  <section class="canasta" id="canasta">
-    <div class="prod-head">
-      <div class="ctx-h">TU CANASTA <span>· arma la tuya y compártela</span></div>
+    <section class="ctx-solo m-can" aria-label="Arma tu canasta">
+      <div class="pchips" id="cchips"></div>
+      <div class="citems" id="citems"></div>
       <div class="can-acciones">
         <button class="ccopy" id="ccopy">copiar link de esta canasta</button>
-        <button class="ccopy" id="shot-canasta">captura PNG</button>
       </div>
-    </div>
-    <div class="can-reg">Canasta armada por ti con datos ODEPA · no es un índice oficial Carestía</div>
-    <div class="pchips" id="cchips"></div>
-    <div class="citems" id="citems"></div>
-    <div class="can-resumen">
-      <div class="ccosto" id="ccosto"></div>
-      <div class="cstats" id="cstats"></div>
-      <div class="caviso" id="caviso"></div>
-    </div>
-    <div class="cchart-wrap"><div id="cchart"></div></div>
-  </section>
+    </section>
+  </div>
 
   <footer>
     <div class="attr">Fuente: precios al consumidor ODEPA (datos.odepa.gob.cl, CC-BY) · deflactado por IPC. Cada precio es el promedio de los puntos que ODEPA encuesta cada semana en la Región Metropolitana: ferias libres, supermercados y carnicerías. Por eso suele ser menor que el precio de supermercado. Canastas fijas; precios normalizados a kilo, unidad o litro según el envase que cotiza ODEPA.</div>
@@ -436,8 +412,7 @@ HTML = r"""<!DOCTYPE html>
         b.innerHTML = '<span class="tn">' + nombre + '</span>' +
           '<span class="tp">' + fmt(d.costo_real) + '</span>' +
           '<span class="td">' + fmtDelta(deltaSemanal(d)) + '</span>';
-        b.onclick = () => { render(code); document.getElementById('hero')
-          .scrollIntoView({ behavior: reduced ? 'auto' : 'smooth' }); };
+        b.onclick = () => render(code);
         track.appendChild(b);
       });
     }
@@ -449,7 +424,7 @@ HTML = r"""<!DOCTYPE html>
   ['touchend', 'touchcancel'].forEach(ev => tscroll.addEventListener(ev,
     () => tscroll.classList.remove('tocado'), { passive: true }));
 
-  /* ---------- tabs de índice ---------- */
+  /* ---------- tabs: índices + modos del lienzo ---------- */
   const tabsEl = document.getElementById('tabs');
   function buildTabs() {
     tabsEl.innerHTML = '';
@@ -458,39 +433,49 @@ HTML = r"""<!DOCTYPE html>
       b.className = 'tab';
       b.dataset.code = code;
       b.textContent = INDICES[code].nombre.replace(/^Índice /i, '');
-      b.onclick = () => { render(code); document.getElementById('hero')
-        .scrollIntoView({ behavior: reduced ? 'auto' : 'smooth' }); };
+      b.onclick = () => render(code);
       tabsEl.appendChild(b);
     });
-    // pill de sección: no es un índice, va tras un separador fino
+    if (!Object.keys(PRODS).length) return;   // sin productos no hay más modos
+    // pills de modo: no son índices, van tras un separador fino
     const sep = document.createElement('span');
     sep.className = 'tab-sep';
     tabsEl.appendChild(sep);
-    const p = document.createElement('button');
-    p.className = 'tab';
-    p.dataset.sec = 'productos';
-    p.textContent = 'Productos';
-    p.onclick = () => irASeccion('productos');
-    tabsEl.appendChild(p);
-    const c = document.createElement('button');
-    c.className = 'tab';
-    c.dataset.sec = 'canasta';
-    c.textContent = 'Tu canasta';
-    c.onclick = () => irASeccion('canasta');
-    tabsEl.appendChild(c);
+    [['productos', 'Productos'], ['canasta', 'Tu canasta']].forEach(([m, label]) => {
+      const p = document.createElement('button');
+      p.className = 'tab';
+      p.dataset.modo = m;
+      p.textContent = label;
+      p.onclick = () => setModo(m);
+      tabsEl.appendChild(p);
+    });
   }
-  // secActiva: pill de sección activo; null → manda el índice actual (hero)
-  let secActiva = null;
+  // modo: qué herramienta ocupa el lienzo del hero; las tabs lo cambian
+  // EN EL LUGAR, sin scroll
+  let modo = 'indices';
   function syncTabs() {
     tabsEl.querySelectorAll('.tab').forEach(b =>
-      b.classList.toggle('active', secActiva ?
-        b.dataset.sec === secActiva : b.dataset.code === cur));
+      b.classList.toggle('active', modo === 'indices' ?
+        b.dataset.code === cur : b.dataset.modo === modo));
   }
-  function irASeccion(sec) {
-    secActiva = sec;
+  function chartActivo() {
+    return modo === 'productos' ? pchart : modo === 'canasta' ? cchart : chart;
+  }
+  function setModo(m) {
+    const cambio = modo !== m;
+    modo = m;
+    document.body.dataset.modo = m;
     syncTabs();
-    document.getElementById(sec)
-      .scrollIntoView({ behavior: reduced ? 'auto' : 'smooth' });
+    if (!cambio) return;
+    // el chart recién mostrado estuvo en display:none: esperar a que el
+    // ResizeObserver de autoSize le dé tamaño y recién ahí re-encuadrar,
+    // recuperando la autoescala si el usuario arrastró el eje de precios
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const ch = chartActivo();
+      if (!ch) return;
+      ch.priceScale('right').applyOptions({ autoScale: true });
+      ch.timeScale().fitContent();
+    }));
   }
 
   /* ---------- hero chart ---------- */
@@ -654,8 +639,7 @@ HTML = r"""<!DOCTYPE html>
   const vistaEl = document.getElementById('vista');
   function render(code, primera) {
     cur = code;
-    secActiva = null;    // volver a un índice apaga el pill de sección
-    syncTabs();          // estado activo también al navegar desde el ticker
+    setModo('indices');   // elegir un índice también fija el modo del lienzo
     if (primera || reduced) { aplicar(code); return; }
     vistaEl.style.opacity = 0;                       // crossfade al cambiar índice
     setTimeout(() => { aplicar(code); vistaEl.style.opacity = 1; }, 180);
@@ -720,7 +704,7 @@ HTML = r"""<!DOCTYPE html>
   }
 
   function buildProductos() {
-    if (!PKEYS.length) { document.getElementById('productos').style.display = 'none'; return; }
+    if (!PKEYS.length) return;   // sin productos el modo no existe (ni su pill)
     let y0 = 9999, y1 = 0;
     PKEYS.forEach(k => {
       const r = PRODS[k].real;
@@ -915,7 +899,7 @@ HTML = r"""<!DOCTYPE html>
   }
 
   function buildCanasta() {
-    if (!PKEYS.length) { document.getElementById('canasta').style.display = 'none'; return; }
+    if (!PKEYS.length) return;   // sin productos el modo no existe (ni su pill)
     if (!leerHash()) {   // precarga primera visita: un pan con palta generoso
       if (PRODS.marraqueta) canasta.set('marraqueta', 0.1);
       if (PRODS.palta) canasta.set('palta', 0.1);
@@ -985,8 +969,8 @@ HTML = r"""<!DOCTYPE html>
     ctx.globalAlpha = 1;
   }
 
-  async function capturarPNG(cual) {
-    const ch = cual === 'canasta' ? cchart : chart;
+  async function capturarPNG() {
+    const ch = chartActivo();
     if (!ch) return;
     // el canvas no dispara la carga perezosa de webfonts: si un peso aún
     // no se usó en el DOM, fillText caería a la fuente del sistema.
@@ -1009,16 +993,21 @@ HTML = r"""<!DOCTYPE html>
     const pad = Math.round(W * 0.04);
     const chartW = W - pad * 2;
     const chartH = Math.round(shot.height * chartW / shot.width);
-    // composición de la canasta bajo el costo (solo en el snapshot del
-    // constructor): "{label} {cantidad} {unidad} · ..." en una línea o
-    // dos si no cabe; el encabezado crece lo que ellas ocupen
+    // bajo el costo, la composición: en canasta "{label} {cantidad} {unidad}"
+    // y en productos los elegidos del spaghetti; una línea o dos si no cabe,
+    // el encabezado crece lo que ellas ocupen
     const compSize = Math.round(W * 0.013), compAlto = Math.round(compSize * 1.5);
     const compLineas = [];
-    if (cual === 'canasta' && canasta.size) {
+    let partes = [];
+    if (modo === 'canasta' && canasta.size) {
+      partes = [...canasta.entries()].filter(([k]) => PRODS[k])
+        .map(([k, q]) => PRODS[k].label + ' ' + fmtCant(q, PRODS[k].unidad));
+    } else if (modo === 'productos') {
+      partes = PKEYS.filter(k => psel.has(k)).map(k => PRODS[k].label);
+    }
+    if (partes.length) {
       const mctx = document.createElement('canvas').getContext('2d');
       mctx.font = '400 ' + compSize + 'px "IBM Plex Mono", monospace';
-      const partes = [...canasta.entries()].filter(([k]) => PRODS[k])
-        .map(([k, q]) => PRODS[k].label + ' ' + fmtCant(q, PRODS[k].unidad));
       let linea = '';
       partes.forEach(p => {
         const cand = linea ? linea + ' · ' + p : p;
@@ -1043,11 +1032,17 @@ HTML = r"""<!DOCTYPE html>
     ctx.imageSmoothingQuality = 'high';
     ctx.fillStyle = '#17120e';
     ctx.fillRect(0, 0, W, H);
-    // contexto arriba a la izquierda: qué es, cuánto vale, de cuándo
-    let titulo, precio;
-    if (cual === 'canasta') {
+    // contexto arriba a la izquierda: qué es, cuánto vale, de cuándo;
+    // productos no tiene un costo único y lleva su etiqueta en vez del monto
+    let titulo, precio,
+      precioFont = '700 ' + Math.round(W * 0.037) + 'px "Space Grotesk", sans-serif';
+    if (modo === 'canasta') {
       titulo = 'TU CANASTA';
       precio = document.getElementById('ccosto').textContent || '·';
+    } else if (modo === 'productos') {
+      titulo = 'PRODUCTOS';
+      precio = 'variación real, no precio';
+      precioFont = '400 ' + Math.round(W * 0.02) + 'px "IBM Plex Mono", monospace';
     } else {
       const d = INDICES[cur];
       titulo = d.nombre.replace(/^Índice /i, '').toUpperCase();
@@ -1059,7 +1054,7 @@ HTML = r"""<!DOCTYPE html>
     ctx.font = '500 ' + Math.round(W * 0.014) + 'px "IBM Plex Mono", monospace';
     ctx.fillText(titulo, pad, Math.round(W * 0.028));
     ctx.fillStyle = '#e4dacc';
-    ctx.font = '700 ' + Math.round(W * 0.037) + 'px "Space Grotesk", sans-serif';
+    ctx.font = precioFont;
     ctx.fillText(precio, pad, Math.round(W * 0.05));
     ctx.fillStyle = '#8b8276';
     ctx.font = '400 ' + compSize + 'px "IBM Plex Mono", monospace';
@@ -1069,7 +1064,7 @@ HTML = r"""<!DOCTYPE html>
     ctx.fillText('semana del ' + fecha, pad, Math.round(W * 0.098) + compH);
     ctx.drawImage(shot, pad, headH, chartW, chartH);
     marcaDeAgua(ctx, W - pad, H - Math.round(footH * 0.35), Math.round(W * 0.02));
-    const nombre = 'carestia_' + (cual === 'canasta' ? 'canasta' : cur) + '_' +
+    const nombre = 'carestia_' + (modo === 'indices' ? cur : modo) + '_' +
       new Date().toISOString().slice(0, 10) + '.png';
     cv.toBlob(async blob => {
       if (!blob) return;
@@ -1088,32 +1083,34 @@ HTML = r"""<!DOCTYPE html>
       setTimeout(() => URL.revokeObjectURL(a.href), 2000);
     }, 'image/png');
   }
-  document.getElementById('shot-hero').onclick = () => capturarPNG('hero');
-  document.getElementById('shot-canasta').onclick = () => capturarPNG('canasta');
+  document.getElementById('shot').onclick = () => capturarPNG();
 
-  // deep link: quien abre un link compartido debe aterrizar en la vista
-  // Tu canasta con su pill activo, no en el hero del primer índice
+  // deep link: el modo ES la pantalla, sin scroll. #productos y #canasta
+  // abren su modo directo; #canasta=... además aterriza con la canasta armada
+  function modoDelHash() {
+    if (/^#canasta(=|$)/.test(location.hash)) return 'canasta';
+    if (location.hash === '#productos') return 'productos';
+    return null;
+  }
   function activarDeepLink() {
-    if (!/canasta=/.test(location.hash)) return;
-    irASeccion('canasta');
+    const m = modoDelHash();
+    if (m) setModo(m);
   }
   // y si el hash cambia con la página ya abierta (otro link compartido),
-  // rearmar la canasta desde cero y navegar igual; guardarHash usa
+  // rearmar la canasta desde cero y cambiar de modo; guardarHash usa
   // replaceState, así que los cambios propios no disparan este evento
   window.addEventListener('hashchange', () => {
-    if (!/canasta=/.test(location.hash)) return;
-    canasta.clear();
-    leerHash();
-    cpaints.forEach(f => f());
-    renderCItems();
-    syncCanasta();
-    irASeccion('canasta');
+    const m = modoDelHash();
+    if (!m) return;
+    if (/canasta=/.test(location.hash)) {
+      canasta.clear();
+      leerHash();
+      cpaints.forEach(f => f());
+      renderCItems();
+      syncCanasta();
+    }
+    setModo(m);
   });
-
-  // el chevron invita a bajar; se apaga con el primer scroll del usuario
-  window.addEventListener('scroll', () =>
-    document.getElementById('scroll-cue').classList.add('oculto'),
-    { once: true, passive: true });
 
   window.addEventListener('load', () => {
     buildTicker();
