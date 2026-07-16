@@ -116,13 +116,22 @@ HTML = r"""<!DOCTYPE html>
     border-bottom:1px solid var(--line); overflow-x:auto; overflow-y:hidden;
     scrollbar-width:none; -webkit-overflow-scrolling:touch; }
   .tabs::-webkit-scrollbar { display:none; }
+  /* afordancia: las pills inactivas se leen como botón (fondo panel, borde
+     ceniza-dim, texto hueso) y el hover/focus responde con borde brasa;
+     todo dentro de la paleta existente */
   .tab { flex:none; font:600 11px "IBM Plex Mono",monospace; letter-spacing:.1em;
     padding:8px 16px; min-height:34px; cursor:pointer; white-space:nowrap;
-    background:transparent; border:1px solid var(--line); border-radius:999px;
-    color:var(--ash); }
-  .tab:hover { background:#1f1913; }
+    background:var(--panel); border:1px solid var(--dim); border-radius:999px;
+    color:var(--bone);
+    transition:background-color .15s ease, border-color .15s ease, color .15s ease; }
+  .tab:not(.active):hover, .tab:not(.active):focus-visible {
+    background:#1f1913; border-color:var(--ember); }
   .tab.active { background:var(--bone); border-color:var(--bone); color:#17120e; }
-  /* separador fino entre los índices y la pill de sección Productos */
+  /* punto brasa de 6px: marca las tabs de herramienta (Comparar productos /
+     Arma tu canasta), el mismo gesto de la í del wordmark */
+  .tab .tdot { display:inline-block; width:6px; height:6px; border-radius:50%;
+    background:var(--ember); margin-right:8px; }
+  /* separador fino entre los índices y las pills de herramientas */
   .tab-sep { flex:none; width:1px; align-self:stretch; background:var(--line);
     margin:0 4px; }
 
@@ -453,7 +462,7 @@ HTML = r"""<!DOCTYPE html>
       const p = document.createElement('button');
       p.className = 'tab';
       p.dataset.modo = m;
-      p.textContent = label;
+      p.innerHTML = '<span class="tdot" aria-hidden="true"></span>' + label;
       p.onclick = () => setModo(m);
       tabsEl.appendChild(p);
     });
