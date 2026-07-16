@@ -4,8 +4,9 @@ build_site.py - genera el sitio Carestía
 Lee 'indices.json' (lo produce indices.py) y escribe 'index.html': un sitio
 autocontenido con cinta ticker y una sola superficie: el hero es el único
 lienzo de gráfico y las tabs lo cambian de MODO en el lugar (índices con
-veredicto y línea/velas · Productos en spaghetti · Tu canasta), con una
-franja de contexto que acompaña a cada modo y footer con atribución.
+veredicto y línea/velas · Comparar productos en spaghetti · Tu canasta),
+con una franja de contexto que acompaña a cada modo y footer con
+atribución.
 
 Identidad: paleta 2c "Hueso protagonista", hueso/ceniza sobre carbón; la
 brasa #e8743b solo vive en el veredicto, en la í del wordmark y en la línea
@@ -328,7 +329,7 @@ HTML = r"""<!DOCTYPE html>
         <div class="ovs" id="ovs"></div>
       </div>
       <div class="overlay m-prod">
-        <div class="oname">PRODUCTOS <span id="prod-rango"></span></div>
+        <div class="oname">COMPARAR PRODUCTOS <span id="prod-rango"></span></div>
         <div class="onote">variación real, no precio</div>
       </div>
       <div class="overlay m-can">
@@ -448,7 +449,7 @@ HTML = r"""<!DOCTYPE html>
     const sep = document.createElement('span');
     sep.className = 'tab-sep';
     tabsEl.appendChild(sep);
-    [['productos', 'Productos'], ['canasta', 'Tu canasta']].forEach(([m, label]) => {
+    [['productos', 'Comparar productos'], ['canasta', 'Tu canasta']].forEach(([m, label]) => {
       const p = document.createElement('button');
       p.className = 'tab';
       p.dataset.modo = m;
@@ -1096,7 +1097,9 @@ HTML = r"""<!DOCTYPE html>
   // abren su modo directo; #canasta=... además aterriza con la canasta armada
   function modoDelHash() {
     if (/^#canasta(=|$)/.test(location.hash)) return 'canasta';
-    if (location.hash === '#productos') return 'productos';
+    // #comparar es alias de #productos (label visible "Comparar productos");
+    // ambos siguen funcionando para no romper links compartidos
+    if (location.hash === '#productos' || location.hash === '#comparar') return 'productos';
     return null;
   }
   function activarDeepLink() {
