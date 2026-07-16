@@ -1085,22 +1085,31 @@ HTML = r"""<!DOCTYPE html>
   }
   document.getElementById('shot').onclick = () => capturarPNG();
 
-  // deep link: quien abre un link compartido aterriza en el modo Tu canasta
-  // con su pill activo; el modo ES la pantalla, ya sin scroll
+  // deep link: el modo ES la pantalla, sin scroll. #productos y #canasta
+  // abren su modo directo; #canasta=... además aterriza con la canasta armada
+  function modoDelHash() {
+    if (/^#canasta(=|$)/.test(location.hash)) return 'canasta';
+    if (location.hash === '#productos') return 'productos';
+    return null;
+  }
   function activarDeepLink() {
-    if (/canasta=/.test(location.hash)) setModo('canasta');
+    const m = modoDelHash();
+    if (m) setModo(m);
   }
   // y si el hash cambia con la página ya abierta (otro link compartido),
   // rearmar la canasta desde cero y cambiar de modo; guardarHash usa
   // replaceState, así que los cambios propios no disparan este evento
   window.addEventListener('hashchange', () => {
-    if (!/canasta=/.test(location.hash)) return;
-    canasta.clear();
-    leerHash();
-    cpaints.forEach(f => f());
-    renderCItems();
-    syncCanasta();
-    setModo('canasta');
+    const m = modoDelHash();
+    if (!m) return;
+    if (/canasta=/.test(location.hash)) {
+      canasta.clear();
+      leerHash();
+      cpaints.forEach(f => f());
+      renderCItems();
+      syncCanasta();
+    }
+    setModo(m);
   });
 
   window.addEventListener('load', () => {
