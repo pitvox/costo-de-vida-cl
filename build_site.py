@@ -140,10 +140,12 @@ HTML = r"""<!DOCTYPE html>
   body:not([data-modo="productos"]) .m-prod { display:none !important; }
   body:not([data-modo="canasta"])   .m-can  { display:none !important; }
   #vista { opacity:1; transition:opacity .18s ease; }
-  .hero-wrap { position:relative; height:calc(100vh - 266px); min-height:320px;
+  /* la barra de controles (~52px) sale del calc para que hero+barra sigan
+     encuadrando la pantalla sin scroll */
+  .hero-wrap { position:relative; height:calc(100vh - 318px); min-height:320px;
     background:var(--bg); }
   @media (min-width:760px) {
-    .hero-wrap { height:calc(100vh - 220px); min-height:420px; } }
+    .hero-wrap { height:calc(100vh - 272px); min-height:420px; } }
   @media (max-width:759px) { .overlay .oname, .overlay .cstats, .overlay .caviso,
     .overlay .can-reg { max-width:calc(100vw - 160px); } }
   #chart, #pchart, #cchart { position:absolute; inset:0; }
@@ -168,14 +170,19 @@ HTML = r"""<!DOCTYPE html>
   .onote { display:inline-block; font:500 11px "IBM Plex Mono",monospace; color:var(--ash);
     border:1px solid var(--line); padding:4px 10px; background:var(--panel);
     margin-top:8px; }
-  .controls { position:absolute; right:clamp(10px,2vw,76px); top:clamp(10px,2vw,26px);
-    display:flex; align-items:center; gap:20px; z-index:6; }
-  @media (max-width:759px) {
-    .controls { flex-direction:column; align-items:flex-end; gap:8px; }
-  }
+  /* ---- barra de controles: fuera del lienzo, sobre el gráfico ---- */
+  /* los controles ya no flotan sobre el chart; viven en una fila propia,
+     alineados a la derecha, con scroll horizontal si no caben (móvil) */
+  .cbar { display:flex; align-items:center; gap:14px; min-height:50px;
+    padding:7px clamp(16px,3vw,32px); border-bottom:1px solid var(--line);
+    overflow-x:auto; overflow-y:hidden; scrollbar-width:none;
+    -webkit-overflow-scrolling:touch; }
+  .cbar::-webkit-scrollbar { display:none; }
+  .cbar-right { margin-left:auto; display:flex; align-items:center; gap:14px; }
+  .cbar-right > * { flex:none; }
   .legend { display:none; flex-direction:column; align-items:flex-start; gap:4px;
     font:400 10px/1.5 "IBM Plex Mono",monospace; color:var(--ash);
-    max-width:min(44vw,420px); text-wrap:pretty; }
+    max-width:min(40vw,440px); text-wrap:pretty; }
   @media (min-width:900px) { .legend { display:flex; } }
   .legend .sw { display:inline-block; width:16px; height:0; margin-right:6px;
     vertical-align:middle; }
@@ -185,15 +192,12 @@ HTML = r"""<!DOCTYPE html>
   .vbtn + .vbtn { border-left:1px solid var(--line); }
   .vbtn.active { background:var(--bone); color:var(--bg); }
   .nomtoggle { border:1px solid var(--line); background:var(--bg); }
-  /* la referencia de velas y la pista de zoom viven bajo los controles;
-     en móvil el hero ya va cargado (overlay + controles apilados +
-     chevron) y la referencia se superpondría al overlay: ambas se omiten */
-  .ref { display:none; position:absolute; right:clamp(10px,2vw,76px);
-    top:calc(clamp(10px,2vw,26px) + 42px);
-    font:400 10px "IBM Plex Mono",monospace; color:var(--dim); z-index:6; }
-  .zoomhint { display:none; position:absolute; right:clamp(10px,2vw,76px);
-    top:calc(clamp(10px,2vw,26px) + 64px);
-    font:400 10px "IBM Plex Mono",monospace; color:var(--ash); z-index:6; }
+  /* referencia de velas y pista de zoom: texto de ayuda dentro de la barra;
+     bajo 760px se omiten para no alargar la fila de controles en móvil */
+  .ref { display:none; white-space:nowrap;
+    font:400 10px "IBM Plex Mono",monospace; color:var(--dim); }
+  .zoomhint { display:none; white-space:nowrap;
+    font:400 10px "IBM Plex Mono",monospace; color:var(--ash); }
   @media (min-width:760px) { .ref, .zoomhint { display:block; } }
   .tooltip { position:absolute; display:none; z-index:7; pointer-events:none;
     background:#0f0c09; border:1px solid var(--line); padding:8px 12px; white-space:nowrap; }
@@ -289,6 +293,23 @@ HTML = r"""<!DOCTYPE html>
 
   <nav class="tabs" id="tabs" aria-label="Índices y herramientas"></nav>
 
+  <div class="cbar" id="cbar">
+    <div class="legend m-ind">
+      <span><span class="sw" style="border-top:2px solid #e8743b"></span>En pesos de hoy: cuánto valdría hoy ese precio antiguo por la inflación acumulada · equivale a medirlo en UF</span>
+      <span id="leg-nom"><span class="sw" style="border-top:1px solid #8b8276"></span>Nominal: el precio de la boleta de ese día</span>
+    </div>
+    <div class="cbar-right">
+      <span class="zoomhint">zoom: arrastra el eje de años o el de precios · pinch en táctil</span>
+      <span class="ref m-ind" id="ref-velas"></span>
+      <button class="vbtn nomtoggle m-ind" id="v-nominal">+ nominal</button>
+      <div class="vtoggle m-ind">
+        <button class="vbtn active" id="v-linea">LÍNEA</button>
+        <button class="vbtn" id="v-velas">VELAS</button>
+      </div>
+      <button class="vbtn nomtoggle" id="shot">captura PNG</button>
+    </div>
+  </div>
+
   <div id="vista">
     <section class="hero-wrap" id="hero">
       <div id="chart" class="m-ind"></div>
@@ -317,20 +338,6 @@ HTML = r"""<!DOCTYPE html>
         <div class="caviso" id="caviso"></div>
         <div class="can-reg">Canasta armada por ti con datos ODEPA · no es un índice oficial Carestía</div>
       </div>
-      <div class="controls">
-        <div class="legend m-ind">
-          <span><span class="sw" style="border-top:2px solid #e8743b"></span>En pesos de hoy: cuánto valdría hoy ese precio antiguo por la inflación acumulada · equivale a medirlo en UF</span>
-          <span id="leg-nom"><span class="sw" style="border-top:1px solid #8b8276"></span>Nominal: el precio de la boleta de ese día</span>
-        </div>
-        <button class="vbtn nomtoggle m-ind" id="v-nominal">+ nominal</button>
-        <div class="vtoggle m-ind">
-          <button class="vbtn active" id="v-linea">LÍNEA</button>
-          <button class="vbtn" id="v-velas">VELAS</button>
-        </div>
-        <button class="vbtn nomtoggle" id="shot">captura PNG</button>
-      </div>
-      <div class="ref m-ind" id="ref-velas"></div>
-      <div class="zoomhint">zoom: arrastra el eje de años o el de precios · pinch en táctil</div>
       <div class="tooltip" id="tooltip">
         <div class="tt-d" id="tt-d"></div>
         <div class="tt-r"><span id="tt-r"></span> <small>pesos de hoy</small></div>
