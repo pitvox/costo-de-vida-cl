@@ -242,6 +242,26 @@ HTML = r"""<!DOCTYPE html>
   /* ---- franja de contexto: productos y canasta ---- */
   .ctx-solo { border-top:1px solid var(--line);
     padding:clamp(16px,3vw,24px) clamp(16px,3vw,32px) clamp(20px,3vw,28px); }
+  /* selector de catálogo: búsqueda + grupos ODEPA colapsables */
+  .psearch { width:100%; font:400 12px "IBM Plex Mono",monospace; color:var(--bone);
+    background:var(--panel); border:1px solid var(--line); padding:10px 14px;
+    margin-bottom:10px; border-radius:0; outline:none; -webkit-appearance:none; }
+  .psearch::placeholder { color:var(--dim); }
+  .psearch:focus { border-color:var(--dim); }
+  .pgroup { border-top:1px solid var(--grid); }
+  .pg-head { display:flex; align-items:center; gap:8px; width:100%; text-align:left;
+    font:600 11px "IBM Plex Mono",monospace; letter-spacing:.14em; color:var(--ash);
+    text-transform:uppercase; background:none; border:none; padding:11px 2px;
+    min-height:38px; cursor:pointer; }
+  .pg-head:hover { color:var(--bone); }
+  .pg-n { color:var(--dim); letter-spacing:.04em; }
+  .pg-chev { color:var(--dim); transition:transform .15s ease; }
+  .pgroup.abierto .pg-chev { transform:rotate(90deg); }
+  .pg-body { padding:2px 0 14px; }
+  /* colapso con más especificidad que el display:flex de .pchips (el cuerpo
+     lleva ambas clases); buscando: los grupos con resultados se abren solos
+     y al borrar la búsqueda vuelve el colapso que dejó el usuario */
+  .pgroup:not(.abierto):not(.buscando) .pg-body { display:none; }
   .pchips { display:flex; flex-wrap:wrap; gap:8px; }
   .pchip { display:flex; align-items:center; gap:8px; font:500 11px "IBM Plex Mono",monospace;
     padding:7px 12px; min-height:34px; cursor:pointer; background:transparent;
@@ -368,11 +388,13 @@ HTML = r"""<!DOCTYPE html>
     </section>
 
     <section class="ctx-solo m-prod" aria-label="Selección de productos">
-      <div class="pchips" id="pchips"></div>
+      <input class="psearch" id="psearch" type="search" placeholder="busca un producto..." autocomplete="off">
+      <div id="pgroups"></div>
     </section>
 
     <section class="ctx-solo m-can" aria-label="Arma tu canasta">
-      <div class="pchips" id="cchips"></div>
+      <input class="psearch" id="csearch" type="search" placeholder="busca un producto..." autocomplete="off">
+      <div id="cgroups"></div>
       <div class="citems" id="citems"></div>
       <div class="can-acciones">
         <button class="ccopy" id="ccopy">copiar link de esta canasta</button>
@@ -390,6 +412,24 @@ HTML = r"""<!DOCTYPE html>
   const INDICES = DATA.indices;
   const CODES = Object.keys(INDICES);
   const PRODS = DATA.productos || {};
+  // el catálogo llega compacto: {t0, v:[...]} con null en semanas sin dato.
+  // Se expande una vez (t0 + 7 días por índice) a dos series: real = solo
+  // semanas con dato (en la canasta un null cuenta como "sin dato" para la
+  // intersección estricta) y gaps = serie completa con puntos whitespace,
+  // para que el spaghetti dibuje cortes donde no hubo precio (estacionales)
+  (function expandirProductos() {
+    const DIA = 864e5;
+    Object.values(PRODS).forEach(p => {
+      const base = Date.parse(p.t0 + 'T00:00:00Z');
+      p.real = []; p.gaps = [];
+      p.v.forEach((v, i) => {
+        const time = new Date(base + i * 7 * DIA).toISOString().slice(0, 10);
+        if (v == null) { p.gaps.push({ time }); return; }
+        p.real.push({ time, value: v });
+        p.gaps.push({ time, value: v });
+      });
+    });
+  })();
   const fmt = v => '$' + Math.round(v).toLocaleString('es-CL');
   const MESES = ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -669,6 +709,61 @@ HTML = r"""<!DOCTYPE html>
                    '#d18a92', '#c2c268', '#b58a5c', '#8f9bb3'];
   const PKEYS = Object.keys(PRODS);
   const colorOf = k => PALETTE[PKEYS.indexOf(k) % PALETTE.length];
+
+  /* ---------- selector de catálogo: búsqueda + grupos colapsables ---------- */
+  const sinTildes = s =>
+    s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  // los productos de las canastas oficiales van primero dentro de su grupo
+  const OFICIALES = new Set();
+  CODES.forEach(c => (INDICES[c].componentes || []).forEach(x =>
+    OFICIALES.add(sinTildes(x.label).trim().replace(/ /g, '_'))));
+  const GRUPOS = [...new Set(PKEYS.map(k => PRODS[k].grupo || 'Otros'))];
+  const esMovil = window.matchMedia('(max-width:759px)').matches;
+
+  function buildSelector(idCaja, idBusca, hacerChip) {
+    const caja = document.getElementById(idCaja);
+    caja.innerHTML = '';
+    const grupos = [];
+    GRUPOS.forEach((g, gi) => {
+      const keys = PKEYS.filter(k => (PRODS[k].grupo || 'Otros') === g)
+        .sort((a, b) => (OFICIALES.has(b) ? 1 : 0) - (OFICIALES.has(a) ? 1 : 0));
+      if (!keys.length) return;
+      const box = document.createElement('div'); box.className = 'pgroup';
+      const head = document.createElement('button'); head.className = 'pg-head';
+      head.innerHTML = '<span class="pg-chev" aria-hidden="true">▸</span>' + g +
+        ' <span class="pg-n">· ' + keys.length + '</span>';
+      const body = document.createElement('div'); body.className = 'pg-body pchips';
+      const chips = keys.map(k => {
+        const b = hacerChip(k);
+        b.dataset.buscar = sinTildes(PRODS[k].label);
+        body.appendChild(b);
+        return b;
+      });
+      // colapsados por defecto en móvil; en desktop abren los 2 primeros
+      let abierto = !esMovil && gi < 2;
+      box.classList.toggle('abierto', abierto);
+      head.onclick = () => {
+        abierto = !abierto;
+        box.classList.toggle('abierto', abierto);
+      };
+      box.appendChild(head); box.appendChild(body); caja.appendChild(box);
+      grupos.push({ box, chips });
+    });
+    const input = document.getElementById(idBusca);
+    input.oninput = () => {
+      const q = sinTildes(input.value.trim());
+      grupos.forEach(gr => {
+        let vivos = 0;
+        gr.chips.forEach(ch => {
+          const ok = !q || ch.dataset.buscar.indexOf(q) !== -1;
+          ch.style.display = ok ? '' : 'none';
+          if (ok) vivos++;
+        });
+        gr.box.classList.toggle('buscando', !!q);
+        gr.box.style.display = (q && !vivos) ? 'none' : '';
+      });
+    };
+  }
   const psel = new Set();
   ['asado_de_tira', 'palta', 'huevo_color'].forEach(w => {
     if (PRODS[w]) { psel.add(w); return; }
@@ -709,7 +804,7 @@ HTML = r"""<!DOCTYPE html>
       if (on && !pseries.has(k)) {
         const s = pchart.addLineSeries({ color: colorOf(k), lineWidth: 2,
           priceLineVisible: false, lastValueVisible: false });
-        s.setData(PRODS[k].real);
+        s.setData(PRODS[k].gaps);   // con huecos donde no hubo precio
         pseries.set(k, s);
       } else if (!on && pseries.has(k)) {
         pchart.removeSeries(pseries.get(k));
@@ -730,9 +825,7 @@ HTML = r"""<!DOCTYPE html>
       y1 = Math.max(y1, +r[r.length - 1].time.slice(0, 4));
     });
     document.getElementById('prod-rango').textContent = '· ' + y0 + ' a ' + y1;
-    const cont = document.getElementById('pchips');
-    cont.innerHTML = '';
-    PKEYS.forEach(k => {
+    buildSelector('pgroups', 'psearch', k => {
       const b = document.createElement('button');
       b.className = 'pchip' + (psel.has(k) ? ' active' : '');
       b.innerHTML = '<span class="dot"></span>' + PRODS[k].label;
@@ -748,7 +841,7 @@ HTML = r"""<!DOCTYPE html>
         if (psel.has(k)) psel.delete(k); else psel.add(k);
         paint(); syncProductos();
       };
-      cont.appendChild(b);
+      return b;
     });
   }
 
@@ -921,9 +1014,7 @@ HTML = r"""<!DOCTYPE html>
       if (PRODS.marraqueta) canasta.set('marraqueta', 0.1);
       if (PRODS.palta) canasta.set('palta', 0.1);
     }
-    const cont = document.getElementById('cchips');
-    cont.innerHTML = '';
-    PKEYS.forEach(k => {
+    buildSelector('cgroups', 'csearch', k => {
       const b = document.createElement('button');
       b.className = 'pchip';
       b.innerHTML = '<span class="dot"></span>' + PRODS[k].label;
@@ -945,7 +1036,7 @@ HTML = r"""<!DOCTYPE html>
         cpaints.forEach(f => f());
         renderCItems(); guardarHash(); syncCanasta();
       };
-      cont.appendChild(b);
+      return b;
     });
     cpaints.forEach(f => f());
     initCChart();
