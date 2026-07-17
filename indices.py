@@ -144,6 +144,9 @@ def _norm(df: pd.DataFrame, year: int) -> pd.DataFrame:
     c_uni = pick("unidad")
     out["Unidad"] = df[c_uni].astype(str).str.strip() if c_uni else ""
 
+    c_gru = pick("grupo")
+    out["Grupo"] = df[c_gru].astype(str).str.strip() if c_gru else ""
+
     c_fini = pick("fecha inicio", "fecha_inicio", "fecha")
     if c_fini:
         out["fecha"] = pd.to_datetime(df[c_fini], errors="coerce")
@@ -261,6 +264,37 @@ def parse_envase(unidad_str: str):
     return ("kg", 1.0)
 
 
+def parse_envase_estricto(unidad_str: str):
+    """La compuerta de unidades del catálogo completo: misma cadena de
+    reconocimiento que parse_envase pero SIN fallback — si el envase no se
+    reconoce con certeza devuelve None y el producto queda fuera del JSON.
+    También rechaza 'N kilos' sin contexto de envase/bolsa/caja (una malla
+    de 18 kilos tratada como $/kg publicaría un precio 18 veces menor).
+    Un precio mal normalizado publicado es peor que un producto ausente."""
+    u = (unidad_str or "").lower()
+    m = re.search(r"(\d+(?:[.,]\d+)?)\s*(?:gramos|grs|gr|g\b)", u)
+    if m:
+        return ("kg", float(m.group(1).replace(",", ".")) / 1000.0)
+    m = re.search(r"(\d+(?:[.,]\d+)?)\s*kilo", u)
+    if m:
+        if "envase" in u or "bolsa" in u or "caja" in u:
+            return ("kg", float(m.group(1).replace(",", ".")))
+        return None                      # 'N kilos' suelto: envase incierto
+    m = re.search(r"(\d+(?:[.,]\d+)?)\s*litro", u)
+    if m:
+        return ("l", float(m.group(1).replace(",", ".")))
+    m = re.search(r"(\d+(?:[.,]\d+)?)\s*unidad", u)
+    if m:
+        return ("un", float(m.group(1).replace(",", ".")))
+    if "kilo" in u or u.strip() in ("$/kg", "kg"):
+        return ("kg", 1.0)
+    if "litro" in u:
+        return ("l", 1.0)
+    if "unidad" in u:
+        return ("un", 1.0)
+    return None
+
+
 def factor_precio(odepa_unit: str, objetivo: str):
     """Devuelve (factor, mismatch). El precio por la unidad objetivo del item es
     precio_ODEPA * factor. Si la base de ODEPA no coincide con la unidad pedida
@@ -355,36 +389,91 @@ def _slug(label: str) -> str:
     return s.lower().strip().replace(" ", "_")
 
 
+def _modal(serie) -> str:
+    """Valor más frecuente no vacío de una columna, o ''."""
+    if serie is None:
+        return ""
+    s = serie.dropna().astype(str).str.strip()
+    s = s[s != ""]
+    return str(s.mode().iloc[0]) if not s.empty else ""
+
+
 def series_productos(df: pd.DataFrame, ipc: pd.Series) -> dict:
-    """Serie real semanal de cada producto usado en cualquier canasta,
-    deduplicado por texto de match. Precio por unidad normalizada (kg/un/l),
-    remuestreo W-MON + ffill(limit=4) como el pipeline, deflactado a pesos de
-    hoy con el mismo IPC ya cargado. Solo la serie real, valores enteros."""
+    """Catálogo COMPLETO de productos RM en formato compacto.
+
+    Dos pasadas: (1) los productos de las canastas oficiales conservan su
+    slug histórico y su agregación por texto de match — los deep links
+    #canasta=... ya compartidos dependen de esos slugs; (2) el resto de los
+    ProductoBase de la data, deduplicando variantes que difieren solo en
+    espacios/mayúsculas ("Lentejas 6 mm" ≡ "Lentejas 6mm").
+
+    COMPUERTA: solo entra al JSON el producto cuya unidad modal ODEPA se
+    parsea con certeza (parse_envase_estricto) a kg/un/l; el resto se
+    excluye y se reporta. Serie: precio por unidad base, W-MON +
+    ffill(limit=4) como el pipeline, deflactada a pesos de hoy, y emitida
+    compacta: {label, unidad, grupo, t0, v} con v = enteros semanales
+    consecutivos desde t0 y null en las semanas sin dato (estacionales)."""
+    ipc_hoy = float(ipc.iloc[-1])
+    der = ipc.rename("ipc").rename_axis("fecha").reset_index().sort_values("fecha")
+    out, excluidos = {}, []
+
+    def emitir(slug, label, uni, grupo, precios, contenido):
+        s = (precios / contenido).resample("W-MON").mean().ffill(limit=4)
+        validos = s.dropna()
+        if validos.empty:
+            return
+        s = s.loc[validos.index[0]:validos.index[-1]]   # recorta colas sin dato
+        izq = s.rename("nominal").rename_axis("fecha").reset_index().sort_values("fecha")
+        m = pd.merge_asof(izq, der, on="fecha", direction="backward").set_index("fecha")
+        real = m["nominal"] * (ipc_hoy / m["ipc"])
+        out[slug] = {
+            "label": label, "unidad": uni, "grupo": grupo or "Otros",
+            "t0": s.index[0].strftime("%Y-%m-%d"),
+            "v": [int(round(v)) if pd.notna(v) else None for v in real],
+        }
+
+    # 1) canastas oficiales: slug y agregación históricos
+    consumidos = pd.Series(False, index=df.index)
     universo = {}
     for meta in BASKETS.values():
         for (lab, match, _qty, uni) in meta["items"]:
             if match not in universo:
                 universo[match] = (lab, uni)
-
-    ipc_hoy = float(ipc.iloc[-1])
-    der = ipc.rename("ipc").rename_axis("fecha").reset_index().sort_values("fecha")
-    out = {}
     for match, (lab, uni) in universo.items():
-        ps = precio_semanal(df, match)
-        if ps.empty:
+        mask = df["ProductoBase"].str.contains(match, case=False, na=False)
+        if not mask.any():
             continue
-        f, _ = factor_precio(unidad_modal(df, match), uni)
-        s = (ps * f).resample("W-MON").mean().ffill(limit=4).dropna()
-        if s.empty:
+        consumidos |= mask
+        sub = df[mask]
+        odu = unidad_modal(df, match)
+        p = parse_envase_estricto(odu)
+        if p is None or p[0] != uni:
+            excluidos.append((lab, odu))
             continue
-        izq = s.rename("nominal").rename_axis("fecha").reset_index().sort_values("fecha")
-        m = pd.merge_asof(izq, der, on="fecha", direction="backward").set_index("fecha")
-        real = m["nominal"] * (ipc_hoy / m["ipc"])
-        out[_slug(lab)] = {
-            "label": lab, "unidad": uni,
-            "real": [{"time": fch.strftime("%Y-%m-%d"), "value": int(round(v))}
-                     for fch, v in real.items() if pd.notna(v)],
-        }
+        emitir(_slug(lab), lab, uni, _modal(sub.get("Grupo")),
+               sub.groupby("fecha")["Precio promedio"].mean().sort_index(), p[1])
+
+    # 2) resto del catálogo, deduplicado por espacios/mayúsculas
+    resto = df[~consumidos]
+    clave = resto["ProductoBase"].astype(str).str.lower().str.replace(r"\s+", "", regex=True)
+    for _k, sub in resto.groupby(clave):
+        label = re.sub(r"\s+", " ", _modal(sub["ProductoBase"]))
+        if not label:
+            continue
+        odu = _modal(sub["Unidad"])
+        p = parse_envase_estricto(odu)
+        if p is None:
+            excluidos.append((label, odu))
+            continue
+        slug = _slug(label)
+        if slug in out:
+            continue
+        emitir(slug, label, p[0], _modal(sub.get("Grupo")),
+               sub.groupby("fecha")["Precio promedio"].mean().sort_index(), p[1])
+
+    for lab, odu in sorted(excluidos):
+        print(f"EXCLUIDOS (unidad no parseada): {lab}: {odu or '(sin unidad)'}")
+    print(f"Catálogo: {len(out)} incluidos, {len(excluidos)} excluidos")
     return out
 
 
@@ -453,9 +542,7 @@ def main() -> None:
                   f" → {c['qty']}{c['unidad']} = {ap}")
     print("=" * 64)
 
-    salida["productos"] = series_productos(df, ipc)
-    print(f"Productos exportados: {len(salida['productos'])} "
-          f"({', '.join(sorted(salida['productos']))})")
+    salida["productos"] = series_productos(df, ipc)   # imprime su propio reporte
 
     with open("indices.json", "w", encoding="utf-8") as fh:
         json.dump(salida, fh, ensure_ascii=False)
