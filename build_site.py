@@ -1375,8 +1375,8 @@ PRODUCT_HTML = r"""<!DOCTYPE html>
     <div id="grafico"></div>
     <div class="fecha">Semana del __FECHA__ · serie desde __ANIO__ · actualizado viernes</div>
     <p class="metodo">Cada punto es el promedio de los puntos que ODEPA encuesta
-      cada semana en la Región Metropolitana —ferias libres, supermercados y
-      carnicerías—, deflactado por IPC a pesos de hoy. Fuente: precios al
+      cada semana en la Región Metropolitana: ferias libres, supermercados y
+      carnicerías, deflactado por IPC a pesos de hoy. Fuente: precios al
       consumidor ODEPA (datos.odepa.gob.cl, CC-BY). Actualizado cada viernes.</p>
     <p class="disc">Información de consumo con fines analíticos. No constituye
       asesoría ni recomendación de inversión.</p>
