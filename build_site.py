@@ -48,6 +48,11 @@ HTML = r"""<!DOCTYPE html>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
 <style>
+  /* fallback métrico: Arial ajustada a las métricas de Space Grotesk para
+     que el swap de la webfont no reacomode el wordmark ni los precios (CLS) */
+  @font-face { font-family:"Space Grotesk Fallback"; src:local("Arial");
+    size-adjust:101.7%; ascent-override:96.9%; descent-override:29.2%;
+    line-gap-override:0%; }
   :root {
     --bg:#17120e; --bg2:#120e0a; --panel:#1a140f;
     --line:#2a231c; --grid:#221b14;
@@ -83,7 +88,7 @@ HTML = r"""<!DOCTYPE html>
     white-space:nowrap; border-right:1px solid var(--grid); background:none; border-top:0;
     border-bottom:0; border-left:0; min-height:44px; }
   .titem:hover { background:#1f1913; }
-  .titem .tn { font:600 12px "Space Grotesk",sans-serif; letter-spacing:.1em; color:var(--bone); }
+  .titem .tn { font:600 12px "Space Grotesk","Space Grotesk Fallback",sans-serif; letter-spacing:.1em; color:var(--bone); }
   .titem .tp { font:500 12px "IBM Plex Mono",monospace;
     font-variant-numeric:tabular-nums; color:var(--bone); }
   .titem .td { font:500 11px "IBM Plex Mono",monospace;
@@ -99,8 +104,11 @@ HTML = r"""<!DOCTYPE html>
     justify-content:space-between; padding:16px clamp(16px,3vw,32px) 12px;
     border-bottom:1px solid var(--line); }
   .brand { display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 18px; }
-  .wordmark { font:700 clamp(20px,4vw,26px) "Space Grotesk",sans-serif;
-    letter-spacing:.06em; color:var(--bone); display:flex; align-items:baseline; }
+  /* line-height y alto explícitos: el alto del wordmark depende solo del
+     font-size, no de la métrica de la fuente que esté cargada (CLS) */
+  .wordmark { font:700 clamp(20px,4vw,26px)/1.15 "Space Grotesk","Space Grotesk Fallback",sans-serif;
+    letter-spacing:.06em; color:var(--bone); display:flex; align-items:baseline;
+    height:1.15em; }
   /* í-brasa: la Í del wordmark es la I del tipo más el acento agudo del
      propio tipo en brasa. El span superpuesto pinta una Í completa y el
      clip-path deja visible solo el acento; al cuerpo del header (20-26px)
@@ -116,8 +124,11 @@ HTML = r"""<!DOCTYPE html>
     text-transform:uppercase; }
   .semana span { color:var(--dim); }
   /* ---- tabs de índice ---- */
+  /* min-height = pill (34px) + padding: las tabs las construye JS y sin
+     reserva la fila nacía vacía y empujaba todo al poblarse (CLS) */
   .tabs { display:flex; gap:8px; padding:12px clamp(16px,3vw,32px);
-    border-bottom:1px solid var(--line); overflow-x:auto; overflow-y:hidden;
+    min-height:59px; border-bottom:1px solid var(--line);
+    overflow-x:auto; overflow-y:hidden;
     scrollbar-width:none; -webkit-overflow-scrolling:touch; }
   .tabs::-webkit-scrollbar { display:none; }
   /* afordancia: las pills inactivas se leen como botón (fondo panel, borde
@@ -156,10 +167,17 @@ HTML = r"""<!DOCTYPE html>
   #vista { opacity:1; transition:opacity .18s ease; }
   /* la barra de controles (~52px) sale del calc para que hero+barra sigan
      encuadrando la pantalla sin scroll */
+  /* altura reservada por CSS antes de que Lightweight Charts monte, y en
+     svh donde exista: 100vh cambia con la barra del navegador móvil y ese
+     reflow se atribuía a los contenedores de chart (CLS) */
   .hero-wrap { position:relative; height:calc(100vh - 318px); min-height:320px;
     background:var(--bg); }
+  @supports (height:100svh) {
+    .hero-wrap { height:calc(100svh - 318px); } }
   @media (min-width:760px) {
-    .hero-wrap { height:calc(100vh - 272px); min-height:420px; } }
+    .hero-wrap { height:calc(100vh - 272px); min-height:420px; }
+    @supports (height:100svh) {
+      .hero-wrap { height:calc(100svh - 272px); } } }
   @media (max-width:759px) { .overlay .oname, .overlay .cstats, .overlay .caviso,
     .overlay .can-reg { max-width:calc(100vw - 160px); } }
   #chart, #pchart, #cchart { position:absolute; inset:0; }
@@ -170,13 +188,13 @@ HTML = r"""<!DOCTYPE html>
   .overlay .oname span { color:var(--dim); text-transform:none; }
   .orow { display:flex; align-items:baseline; gap:clamp(8px,1.5vw,16px);
     margin-top:4px; flex-wrap:wrap; }
-  .oprice { font:700 clamp(34px,6vw,68px)/1 "Space Grotesk",sans-serif;
+  .oprice { font:700 clamp(34px,6vw,68px)/1 "Space Grotesk","Space Grotesk Fallback",sans-serif;
     font-variant-numeric:tabular-nums; letter-spacing:-.01em; color:var(--bone); }
   .odelta { font:600 clamp(12px,1.6vw,18px) "IBM Plex Mono",monospace;
     font-variant-numeric:tabular-nums; color:var(--ash); }
   .odelta small { font:400 11px "IBM Plex Mono",monospace; color:var(--dim); }
   .overd { display:flex; align-items:center; gap:12px; margin-top:12px; flex-wrap:wrap; }
-  .badge { font:700 clamp(11px,1.4vw,13px) "Space Grotesk",sans-serif; letter-spacing:.14em;
+  .badge { font:700 clamp(11px,1.4vw,13px) "Space Grotesk","Space Grotesk Fallback",sans-serif; letter-spacing:.14em;
     padding:5px 12px; background:var(--verdict); color:var(--bg);
     animation:car-pulse 2.4s ease-in-out infinite; }
   .opct, .ovs { font:400 clamp(10px,1.3vw,12px) "IBM Plex Mono",monospace; color:var(--ash); }
@@ -223,9 +241,12 @@ HTML = r"""<!DOCTYPE html>
     font-variant-numeric:tabular-nums; color:var(--ash); }
 
   /* ---- franja de contexto ---- */
+  /* min-height en las cajas que puebla JS (barras, chips, selector): la
+     estructura bajo el hero queda reservada y ni la carga inicial ni el
+     cambio de modo desplazan el footer (CLS de #vista) */
   .contexto { display:grid; grid-template-columns:1fr; border-top:1px solid var(--line); }
   @media (min-width:900px) { .contexto { grid-template-columns:480px 1fr; } }
-  .ctx-box { padding:clamp(16px,3vw,24px) clamp(16px,3vw,32px); }
+  .ctx-box { padding:clamp(16px,3vw,24px) clamp(16px,3vw,32px); min-height:190px; }
   @media (min-width:900px) { .ctx-box + .ctx-box { border-left:1px solid var(--line); } }
   @media (max-width:899px) { .ctx-box + .ctx-box { border-top:1px solid var(--line); } }
   .ctx-h { font:600 11px "IBM Plex Mono",monospace; letter-spacing:.16em; color:var(--ash); }
@@ -244,7 +265,7 @@ HTML = r"""<!DOCTYPE html>
   .comp .chip b { font-weight:600; font-variant-numeric:tabular-nums; }
 
   /* ---- franja de contexto: productos y canasta ---- */
-  .ctx-solo { border-top:1px solid var(--line);
+  .ctx-solo { border-top:1px solid var(--line); min-height:190px;
     padding:clamp(16px,3vw,24px) clamp(16px,3vw,32px) clamp(20px,3vw,28px); }
   /* selector de catálogo: búsqueda + grupos ODEPA colapsables */
   .psearch { width:100%; font:400 12px "IBM Plex Mono",monospace; color:var(--bone);
@@ -1273,6 +1294,10 @@ PRODUCT_HTML = r"""<!DOCTYPE html>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
 <style>
+  /* fallback métrico: el swap de Space Grotesk no mueve wordmark ni precio */
+  @font-face { font-family:"Space Grotesk Fallback"; src:local("Arial");
+    size-adjust:101.7%; ascent-override:96.9%; descent-override:29.2%;
+    line-gap-override:0%; }
   :root {
     --bg:#17120e; --bg2:#120e0a; --panel:#1a140f;
     --line:#2a231c; --grid:#221b14;
@@ -1284,7 +1309,7 @@ PRODUCT_HTML = r"""<!DOCTYPE html>
   header { display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 14px;
     padding:14px clamp(16px,3vw,32px); border-bottom:1px solid var(--line);
     min-height:51px; }
-  .wordmark { font:700 20px/1.1 "Space Grotesk",sans-serif; letter-spacing:.06em;
+  .wordmark { font:700 20px/1.1 "Space Grotesk","Space Grotesk Fallback",sans-serif; letter-spacing:.06em;
     color:var(--bone); text-decoration:none; display:inline-flex;
     align-items:baseline; height:22px; overflow:hidden; }
   /* í-brasa: misma construcción del index, overlay con clip-path */
@@ -1297,11 +1322,11 @@ PRODUCT_HTML = r"""<!DOCTYPE html>
     padding:clamp(20px,4vw,36px) clamp(16px,3vw,32px) clamp(28px,4vw,44px); }
   .miga { font:500 10px "IBM Plex Mono",monospace; letter-spacing:.16em;
     color:var(--ash); text-transform:uppercase; }
-  h1 { font:700 clamp(26px,5vw,42px)/1.1 "Space Grotesk",sans-serif;
+  h1 { font:700 clamp(26px,5vw,42px)/1.1 "Space Grotesk","Space Grotesk Fallback",sans-serif;
     letter-spacing:.01em; margin-top:6px; }
   .orow { display:flex; align-items:baseline; gap:clamp(10px,2vw,18px);
     flex-wrap:wrap; margin-top:14px; min-height:52px; }
-  .oprice { font:700 clamp(38px,7vw,64px)/1 "Space Grotesk",sans-serif;
+  .oprice { font:700 clamp(38px,7vw,64px)/1 "Space Grotesk","Space Grotesk Fallback",sans-serif;
     font-variant-numeric:tabular-nums; letter-spacing:-.01em; color:var(--bone); }
   .ouni { font:400 12px "IBM Plex Mono",monospace; color:var(--ash); }
   .odelta { font:600 15px "IBM Plex Mono",monospace;
