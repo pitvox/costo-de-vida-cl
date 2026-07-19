@@ -20,7 +20,11 @@ Correr:
 """
 
 import datetime
+import html
 import json
+import os
+import re
+import unicodedata
 
 with open("indices.json", encoding="utf-8") as fh:
     DATA = json.load(fh)
@@ -43,7 +47,13 @@ HTML = r"""<!DOCTYPE html>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+<script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "TOKEN_AQUI"}'></script>
 <style>
+  /* fallback métrico: Arial ajustada a las métricas de Space Grotesk para
+     que el swap de la webfont no reacomode el wordmark ni los precios (CLS) */
+  @font-face { font-family:"Space Grotesk Fallback"; src:local("Arial");
+    size-adjust:101.7%; ascent-override:96.9%; descent-override:29.2%;
+    line-gap-override:0%; }
   :root {
     --bg:#17120e; --bg2:#120e0a; --panel:#1a140f;
     --line:#2a231c; --grid:#221b14;
@@ -79,7 +89,7 @@ HTML = r"""<!DOCTYPE html>
     white-space:nowrap; border-right:1px solid var(--grid); background:none; border-top:0;
     border-bottom:0; border-left:0; min-height:44px; }
   .titem:hover { background:#1f1913; }
-  .titem .tn { font:600 12px "Space Grotesk",sans-serif; letter-spacing:.1em; color:var(--bone); }
+  .titem .tn { font:600 12px "Space Grotesk","Space Grotesk Fallback",sans-serif; letter-spacing:.1em; color:var(--bone); }
   .titem .tp { font:500 12px "IBM Plex Mono",monospace;
     font-variant-numeric:tabular-nums; color:var(--bone); }
   .titem .td { font:500 11px "IBM Plex Mono",monospace;
@@ -95,8 +105,11 @@ HTML = r"""<!DOCTYPE html>
     justify-content:space-between; padding:16px clamp(16px,3vw,32px) 12px;
     border-bottom:1px solid var(--line); }
   .brand { display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 18px; }
-  .wordmark { font:700 clamp(20px,4vw,26px) "Space Grotesk",sans-serif;
-    letter-spacing:.06em; color:var(--bone); display:flex; align-items:baseline; }
+  /* line-height y alto explícitos: el alto del wordmark depende solo del
+     font-size, no de la métrica de la fuente que esté cargada (CLS) */
+  .wordmark { font:700 clamp(20px,4vw,26px)/1.15 "Space Grotesk","Space Grotesk Fallback",sans-serif;
+    letter-spacing:.06em; color:var(--bone); display:flex; align-items:baseline;
+    height:1.15em; }
   /* í-brasa: la Í del wordmark es la I del tipo más el acento agudo del
      propio tipo en brasa. El span superpuesto pinta una Í completa y el
      clip-path deja visible solo el acento; al cuerpo del header (20-26px)
@@ -112,8 +125,11 @@ HTML = r"""<!DOCTYPE html>
     text-transform:uppercase; }
   .semana span { color:var(--dim); }
   /* ---- tabs de índice ---- */
+  /* min-height = pill (34px) + padding: las tabs las construye JS y sin
+     reserva la fila nacía vacía y empujaba todo al poblarse (CLS) */
   .tabs { display:flex; gap:8px; padding:12px clamp(16px,3vw,32px);
-    border-bottom:1px solid var(--line); overflow-x:auto; overflow-y:hidden;
+    min-height:59px; border-bottom:1px solid var(--line);
+    overflow-x:auto; overflow-y:hidden;
     scrollbar-width:none; -webkit-overflow-scrolling:touch; }
   .tabs::-webkit-scrollbar { display:none; }
   /* afordancia: las pills inactivas se leen como botón (fondo panel, borde
@@ -152,10 +168,17 @@ HTML = r"""<!DOCTYPE html>
   #vista { opacity:1; transition:opacity .18s ease; }
   /* la barra de controles (~52px) sale del calc para que hero+barra sigan
      encuadrando la pantalla sin scroll */
+  /* altura reservada por CSS antes de que Lightweight Charts monte, y en
+     svh donde exista: 100vh cambia con la barra del navegador móvil y ese
+     reflow se atribuía a los contenedores de chart (CLS) */
   .hero-wrap { position:relative; height:calc(100vh - 318px); min-height:320px;
     background:var(--bg); }
+  @supports (height:100svh) {
+    .hero-wrap { height:calc(100svh - 318px); } }
   @media (min-width:760px) {
-    .hero-wrap { height:calc(100vh - 272px); min-height:420px; } }
+    .hero-wrap { height:calc(100vh - 272px); min-height:420px; }
+    @supports (height:100svh) {
+      .hero-wrap { height:calc(100svh - 272px); } } }
   @media (max-width:759px) { .overlay .oname, .overlay .cstats, .overlay .caviso,
     .overlay .can-reg { max-width:calc(100vw - 160px); } }
   #chart, #pchart, #cchart { position:absolute; inset:0; }
@@ -166,13 +189,13 @@ HTML = r"""<!DOCTYPE html>
   .overlay .oname span { color:var(--dim); text-transform:none; }
   .orow { display:flex; align-items:baseline; gap:clamp(8px,1.5vw,16px);
     margin-top:4px; flex-wrap:wrap; }
-  .oprice { font:700 clamp(34px,6vw,68px)/1 "Space Grotesk",sans-serif;
+  .oprice { font:700 clamp(34px,6vw,68px)/1 "Space Grotesk","Space Grotesk Fallback",sans-serif;
     font-variant-numeric:tabular-nums; letter-spacing:-.01em; color:var(--bone); }
   .odelta { font:600 clamp(12px,1.6vw,18px) "IBM Plex Mono",monospace;
     font-variant-numeric:tabular-nums; color:var(--ash); }
   .odelta small { font:400 11px "IBM Plex Mono",monospace; color:var(--dim); }
   .overd { display:flex; align-items:center; gap:12px; margin-top:12px; flex-wrap:wrap; }
-  .badge { font:700 clamp(11px,1.4vw,13px) "Space Grotesk",sans-serif; letter-spacing:.14em;
+  .badge { font:700 clamp(11px,1.4vw,13px) "Space Grotesk","Space Grotesk Fallback",sans-serif; letter-spacing:.14em;
     padding:5px 12px; background:var(--verdict); color:var(--bg);
     animation:car-pulse 2.4s ease-in-out infinite; }
   .opct, .ovs { font:400 clamp(10px,1.3vw,12px) "IBM Plex Mono",monospace; color:var(--ash); }
@@ -219,9 +242,12 @@ HTML = r"""<!DOCTYPE html>
     font-variant-numeric:tabular-nums; color:var(--ash); }
 
   /* ---- franja de contexto ---- */
+  /* min-height en las cajas que puebla JS (barras, chips, selector): la
+     estructura bajo el hero queda reservada y ni la carga inicial ni el
+     cambio de modo desplazan el footer (CLS de #vista) */
   .contexto { display:grid; grid-template-columns:1fr; border-top:1px solid var(--line); }
   @media (min-width:900px) { .contexto { grid-template-columns:480px 1fr; } }
-  .ctx-box { padding:clamp(16px,3vw,24px) clamp(16px,3vw,32px); }
+  .ctx-box { padding:clamp(16px,3vw,24px) clamp(16px,3vw,32px); min-height:190px; }
   @media (min-width:900px) { .ctx-box + .ctx-box { border-left:1px solid var(--line); } }
   @media (max-width:899px) { .ctx-box + .ctx-box { border-top:1px solid var(--line); } }
   .ctx-h { font:600 11px "IBM Plex Mono",monospace; letter-spacing:.16em; color:var(--ash); }
@@ -240,7 +266,7 @@ HTML = r"""<!DOCTYPE html>
   .comp .chip b { font-weight:600; font-variant-numeric:tabular-nums; }
 
   /* ---- franja de contexto: productos y canasta ---- */
-  .ctx-solo { border-top:1px solid var(--line);
+  .ctx-solo { border-top:1px solid var(--line); min-height:190px;
     padding:clamp(16px,3vw,24px) clamp(16px,3vw,32px) clamp(20px,3vw,28px); }
   /* selector de catálogo: búsqueda + grupos ODEPA colapsables */
   .psearch { width:100%; font:400 12px "IBM Plex Mono",monospace; color:var(--bone);
@@ -1244,14 +1270,296 @@ Allow: /
 Sitemap: https://carestia.cl/sitemap.xml
 """
 
-SITEMAP = """<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>https://carestia.cl/</loc>
+# ---------------- Páginas estáticas por producto (SEO) ----------------
+# Una página liviana por producto del catálogo, generada en el build con los
+# datos de ESE producto inline (nunca el catálogo completo). Versión reducida
+# de la estética del sitio: carbón/hueso/ceniza/brasa, wordmark chico con la
+# tilde, sin ticker. La serie va compacta (t0 + enteros semanales) y se
+# expande en el navegador igual que en el index.
+PRODUCT_HTML = r"""<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITLE__</title>
+<meta name="description" content="__DESC__">
+<link rel="canonical" href="https://carestia.cl/productos/__SLUG__.html">
+<meta property="og:title" content="__TITLE__">
+<meta property="og:description" content="__DESC__">
+<meta property="og:image" content="https://pitvox.github.io/costo-de-vida-cl/og.png">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2317120e'/%3E%3Crect x='28.5' y='28' width='7' height='24' rx='2' fill='%23e4dacc'/%3E%3Cpath d='M29.5 22L39 13.5' stroke='%23e8743b' stroke-width='7' stroke-linecap='round' fill='none'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+<script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "TOKEN_AQUI"}'></script>
+<style>
+  /* fallback métrico: el swap de Space Grotesk no mueve wordmark ni precio */
+  @font-face { font-family:"Space Grotesk Fallback"; src:local("Arial");
+    size-adjust:101.7%; ascent-override:96.9%; descent-override:29.2%;
+    line-gap-override:0%; }
+  :root {
+    --bg:#17120e; --bg2:#120e0a; --panel:#1a140f;
+    --line:#2a231c; --grid:#221b14;
+    --bone:#e4dacc; --ash:#8b8276; --dim:#5a5348; --ember:#e8743b;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--bone);
+    font-family:"IBM Plex Mono",monospace; min-height:100vh; }
+  header { display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 14px;
+    padding:14px clamp(16px,3vw,32px); border-bottom:1px solid var(--line);
+    min-height:51px; }
+  .wordmark { font:700 20px/1.1 "Space Grotesk","Space Grotesk Fallback",sans-serif; letter-spacing:.06em;
+    color:var(--bone); text-decoration:none; display:inline-flex;
+    align-items:baseline; height:22px; overflow:hidden; }
+  /* í-brasa: misma construcción del index, overlay con clip-path */
+  .wordmark .i { position:relative; display:inline-block; }
+  .wordmark .i .tilde { position:absolute; left:0; top:0; pointer-events:none;
+    color:var(--ember); clip-path:inset(0 0 86% 0); }
+  .tagline { font:400 11px "IBM Plex Mono",monospace; color:var(--ash);
+    letter-spacing:.04em; }
+  main { max-width:980px; margin:0 auto;
+    padding:clamp(20px,4vw,36px) clamp(16px,3vw,32px) clamp(28px,4vw,44px); }
+  .miga { font:500 10px "IBM Plex Mono",monospace; letter-spacing:.16em;
+    color:var(--ash); text-transform:uppercase; }
+  h1 { font:700 clamp(26px,5vw,42px)/1.1 "Space Grotesk","Space Grotesk Fallback",sans-serif;
+    letter-spacing:.01em; margin-top:6px; }
+  .orow { display:flex; align-items:baseline; gap:clamp(10px,2vw,18px);
+    flex-wrap:wrap; margin-top:14px; min-height:52px; }
+  .oprice { font:700 clamp(38px,7vw,64px)/1 "Space Grotesk","Space Grotesk Fallback",sans-serif;
+    font-variant-numeric:tabular-nums; letter-spacing:-.01em; color:var(--bone); }
+  .ouni { font:400 12px "IBM Plex Mono",monospace; color:var(--ash); }
+  .odelta { font:600 15px "IBM Plex Mono",monospace;
+    font-variant-numeric:tabular-nums; color:var(--ash); } /* deltas SIEMPRE en ceniza */
+  .odelta small { font:400 11px "IBM Plex Mono",monospace; color:var(--dim); }
+  .pct { font:400 13px/1.6 "IBM Plex Mono",monospace; color:var(--bone);
+    margin-top:12px; text-wrap:pretty; }
+  /* altura reservada por CSS ANTES de que Lightweight Charts monte: la
+     página no salta al renderizar (svh: estable frente a la barra móvil) */
+  #grafico { position:relative; height:clamp(300px,52vh,480px);
+    height:clamp(300px,52svh,480px); margin-top:22px; }
+  .fecha { font:500 11px "IBM Plex Mono",monospace; color:var(--ash);
+    letter-spacing:.08em; text-transform:uppercase; margin-top:14px; }
+  .metodo { font:400 11px/1.6 "IBM Plex Mono",monospace; color:var(--ash);
+    margin-top:18px; text-wrap:pretty; }
+  .disc { font:400 11px/1.6 "IBM Plex Mono",monospace; color:var(--dim);
+    margin-top:6px; }
+  .links { display:flex; gap:12px; flex-wrap:wrap; margin-top:24px; }
+  .links a { font:600 11px "IBM Plex Mono",monospace; letter-spacing:.06em;
+    padding:9px 16px; min-height:34px; display:inline-flex; align-items:center;
+    text-decoration:none; border:1px solid var(--line); color:var(--bone);
+    background:var(--panel); border-radius:999px; }
+  .links a:hover { border-color:var(--ember); background:#1f1913; }
+  .nochart { display:flex; align-items:center; justify-content:center;
+    height:100%; color:var(--ash); font-size:13px; padding:20px; text-align:center; }
+</style>
+</head>
+<body>
+
+  <header>
+    <a class="wordmark" href="https://carestia.cl/">CAREST<span class="i">I<span class="tilde" aria-hidden="true">Í</span></span>A</a>
+    <span class="tagline">Índices del costo de vida · Chile</span>
+  </header>
+
+  <main>
+    <div class="miga">Precio real en Chile · pesos de hoy</div>
+    <h1>__LABEL__</h1>
+    <div class="orow">
+      <div class="oprice">__PRECIO__</div>
+      <div class="ouni">por __UNI_TXT__ · pesos de hoy</div>
+      <div class="odelta">__DELTA__ <small>sem.</small></div>
+    </div>
+    <p class="pct">__PCT_LINEA__</p>
+    <div id="grafico"></div>
+    <div class="fecha">Semana del __FECHA__ · serie desde __ANIO__ · actualizado viernes</div>
+    <p class="metodo">Cada punto es el promedio de los puntos que ODEPA encuesta
+      cada semana en la Región Metropolitana —ferias libres, supermercados y
+      carnicerías—, deflactado por IPC a pesos de hoy. Fuente: precios al
+      consumidor ODEPA (datos.odepa.gob.cl, CC-BY). Actualizado cada viernes.</p>
+    <p class="disc">Información de consumo con fines analíticos. No constituye
+      asesoría ni recomendación de inversión.</p>
+    <nav class="links">
+      <a href="https://carestia.cl/">← todos los índices</a>
+      <a href="https://carestia.cl/#canasta=__CANASTA__">ármalo en una canasta →</a>
+    </nav>
+  </main>
+
+<script>
+  // serie compacta del producto: t0 + valores semanales consecutivos, null en
+  // semanas sin dato (estacionales); se expande a puntos con huecos visibles
+  const T0 = '__T0__';
+  const V = __V__;
+  const DIA = 864e5, base = Date.parse(T0 + 'T00:00:00Z');
+  const serie = V.map((v, i) => {
+    const time = new Date(base + i * 7 * DIA).toISOString().slice(0, 10);
+    return v == null ? { time } : { time, value: v };
+  });
+  const fmt = v => '$' + Math.round(v).toLocaleString('es-CL');
+  window.addEventListener('load', () => {
+    const el = document.getElementById('grafico');
+    if (!window.LightweightCharts) {
+      el.innerHTML = '<div class="nochart">No se pudo cargar el motor de gráficos (revisa la conexión).</div>';
+      return;
+    }
+    const chart = LightweightCharts.createChart(el, {
+      autoSize: true,
+      layout: { background: { type: 'solid', color: 'transparent' }, textColor: '#8b8276',
+        fontFamily: "'IBM Plex Mono', monospace" },
+      grid: { vertLines: { color: '#221b14' }, horzLines: { color: '#221b14' } },
+      rightPriceScale: { borderColor: '#2a231c' },
+      timeScale: { borderColor: '#2a231c' },
+      localization: { priceFormatter: fmt },
+      // misma política de gestos del sitio: la rueda y el swipe vertical
+      // quedan para la página; zoom en los ejes y pinch en táctil
+      handleScale: { mouseWheel: false, pinch: true, axisPressedMouseMove: true },
+      handleScroll: { mouseWheel: false, vertTouchDrag: false,
+        horzTouchDrag: true, pressedMouseMove: true },
+      crosshair: { mode: 0,
+        vertLine: { color: 'rgba(232,116,59,0.35)', labelBackgroundColor: '#5c3a24' },
+        horzLine: { color: 'rgba(232,116,59,0.35)', labelBackgroundColor: '#5c3a24' } },
+    });
+    chart.addLineSeries({ color: '#e8743b', lineWidth: 2, priceLineVisible: false })
+      .setData(serie);
+    chart.timeScale().fitContent();
+  });
+</script>
+</body>
+</html>
+"""
+
+UNI_TXT = {"kg": "kilo", "un": "unidad", "l": "litro"}
+QDEF = {"kg": "0.5", "un": "1", "l": "1"}   # cantidad por defecto del link de canasta
+
+
+def slug_url(label: str) -> str:
+    """Slug ESTABLE para la URL pública: minúsculas, sin tildes, espacios a
+    guiones; solo [a-z0-9-]. Función pura del label: mismo label → mismo slug
+    en todos los builds."""
+    s = unicodedata.normalize("NFKD", label)
+    s = "".join(c for c in s if not unicodedata.combining(c))
+    s = re.sub(r"\s+", "-", s.lower().strip())
+    s = re.sub(r"[^a-z0-9-]", "", s)
+    return re.sub(r"-{2,}", "-", s).strip("-")
+
+
+def fmt_clp(x: float) -> str:
+    return "$" + f"{int(round(x)):,}".replace(",", ".")
+
+
+def fmt_delta(vals: list) -> str:
+    if len(vals) < 2 or not vals[-2]:
+        return "·"
+    d = (vals[-1] / vals[-2] - 1) * 100
+    return ("▼" if d < 0 else "▲") + f"{abs(d):.1f}".replace(".", ",") + "%"
+
+
+def es_femenino(label: str) -> bool:
+    """Concordancia por la primera palabra del label (la palta / el asado)."""
+    return label.split()[0].lower().endswith("a")
+
+
+def pagina_producto(key: str, p: dict, slug: str) -> str:
+    """Renderiza la página estática de UN producto con sus datos inline."""
+    vals = [v for v in p["v"] if v is not None]
+    ult = vals[-1]
+    n = len(vals)
+    anio = p["t0"][:4]
+    fecha_fin = (datetime.date.fromisoformat(p["t0"]) +
+                 datetime.timedelta(weeks=len(p["v"]) - 1))
+    fem = es_femenino(p["label"])
+    art, de = ("la", "de la") if fem else ("el", "del")
+    label_frase = p["label"][0].lower() + p["label"][1:]
+    uni_txt = UNI_TXT.get(p["unidad"], p["unidad"])
+    precio = fmt_clp(ult)
+
+    # percentil sobre la serie real completa: en qué fracción de las semanas
+    # el precio fue menor (más caro) o mayor (más barato) que el de hoy
+    pct_caro = round(100 * sum(1 for v in vals if v < ult) / n)
+    pct_barato = round(100 * sum(1 for v in vals if v > ult) / n)
+    if pct_caro >= pct_barato:
+        adj = "cara" if fem else "caro"
+        pct_linea = (f"Hoy está más {adj} que en el {pct_caro}% de las "
+                     f"semanas desde {anio}, en pesos de hoy.")
+    else:
+        adj = "barata" if fem else "barato"
+        pct_linea = (f"Hoy está más {adj} que en el {pct_barato}% de las "
+                     f"semanas desde {anio}, en pesos de hoy.")
+
+    title = f"Precio {de} {label_frase} en Chile: histórico desde {anio} | Carestía"
+    desc = (f"Hoy {art} {label_frase} cuesta {precio} por {uni_txt} en Chile "
+            f"(promedio de ferias, supermercados y carnicerías de la RM, "
+            f"en pesos de hoy). Serie semanal desde {anio} con datos ODEPA, "
+            f"actualizada cada viernes.")
+
+    out = PRODUCT_HTML
+    for token, valor in [
+        ("__TITLE__", html.escape(title, quote=True)),
+        ("__DESC__", html.escape(desc, quote=True)),
+        ("__SLUG__", slug),
+        ("__LABEL__", html.escape(p["label"])),
+        ("__PRECIO__", precio),
+        ("__UNI_TXT__", uni_txt),
+        ("__DELTA__", fmt_delta(vals)),
+        ("__PCT_LINEA__", html.escape(pct_linea)),
+        ("__FECHA__", fecha_fin.strftime("%d-%m-%Y")),
+        ("__ANIO__", anio),
+        ("__CANASTA__", f"{key}:{QDEF.get(p['unidad'], '1')}"),
+        ("__T0__", p["t0"]),
+        ("__V__", json.dumps(p["v"])),
+    ]:
+        out = out.replace(token, valor)
+    return out
+
+
+def generar_productos() -> list:
+    """Escribe productos/{slug}.html por cada producto del catálogo y devuelve
+    los slugs generados (para el sitemap). Detecta colisiones de slug: son
+    URLs públicas indexables y dos labels no pueden compartir una."""
+    prods = DATA.get("productos", {})
+    slugs = {}
+    for key in sorted(prods):
+        p = prods[key]
+        if not any(v is not None for v in p["v"]):
+            continue
+        slug = slug_url(p["label"])
+        if not slug:
+            print(f"AVISO: label sin slug utilizable, se omite: {p['label']!r}")
+            continue
+        if slug in slugs:
+            # la URL pública ya publicada no se pisa: el label que llegó
+            # después (orden estable por clave) queda fuera y se reporta
+            print(f"COLISIÓN de slug '{slug}': {slugs[slug][1]!r} vs "
+                  f"{p['label']!r}; se omite el segundo.")
+            continue
+        slugs[slug] = (key, p["label"])
+    os.makedirs("productos", exist_ok=True)
+    for slug, (key, _label) in slugs.items():
+        with open(os.path.join("productos", f"{slug}.html"), "w",
+                  encoding="utf-8") as fh:
+            fh.write(pagina_producto(key, prods[key], slug))
+    return sorted(slugs)
+
+SITEMAP_URL = """  <url>
+    <loc>{loc}</loc>
     <lastmod>{lastmod}</lastmod>
   </url>
-</urlset>
 """
+
+
+def generar_sitemap(slugs: list) -> None:
+    """Raíz + las URLs de producto, todas con el lastmod del build."""
+    lastmod = datetime.date.today().isoformat()
+    locs = ["https://carestia.cl/"] + \
+        [f"https://carestia.cl/productos/{s}.html" for s in slugs]
+    with open("sitemap.xml", "w", encoding="utf-8") as fh:
+        fh.write('<?xml version="1.0" encoding="UTF-8"?>\n')
+        fh.write('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n')
+        for loc in locs:
+            fh.write(SITEMAP_URL.format(loc=loc, lastmod=lastmod))
+        fh.write('</urlset>\n')
+
 
 with open("index.html", "w", encoding="utf-8") as fh:
     fh.write(HTML.replace("__DATA__", json.dumps(DATA, ensure_ascii=False)))
@@ -1259,10 +1567,11 @@ with open("index.html", "w", encoding="utf-8") as fh:
 with open("robots.txt", "w", encoding="utf-8") as fh:
     fh.write(ROBOTS)
 
-with open("sitemap.xml", "w", encoding="utf-8") as fh:
-    fh.write(SITEMAP.format(lastmod=datetime.date.today().isoformat()))
+SLUGS = generar_productos()
+generar_sitemap(SLUGS)
 
-print("Listo: index.html + robots.txt + sitemap.xml")
+print(f"Listo: index.html + robots.txt + sitemap.xml + "
+      f"{len(SLUGS)} páginas en productos/")
 for c, d in DATA["indices"].items():
     print(f"  {d['nombre']}: {d['veredicto']} (percentil {d['percentil']})")
 if "productos" in DATA:
