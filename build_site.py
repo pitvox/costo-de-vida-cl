@@ -320,6 +320,7 @@ HTML = r"""<!DOCTYPE html>
   .ci-eq { font:400 10px "IBM Plex Mono",monospace; color:var(--ash); }
   .cstats { font:400 12px/1.5 "IBM Plex Mono",monospace; color:var(--ash); margin-top:8px;
     text-wrap:pretty; }
+  .ctemporada { margin-top:2px; }
   .caviso { font:400 11px/1.5 "IBM Plex Mono",monospace; color:var(--ash); margin-top:4px; }
 
   /* ---- footer ---- */
@@ -391,6 +392,7 @@ HTML = r"""<!DOCTYPE html>
         <div class="oname">ARMA TU CANASTA <span>· y compártela</span></div>
         <div class="orow"><div class="oprice" id="ccosto"></div></div>
         <div class="cstats" id="cstats"></div>
+        <div class="cstats ctemporada" id="ctemporada"></div>
         <div class="caviso" id="caviso"></div>
         <div class="can-reg">Canasta armada por ti con datos ODEPA · no es un índice oficial Carestía</div>
       </div>
@@ -1001,16 +1003,32 @@ HTML = r"""<!DOCTYPE html>
     });
   }
 
+  // semana ISO (1..53) de una fecha 'YYYY-MM-DD', en UTC para no depender
+  // del huso del visitante
+  function semanaISO(t) {
+    const d = new Date(t + 'T00:00:00Z');
+    d.setUTCDate(d.getUTCDate() + 3 - ((d.getUTCDay() + 6) % 7));
+    const j4 = new Date(Date.UTC(d.getUTCFullYear(), 0, 4));
+    return 1 + Math.round(((d - j4) / 864e5 - 3 + ((j4.getUTCDay() + 6) % 7)) / 7);
+  }
+  // distancia circular mod 52: diciembre y enero son épocas vecinas
+  const distSem = (a, b) => {
+    const d = Math.abs(a - b) % 52;
+    return Math.min(d, 52 - d);
+  };
+
   function syncCanasta() {
     const r = calcularCanasta();
     const costo = document.getElementById('ccosto');
     const stats = document.getElementById('cstats');
+    const temporada = document.getElementById('ctemporada');
     const aviso = document.getElementById('caviso');
     if (!r.serie.length) {
       costo.textContent = '';
       stats.textContent = canasta.size ?
         'sin semanas en común entre los productos elegidos' :
         'elige productos para armar tu canasta';
+      temporada.textContent = '';
       aviso.textContent = '';
     } else {
       const vals = r.serie.map(p => p.value);
@@ -1022,6 +1040,29 @@ HTML = r"""<!DOCTYPE html>
       stats.textContent = 'percentil ' + pct + ' de ' + n +
         ' semanas de esta canasta · ' + (vsp >= 0 ? '+' : '') + vsp +
         '% vs su promedio histórico';
+      // percentil de TEMPORADA: la semana actual solo contra las semanas
+      // históricas de su misma época (semana ISO a ±6, circular); con menos
+      // de 30 comparables el percentil es ruido y la línea se omite
+      const wAct = semanaISO(r.serie[n - 1].time);
+      const comp = [];
+      let desde = '';
+      for (let i = 0; i < n - 1; i++) {
+        if (distSem(semanaISO(r.serie[i].time), wAct) <= 6) {
+          if (!comp.length) desde = r.serie[i].time.slice(0, 4);
+          comp.push(vals[i]);
+        }
+      }
+      if (comp.length < 30) temporada.textContent = '';
+      else {
+        const nc = comp.length;
+        const ord = comp.slice().sort((a, b) => a - b);
+        const med = (ord[(nc - 1) >> 1] + ord[nc >> 1]) / 2;
+        const pca = Math.round(100 * comp.filter(v => v < ult).length / nc);
+        temporada.textContent = 'en esta época del año: ' + (ult < med ?
+          'más barata que el ' + (100 - pca) + '%' :
+          'más cara que el ' + pca + '%') +
+          ' de las semanas comparables (' + nc + ' desde ' + desde + ')';
+      }
       aviso.textContent = r.truncada ? 'tu canasta tiene datos desde ' +
         r.serie[0].time.slice(0, 4) + ' (limitada por ' +
         PRODS[r.limitante].label + ')' : '';
