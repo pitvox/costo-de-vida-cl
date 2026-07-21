@@ -230,15 +230,31 @@ def _ipc_bcch() -> pd.Series:
            "&timeseries=G073.IPC.IND.2018.M&function=GetSeries")
     r = requests.get(url, timeout=60)
     try:
-        obs = r.json()["Series"]["Obs"]
-        s = pd.DataFrame(obs)
-        s["fecha"] = pd.to_datetime(s["indexDateString"], format="%d-%m-%Y")
-        s["valor"] = pd.to_numeric(s["value"], errors="coerce")
-        return s.dropna(subset=["valor"]).set_index("fecha")["valor"].sort_index().rename("ipc")
+        data = r.json()
     except Exception:
         texto = " ".join(r.text[:300].split())
         print(f"  [BCCh respuesta {r.status_code}: {texto}]")
         raise
+    # Con error (ej: Codigo -5) Series.Obs viene null: verificar Codigo antes
+    # de tocar Obs para caer limpio a mindicador en vez de morir con KeyError.
+    if data.get("Codigo") != 0:
+        raise RuntimeError(f"[BCCh error {data.get('Codigo')}: {data.get('Descripcion')}]")
+    serie = data.get("Series") or {}
+    print(f"  [BCCh serie: {serie.get('descripEsp')}]")
+    obs = serie.get("Obs") or []
+    if not obs:
+        raise RuntimeError("[BCCh: Codigo 0 pero sin observaciones]")
+    s = pd.DataFrame(obs)
+    s = s[s["statusCode"] == "OK"]
+    s["fecha"] = pd.to_datetime(s["indexDateString"], format="%d-%m-%Y")
+    s["valor"] = pd.to_numeric(s["value"], errors="coerce")  # value es string; "NaN" -> descartada
+    s = s.dropna(subset=["valor"]).set_index("fecha")["valor"].sort_index().rename("ipc")
+    if s.empty:
+        raise RuntimeError("[BCCh: ninguna observacion valida tras filtrar statusCode/value]")
+    # G073.IPC.IND.2018.M es el INDICE (nivel, base 2018), no variaciones: el
+    # pipeline deflacta con ipc_hoy/ipc, que espera exactamente un nivel.
+    print(f"  [BCCh: {len(s)} obs, {s.index[0]:%Y-%m} a {s.index[-1]:%Y-%m}]")
+    return s
 
 
 def _ipc_mindicador_anio(y: int):
