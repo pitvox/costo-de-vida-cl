@@ -24,6 +24,7 @@ import io
 import os
 import re
 import json
+import time
 import unicodedata
 import requests
 import numpy as np
@@ -193,35 +194,102 @@ def cargar_odepa() -> pd.DataFrame:
 
 
 # ---------------- IPC ----------------
+IPC_MES_INICIO = "2008-01"
+IPC_MIN_MESES = 210
+IPC_REINTENTOS = 3
+
+
+def _meses_ipc_esperados() -> pd.PeriodIndex:
+    """Meses que la serie IPC debe cubrir: 2008-01 hasta el mes vigente-1."""
+    return pd.period_range(IPC_MES_INICIO, pd.Timestamp.today().to_period("M") - 1, freq="M")
+
+
+def _meses_ipc_faltantes(s: pd.Series) -> list:
+    tiene = set(s.index.to_period("M"))
+    return [m for m in _meses_ipc_esperados() if m not in tiene]
+
+
+def _validar_ipc(s: pd.Series) -> pd.Series:
+    """Compuerta de la deflactación: un hueco en la serie IPC deforma el
+    cumprod y corre percentiles y vs-promedio de TODOS los índices, así que
+    ante cobertura incompleta se aborta el build en vez de publicar cifras
+    cojas (el Action falla visible y el sitio conserva el deploy anterior)."""
+    faltan = _meses_ipc_faltantes(s)
+    if faltan:
+        anios = sorted({m.year for m in faltan})
+        raise RuntimeError("IPC incompleto: falta " + ", ".join(str(a) for a in anios))
+    if len(s) <= IPC_MIN_MESES:
+        raise RuntimeError(f"IPC incompleto: solo {len(s)} meses (esperaba >{IPC_MIN_MESES})")
+    print(f"IPC OK: {len(s)} meses, {s.index[0]:%Y-%m} a {s.index[-1]:%Y-%m}")
+    return s
+
+
+def _ipc_bcch() -> pd.Series:
+    url = ("https://si3.bcentral.cl/SieteRestWS/SieteRestWS.ashx"
+           f"?user={BCCH_USER}&pass={BCCH_PASS}"
+           "&firstdate=2008-01-01&lastdate=2026-12-31"
+           "&timeseries=G073.IPC.IND.2018.M&function=GetSeries")
+    obs = requests.get(url, timeout=60).json()["Series"]["Obs"]
+    s = pd.DataFrame(obs)
+    s["fecha"] = pd.to_datetime(s["indexDateString"], format="%d-%m-%Y")
+    s["valor"] = pd.to_numeric(s["value"], errors="coerce")
+    return s.dropna(subset=["valor"]).set_index("fecha")["valor"].sort_index().rename("ipc")
+
+
+def _ipc_mindicador_anio(y: int):
+    """Variaciones mensuales de un año en mindicador, o None si falla o viene vacío."""
+    try:
+        serie = requests.get(f"https://mindicador.cl/api/ipc/{y}", timeout=60).json().get("serie", [])
+        return pd.DataFrame(serie) if serie else None
+    except Exception as e:  # noqa
+        print(f"  [mindicador {y} fallo: {e}]")
+        return None
+
+
+def _armar_ipc_mindicador(datos: dict) -> pd.Series:
+    s = pd.concat(datos.values(), ignore_index=True)
+    s["fecha"] = pd.to_datetime(s["fecha"]).dt.tz_localize(None)
+    s = s.set_index("fecha")["valor"].sort_index()
+    s = s[~s.index.duplicated(keep="last")]
+    return (1 + s / 100.0).cumprod().rename("ipc")
+
+
+def _ipc_mindicador() -> pd.Series:
+    """Baja el IPC año por año y reintenta los años con huecos: un año caído
+    no puede pasar piola porque el cumprod cojo deflacta mal todo 2008-hoy."""
+    datos = {}
+    pendientes = list(YEARS)
+    for intento in range(1, IPC_REINTENTOS + 1):
+        if intento > 1:
+            espera = 2 ** intento
+            print(f"  [mindicador: huecos en {pendientes}; "
+                  f"reintento {intento}/{IPC_REINTENTOS} en {espera}s]")
+            time.sleep(espera)
+        for y in pendientes:
+            df = _ipc_mindicador_anio(y)
+            if df is not None:
+                datos[y] = df
+        if not datos:
+            continue
+        faltan = _meses_ipc_faltantes(_armar_ipc_mindicador(datos))
+        if not faltan:
+            break
+        pendientes = sorted({m.year for m in faltan})
+    if not datos:
+        raise RuntimeError("IPC incompleto: falta " + ", ".join(str(y) for y in YEARS))
+    return _armar_ipc_mindicador(datos)
+
+
 def cargar_ipc() -> pd.Series:
     if BCCH_USER and BCCH_PASS:
         try:
             print("IPC: Banco Central (oficial)...")
-            url = ("https://si3.bcentral.cl/SieteRestWS/SieteRestWS.ashx"
-                   f"?user={BCCH_USER}&pass={BCCH_PASS}"
-                   "&firstdate=2008-01-01&lastdate=2026-12-31"
-                   "&timeseries=G073.IPC.IND.2018.M&function=GetSeries")
-            obs = requests.get(url, timeout=60).json()["Series"]["Obs"]
-            s = pd.DataFrame(obs)
-            s["fecha"] = pd.to_datetime(s["indexDateString"], format="%d-%m-%Y")
-            s["valor"] = pd.to_numeric(s["value"], errors="coerce")
-            return s.dropna(subset=["valor"]).set_index("fecha")["valor"].sort_index().rename("ipc")
+            return _validar_ipc(_ipc_bcch())
         except Exception as e:  # noqa
             print(f"  [BCCh fallo: {e}; uso mindicador]")
     else:
         print("IPC: sin credenciales BCCh -> mindicador (fallback).")
-    filas = []
-    for y in YEARS:
-        try:
-            serie = requests.get(f"https://mindicador.cl/api/ipc/{y}", timeout=60).json().get("serie", [])
-            if serie:
-                filas.append(pd.DataFrame(serie))
-        except Exception:  # noqa
-            pass
-    s = pd.concat(filas, ignore_index=True)
-    s["fecha"] = pd.to_datetime(s["fecha"]).dt.tz_localize(None)
-    s = s.set_index("fecha")["valor"].sort_index()
-    return (1 + s / 100.0).cumprod().rename("ipc")
+    return _validar_ipc(_ipc_mindicador())
 
 
 # ---------------- Unidades ----------------
