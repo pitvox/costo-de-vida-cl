@@ -216,8 +216,7 @@ def _validar_ipc(s: pd.Series) -> pd.Series:
     cojas (el Action falla visible y el sitio conserva el deploy anterior)."""
     faltan = _meses_ipc_faltantes(s)
     if faltan:
-        anios = sorted({m.year for m in faltan})
-        raise RuntimeError("IPC incompleto: falta " + ", ".join(str(a) for a in anios))
+        raise RuntimeError("IPC incompleto: faltan " + ", ".join(str(m) for m in faltan))
     if len(s) <= IPC_MIN_MESES:
         raise RuntimeError(f"IPC incompleto: solo {len(s)} meses (esperaba >{IPC_MIN_MESES})")
     print(f"IPC OK: {len(s)} meses, {s.index[0]:%Y-%m} a {s.index[-1]:%Y-%m}")
@@ -229,18 +228,27 @@ def _ipc_bcch() -> pd.Series:
            f"?user={BCCH_USER}&pass={BCCH_PASS}"
            "&firstdate=2008-01-01&lastdate=2026-12-31"
            "&timeseries=G073.IPC.IND.2018.M&function=GetSeries")
-    obs = requests.get(url, timeout=60).json()["Series"]["Obs"]
-    s = pd.DataFrame(obs)
-    s["fecha"] = pd.to_datetime(s["indexDateString"], format="%d-%m-%Y")
-    s["valor"] = pd.to_numeric(s["value"], errors="coerce")
-    return s.dropna(subset=["valor"]).set_index("fecha")["valor"].sort_index().rename("ipc")
+    r = requests.get(url, timeout=60)
+    try:
+        obs = r.json()["Series"]["Obs"]
+        s = pd.DataFrame(obs)
+        s["fecha"] = pd.to_datetime(s["indexDateString"], format="%d-%m-%Y")
+        s["valor"] = pd.to_numeric(s["value"], errors="coerce")
+        return s.dropna(subset=["valor"]).set_index("fecha")["valor"].sort_index().rename("ipc")
+    except Exception:
+        texto = " ".join(r.text[:300].split())
+        print(f"  [BCCh respuesta {r.status_code}: {texto}]")
+        raise
 
 
 def _ipc_mindicador_anio(y: int):
     """Variaciones mensuales de un año en mindicador, o None si falla o viene vacío."""
     try:
         serie = requests.get(f"https://mindicador.cl/api/ipc/{y}", timeout=60).json().get("serie", [])
-        return pd.DataFrame(serie) if serie else None
+        if not serie:
+            return None
+        print(f"  [mindicador {y}: {len(serie)} meses]")
+        return pd.DataFrame(serie)
     except Exception as e:  # noqa
         print(f"  [mindicador {y} fallo: {e}]")
         return None
