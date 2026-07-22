@@ -24,6 +24,7 @@ open index.html
 Cada índice es una **canasta fija** de cantidades (tipo Laspeyres): lo que cambia en el tiempo es el precio, no qué se compra. El costo semanal es la suma de `cantidad × precio` de cada producto.
 
 - **Nominal vs. pesos de hoy** — se muestran ambos. El "real" reexpresa cada semana en pesos actuales usando el IPC, para comparar a través del tiempo sin que la inflación general distorsione.
+- **Deflactación** — por IPC empalmado del BCCh (base 2023=100, serie `G073.IPC.IND.2023.M`). Las variaciones del empalme BCCh pueden diferir marginalmente de las variaciones oficiales INE mes a mes; para series reales de largo plazo el empalme es el instrumento apropiado.
 - **Caro / barato** — por **percentil histórico**: dónde cae el costo de esta semana en la distribución de toda su historia (en pesos de hoy). Verde <33, amarillo 33–66, rojo >66. El umbral es una convención de presentación, no una verdad física.
 - **Estacionalidad** — patrón típico por mes, quitando la tendencia; indica en qué meses la canasta suele estar más barata o más cara.
 - **Unidades** — ODEPA cotiza por envase (`pan de 250 gramos`, `bandeja 12 unidades`, `caja de 1 litro`, etc.). El pipeline lee el contenido neto de cada envase y normaliza a precio por kilo / unidad / litro real.

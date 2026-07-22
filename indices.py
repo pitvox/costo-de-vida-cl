@@ -228,7 +228,7 @@ def _ipc_bcch() -> pd.Series:
     url = ("https://si3.bcentral.cl/SieteRestWS/SieteRestWS.ashx"
            f"?user={BCCH_USER}&pass={BCCH_PASS}"
            "&firstdate=2008-01-01&lastdate=2026-12-31"
-           "&timeseries=G073.IPC.IND.2018.M&function=GetSeries")
+           "&timeseries=G073.IPC.IND.2023.M&function=GetSeries")
     r = requests.get(url, timeout=60)
     try:
         data = r.json()
@@ -252,8 +252,9 @@ def _ipc_bcch() -> pd.Series:
     s = s.dropna(subset=["valor"]).set_index("fecha")["valor"].sort_index().rename("ipc")
     if s.empty:
         raise RuntimeError("[BCCh: ninguna observacion valida tras filtrar statusCode/value]")
-    # G073.IPC.IND.2018.M es el INDICE (nivel, base 2018), no variaciones: el
-    # pipeline deflacta con ipc_hoy/ipc, que espera exactamente un nivel.
+    # G073.IPC.IND.2023.M es el INDICE empalmado BCCh (nivel, base 2023=100),
+    # no variaciones: el pipeline deflacta con ipc_hoy/ipc, que espera
+    # exactamente un nivel.
     print(f"  [BCCh: {len(s)} obs, {s.index[0]:%Y-%m} a {s.index[-1]:%Y-%m}]")
     return s
 
@@ -339,14 +340,15 @@ def _empalmar(niveles: pd.Series, variaciones: pd.Series, fuente: str, tramos: l
 
 
 def cargar_ipc() -> pd.Series:
-    """Serie de NIVELES IPC por FUSIÓN de tres fuentes, porque ninguna cubre
-    todo: la serie BCCh (G073.IPC.IND.2018.M) quedó congelada en 2023-12
-    cuando el INE recanastó a base 2023=100, y mindicador publica con rezago
-    el año en curso. Base: niveles BCCh; los meses posteriores se extienden
-    con las variaciones de mindicador y luego con las de ipc_manual.json.
-    La compuerta _validar_ipc sigue igual de estricta sobre la serie
-    fusionada, y la deflactación aguas abajo sigue recibiendo niveles
-    (ipc_hoy/ipc) sin cambios."""
+    """Serie de NIVELES IPC por FUSIÓN de fuentes. Primaria: el empalme
+    BCCh (G073.IPC.IND.2023.M, base 2023=100), que cubre todo el rango
+    2008-01 en adelante y en régimen normal deja sin trabajo a las demás.
+    Respaldo: variaciones de mindicador y luego de ipc_manual.json,
+    empalmadas por tasas sobre el último nivel disponible — el mismo
+    mecanismo de siempre, que solo aporta los meses que a BCCh le falten
+    (caída del servicio, rezago de publicación). La compuerta _validar_ipc
+    sigue igual de estricta sobre la serie fusionada, y la deflactación
+    aguas abajo sigue recibiendo niveles (ipc_hoy/ipc) sin cambios."""
     tramos = []
     niveles = pd.Series(dtype=float, name="ipc")
     if BCCH_USER and BCCH_PASS:
