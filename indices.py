@@ -197,6 +197,7 @@ def cargar_odepa() -> pd.DataFrame:
 IPC_MES_INICIO = "2008-01"
 IPC_MIN_MESES = 210
 IPC_REINTENTOS = 3
+IPC_MANUAL_ARCHIVO = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ipc_manual.json")
 
 
 def _meses_ipc_esperados() -> pd.PeriodIndex:
@@ -258,11 +259,11 @@ def _ipc_bcch() -> pd.Series:
 
 
 def _ipc_mindicador_anio(y: int):
-    """Variaciones mensuales de un año en mindicador, o None si falla o viene vacío."""
+    """DataFrame con las variaciones mensuales de un año en mindicador.
+    Vacío si el año aún no tiene datos publicados (respuesta válida);
+    None solo si la petición misma falló."""
     try:
         serie = requests.get(f"https://mindicador.cl/api/ipc/{y}", timeout=60).json().get("serie", [])
-        if not serie:
-            return None
         print(f"  [mindicador {y}: {len(serie)} meses]")
         return pd.DataFrame(serie)
     except Exception as e:  # noqa
@@ -270,50 +271,110 @@ def _ipc_mindicador_anio(y: int):
         return None
 
 
-def _armar_ipc_mindicador(datos: dict) -> pd.Series:
-    s = pd.concat(datos.values(), ignore_index=True)
-    s["fecha"] = pd.to_datetime(s["fecha"]).dt.tz_localize(None)
-    s = s.set_index("fecha")["valor"].sort_index()
-    s = s[~s.index.duplicated(keep="last")]
-    return (1 + s / 100.0).cumprod().rename("ipc")
-
-
-def _ipc_mindicador() -> pd.Series:
-    """Baja el IPC año por año y reintenta los años con huecos: un año caído
-    no puede pasar piola porque el cumprod cojo deflacta mal todo 2008-hoy."""
-    datos = {}
-    pendientes = list(YEARS)
+def _ipc_mindicador_var() -> pd.Series:
+    """Variaciones mensuales (%) de mindicador, indexadas por Period mensual.
+    Reintenta solo los años cuya petición FALLÓ: un año vacío (ej: 2026 sin
+    publicar todavía) es respuesta válida y no se insiste sobre él."""
+    datos, pendientes = [], list(YEARS)
     for intento in range(1, IPC_REINTENTOS + 1):
         if intento > 1:
             espera = 2 ** intento
-            print(f"  [mindicador: huecos en {pendientes}; "
+            print(f"  [mindicador: fallaron {pendientes}; "
                   f"reintento {intento}/{IPC_REINTENTOS} en {espera}s]")
             time.sleep(espera)
+        fallidos = []
         for y in pendientes:
             df = _ipc_mindicador_anio(y)
-            if df is not None:
-                datos[y] = df
-        if not datos:
-            continue
-        faltan = _meses_ipc_faltantes(_armar_ipc_mindicador(datos))
-        if not faltan:
+            if df is None:
+                fallidos.append(y)
+            elif not df.empty:
+                datos.append(df)
+        pendientes = fallidos
+        if not pendientes:
             break
-        pendientes = sorted({m.year for m in faltan})
     if not datos:
-        raise RuntimeError("IPC incompleto: falta " + ", ".join(str(y) for y in YEARS))
-    return _armar_ipc_mindicador(datos)
+        return pd.Series(dtype=float)
+    s = pd.concat(datos, ignore_index=True)
+    s["mes"] = pd.to_datetime(s["fecha"]).dt.tz_localize(None).dt.to_period("M")
+    s = s.set_index("mes")["valor"].sort_index()
+    return s[~s.index.duplicated(keep="last")]
+
+
+def _ipc_manual() -> pd.Series:
+    """Variaciones mensuales (%) tipeadas a mano en ipc_manual.json, formato
+    {"2026-01": 0.3, ...}, sacadas de la fuente oficial (INE) por el dueño.
+    Los null son placeholders a la espera del dato real y NO cuentan como
+    dato: nada se inventa, y el mes queda faltante para la compuerta."""
+    try:
+        with open(IPC_MANUAL_ARCHIVO, encoding="utf-8") as fh:
+            crudo = json.load(fh)
+    except FileNotFoundError:
+        return pd.Series(dtype=float)
+    datos = {pd.Period(mes, freq="M"): float(v)
+             for mes, v in crudo.items() if v is not None}
+    if not datos:
+        return pd.Series(dtype=float)
+    return pd.Series(datos).sort_index()
+
+
+def _empalmar(niveles: pd.Series, variaciones: pd.Series, fuente: str, tramos: list) -> pd.Series:
+    """Empalme estándar por tasas: extiende la serie de NIVELES con las
+    variaciones mensuales (%) de otra fuente, nivel_t = nivel_{t-1} *
+    (1 + var_t/100). Nunca mezcla niveles de dos fuentes, así que es inmune
+    a cambios de base (2018=100 vs 2023=100). Solo consume meses CONSECUTIVOS
+    al último nivel: un hueco corta el empalme y el mes queda faltante."""
+    if niveles.empty or variaciones.empty:
+        return niveles
+    nivel = float(niveles.iloc[-1])
+    nuevos = {}
+    mes = niveles.index[-1].to_period("M") + 1
+    while mes in variaciones.index:
+        nivel *= 1 + float(variaciones.loc[mes]) / 100.0
+        nuevos[mes.to_timestamp()] = nivel
+        mes += 1
+    if nuevos:
+        tramos.append(f"{fuente} {min(nuevos):%Y-%m}..{max(nuevos):%Y-%m}")
+        niveles = pd.concat([niveles, pd.Series(nuevos)]).rename("ipc")
+    return niveles
 
 
 def cargar_ipc() -> pd.Series:
+    """Serie de NIVELES IPC por FUSIÓN de tres fuentes, porque ninguna cubre
+    todo: la serie BCCh (G073.IPC.IND.2018.M) quedó congelada en 2023-12
+    cuando el INE recanastó a base 2023=100, y mindicador publica con rezago
+    el año en curso. Base: niveles BCCh; los meses posteriores se extienden
+    con las variaciones de mindicador y luego con las de ipc_manual.json.
+    La compuerta _validar_ipc sigue igual de estricta sobre la serie
+    fusionada, y la deflactación aguas abajo sigue recibiendo niveles
+    (ipc_hoy/ipc) sin cambios."""
+    tramos = []
+    niveles = pd.Series(dtype=float, name="ipc")
     if BCCH_USER and BCCH_PASS:
         try:
             print("IPC: Banco Central (oficial)...")
-            return _validar_ipc(_ipc_bcch())
+            niveles = _ipc_bcch()
+            tramos.append(f"BCCh {niveles.index[0]:%Y-%m}..{niveles.index[-1]:%Y-%m}")
         except Exception as e:  # noqa
-            print(f"  [BCCh fallo: {e}; uso mindicador]")
+            print(f"  [BCCh fallo: {e}; sigo con mindicador]")
     else:
-        print("IPC: sin credenciales BCCh -> mindicador (fallback).")
-    return _validar_ipc(_ipc_mindicador())
+        print("IPC: sin credenciales BCCh -> parto de mindicador.")
+
+    var_mind = _ipc_mindicador_var()
+    if niveles.empty:
+        # Sin niveles BCCh: reconstruye niveles desde las variaciones de
+        # mindicador (cumprod, base arbitraria = 1; la deflactación usa
+        # cocientes ipc_hoy/ipc así que la escala no importa).
+        if var_mind.empty:
+            raise RuntimeError("IPC incompleto: sin niveles BCCh ni datos mindicador")
+        niveles = (1 + var_mind / 100.0).cumprod().rename("ipc")
+        niveles.index = niveles.index.to_timestamp()
+        tramos.append(f"mindicador {niveles.index[0]:%Y-%m}..{niveles.index[-1]:%Y-%m}")
+    else:
+        niveles = _empalmar(niveles, var_mind, "mindicador", tramos)
+
+    niveles = _empalmar(niveles, _ipc_manual(), "manual", tramos)
+    print("[IPC fusión: " + " · ".join(tramos) + "]")
+    return _validar_ipc(niveles)
 
 
 # ---------------- Unidades ----------------
