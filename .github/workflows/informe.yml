@@ -1,0 +1,37 @@
+name: Generar Informe Carestía
+
+# Solo ejecucion manual: genera la tabla del Informe Carestía mensual
+# y la deja disponible como artifact descargable.
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  informe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clonar repo
+        uses: actions/checkout@v4
+
+      - name: Instalar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependencias
+        run: pip install pandas numpy requests
+
+      - name: Generar informe
+        env:
+          BCCH_USER: ${{ secrets.BCCH_USER }}
+          BCCH_PASS: ${{ secrets.BCCH_PASS }}
+        run: python informe.py
+
+      - name: Subir informe como artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: informe
+          path: informe_*.md
+          retention-days: 30
