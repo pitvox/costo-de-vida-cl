@@ -110,15 +110,19 @@ HTML = r"""<!DOCTYPE html>
   .wordmark { font:700 clamp(20px,4vw,26px)/1.15 "Space Grotesk","Space Grotesk Fallback",sans-serif;
     letter-spacing:.06em; color:var(--bone); display:flex; align-items:baseline;
     height:1.15em; }
-  /* í-brasa: la Í del wordmark es la I del tipo más el acento agudo del
-     propio tipo en brasa. El span superpuesto pinta una Í completa y el
-     clip-path deja visible solo el acento; al cuerpo del header (20-26px)
-     la tilde va siempre plana, sin glow: a ese tamaño el halo es más
-     grande que el acento y lo vuelve una mancha. El 86% está calibrado
-     al pixel en Chromium a 20 y 26px: menos corta el tallo, más corta
-     el acento */
+  /* í-brasa: el texto real del nodo lleva la Í única (innerText, copy-paste
+     y lectores de pantalla leen CARESTÍA); el adorno es un ::after
+     decorativo que repinta la misma Í en brasa y el clip-path deja visible
+     solo el acento, tapando el de hueso que queda debajo (mismo glifo,
+     misma posición: solape exacto). Al cuerpo del header (20-26px) la
+     tilde va siempre plana, sin glow: a ese tamaño el halo es más grande
+     que el acento y lo vuelve una mancha. El 86% está calibrado al pixel
+     en Chromium a 20 y 26px: menos corta el tallo, más corta el acento.
+     El box del span no cambia (la altura la fija line-height, no el
+     glifo): el fix de CLS del wordmark queda intacto */
   .wordmark .i { position:relative; display:inline-block; }
-  .wordmark .i .tilde { position:absolute; left:0; top:0; pointer-events:none;
+  .wordmark .i::after { content:"Í"; content:"Í" / ""; position:absolute;
+    left:0; top:0; pointer-events:none;
     color:#e8743b; clip-path:inset(0 0 86% 0); }
   .tagline { font:400 12px "IBM Plex Mono",monospace; color:var(--ash); letter-spacing:.04em; }
   .semana { font:500 11px "IBM Plex Mono",monospace; color:var(--ash); letter-spacing:.08em;
@@ -342,7 +346,10 @@ HTML = r"""<!DOCTYPE html>
 
   <header>
     <div class="brand">
-      <div class="wordmark">CAREST<span class="i">I<span class="tilde" aria-hidden="true">Í</span></span>A</div>
+      <!-- un único span envuelve el texto: con flex, los nodos sueltos se
+           vuelven flex items y innerText/copy-paste los separa con saltos
+           de línea; así el wordmark es UN run inline: "CARESTÍA" -->
+      <div class="wordmark"><span>CAREST<span class="i">Í</span>A</span></div>
       <div class="tagline">Índices del costo de vida · Chile</div>
     </div>
     <div class="semana">Semana del <span id="fecha"></span> <span>· actualizado viernes</span></div>
@@ -1355,9 +1362,11 @@ PRODUCT_HTML = r"""<!DOCTYPE html>
   .wordmark { font:700 20px/1.1 "Space Grotesk","Space Grotesk Fallback",sans-serif; letter-spacing:.06em;
     color:var(--bone); text-decoration:none; display:inline-flex;
     align-items:baseline; height:22px; overflow:hidden; }
-  /* í-brasa: misma construcción del index, overlay con clip-path */
+  /* í-brasa: misma construcción del index; el texto del nodo lleva la Í
+     única y el ::after decorativo repinta el acento en brasa (clip-path) */
   .wordmark .i { position:relative; display:inline-block; }
-  .wordmark .i .tilde { position:absolute; left:0; top:0; pointer-events:none;
+  .wordmark .i::after { content:"Í"; content:"Í" / ""; position:absolute;
+    left:0; top:0; pointer-events:none;
     color:var(--ember); clip-path:inset(0 0 86% 0); }
   .tagline { font:400 11px "IBM Plex Mono",monospace; color:var(--ash);
     letter-spacing:.04em; }
@@ -1383,6 +1392,17 @@ PRODUCT_HTML = r"""<!DOCTYPE html>
     height:clamp(300px,52svh,480px); margin-top:22px; }
   .fecha { font:500 11px "IBM Plex Mono",monospace; color:var(--ash);
     letter-spacing:.08em; text-transform:uppercase; margin-top:14px; }
+  /* otros productos del grupo: interlinking sobrio al pie, misma paleta
+     del sitio (panel/línea/hueso, hover en brasa como .links) */
+  .otros { margin-top:26px; }
+  .otros-h { font:600 11px "IBM Plex Mono",monospace; letter-spacing:.16em;
+    color:var(--ash); text-transform:uppercase; }
+  .otros-links { display:flex; flex-wrap:wrap; gap:10px; margin-top:12px; }
+  .otros-links a { font:500 12px "IBM Plex Mono",monospace; padding:9px 14px;
+    min-height:34px; display:inline-flex; align-items:center;
+    text-decoration:none; border:1px solid var(--line); color:var(--bone);
+    background:var(--panel); }
+  .otros-links a:hover { border-color:var(--ember); background:#1f1913; }
   .metodo { font:400 11px/1.6 "IBM Plex Mono",monospace; color:var(--ash);
     margin-top:18px; text-wrap:pretty; }
   .disc { font:400 11px/1.6 "IBM Plex Mono",monospace; color:var(--dim);
@@ -1400,7 +1420,8 @@ PRODUCT_HTML = r"""<!DOCTYPE html>
 <body>
 
   <header>
-    <a class="wordmark" href="https://carestia.cl/">CAREST<span class="i">I<span class="tilde" aria-hidden="true">Í</span></span>A</a>
+    <!-- span único: un solo flex item para que innerText no parta el texto -->
+    <a class="wordmark" href="https://carestia.cl/"><span>CAREST<span class="i">Í</span>A</span></a>
     <span class="tagline">Índices del costo de vida · Chile</span>
   </header>
 
@@ -1415,6 +1436,7 @@ PRODUCT_HTML = r"""<!DOCTYPE html>
     <p class="pct">__PCT_LINEA__</p>
     <div id="grafico"></div>
     <div class="fecha">Semana del __FECHA__ · serie desde __ANIO__ · actualizado viernes</div>
+    __OTROS__
     <p class="metodo">Cada punto es el promedio de los puntos que ODEPA encuesta
       cada semana en la Región Metropolitana: ferias libres, supermercados y
       carnicerías, deflactado por IPC a pesos de hoy. Fuente: precios al
@@ -1501,7 +1523,30 @@ def es_femenino(label: str) -> bool:
     return label.split()[0].lower().endswith("a")
 
 
-def pagina_producto(key: str, p: dict, slug: str) -> str:
+def seccion_otros(slug: str, grupo: str, rueda: list, labels: dict) -> str:
+    """Sección "Otros productos de {grupo}" con enlaces a los 4 SIGUIENTES
+    slugs en la rueda alfabética del grupo (circular). Selección DETERMINISTA:
+    función pura del catálogo, el mismo set de productos produce los mismos
+    enlaces en todos los builds (crawl estable, nunca aleatoria). Con menos
+    de 2 productos en el grupo no hay sección."""
+    i = rueda.index(slug)
+    vecinos = [rueda[(i + j) % len(rueda)] for j in range(1, len(rueda))][:4]
+    if not vecinos:
+        return ""
+    enlaces = "\n      ".join(
+        f'<a href="https://carestia.cl/productos/{v}.html">'
+        f'{html.escape(labels[v])}</a>' for v in vecinos)
+    return (f'<section class="otros" aria-label="Otros productos de '
+            f'{html.escape(grupo, quote=True)}">\n'
+            f'      <h2 class="otros-h">Otros productos de '
+            f'{html.escape(grupo)}</h2>\n'
+            f'      <nav class="otros-links">\n'
+            f'      {enlaces}\n'
+            f'      </nav>\n'
+            f'    </section>')
+
+
+def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "") -> str:
     """Renderiza la página estática de UN producto con sus datos inline."""
     vals = [v for v in p["v"] if v is not None]
     ult = vals[-1]
@@ -1549,6 +1594,9 @@ def pagina_producto(key: str, p: dict, slug: str) -> str:
         ("__CANASTA__", f"{key}:{QDEF.get(p['unidad'], '1')}"),
         ("__T0__", p["t0"]),
         ("__V__", json.dumps(p["v"])),
+        # HTML ya renderizado (seccion_otros escapa labels y grupo), no
+        # se vuelve a escapar aquí
+        ("__OTROS__", otros_html),
     ]:
         out = out.replace(token, valor)
     return out
@@ -1575,11 +1623,21 @@ def generar_productos() -> list:
                   f"{p['label']!r}; se omite el segundo.")
             continue
         slugs[slug] = (key, p["label"])
+    # interlinking: rueda alfabética de slugs por grupo ODEPA (determinista)
+    por_grupo = {}
+    for slug, (key, _label) in slugs.items():
+        g = prods[key].get("grupo") or "Otros"
+        por_grupo.setdefault(g, []).append(slug)
+    for lst in por_grupo.values():
+        lst.sort()
+    labels = {s: lab for s, (_k, lab) in slugs.items()}
     os.makedirs("productos", exist_ok=True)
     for slug, (key, _label) in slugs.items():
+        grupo = prods[key].get("grupo") or "Otros"
+        otros = seccion_otros(slug, grupo, por_grupo[grupo], labels)
         with open(os.path.join("productos", f"{slug}.html"), "w",
                   encoding="utf-8") as fh:
-            fh.write(pagina_producto(key, prods[key], slug))
+            fh.write(pagina_producto(key, prods[key], slug, otros))
     return sorted(slugs)
 
 SITEMAP_URL = """  <url>
