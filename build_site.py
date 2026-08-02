@@ -39,7 +39,7 @@ HTML = r"""<!DOCTYPE html>
 <link rel="canonical" href="https://carestia.cl/">
 <meta property="og:title" content="Carestía · Índices del costo de vida en Chile">
 <meta property="og:description" content="Cuánto cuesta la vida cotidiana en Chile, en pesos de hoy. Índices propios sobre datos públicos de ODEPA, actualizados cada viernes.">
-<meta property="og:image" content="https://pitvox.github.io/costo-de-vida-cl/og.png">
+<meta property="og:image" content="https://carestia.cl/og.png">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2317120e'/%3E%3Crect x='28.5' y='28' width='7' height='24' rx='2' fill='%23e4dacc'/%3E%3Cpath d='M29.5 22L39 13.5' stroke='%23e8743b' stroke-width='7' stroke-linecap='round' fill='none'/%3E%3C/svg%3E">
@@ -1334,7 +1334,7 @@ PRODUCT_HTML = r"""<!DOCTYPE html>
 <link rel="canonical" href="https://carestia.cl/productos/__SLUG__.html">
 <meta property="og:title" content="__TITLE__">
 <meta property="og:description" content="__DESC__">
-<meta property="og:image" content="https://pitvox.github.io/costo-de-vida-cl/og.png">
+<meta property="og:image" content="https://carestia.cl/og.png">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2317120e'/%3E%3Crect x='28.5' y='28' width='7' height='24' rx='2' fill='%23e4dacc'/%3E%3Cpath d='M29.5 22L39 13.5' stroke='%23e8743b' stroke-width='7' stroke-linecap='round' fill='none'/%3E%3C/svg%3E">
