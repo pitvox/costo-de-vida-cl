@@ -200,9 +200,20 @@ IPC_REINTENTOS = 3
 IPC_MANUAL_ARCHIVO = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ipc_manual.json")
 
 
+def _mes_ipc_vigente() -> pd.Period:
+    return pd.Timestamp.today().to_period("M")
+
+
 def _meses_ipc_esperados() -> pd.PeriodIndex:
-    """Meses que la serie IPC debe cubrir: 2008-01 hasta el mes vigente-1."""
-    return pd.period_range(IPC_MES_INICIO, pd.Timestamp.today().to_period("M") - 1, freq="M")
+    """Meses de cobertura OBLIGATORIA: 2008-01 hasta el mes vigente-2.
+
+    El INE publica el IPC de un mes alrededor del dia 8 del mes siguiente,
+    asi que entre el dia 1 y esa fecha el mes vigente-1 no existe en NINGUNA
+    fuente (ni BCCh, ni mindicador, ni ipc_manual). Exigirlo mataba el build
+    en cada primer viernes de mes pidiendo un dato que aun no se publica.
+    Ese mes queda OPCIONAL y lo maneja _validar_ipc: si la serie lo trae se
+    usa normal, si falta se avisa y se deflacta con el ultimo disponible."""
+    return pd.period_range(IPC_MES_INICIO, _mes_ipc_vigente() - 2, freq="M")
 
 
 def _meses_ipc_faltantes(s: pd.Series) -> list:
@@ -214,12 +225,20 @@ def _validar_ipc(s: pd.Series) -> pd.Series:
     """Compuerta de la deflactación: un hueco en la serie IPC deforma el
     cumprod y corre percentiles y vs-promedio de TODOS los índices, así que
     ante cobertura incompleta se aborta el build en vez de publicar cifras
-    cojas (el Action falla visible y el sitio conserva el deploy anterior)."""
+    cojas (el Action falla visible y el sitio conserva el deploy anterior).
+
+    Unica tolerancia: el mes vigente-1, que el INE todavia puede no haber
+    publicado (ver _meses_ipc_esperados). Si falta se avisa y se sigue; un
+    hueco en cualquier otro mes sigue abortando igual que siempre."""
     faltan = _meses_ipc_faltantes(s)
     if faltan:
         raise RuntimeError("IPC incompleto: faltan " + ", ".join(str(m) for m in faltan))
     if len(s) <= IPC_MIN_MESES:
         raise RuntimeError(f"IPC incompleto: solo {len(s)} meses (esperaba >{IPC_MIN_MESES})")
+    opcional = _mes_ipc_vigente() - 1
+    if opcional not in set(s.index.to_period("M")):
+        print(f"[IPC: mes {opcional} aún no publicado; "
+              f"deflactando con último disponible {s.index[-1]:%Y-%m}]")
     print(f"IPC OK: {len(s)} meses, {s.index[0]:%Y-%m} a {s.index[-1]:%Y-%m}")
     return s
 
