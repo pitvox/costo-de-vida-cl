@@ -154,6 +154,22 @@ HTML = r"""<!DOCTYPE html>
   /* separador fino entre los índices y las pills de herramientas */
   .tab-sep { flex:none; width:1px; align-self:stretch; background:var(--line);
     margin:0 4px; }
+  /* móvil: sin scroll horizontal; las pills envuelven en dos filas completas
+     (índices arriba, herramientas abajo) y el separador se vuelve un filete
+     horizontal que fuerza el salto de fila. flex-basis 0 en las pills: cada
+     fila se reparte el ancho y NUNCA nace una tercera fila; en pantallas muy
+     angostas el texto elipsa en vez de reflowar. min-height =
+     12+34+8+1+8+34+12 más el borde inferior: la reserva exacta de las dos
+     filas antes de que JS las pueble (CLS). El punto brasa de las
+     herramientas queda intacto */
+  @media (max-width:640px) {
+    .tabs { flex-wrap:wrap; overflow-x:visible; min-height:110px; }
+    .tab { flex:1 1 0; min-width:0; overflow:hidden; text-overflow:ellipsis;
+      text-align:center; padding:8px 6px; font-size:10px; letter-spacing:.06em; }
+    .tab .tdot { margin-right:6px; }
+    .tab-sep { flex-basis:100%; width:auto; height:1px; align-self:auto;
+      margin:0; }
+  }
 
   @keyframes car-pulse {
     0%,100% { box-shadow:0 0 0 0 rgba(232,116,59,.55); }
@@ -183,6 +199,17 @@ HTML = r"""<!DOCTYPE html>
     .hero-wrap { height:calc(100vh - 272px); min-height:420px; }
     @supports (height:100svh) {
       .hero-wrap { height:calc(100svh - 272px); } } }
+  /* móvil: la franja bajo el lienzo (50px, ver .mstrip) y, bajo 641px, la
+     segunda fila de tabs (+50px) salen del encuadre para que hero + barras
+     sigan cerrando la pantalla sin scroll donde el alto alcance */
+  @media (max-width:759px) {
+    .hero-wrap { height:calc(100vh - 368px); }
+    @supports (height:100svh) {
+      .hero-wrap { height:calc(100svh - 368px); } } }
+  @media (max-width:640px) {
+    .hero-wrap { height:calc(100vh - 419px); }
+    @supports (height:100svh) {
+      .hero-wrap { height:calc(100svh - 419px); } } }
   @media (max-width:759px) { .overlay .oname, .overlay .cstats, .overlay .caviso,
     .overlay .can-reg { max-width:calc(100vw - 160px); } }
   #chart, #pchart, #cchart { position:absolute; inset:0; }
@@ -236,6 +263,26 @@ HTML = r"""<!DOCTYPE html>
   .zoomhint { display:none; white-space:nowrap;
     font:400 10px "IBM Plex Mono",monospace; color:var(--ash); }
   @media (min-width:760px) { .ref, .zoomhint { display:block; } }
+  /* ---- franja móvil bajo el lienzo: leyenda compacta + pista táctil ---- */
+  /* bajo 760px ni la leyenda completa (≥900px) ni la pista de zoom de la
+     barra (≥760px) existen: esta franja trae ambas en versión corta, fuera
+     del lienzo para no taparlo. Primera línea: solo swatch + etiqueta corta
+     (la frase explicativa completa queda en desktop); segunda línea: la
+     pista de gestos. En productos/canasta la leyenda (m-ind) se apaga y el
+     min-height mantiene la franja estable; altura fija reservada desde el
+     primer paint (CLS) */
+  .mstrip { display:none; }
+  @media (max-width:759px) {
+    .mstrip { display:flex; flex-wrap:wrap; align-content:flex-start;
+      align-items:center; gap:4px 14px; min-height:50px;
+      padding:7px clamp(16px,3vw,32px);
+      font:400 10px/16px "IBM Plex Mono",monospace; color:var(--ash); }
+    .mstrip .sw { display:inline-block; width:16px; height:0; margin-right:6px;
+      vertical-align:middle; }
+    .mstrip .mleg { white-space:nowrap; }
+    .mstrip .mhint { flex-basis:100%; color:var(--dim); white-space:nowrap;
+      overflow:hidden; text-overflow:ellipsis; }
+  }
   .tooltip { position:absolute; display:none; z-index:7; pointer-events:none;
     background:#0f0c09; border:1px solid var(--line); padding:8px 12px; white-space:nowrap; }
   .tooltip .tt-d { font:500 10px "IBM Plex Mono",monospace; letter-spacing:.1em; color:var(--ash); }
@@ -409,6 +456,14 @@ HTML = r"""<!DOCTYPE html>
         <div class="tt-n" id="tt-n"></div>
       </div>
     </section>
+
+    <!-- franja móvil (<760px): leyenda compacta del modo índices y pista de
+         gestos táctiles del lienzo; en desktop no existe -->
+    <div class="mstrip">
+      <span class="mleg m-ind"><span class="sw" style="border-top:2px solid #e8743b"></span>En pesos de hoy</span>
+      <span class="mleg m-ind" id="mleg-nom"><span class="sw" style="border-top:1px solid #8b8276"></span>Nominal</span>
+      <span class="mhint">desliza horizontal para moverte · pinch para zoom</span>
+    </div>
 
     <section class="contexto m-ind">
       <div class="ctx-box">
@@ -638,6 +693,8 @@ HTML = r"""<!DOCTYPE html>
     nb.classList.toggle('active', nomVisible);
     nb.style.visibility = linea ? 'visible' : 'hidden';   // solo aplica a la vista Línea
     document.getElementById('leg-nom').style.opacity = nomVisible ? '' : '.35';
+    // la leyenda compacta móvil acompaña el mismo atenuado
+    document.getElementById('mleg-nom').style.opacity = nomVisible ? '' : '.35';
     document.getElementById('ref-velas').textContent =
       linea ? '' : 'velas semanales · mecha = rango mín-máx entre locales encuestados';
     chart.timeScale().fitContent();
