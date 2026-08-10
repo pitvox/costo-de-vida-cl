@@ -1,0 +1,44 @@
+name: Analisis Libertadores (one-off)
+
+# Analisis editorial manual sobre el cierre del Paso Los Libertadores.
+# SOLO workflow_dispatch (sin cron). No toca Pages ni usa el grupo de
+# concurrencia "pages": no puede interferir con el deploy del sitio.
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  analisis:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clonar repo
+        uses: actions/checkout@v4
+
+      - name: Instalar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependencias
+        run: pip install pandas numpy requests matplotlib
+
+      - name: Ejecutar analisis
+        env:
+          BCCH_USER: ${{ secrets.BCCH_USER }}
+          BCCH_PASS: ${{ secrets.BCCH_PASS }}
+        # tee: la tabla queda en el log del workflow Y en tabla.txt (artifact).
+        # pipefail para que un fallo de python no quede oculto por el tee.
+        run: |
+          set -o pipefail
+          python analisis_libertadores.py 2>&1 | tee tabla.txt
+
+      - name: Subir resultados como artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: libertadores
+          path: |
+            libertadores.png
+            tabla.txt
+          retention-days: 30
