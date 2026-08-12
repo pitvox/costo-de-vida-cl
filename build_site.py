@@ -1704,6 +1704,46 @@ SITEMAP_URL = """  <url>
 """
 
 
+def generar_resumen() -> None:
+    """resumen.json: endpoint liviano y estable con los 4 índices, para
+    consumo externo (buscadores, agentes). Solo reempaqueta lo que ya viene
+    calculado en indices.json; la variación semanal sale de las dos últimas
+    semanas de la serie real. UTF-8 sin BOM, tildes literales."""
+    indices = {}
+    semana = None
+    for code, d in DATA["indices"].items():
+        real = d.get("real") or []
+        variacion = None
+        if len(real) >= 2 and real[-2]["value"]:
+            variacion = round((real[-1]["value"] / real[-2]["value"] - 1) * 100, 1)
+        if real and (semana is None or real[-1]["time"] > semana):
+            semana = real[-1]["time"]
+        indices[code] = {
+            "nombre": d["nombre"],
+            "subtitulo": d["subtitulo"],
+            "costo_pesos_hoy": d["costo_real"],
+            "veredicto": d["veredicto"],
+            "percentil": d["percentil"],
+            "vs_promedio_pct": d["vs_promedio"],
+            "variacion_semanal_pct": variacion,
+            "semanas_historia": d["n"],
+        }
+    resumen = {
+        "generado": datetime.date.today().isoformat(),
+        "semana": semana,
+        "fuente": "Carestía",
+        "url": "https://carestia.cl",
+        "licencia_datos": "ODEPA (CC-BY), IPC Banco Central de Chile",
+        "atribucion_requerida": True,
+        "deslinde": "Información de consumo. No constituye asesoría "
+                    "ni recomendación de inversión.",
+        "frecuencia": "semanal (viernes)",
+        "indices": indices,
+    }
+    with open("resumen.json", "w", encoding="utf-8") as fh:
+        json.dump(resumen, fh, ensure_ascii=False, indent=2)
+
+
 def generar_sitemap(slugs: list) -> None:
     """Raíz + las URLs de producto, todas con el lastmod del build."""
     lastmod = datetime.date.today().isoformat()
@@ -1725,8 +1765,9 @@ with open("robots.txt", "w", encoding="utf-8") as fh:
 
 SLUGS = generar_productos()
 generar_sitemap(SLUGS)
+generar_resumen()
 
-print(f"Listo: index.html + robots.txt + sitemap.xml + "
+print(f"Listo: index.html + robots.txt + sitemap.xml + resumen.json + "
       f"{len(SLUGS)} páginas en productos/")
 for c, d in DATA["indices"].items():
     print(f"  {d['nombre']}: {d['veredicto']} (percentil {d['percentil']})")
