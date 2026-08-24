@@ -12,7 +12,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-from datetime import datetime
+from datetime import datetime, timedelta
 
 URL = "https://carestia.cl/indices.json"
 
@@ -46,6 +46,10 @@ ax.set_facecolor(BG)
 
 ax.plot(fechas, vals, color=AZUL, linewidth=1.6, zorder=3)
 
+# Aire a la derecha: la etiqueta de "hoy" se rotula fuera de la serie, no
+# encima. Sin este margen cae sobre la linea y queda ilegible.
+ax.set_xlim(fechas[0], fechas[-1] + timedelta(days=220))
+
 # máximo histórico
 ax.scatter([f_max], [v_max], color=ROJO, s=30, zorder=4)
 ax.annotate("máximo real histórico\n" + clp(v_max) + " · " + f_max.strftime("%b %Y"),
@@ -56,8 +60,10 @@ ax.annotate("máximo real histórico\n" + clp(v_max) + " · " + f_max.strftime("
 # última semana
 ax.scatter([f_ult], [v_ult], color=INK, s=30, zorder=4)
 ax.annotate("hoy: " + clp(v_ult),
-            xy=(f_ult, v_ult), xytext=(-4, -22), textcoords="offset points",
-            ha="right", fontsize=9, color=INK, family="monospace", weight="bold")
+            xy=(f_ult, v_ult), xytext=(9, 0), textcoords="offset points",
+            ha="left", va="center", fontsize=9, color=INK, family="monospace",
+            weight="bold", zorder=5,
+            bbox=dict(boxstyle="round,pad=0.2", facecolor=BG, edgecolor="none"))
 
 ax.set_title("Índice Asado — asado para 4 personas, en pesos de hoy",
              color=INK, fontsize=11, family="monospace", loc="left", pad=12)
