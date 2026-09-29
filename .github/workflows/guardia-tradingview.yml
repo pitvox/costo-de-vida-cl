@@ -1,0 +1,60 @@
+name: Guardia licencia TV
+
+# Obligación contractual: la licencia de TradingView Advanced Charts prohíbe
+# que la librería exista en un repositorio público. Se inyecta en el build
+# desde un repo privado. Esta guardia falla si cualquier archivo versionado
+# parece ser parte de la librería.
+on:
+  push:
+    branches: ["**"]
+  pull_request: {}
+
+permissions:
+  contents: read
+
+jobs:
+  guardia:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Clonar repo
+        uses: actions/checkout@v4
+
+      - name: Buscar librería propietaria en el árbol
+        shell: bash
+        run: |
+          set -euo pipefail
+          MSG="Librería TradingView detectada en el repo público: viola la licencia. Revertir el commit antes de mergear."
+          hallazgos=""
+
+          # 1) Rutas: cualquier componente charting_library* / datafeeds*, o un directorio bundles/.
+          rutas=$(git ls-files | grep -Ei '(^|/)(charting_library|datafeeds)[^/]*(/|$)|(^|/)bundles/' || true)
+          if [ -n "$rutas" ]; then
+            hallazgos+=$'Rutas prohibidas:\n'"$rutas"$'\n'
+          fi
+
+          # 2) Contenido: la cadena en las primeras 5 líneas de cualquier archivo versionado.
+          contenido=""
+          while IFS= read -r -d '' f; do
+            [ -f "$f" ] || continue
+            if head -n 5 -- "$f" | grep -aqi 'TradingView Charting Library'; then
+              contenido+="$f"$'\n'
+            fi
+          done < <(git ls-files -z)
+          if [ -n "$contenido" ]; then
+            hallazgos+=$'Archivos con "TradingView Charting Library" en sus primeras 5 líneas:\n'"$contenido"
+          fi
+
+          if [ -n "$hallazgos" ]; then
+            echo "::error::$MSG"
+            printf '%s\n' "$hallazgos"
+            {
+              echo "## ❌ $MSG"
+              echo '```'
+              printf '%s\n' "$hallazgos"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          echo "OK: no hay rastros de la librería TradingView en el árbol."
+          echo "✅ Guardia TradingView: sin rastros de la librería." >> "$GITHUB_STEP_SUMMARY"
