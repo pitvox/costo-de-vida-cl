@@ -31,12 +31,22 @@ jobs:
       - name: Instalar dependencias
         run: pip install pandas numpy requests
 
-      - name: Calcular indices + generar sitio
+      - name: Tests
+        run: |
+          pip install pytest
+          python -m pytest -q tests
+
+      - name: Calcular indices
         env:
           BCCH_USER: ${{ secrets.BCCH_USER }}
           BCCH_PASS: ${{ secrets.BCCH_PASS }}
+        run: python indices.py
+
+      - name: Validar contra sitio desplegado
+        run: python validar.py
+
+      - name: Generar sitio
         run: |
-          python indices.py
           python build_site.py
           mkdir -p public
           cp index.html public/index.html
