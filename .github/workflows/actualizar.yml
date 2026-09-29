@@ -55,6 +55,12 @@ jobs:
           cp og.png public/og.png
           cp robots.txt public/robots.txt
           cp sitemap.xml public/sitemap.xml
+          cp metodologia.html public/metodologia.html
+          cp acerca.html public/acerca.html
+          cp contacto.html public/contacto.html
+          cp terminos.html public/terminos.html
+          cp privacidad.html public/privacidad.html
+          cp 404.html public/404.html
           cp -r productos public/productos
 
       - name: Preparar artefacto de Pages
