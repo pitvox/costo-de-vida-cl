@@ -572,7 +572,32 @@ def _modal(serie) -> str:
     return str(s.mode().iloc[0]) if not s.empty else ""
 
 
-def series_productos(df: pd.DataFrame, ipc: pd.Series) -> dict:
+LIMPIEZA_VENTANA = 8      # semanas calendario anteriores
+LIMPIEZA_MIN_OBS = 3      # valores crudos mínimos en la ventana para juzgar
+LIMPIEZA_FACTOR = 5.0     # fuera de [mediana/5, mediana*5] = error de captura
+
+
+def limpiar_semanal(s: pd.Series):
+    """Limpieza de UNA serie de producto (solo series_productos; los índices
+    no pasan por aquí). Recibe la serie semanal W-MON ya promediada, ANTES del
+    ffill, y devuelve (serie_limpia, descartes) con descartes = lista de
+    (semana, precio, mediana).
+
+    Para cada semana con dato toma los valores CRUDOS de las 8 semanas
+    calendario anteriores; con al menos 3, si el valor queda bajo mediana/5 o
+    sobre 5*mediana se descarta (NaN, y el ffill posterior la completa como
+    cualquier semana sin dato). La ventana usa los crudos, no los limpios: un
+    cambio de nivel persistente (ODEPA cambia la unidad) entra en la mediana y
+    se acepta tras unas semanas en vez de congelar la serie para siempre."""
+    med = (s.shift(1).rolling(LIMPIEZA_VENTANA, min_periods=LIMPIEZA_MIN_OBS)
+           .median())
+    malo = s.notna() & med.notna() & ((s < med / LIMPIEZA_FACTOR) |
+                                      (s > med * LIMPIEZA_FACTOR))
+    descartes = [(f, float(s[f]), float(med[f])) for f in s.index[malo]]
+    return s.mask(malo), descartes
+
+
+def series_productos(df: pd.DataFrame, ipc: pd.Series, descartes: list = None) -> dict:
     """Catálogo COMPLETO de productos RM en formato compacto.
 
     Dos pasadas: (1) los productos de las canastas oficiales conservan su
@@ -586,16 +611,26 @@ def series_productos(df: pd.DataFrame, ipc: pd.Series) -> dict:
     excluye y se reporta. Serie: precio por unidad base, W-MON +
     ffill(limit=4) como el pipeline, deflactada a pesos de hoy, y emitida
     compacta: {label, unidad, grupo, t0, v} con v = enteros semanales
-    consecutivos desde t0 y null en las semanas sin dato (estacionales)."""
+    consecutivos desde t0 y null en las semanas sin dato (estacionales).
+
+    LIMPIEZA (solo aquí, nunca en los índices): antes del ffill cada serie
+    pasa por limpiar_semanal; si se entrega la lista 'descartes', se le
+    agregan {slug, semana, precio, mediana} en pesos nominales por unidad
+    base."""
     ipc_hoy = float(ipc.iloc[-1])
     der = ipc.rename("ipc").rename_axis("fecha").reset_index().sort_values("fecha")
     out, excluidos = {}, []
 
     def emitir(slug, label, uni, grupo, precios, contenido):
-        s = (precios / contenido).resample("W-MON").mean().ffill(limit=4)
+        s, fuera = limpiar_semanal((precios / contenido).resample("W-MON").mean())
+        s = s.ffill(limit=4)
         validos = s.dropna()
         if validos.empty:
             return
+        if descartes is not None:
+            descartes.extend({"slug": slug, "semana": f.strftime("%Y-%m-%d"),
+                              "precio": round(p, 2), "mediana": round(m, 2)}
+                             for f, p, m in fuera)
         s = s.loc[validos.index[0]:validos.index[-1]]   # recorta colas sin dato
         izq = s.rename("nominal").rename_axis("fecha").reset_index().sort_values("fecha")
         m = pd.merge_asof(izq, der, on="fecha", direction="backward").set_index("fecha")
@@ -716,7 +751,13 @@ def main() -> None:
                   f" → {c['qty']}{c['unidad']} = {ap}")
     print("=" * 64)
 
-    salida["productos"] = series_productos(df, ipc)   # imprime su propio reporte
+    descartes = []
+    salida["productos"] = series_productos(df, ipc, descartes)   # imprime su propio reporte
+    salida["descartes"] = descartes
+    print(f"Limpieza de productos: {len(descartes)} semanas descartadas")
+    for d in descartes:
+        print(f"  DESCARTE {d['slug']} {d['semana']}: {d['precio']} "
+              f"(mediana 8 sem. {d['mediana']})")
 
     with open("indices.json", "w", encoding="utf-8") as fh:
         json.dump(salida, fh, ensure_ascii=False)
