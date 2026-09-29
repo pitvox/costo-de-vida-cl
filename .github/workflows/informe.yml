@@ -30,7 +30,7 @@ jobs:
         run: python informe.py
 
       - name: Subir informe como artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: informe
           path: informe_*.md
