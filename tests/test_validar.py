@@ -222,3 +222,50 @@ def test_resumen_igual_al_de_build_site():
     propio = validar.resumen_desde_indices(data)
     assert propio["semana"] == esperado["semana"]
     assert propio["indices"] == esperado["indices"]
+
+
+# ---------------- Limpieza de productos (clave "descartes") ----------------
+def _descartes(n, semana=SEMANA_NUEVA, slug="prod_000"):
+    return [{"slug": slug, "semana": semana, "precio": 3.0, "mediana": 3000.0}] * n
+
+
+def test_sin_clave_descartes_pasa(entorno):
+    assert "descartes" not in entorno["indices"]
+    code, summary = entorno["correr"]()
+    assert code == 0, summary
+    assert "## Limpieza de productos" in summary
+    assert "no trae la clave `descartes`" in summary
+
+
+def test_pocos_descartes_no_fallan_y_se_informan(entorno):
+    # 125 productos x 200 semanas = 25.000 semanas-producto con dato
+    for p in entorno["indices"]["productos"].values():
+        p["t0"] = _semanas(SEMANA_NUEVA, 200)[0]
+        p["v"] = [1000] * 200
+    entorno["indices"]["descartes"] = (
+        [{"slug": "poroto_manteca", "semana": "2026-06-29", "precio": 3.0,
+          "mediana": 2950.0}]
+        + _descartes(1, slug="prod_001")
+        + [d for k in range(3) for d in _descartes(
+            1, (datetime.date.fromisoformat(SEMANA_NUEVA)
+                - datetime.timedelta(weeks=k)).isoformat(), "prod_002")])
+    code, summary = entorno["correr"]()
+    assert code == 0, summary
+    assert "5 semanas descartadas" in summary and "de 25000 semanas-producto" in summary
+    assert f"Última semana ({SEMANA_NUEVA}):** 2 descarte(s)" in summary
+    assert "posible cambio de unidad o de producto en ODEPA: revisar" in summary
+    assert "- prod_002" in summary and "- prod_001" not in summary
+    assert "| poroto_manteca | 2026-06-29 | 3.0 | 2950.0 |" in summary
+
+
+def test_descartes_sobre_el_medio_por_ciento_fallan(entorno):
+    for p in entorno["indices"]["productos"].values():
+        p["t0"] = _semanas(SEMANA_NUEVA, 200)[0]
+        p["v"] = [1000] * 200
+    entorno["indices"]["descartes"] = _descartes(126)     # 126/25.000 = 0,504%
+    code, summary = entorno["correr"]()
+    assert code == 1
+    assert "limpieza de productos: descartes ≤ 0,5%" in summary
+    assert "borrando de más" in summary
+    entorno["indices"]["descartes"] = _descartes(125)     # justo 0,5%: pasa
+    assert entorno["correr"]()[0] == 0

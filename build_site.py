@@ -1802,14 +1802,40 @@ def seccion_otros(slug: str, grupo: str, rueda: list, labels: dict) -> str:
             f'    </section>')
 
 
-def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "") -> str:
-    """Renderiza la página estática de UN producto con sus datos inline."""
+def fin_serie(p: dict) -> datetime.date:
+    """Semana del último valor publicado de una serie compacta (t0 + v)."""
+    return (datetime.date.fromisoformat(p["t0"]) +
+            datetime.timedelta(weeks=len(p["v"]) - 1))
+
+
+def semana_vigente(prods) -> datetime.date:
+    """La semana más reciente del catálogo: la vara con que se decide si el
+    precio de un producto es "de hoy" o de una semana anterior."""
+    return max((fin_serie(p) for p in prods if any(v is not None for v in p["v"])),
+               default=None)
+
+
+# sobre este umbral el producto va a "Sin datos hace más de un año"
+SEMANAS_SIN_DATOS = 52
+
+
+def sin_datos_hace_un_anio(fin: datetime.date, semana: datetime.date) -> bool:
+    return semana is not None and (semana - fin).days > SEMANAS_SIN_DATOS * 7
+
+
+def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
+                    semana: datetime.date = None) -> str:
+    """Renderiza la página estática de UN producto con sus datos inline.
+    'semana' es la semana vigente del catálogo: si el último dato del
+    producto es de otra semana (mismo criterio que el "precio de la semana
+    del…" de /productos/), ni el texto ni la descripción dicen "Hoy"."""
     vals = [v for v in p["v"] if v is not None]
     ult = vals[-1]
     n = len(vals)
     anio = p["t0"][:4]
-    fecha_fin = (datetime.date.fromisoformat(p["t0"]) +
-                 datetime.timedelta(weeks=len(p["v"]) - 1))
+    fecha_fin = fin_serie(p)
+    antiguo = semana is not None and fecha_fin != semana
+    fecha_txt = fecha_fin.strftime("%d-%m-%Y")
     fem = es_femenino(p["label"])
     art, de = ("la", "de la") if fem else ("el", "del")
     label_frase = p["label"][0].lower() + p["label"][1:]
@@ -1820,20 +1846,31 @@ def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "") -> str:
     # el precio fue menor (más caro) o mayor (más barato) que el de hoy
     pct_caro = round(100 * sum(1 for v in vals if v < ult) / n)
     pct_barato = round(100 * sum(1 for v in vals if v > ult) / n)
+    if antiguo:
+        cuando, esta = "En esa semana", "estaba"
+    else:
+        cuando, esta = "Hoy", "está"
     if pct_caro >= pct_barato:
         adj = "cara" if fem else "caro"
-        pct_linea = (f"Hoy está más {adj} que en el {pct_caro}% de las "
+        pct_linea = (f"{cuando} {esta} más {adj} que en el {pct_caro}% de las "
                      f"semanas desde {anio}, en pesos de hoy.")
     else:
         adj = "barata" if fem else "barato"
-        pct_linea = (f"Hoy está más {adj} que en el {pct_barato}% de las "
+        pct_linea = (f"{cuando} {esta} más {adj} que en el {pct_barato}% de las "
                      f"semanas desde {anio}, en pesos de hoy.")
 
     title = f"Precio {de} {label_frase} en Chile: histórico desde {anio} | Carestía"
-    desc = (f"Hoy {art} {label_frase} cuesta {precio} por {uni_txt} en Chile "
-            f"(promedio de ferias, supermercados y carnicerías de la RM, "
-            f"en pesos de hoy). Serie semanal desde {anio} con datos ODEPA, "
-            f"actualizada cada viernes.")
+    if antiguo:
+        ultimo = f"Último precio publicado por ODEPA (semana del {fecha_txt})"
+        pct_linea = f"{ultimo}. {pct_linea}"
+        desc = (f"{ultimo}: {precio} por {uni_txt} {de} {label_frase} en Chile "
+                f"(promedio de ferias, supermercados y carnicerías de la RM, "
+                f"en pesos de hoy). Serie semanal desde {anio} con datos ODEPA.")
+    else:
+        desc = (f"Hoy {art} {label_frase} cuesta {precio} por {uni_txt} en Chile "
+                f"(promedio de ferias, supermercados y carnicerías de la RM, "
+                f"en pesos de hoy). Serie semanal desde {anio} con datos ODEPA, "
+                f"actualizada cada viernes.")
 
     out = PRODUCT_HTML
     for token, valor in [
@@ -1845,7 +1882,7 @@ def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "") -> str:
         ("__UNI_TXT__", uni_txt),
         ("__DELTA__", fmt_delta(vals)),
         ("__PCT_LINEA__", html.escape(pct_linea)),
-        ("__FECHA__", fecha_fin.strftime("%d-%m-%Y")),
+        ("__FECHA__", fecha_txt),
         ("__ANIO__", anio),
         ("__CANASTA__", f"{key}:{QDEF.get(p['unidad'], '1')}"),
         ("__T0__", p["t0"]),
@@ -1893,13 +1930,14 @@ def generar_productos() -> dict:
     for lst in por_grupo.values():
         lst.sort()
     labels = {s: lab for s, (_k, lab) in slugs.items()}
+    semana = semana_vigente(prods[k] for k, _l in slugs.values())
     os.makedirs("productos", exist_ok=True)
     for slug, (key, _label) in slugs.items():
         grupo = prods[key].get("grupo") or "Otros"
         otros = seccion_otros(slug, grupo, por_grupo[grupo], labels)
         with open(os.path.join("productos", f"{slug}.html"), "w",
                   encoding="utf-8") as fh:
-            fh.write(pagina_producto(key, prods[key], slug, otros))
+            fh.write(pagina_producto(key, prods[key], slug, otros, semana))
     return slugs
 
 
@@ -2081,40 +2119,57 @@ def generar_indice_productos(fichas: dict) -> None:
     (A-Z, "Otros" al final), cada una con su precio de hoy en pesos de hoy y
     un <a href> a su ficha. Sin semáforo: está reservado a los 4 índices.
     Si la última semana con dato de un producto no es la más reciente del
-    catálogo (estacionales), se dice de cuándo es el precio."""
+    catálogo (estacionales), se dice de cuándo es el precio. Los productos
+    cuyo último dato tiene más de 52 semanas van al final, en su propia
+    sección "Sin datos hace más de un año", con su último dato y su fecha."""
     prods = DATA.get("productos", {})
     filas = []
     for slug, (key, label) in fichas.items():
         p = prods[key]
         ult = [v for v in p["v"] if v is not None][-1]
-        fin = (datetime.date.fromisoformat(p["t0"]) +
-               datetime.timedelta(weeks=len(p["v"]) - 1))
         filas.append((p.get("grupo") or "Otros", label, slug, ult,
-                      UNI_TXT.get(p["unidad"], p["unidad"]), fin))
+                      UNI_TXT.get(p["unidad"], p["unidad"]), fin_serie(p)))
     semana = max((f[5] for f in filas), default=None)
-    grupos = {}
+    grupos, sin_datos = {}, []
     for f in filas:
-        grupos.setdefault(f[0], []).append(f)
+        if sin_datos_hace_un_anio(f[5], semana):
+            sin_datos.append(f)
+        else:
+            grupos.setdefault(f[0], []).append(f)
     orden = sorted(grupos, key=lambda g: (g == "Otros", _orden(g)))
 
-    indice = "\n        ".join(
-        f'<li><a href="#{slug_url(g)}">{html.escape(g)} '
-        f'<span>{len(grupos[g])}</span></a></li>' for g in orden)
-    secciones = []
-    for g in orden:
-        items = []
-        for _g, label, slug, ult, uni, fin in sorted(grupos[g], key=lambda f: _orden(f[1])):
-            viejo = (f'<span class="pf">precio de la semana del '
-                     f'{fin.strftime("%d-%m-%Y")}</span>' if fin != semana else "")
-            items.append(
-                f'<li><a href="{SITIO}/productos/{slug}.html">'
+    def item(label, slug, ult, uni, fin):
+        viejo = (f'<span class="pf">precio de la semana del '
+                 f'{fin.strftime("%d-%m-%Y")}</span>' if fin != semana else "")
+        return (f'<li><a href="{SITIO}/productos/{slug}.html">'
                 f'<span class="pn">{html.escape(label)}{viejo}</span>'
                 f'<span class="pp">{fmt_clp(ult)} <small>por {uni}</small></span>'
                 f'</a></li>')
-        lis = "\n        ".join(items)
+
+    ID_SIN_DATOS = "sin-datos"
+    chips = [(slug_url(g), g, len(grupos[g])) for g in orden]
+    if sin_datos:
+        chips.append((ID_SIN_DATOS, "Sin datos hace más de un año", len(sin_datos)))
+    indice = "\n        ".join(
+        f'<li><a href="#{ancla}">{html.escape(g)} '
+        f'<span>{k}</span></a></li>' for ancla, g, k in chips)
+    secciones = []
+    for g in orden:
+        lis = "\n        ".join(
+            item(*f[1:]) for f in sorted(grupos[g], key=lambda f: _orden(f[1])))
         secciones.append(
             f'    <section class="pgrupo" id="{slug_url(g)}">\n'
             f'      <h2>{html.escape(g)} <span>· {len(grupos[g])}</span></h2>\n'
+            f'      <ul class="plista">\n        {lis}\n      </ul>\n'
+            f'    </section>')
+    if sin_datos:
+        lis = "\n        ".join(
+            item(*f[1:]) for f in sorted(sin_datos, key=lambda f: _orden(f[1])))
+        secciones.append(
+            f'    <section class="pgrupo" id="{ID_SIN_DATOS}">\n'
+            f'      <h2>Sin datos hace más de un año <span>· {len(sin_datos)}</span></h2>\n'
+            f'      <p class="intro">ODEPA no ha publicado precios de estos productos '
+            f'en los últimos 12 meses. Se muestran con su último dato y su fecha.</p>\n'
             f'      <ul class="plista">\n        {lis}\n      </ul>\n'
             f'    </section>')
     n = len(filas)

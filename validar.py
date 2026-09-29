@@ -16,7 +16,11 @@ Chequeos:
      |variacion_semanal_pct| <= 40; costo_pesos_hoy > 0; percentil 0..100;
      veredicto en {BARATO, NORMAL, CARO};
   c. por índice: suma de aportes = costo_nominal (±1%) y ningún mismatch;
-  d. catálogo: len(indices.json["productos"]) == PRODUCTOS_ESPERADOS (125).
+  d. catálogo: len(indices.json["productos"]) == PRODUCTOS_ESPERADOS (125);
+  e. limpieza de productos: los descartes de indices.json["descartes"] no
+     superan el 0,5% de las semanas-producto con dato (si los supera, la
+     regla estaría borrando de más). Sin la clave no se chequea; por debajo
+     del umbral los descartes solo se informan, nunca hacen fallar el build.
 
 Siempre escribe un resumen en $GITHUB_STEP_SUMMARY (o stdout si no existe).
 Solo usa json/requests (+ stdlib).
@@ -37,6 +41,7 @@ URLS_INDICES = ("https://carestia.cl/indices.json",
 MAX_VARIACION_PCT = 40
 TOLERANCIA_APORTES = 0.01
 TIMEOUT = 30
+MAX_DESCARTES = 0.005     # fracción de semanas-producto con dato
 
 OK, KO = "✓", "✗"
 
@@ -193,6 +198,64 @@ def chequear_catalogo(productos: dict, esperados: int) -> tuple:
     return ("catálogo de productos", False, det)
 
 
+def _fin_serie(p: dict) -> str:
+    """Semana (YYYY-MM-DD) del último valor de una serie compacta."""
+    return (_fecha(p["t0"]) + datetime.timedelta(weeks=len(p["v"]) - 1)).isoformat()
+
+
+def revisar_limpieza(data: dict) -> tuple:
+    """Sección "Limpieza de productos" del Step Summary y su chequeo.
+    Devuelve (lineas_markdown, chequeo o None). Sin la clave "descartes"
+    (indices.json anterior a la limpieza) no hay chequeo."""
+    if "descartes" not in data:
+        return (["## Limpieza de productos", "",
+                 "indices.json no trae la clave `descartes`: sin información de limpieza."],
+                None)
+    descartes = data.get("descartes") or []
+    productos = data.get("productos") or {}
+    con_dato = sum(1 for p in productos.values() for v in p.get("v") or [] if v is not None)
+    semana = max((_fin_serie(p) for p in productos.values() if p.get("v")), default=None)
+    frac = len(descartes) / con_dato if con_dato else (1.0 if descartes else 0.0)
+    ok = frac <= MAX_DESCARTES
+    chequeo = ("limpieza de productos: descartes ≤ 0,5%", ok,
+               f"{len(descartes)} de {con_dato} semanas-producto con dato "
+               f"({frac * 100:.3f}%)" + ("" if ok else
+                                        " — la regla estaría borrando de más"))
+
+    def fila(d):
+        return f"| {d.get('slug')} | {d.get('semana')} | {d.get('precio')} | {d.get('mediana')} |"
+
+    cab = ["| Producto | Semana | Precio | Mediana 8 sem. |", "|---|---|---:|---:|"]
+    lineas = ["## Limpieza de productos", "",
+              f"**{OK if ok else KO} {len(descartes)} semanas descartadas** de "
+              f"{con_dato} semanas-producto con dato ({frac * 100:.3f}%; límite "
+              f"{MAX_DESCARTES * 100:g}%). Precios nominales por unidad base.", ""]
+    ultima = [d for d in descartes if d.get("semana") == semana]
+    lineas.append(f"**Última semana ({semana or '·'}):** "
+                  + (f"{len(ultima)} descarte(s)" if ultima else "sin descartes"))
+    if ultima:
+        lineas += [""] + cab + [fila(d) for d in ultima]
+    lineas.append("")
+    if semana:
+        ult3 = {(_fecha(semana) - datetime.timedelta(weeks=k)).isoformat() for k in range(3)}
+        por_slug = {}
+        for d in descartes:
+            if d.get("semana") in ult3:
+                por_slug.setdefault(d.get("slug"), set()).add(d.get("semana"))
+        persistentes = sorted(sl for sl, sems in por_slug.items() if sems == ult3)
+        if persistentes:
+            lineas += ["**Descartes en cada una de las últimas 3 semanas** — posible "
+                       "cambio de unidad o de producto en ODEPA: revisar", ""]
+            lineas += [f"- {sl}" for sl in persistentes]
+            lineas.append("")
+    if descartes:
+        lineas += ["<details><summary>Todos los descartes</summary>", ""] + cab
+        lineas += [fila(d) for d in sorted(descartes, key=lambda d: (str(d.get("semana")),
+                                                                      str(d.get("slug"))))]
+        lineas += ["", "</details>"]
+    return lineas, chequeo
+
+
 # ---------------- Salida ----------------
 def escribir_summary(texto: str) -> None:
     ruta = os.environ.get("GITHUB_STEP_SUMMARY")
@@ -264,8 +327,12 @@ def main() -> int:
             "var": f"{var:+.1f}%" if isinstance(var, (int, float)) else var,
         })
     chequeos.append(chequear_catalogo(data.get("productos") or {}, esperados))
+    limpieza, chequeo = revisar_limpieza(data)
+    if chequeo is not None:
+        chequeos.append(chequeo)
 
-    escribir_summary(armar_summary(filas, chequeos, url_ref))
+    escribir_summary(armar_summary(filas, chequeos, url_ref) + "\n\n"
+                     + "\n".join(limpieza))
     fallas = [(c, d) for c, ok, d in chequeos if not ok]
     if fallas:
         for c, d in fallas:
