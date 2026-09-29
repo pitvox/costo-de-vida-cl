@@ -2177,7 +2177,7 @@ def generar_indice_productos(fichas: dict) -> None:
     cuerpo = (
         f'    <div class="miga">Catálogo · pesos de hoy</div>\n'
         f'    <h1>Productos</h1>\n'
-        f'    <p class="intro">Precio de hoy de {n} productos en la Región '
+        f'    <p class="intro">Precios de {n} productos en la Región '
         f'Metropolitana, en pesos de hoy: el promedio de los puntos que ODEPA '
         f'encuesta cada semana (ferias libres, supermercados y carnicerías). '
         f'Semana del {fecha}. Cada producto enlaza a su serie semanal.</p>\n'
@@ -2187,7 +2187,7 @@ def generar_indice_productos(fichas: dict) -> None:
     escribir_pagina(
         os.path.join("productos", "index.html"), f"{SITIO}/productos/",
         f"Precios de {n} alimentos en Chile, en pesos de hoy | Carestía",
-        f"Precio de hoy de {n} alimentos en la Región Metropolitana, en pesos "
+        f"Precios de {n} alimentos en la Región Metropolitana, en pesos "
         f"de hoy, agrupados por tipo y con la serie semanal de cada uno. Datos "
         f"ODEPA, actualizado cada viernes.",
         cuerpo, actual="productos", clase="catalogo")
