@@ -58,7 +58,7 @@ jobs:
           cp -r productos public/productos
 
       - name: Preparar artefacto de Pages
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: public
 
