@@ -1,0 +1,8 @@
+# Licencia TradingView: nunca commitear la librería.
+# Se inyecta en el build desde un repo privado; la licencia prohíbe que exista
+# en un repositorio público. La guardia .github/workflows/guardia-tradingview.yml
+# falla si igual llega a entrar (p. ej. con git add -f).
+charting_library/
+datafeeds/
+**/charting_library*
+**/datafeeds*

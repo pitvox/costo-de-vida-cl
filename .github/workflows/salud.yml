@@ -1,0 +1,98 @@
+name: Salud
+
+# Chequeo diario del sitio publicado. Solo lectura, sin deploy.
+# El único efecto de una falla es el correo de GitHub al dueño.
+on:
+  schedule:
+    - cron: "0 12 * * *"
+  workflow_dispatch: {}
+
+permissions: {}
+
+jobs:
+  salud:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Chequear carestia.cl
+        env:
+          BASE: https://carestia.cl
+          MAX_DIAS: "12"
+        shell: python
+        run: |
+          import datetime, json, os, re, sys, urllib.request
+
+          BASE = os.environ["BASE"].rstrip("/")
+          MAX_DIAS = int(os.environ["MAX_DIAS"])
+          filas, fallas = [], 0
+
+          def get(url):
+              req = urllib.request.Request(url, headers={"User-Agent": "carestia-salud"})
+              try:
+                  with urllib.request.urlopen(req, timeout=30) as r:
+                      return r.status, r.read().decode("utf-8", "replace")
+              except urllib.error.HTTPError as e:
+                  return e.code, ""
+              except Exception as e:
+                  return None, f"{type(e).__name__}: {e}"
+
+          def reportar(nombre, ok, detalle):
+              global fallas
+              fallas += 0 if ok else 1
+              filas.append(f"| {nombre} | {'✅' if ok else '❌'} | {detalle} |")
+              print(f"{'OK ' if ok else 'FALLA'} {nombre}: {detalle}")
+
+          # 1) resumen.json: 200 + JSON válido
+          url = f"{BASE}/resumen.json"
+          status, cuerpo = get(url)
+          resumen = None
+          if status != 200:
+              reportar("resumen.json responde 200", False, f"{url} → {status} {cuerpo[:200]}")
+          else:
+              try:
+                  resumen = json.loads(cuerpo)
+                  reportar("resumen.json responde 200 y es JSON", True, url)
+              except ValueError as e:
+                  reportar("resumen.json es JSON", False, f"JSON inválido: {e}")
+
+          # 2) semana con <= MAX_DIAS días de antigüedad
+          if resumen is None:
+              reportar("semana reciente", False, "sin resumen.json válido, no se pudo leer")
+          else:
+              semana = resumen.get("semana") if isinstance(resumen, dict) else None
+              try:
+                  f = datetime.date.fromisoformat(str(semana))
+                  dias = (datetime.datetime.now(datetime.timezone.utc).date() - f).days
+                  reportar("semana reciente", dias <= MAX_DIAS,
+                           f"semana={semana}, {dias} días (máx {MAX_DIAS})"
+                           + ("" if dias <= MAX_DIAS else
+                              " — el cron del viernes dejó de correr o de publicar"))
+              except ValueError:
+                  reportar("semana reciente", False, f"campo semana ilegible: {semana!r}")
+
+          # 3) portada contiene "Carestía"
+          url = f"{BASE}/"
+          status, cuerpo = get(url)
+          reportar("portada 200 y contiene «Carestía»",
+                   status == 200 and "Carestía" in cuerpo, f"{url} → {status}")
+
+          # 4) primera página de producto del sitemap responde 200
+          url = f"{BASE}/sitemap.xml"
+          status, cuerpo = get(url)
+          locs = re.findall(r"<loc>\s*([^<]+?)\s*</loc>", cuerpo) if status == 200 else []
+          prods = [l for l in locs if "/productos/" in l]
+          if not prods:
+              reportar("página de producto", False,
+                       f"{url} → {status}; sin <loc> de productos ({len(locs)} <loc> en total)")
+          else:
+              p_status, _ = get(prods[0])
+              reportar("página de producto 200", p_status == 200, f"{prods[0]} → {p_status}")
+
+          resumen_md = ["## Salud de carestia.cl", "",
+                        f"{datetime.datetime.now(datetime.timezone.utc):%Y-%m-%d %H:%M} UTC", "",
+                        "| Chequeo | Estado | Detalle |", "|---|---|---|", *filas, "",
+                        "**Todo OK.**" if not fallas else f"**{fallas} chequeo(s) fallaron.**"]
+          if os.environ.get("GITHUB_STEP_SUMMARY"):
+              with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as fh:
+                  fh.write("\n".join(resumen_md) + "\n")
+          sys.exit(1 if fallas else 0)
