@@ -4,7 +4,7 @@ Carestía mide cuánto cuesta la vida cotidiana en Chile. Publica cuatro índice
 
 No es un comparador de precios: no te dice dónde comprar más barato. Te dice cómo está un precio hoy frente a sus últimos años.
 
-Los datos vienen de fuentes públicas, ODEPA y el Banco Central de Chile, y se actualizan automáticamente cada viernes. La metodología completa está publicada en esta misma web.
+Los datos vienen de fuentes públicas, ODEPA y el Banco Central de Chile, y se actualizan automáticamente cada viernes. [La metodología completa](/metodologia.html) está publicada en esta misma web.
 
 **Para medios.** Puedes citar nuestras cifras indicando "Fuente: Carestía (carestia.cl)". Si necesitas una serie o un gráfico específico, escríbenos.
 

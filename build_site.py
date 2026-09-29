@@ -2276,21 +2276,36 @@ def html_canastas() -> str:
     return '<div class="canastas">\n' + "\n".join(bloques) + '\n    </div>'
 
 
+def secciones_md(texto: str) -> list:
+    """[(título, html)] de un texto partido en sus líneas '## ' (títulos de
+    sección); lo que vaya antes del primer título queda con título None."""
+    secciones, titulo, cuerpo = [], None, []
+    for linea in texto.splitlines() + ["## "]:   # centinela: cierra la última
+        if linea.startswith("## "):
+            if titulo is not None or any(l.strip() for l in cuerpo):
+                secciones.append((titulo, md_a_html("\n".join(cuerpo))))
+            titulo, cuerpo = linea[3:].strip(), []
+        else:
+            cuerpo.append(linea)
+    return secciones
+
+
 def generar_metodologia() -> None:
     """/metodologia.html: "Metodología (resumen)", "Fuentes" y "Deslinde"
-    literales del README.md, "Las canastas" desde BASKETS y, como sección
-    final, las "Notas metodológicas" del texto del dueño
-    (textos/notas_metodologicas.md)."""
-    titulo_notas, notas = cargar_texto("notas_metodologicas")
+    literales del README.md, "Las canastas" desde BASKETS y, al final, las
+    secciones del texto del dueño (textos/notas_metodologicas.md), cada una
+    con su propio título ('## '), al mismo nivel que "Deslinde"."""
     secciones = [
-        ("resumen", "Metodología (resumen)", seccion_readme("Metodología (resumen)")),
-        ("canastas", "Las canastas", html_canastas()),
-        ("fuentes", "Fuentes", seccion_readme("Fuentes")),
-        ("deslinde", "Deslinde", seccion_readme("Deslinde")),
-        ("notas", titulo_notas or "Notas metodológicas", notas),
+        ("resumen", html.escape("Metodología (resumen)"), seccion_readme("Metodología (resumen)")),
+        ("canastas", html.escape("Las canastas"), html_canastas()),
+        ("fuentes", html.escape("Fuentes"), seccion_readme("Fuentes")),
+        ("deslinde", html.escape("Deslinde"), seccion_readme("Deslinde")),
     ]
+    for titulo, contenido in secciones_md(leer_texto("notas_metodologicas")):
+        titulo = titulo or "Notas metodológicas"
+        secciones.append((slug_url(titulo), md_en_linea(titulo), contenido))
     cuerpo = "    <h1>Metodología</h1>\n" + "\n".join(
-        f'    <section id="{sid}">\n    <h2>{html.escape(t)}</h2>\n{contenido}\n    </section>'
+        f'    <section id="{sid}">\n    <h2>{t}</h2>\n{contenido}\n    </section>'
         for sid, t, contenido in secciones)
     escribir_pagina(
         "metodologia.html", f"{SITIO}/metodologia.html",
