@@ -13,6 +13,11 @@ brasa #e8743b solo vive en el veredicto, en la í del wordmark y en la línea
 "en pesos de hoy" (con su crosshair). El verde/rojo/ámbar del semáforo
 queda reservado al veredicto y a las velas.
 
+También escribe una ficha por producto (productos/{slug}.html), el listado
+/productos/, /metodologia.html, las páginas institucionales y legales (con
+los textos literales de textos/), robots.txt, sitemap.xml y resumen.json.
+Todas las páginas comparten la navegación del encabezado y el pie.
+
 Correr:
   python indices.py
   python build_site.py
@@ -25,6 +30,10 @@ import json
 import os
 import re
 import unicodedata
+
+# las cantidades de /metodologia.html salen del mismo diccionario que usa el
+# cálculo (nunca escritas a mano)
+from indices import BASKETS
 
 with open("indices.json", encoding="utf-8") as fh:
     DATA = json.load(fh)
@@ -195,17 +204,19 @@ HTML = r"""<!DOCTYPE html>
     background:var(--bg); }
   @supports (height:100svh) {
     .hero-wrap { height:calc(100svh - 318px); } }
+  /* sobre 640px la fila de navegación del sitio (33px, en el encabezado)
+     también sale del calc: 272+33 y 368+33 */
   @media (min-width:760px) {
-    .hero-wrap { height:calc(100vh - 272px); min-height:420px; }
+    .hero-wrap { height:calc(100vh - 305px); min-height:420px; }
     @supports (height:100svh) {
-      .hero-wrap { height:calc(100svh - 272px); } } }
+      .hero-wrap { height:calc(100svh - 305px); } } }
   /* móvil: la franja bajo el lienzo (50px, ver .mstrip) y, bajo 641px, la
      segunda fila de tabs (+50px) salen del encuadre para que hero + barras
      sigan cerrando la pantalla sin scroll donde el alto alcance */
   @media (max-width:759px) {
-    .hero-wrap { height:calc(100vh - 368px); }
+    .hero-wrap { height:calc(100vh - 401px); }
     @supports (height:100svh) {
-      .hero-wrap { height:calc(100svh - 368px); } } }
+      .hero-wrap { height:calc(100svh - 401px); } } }
   @media (max-width:640px) {
     .hero-wrap { height:calc(100vh - 419px); }
     @supports (height:100svh) {
@@ -374,14 +385,11 @@ HTML = r"""<!DOCTYPE html>
   .ctemporada { margin-top:2px; }
   .caviso { font:400 11px/1.5 "IBM Plex Mono",monospace; color:var(--ash); margin-top:4px; }
 
-  /* ---- footer ---- */
-  footer { border-top:1px solid var(--line); padding:18px clamp(16px,3vw,32px);
-    display:flex; flex-direction:column; gap:6px; background:var(--bg2); }
-  footer .attr { font:400 11px/1.6 "IBM Plex Mono",monospace; color:var(--ash); }
-  footer .disc { font:400 11px/1.6 "IBM Plex Mono",monospace; color:var(--dim); }
+  /* ---- footer: el pie común del sitio (CSS_SITIO, más abajo) ---- */
 
   .nochart { display:flex; align-items:center; justify-content:center; height:100%;
     color:var(--ash); font-size:13px; padding:20px; text-align:center; }
+__CSS_SITIO__
 </style>
 </head>
 <body data-modo="indices">
@@ -400,6 +408,7 @@ HTML = r"""<!DOCTYPE html>
       <div class="tagline">Índices del costo de vida · Chile</div>
     </div>
     <div class="semana">Semana del <span id="fecha"></span> <span>· actualizado viernes</span></div>
+    __NAV__
   </header>
 
   <nav class="tabs" id="tabs" aria-label="Índices y herramientas"></nav>
@@ -492,10 +501,7 @@ HTML = r"""<!DOCTYPE html>
     </section>
   </div>
 
-  <footer>
-    <div class="attr">Fuente: precios al consumidor ODEPA (datos.odepa.gob.cl, CC-BY) · deflactado por IPC. Cada precio es el promedio de los puntos que ODEPA encuesta cada semana en la Región Metropolitana: ferias libres, supermercados y carnicerías. Por eso suele ser menor que el precio de supermercado. Canastas fijas; precios normalizados a kilo, unidad o litro según el envase que cotiza ODEPA.</div>
-    <div class="disc">Información de consumo con fines analíticos. No constituye asesoría ni recomendación de inversión.</div>
-  </footer>
+__PIE__
 
 <script>
   const DATA = __DATA__;
@@ -608,11 +614,33 @@ HTML = r"""<!DOCTYPE html>
   function chartActivo() {
     return modo === 'productos' ? pchart : modo === 'canasta' ? cchart : chart;
   }
+  // navegación del sitio: en la portada, Índices / Comparar / Arma tu
+  // canasta del encabezado cambian el modo EN EL LUGAR, igual que las tabs
+  // (sin recargar y aunque el hash ya sea el mismo); sin JS, o sin
+  // productos, siguen siendo links normales a los deep links
+  function syncNav() {
+    document.querySelectorAll('.sitenav a[data-modo]').forEach(a => {
+      if (a.dataset.modo === modo) a.setAttribute('aria-current', 'page');
+      else a.removeAttribute('aria-current');
+    });
+  }
+  document.querySelectorAll('.sitenav a[data-modo]').forEach(a => {
+    a.addEventListener('click', e => {
+      const m = a.dataset.modo;
+      if (m !== 'indices' && !Object.keys(PRODS).length) return;
+      e.preventDefault();
+      if (m === 'indices') { if (modo !== 'indices') render(cur); }
+      else setModo(m);
+      const menu = a.closest('details');
+      if (menu) menu.open = false;
+    });
+  });
   function setModo(m) {
     const cambio = modo !== m;
     modo = m;
     document.body.dataset.modo = m;
     syncTabs();
+    syncNav();
     if (!cambio) return;
     // el chart recién mostrado estuvo en display:none: esperar a que el
     // ResizeObserver de autoSize le dé tamaño y recién ahí re-encuadrar,
@@ -1375,6 +1403,173 @@ Allow: /
 Sitemap: https://carestia.cl/sitemap.xml
 """
 
+# ---------------- Navegación y pie comunes (todas las páginas) ----------------
+# Portada, fichas y páginas del sitio llevan la misma navegación en el
+# encabezado y cierran con el mismo pie. URLs absolutas al dominio canónico,
+# como el resto de los links del sitio (el 404 se sirve en cualquier ruta).
+# Desktop: los links van en una fila propia bajo la marca. Móvil (≤640px): se
+# pliegan en un <details> "Menú" que ocupa la fila del wordmark: sin scroll
+# horizontal, sin JS y sin sumar filas al encabezado de la portada.
+SITIO = "https://carestia.cl"
+NAV = [   # (clave, texto, href, modo de la portada que abre en el lugar)
+    ("indices", "Índices", f"{SITIO}/", "indices"),
+    ("productos", "Productos", f"{SITIO}/productos/", None),
+    # deep links que ya existen en la portada (#comparar = alias de #productos)
+    ("comparar", "Comparar", f"{SITIO}/#comparar", "productos"),
+    ("canasta", "Arma tu canasta", f"{SITIO}/#canasta", "canasta"),
+    ("metodologia", "Metodología", f"{SITIO}/metodologia.html", None),
+    ("acerca", "Acerca de", f"{SITIO}/acerca.html", None),
+]
+PIE_LINKS = [
+    ("metodologia", "Metodología", f"{SITIO}/metodologia.html"),
+    ("acerca", "Acerca de", f"{SITIO}/acerca.html"),
+    ("contacto", "Contacto", f"{SITIO}/contacto.html"),
+    ("terminos", "Términos de uso", f"{SITIO}/terminos.html"),
+    ("privacidad", "Privacidad", f"{SITIO}/privacidad.html"),
+    ("datos", "Datos abiertos (resumen.json)", f"{SITIO}/resumen.json"),
+]
+# atribución ODEPA CC-BY y deslinde: el mismo texto que ya tenía el pie de la
+# portada, ahora en el pie de todas las páginas
+PIE_ATTR = ('Fuente: precios al consumidor ODEPA (<a href="https://datos.odepa.gob.cl">'
+            'datos.odepa.gob.cl</a>, CC-BY) · deflactado por IPC. Cada precio es el '
+            'promedio de los puntos que ODEPA encuesta cada semana en la Región '
+            'Metropolitana: ferias libres, supermercados y carnicerías. Por eso suele '
+            'ser menor que el precio de supermercado. Canastas fijas; precios '
+            'normalizados a kilo, unidad o litro según el envase que cotiza ODEPA.')
+PIE_DISC = ('Información de consumo con fines analíticos. No constituye asesoría '
+            'ni recomendación de inversión.')
+
+CSS_SITIO = r"""
+  /* ---- navegación del sitio (común a todas las páginas) ---- */
+  .sitenav { flex-basis:100%; }
+  .sitenav ul { list-style:none; }
+  .snav-links { display:flex; flex-wrap:wrap; gap:0 22px; }
+  .snav-links a, .snav-panel a { font:500 11px "IBM Plex Mono",monospace;
+    letter-spacing:.08em; text-transform:uppercase; text-decoration:none; }
+  .snav-links a { display:inline-block; padding:6px 0 5px; color:var(--ash);
+    border-bottom:1px solid transparent; }
+  .snav-links a:hover, .snav-links a:focus-visible { color:var(--bone);
+    border-bottom-color:var(--ember); }
+  .snav-links a[aria-current] { color:var(--bone); border-bottom-color:var(--bone); }
+  /* móvil: el <summary> mide 34px de alto (área táctil de las pills) pero
+     el margen negativo deja su caja en 22px, el alto de la fila del
+     wordmark: el encabezado no crece */
+  .snav-menu { display:none; position:relative; }
+  .snav-menu > summary { display:flex; align-items:center; gap:8px;
+    min-height:34px; margin:-6px 0; padding:0 14px; cursor:pointer;
+    list-style:none; -webkit-user-select:none; user-select:none;
+    font:600 11px "IBM Plex Mono",monospace; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--bone); background:var(--panel);
+    border:1px solid var(--dim); border-radius:999px; }
+  .snav-menu > summary::-webkit-details-marker { display:none; }
+  .snav-menu > summary::after { content:"▾"; content:"▾" / ""; color:var(--ash); }
+  .snav-menu[open] > summary { border-color:var(--bone); }
+  .snav-panel { position:absolute; right:0; top:calc(100% + 12px); z-index:60;
+    min-width:230px; max-width:calc(100vw - 32px); padding:4px 0;
+    background:var(--panel); border:1px solid var(--line);
+    box-shadow:0 14px 34px rgba(0,0,0,.55); }
+  .snav-panel li + li { border-top:1px solid var(--grid); }
+  .snav-panel a { display:flex; align-items:center; min-height:44px;
+    padding:0 18px; font-size:12px; color:var(--bone); }
+  .snav-panel a:hover, .snav-panel a:focus-visible { background:#1f1913; }
+  .snav-panel a[aria-current] { box-shadow:inset 3px 0 0 var(--bone); }
+  @media (max-width:640px) {
+    header { display:grid; grid-template-columns:minmax(0,1fr) auto;
+      align-items:center; column-gap:12px; row-gap:6px; }
+    header .brand { display:contents; }
+    header .wordmark { grid-column:1; grid-row:1; }
+    header .sitenav { grid-column:2; grid-row:1; }
+    header .tagline, header .semana { grid-column:1 / -1; }
+    header .semana { margin-top:2px; }
+    .snav-links { display:none; }
+    .snav-menu { display:block; }
+  }
+
+  /* ---- pie común ---- */
+  /* todo el texto del pie cumple AA sobre --bg2: ceniza 5,1:1 y hueso
+     13,9:1 (el deslinde estaba en --dim, 2,6:1) */
+  .sitefoot { border-top:1px solid var(--line); background:var(--bg2);
+    padding:18px clamp(16px,3vw,32px) 24px; display:flex;
+    flex-direction:column; gap:8px; }
+  .sitefoot p { font:400 11px/1.6 "IBM Plex Mono",monospace; color:var(--ash);
+    text-wrap:pretty; }
+  .sitefoot a { color:var(--bone); text-decoration:underline;
+    text-decoration-color:var(--dim); text-underline-offset:3px; }
+  .sitefoot a:hover, .sitefoot a:focus-visible { text-decoration-color:var(--ember); }
+  .pie-links { display:flex; flex-wrap:wrap; gap:0 20px; list-style:none; }
+  .pie-links a { display:inline-block; padding:6px 0;
+    font:500 11px "IBM Plex Mono",monospace; letter-spacing:.04em; }
+  .pie-links a[aria-current] { text-decoration-color:var(--bone); }
+  /* RUT y fechas (78.521.796-9, 22-07-2026) no se cortan en el guion */
+  .nw { white-space:nowrap; }
+"""
+
+# menú móvil: se cierra al tocar fuera o con Escape (sin JS abre y cierra
+# igual con su propio botón)
+JS_MENU = """<script>
+  (function () {
+    var m = document.querySelector('.snav-menu');
+    if (!m) return;
+    document.addEventListener('click', function (e) {
+      if (m.open && !m.contains(e.target)) m.open = false;
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && m.open) {
+        m.open = false;
+        m.querySelector('summary').focus();
+      }
+    });
+  })();
+</script>"""
+
+
+def nav_sitio(actual: str = "", exacto: bool = True) -> str:
+    """Navegación del encabezado. 'actual' marca la sección con aria-current
+    ('page' en esa misma página; 'true' dentro de ella, como una ficha bajo
+    Productos). El mismo <ul> va dos veces: en el <details> (móvil) y en
+    línea (desktop); cada breakpoint muestra solo uno."""
+    items = []
+    for clave, texto, href, modo in NAV:
+        attrs = f' data-modo="{modo}"' if modo else ""
+        if clave == actual:
+            attrs += f' aria-current="{"page" if exacto else "true"}"'
+        items.append(f'<li><a href="{href}"{attrs}>{html.escape(texto)}</a></li>')
+    lis = "\n        ".join(items)
+    return (f'<nav class="sitenav" aria-label="Secciones del sitio">\n'
+            f'      <details class="snav-menu">\n'
+            f'        <summary>Menú</summary>\n'
+            f'        <ul class="snav-panel">\n        {lis}\n        </ul>\n'
+            f'      </details>\n'
+            f'      <ul class="snav-links">\n        {lis}\n      </ul>\n'
+            f'    </nav>')
+
+
+def pie_sitio(actual: str = "") -> str:
+    """Pie común: links institucionales y legales, atribución ODEPA CC-BY,
+    deslinde, razón social y el aviso de atribución de Lightweight Charts
+    tal cual su NOTICE, con link directo a tradingview.com (sin rel)."""
+    items = []
+    for clave, texto, href in PIE_LINKS:
+        cur = ' aria-current="page"' if clave == actual else ""
+        items.append(f'<li><a href="{href}"{cur}>{html.escape(texto)}</a></li>')
+    links = "\n      ".join(items)
+    return (f'  <footer class="sitefoot">\n'
+            f'    <nav aria-label="Información del sitio"><ul class="pie-links">\n'
+            f'      {links}\n'
+            f'    </ul></nav>\n'
+            f'    <p class="pie-attr">{PIE_ATTR}</p>\n'
+            f'    <p class="pie-disc">{PIE_DISC}</p>\n'
+            # &nbsp; antes de cada "·": al envolver, el separador no abre
+            # línea; y el RUT no se corta en el guion
+            f'    <p class="pie-legal">© 2026 Carestía SpA&nbsp;· '
+            f'<span class="nw">RUT 78.521.796-9</span>&nbsp;· '
+            f'<a href="mailto:pedro@carestia.cl">pedro@carestia.cl</a></p>\n'
+            f'    <p class="pie-tv"><a href="https://www.tradingview.com/">'
+            f'TradingView Lightweight Charts™ · Copyright (c) 2023 TradingView, Inc.'
+            f'</a></p>\n'
+            f'  </footer>\n'
+            f'{JS_MENU}')
+
 # ---------------- Páginas estáticas por producto (SEO) ----------------
 # Una página liviana por producto del catálogo, generada en el build con los
 # datos de ESE producto inline (nunca el catálogo completo). Versión reducida
@@ -1472,6 +1667,7 @@ PRODUCT_HTML = r"""<!DOCTYPE html>
   .links a:hover { border-color:var(--ember); background:#1f1913; }
   .nochart { display:flex; align-items:center; justify-content:center;
     height:100%; color:var(--ash); font-size:13px; padding:20px; text-align:center; }
+__CSS_SITIO__
 </style>
 </head>
 <body>
@@ -1480,6 +1676,7 @@ PRODUCT_HTML = r"""<!DOCTYPE html>
     <!-- span único: un solo flex item para que innerText no parta el texto -->
     <a class="wordmark" href="https://carestia.cl/"><span>CAREST<span class="i">Í</span>A</span></a>
     <span class="tagline">Índices del costo de vida · Chile</span>
+    __NAV__
   </header>
 
   <main>
@@ -1505,6 +1702,8 @@ PRODUCT_HTML = r"""<!DOCTYPE html>
       <a href="https://carestia.cl/#canasta=__CANASTA__">ármalo en una canasta →</a>
     </nav>
   </main>
+
+__PIE__
 
 <script>
   // serie compacta del producto: t0 + valores semanales consecutivos, null en
@@ -1654,15 +1853,20 @@ def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "") -> str:
         # HTML ya renderizado (seccion_otros escapa labels y grupo), no
         # se vuelve a escapar aquí
         ("__OTROS__", otros_html),
+        # navegación y pie comunes; la ficha vive bajo /productos/
+        ("__CSS_SITIO__", CSS_SITIO),
+        ("__NAV__", nav_sitio("productos", exacto=False)),
+        ("__PIE__", pie_sitio()),
     ]:
         out = out.replace(token, valor)
     return out
 
 
-def generar_productos() -> list:
+def generar_productos() -> dict:
     """Escribe productos/{slug}.html por cada producto del catálogo y devuelve
-    los slugs generados (para el sitemap). Detecta colisiones de slug: son
-    URLs públicas indexables y dos labels no pueden compartir una."""
+    las fichas generadas, {slug: (clave, label)} (para el sitemap y
+    /productos/). Detecta colisiones de slug: son URLs públicas indexables y
+    dos labels no pueden compartir una."""
     prods = DATA.get("productos", {})
     slugs = {}
     for key in sorted(prods):
@@ -1670,7 +1874,8 @@ def generar_productos() -> list:
         if not any(v is not None for v in p["v"]):
             continue
         slug = slug_url(p["label"])
-        if not slug:
+        # "index" es productos/index.html, el listado de fichas
+        if not slug or slug == "index":
             print(f"AVISO: label sin slug utilizable, se omite: {p['label']!r}")
             continue
         if slug in slugs:
@@ -1695,7 +1900,448 @@ def generar_productos() -> list:
         with open(os.path.join("productos", f"{slug}.html"), "w",
                   encoding="utf-8") as fh:
             fh.write(pagina_producto(key, prods[key], slug, otros))
-    return sorted(slugs)
+    return slugs
+
+
+# ---------------- Páginas del sitio ----------------
+# /productos/, /metodologia.html y las páginas institucionales y legales.
+# Misma <head> que las fichas (canonical, og, favicon, fuentes y beacon de
+# Cloudflare), sin Lightweight Charts porque no tienen gráfico, y la
+# navegación y el pie comunes. HTML estático: se leen sin JS.
+PAGINA_HTML = r"""<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITLE__</title>
+<meta name="description" content="__DESC__">
+__HEAD_URL__
+<meta property="og:title" content="__TITLE__">
+<meta property="og:description" content="__DESC__">
+<meta property="og:image" content="https://carestia.cl/og.png">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2317120e'/%3E%3Crect x='28.5' y='28' width='7' height='24' rx='2' fill='%23e4dacc'/%3E%3Cpath d='M29.5 22L39 13.5' stroke='%23e8743b' stroke-width='7' stroke-linecap='round' fill='none'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "101b8fafc10e4ae4b412859b124cb5ea"}'></script>
+<style>
+  /* fallback métrico: el swap de Space Grotesk no mueve wordmark ni título */
+  @font-face { font-family:"Space Grotesk Fallback"; src:local("Arial");
+    size-adjust:101.7%; ascent-override:96.9%; descent-override:29.2%;
+    line-gap-override:0%; }
+  :root {
+    --bg:#17120e; --bg2:#120e0a; --panel:#1a140f;
+    --line:#2a231c; --grid:#221b14;
+    --bone:#e4dacc; --ash:#8b8276; --dim:#5a5348; --ember:#e8743b;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--bone);
+    font-family:"IBM Plex Mono",monospace; min-height:100vh; }
+  /* encabezado: el mismo de las fichas */
+  header { display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 14px;
+    padding:14px clamp(16px,3vw,32px); border-bottom:1px solid var(--line);
+    min-height:51px; }
+  .wordmark { font:700 20px/1.1 "Space Grotesk","Space Grotesk Fallback",sans-serif; letter-spacing:.06em;
+    color:var(--bone); text-decoration:none; display:inline-flex;
+    align-items:baseline; height:22px; overflow:hidden; }
+  .wordmark .i { position:relative; display:inline-block; }
+  .wordmark .i::after { content:"Í"; content:"Í" / ""; position:absolute;
+    left:0; top:0; pointer-events:none;
+    color:var(--ember); clip-path:inset(0 0 86% 0); }
+  .tagline { font:400 11px "IBM Plex Mono",monospace; color:var(--ash);
+    letter-spacing:.04em; }
+  main { max-width:980px; margin:0 auto;
+    padding:clamp(20px,4vw,36px) clamp(16px,3vw,32px) clamp(28px,4vw,44px); }
+  .miga { font:500 10px "IBM Plex Mono",monospace; letter-spacing:.16em;
+    color:var(--ash); text-transform:uppercase; }
+  h1 { font:700 clamp(26px,5vw,42px)/1.1 "Space Grotesk","Space Grotesk Fallback",sans-serif;
+    letter-spacing:.01em; margin-top:6px; text-wrap:balance; }
+
+  /* ---- textos: metodología, institucionales y legales ---- */
+  .doc { max-width:760px; }
+  .doc > h1:first-child { margin-top:0; }
+  .doc h2 { font:600 11px "IBM Plex Mono",monospace; letter-spacing:.16em;
+    color:var(--ash); text-transform:uppercase; margin-top:40px; }
+  .doc h3 { font:600 13px "IBM Plex Mono",monospace; color:var(--bone); }
+  .doc h3 span { font-weight:400; color:var(--ash); }
+  .doc p, .doc li { font:400 13px/1.75 "IBM Plex Mono",monospace;
+    color:var(--bone); max-width:74ch; text-wrap:pretty; }
+  .doc p { margin-top:14px; }
+  .doc ul { margin-top:12px; padding-left:18px; }
+  .doc li + li { margin-top:8px; }
+  .doc li::marker { color:var(--ash); }
+  .doc strong { font-weight:600; }
+  .doc code { font:inherit; font-size:.95em; background:var(--panel);
+    border:1px solid var(--line); padding:0 5px;
+    -webkit-box-decoration-break:clone; box-decoration-break:clone; }
+  .doc a { color:var(--bone); text-decoration:underline;
+    text-decoration-color:var(--dim); text-underline-offset:3px; }
+  .doc a:hover, .doc a:focus-visible { text-decoration-color:var(--ember); }
+  .doc .meta { font-size:12px; color:var(--ash); }
+  .doc .sub { padding-left:3ch; }   /* sub-cláusulas: 4.1., 4.2., ... */
+  .doc .pendiente { border:1px dashed var(--ember); padding:12px 16px;
+    color:var(--ash); }
+  /* las canastas: cantidades leídas de BASKETS (indices.py) */
+  .canastas { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+    gap:26px 32px; margin-top:18px; }
+  .canastas table { width:100%; border-collapse:collapse; margin-top:10px; }
+  .canastas th, .canastas td { font:400 12px/1.5 "IBM Plex Mono",monospace;
+    text-align:left; padding:7px 0; border-bottom:1px solid var(--grid); }
+  .canastas th { font-weight:600; font-size:10px; letter-spacing:.14em;
+    text-transform:uppercase; color:var(--ash); }
+  .canastas th + th, .canastas td + td { text-align:right;
+    font-variant-numeric:tabular-nums; padding-left:12px; white-space:nowrap; }
+
+  /* ---- /productos/: listado estático de fichas ---- */
+  .intro { font:400 13px/1.7 "IBM Plex Mono",monospace; color:var(--bone);
+    margin-top:14px; max-width:74ch; text-wrap:pretty; }
+  .grupos { display:flex; flex-wrap:wrap; gap:8px; margin-top:20px; list-style:none; }
+  .grupos a { display:inline-flex; align-items:center; gap:8px; min-height:34px;
+    padding:7px 12px; font:500 12px "IBM Plex Mono",monospace;
+    text-decoration:none; color:var(--bone); background:var(--panel);
+    border:1px solid var(--line); }
+  .grupos a span { color:var(--ash); font-variant-numeric:tabular-nums; }
+  .grupos a:hover, .grupos a:focus-visible { border-color:var(--ember); background:#1f1913; }
+  .pgrupo { margin-top:36px; scroll-margin-top:12px; }
+  .pgrupo h2 { font:600 11px "IBM Plex Mono",monospace; letter-spacing:.16em;
+    color:var(--ash); text-transform:uppercase; }
+  .pgrupo h2 span { letter-spacing:.04em; }
+  .plista { list-style:none; margin-top:10px; display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); column-gap:32px; }
+  .plista a { display:flex; align-items:baseline; justify-content:space-between;
+    gap:14px; min-height:44px; padding:11px 0; text-decoration:none;
+    color:var(--bone); border-bottom:1px solid var(--grid); }
+  .plista a:hover .pn, .plista a:focus-visible .pn { text-decoration:underline;
+    text-decoration-color:var(--ember); text-underline-offset:3px; }
+  .pn { font:500 13px/1.4 "IBM Plex Mono",monospace; }
+  .pf { display:block; font:400 11px "IBM Plex Mono",monospace; color:var(--ash);
+    margin-top:2px; }
+  .pp { font:600 13px "IBM Plex Mono",monospace; font-variant-numeric:tabular-nums;
+    white-space:nowrap; text-align:right; }
+  .pp small { font:400 11px "IBM Plex Mono",monospace; color:var(--ash); }
+__CSS_SITIO__
+</style>
+</head>
+<body>
+
+  <header>
+    <!-- span único: un solo flex item para que innerText no parta el texto -->
+    <a class="wordmark" href="https://carestia.cl/"><span>CAREST<span class="i">Í</span>A</span></a>
+    <span class="tagline">Índices del costo de vida · Chile</span>
+    __NAV__
+  </header>
+
+  <main class="__CLASE__">
+__MAIN__
+  </main>
+
+__PIE__
+</body>
+</html>
+"""
+
+
+def escribir_pagina(archivo: str, url: str, titulo: str, desc: str, cuerpo: str,
+                    actual: str = "", clase: str = "doc") -> None:
+    """Escribe una página del sitio. url=None: no indexable (el 404), sin
+    canonical y con noindex."""
+    if url:
+        head_url = f'<link rel="canonical" href="{url}">'
+    else:
+        head_url = '<meta name="robots" content="noindex">'
+    out = PAGINA_HTML
+    for token, valor in [
+        ("__TITLE__", html.escape(titulo, quote=True)),
+        ("__DESC__", html.escape(desc, quote=True)),
+        ("__HEAD_URL__", head_url),
+        ("__CSS_SITIO__", CSS_SITIO),
+        ("__NAV__", nav_sitio(actual)),
+        ("__PIE__", pie_sitio(actual)),
+        ("__CLASE__", clase),
+        ("__MAIN__", cuerpo),   # al final: HTML ya renderizado
+    ]:
+        out = out.replace(token, valor)
+    carpeta = os.path.dirname(archivo)
+    if carpeta:
+        os.makedirs(carpeta, exist_ok=True)
+    with open(archivo, "w", encoding="utf-8") as fh:
+        fh.write(out)
+
+
+def _orden(s: str) -> str:
+    """Clave de orden alfabético en castellano, sin tildes ni mayúsculas."""
+    s = unicodedata.normalize("NFKD", s)
+    return "".join(c for c in s if not unicodedata.combining(c)).lower()
+
+
+def generar_indice_productos(fichas: dict) -> None:
+    """productos/index.html: las fichas publicadas agrupadas por grupo ODEPA
+    (A-Z, "Otros" al final), cada una con su precio de hoy en pesos de hoy y
+    un <a href> a su ficha. Sin semáforo: está reservado a los 4 índices.
+    Si la última semana con dato de un producto no es la más reciente del
+    catálogo (estacionales), se dice de cuándo es el precio."""
+    prods = DATA.get("productos", {})
+    filas = []
+    for slug, (key, label) in fichas.items():
+        p = prods[key]
+        ult = [v for v in p["v"] if v is not None][-1]
+        fin = (datetime.date.fromisoformat(p["t0"]) +
+               datetime.timedelta(weeks=len(p["v"]) - 1))
+        filas.append((p.get("grupo") or "Otros", label, slug, ult,
+                      UNI_TXT.get(p["unidad"], p["unidad"]), fin))
+    semana = max((f[5] for f in filas), default=None)
+    grupos = {}
+    for f in filas:
+        grupos.setdefault(f[0], []).append(f)
+    orden = sorted(grupos, key=lambda g: (g == "Otros", _orden(g)))
+
+    indice = "\n        ".join(
+        f'<li><a href="#{slug_url(g)}">{html.escape(g)} '
+        f'<span>{len(grupos[g])}</span></a></li>' for g in orden)
+    secciones = []
+    for g in orden:
+        items = []
+        for _g, label, slug, ult, uni, fin in sorted(grupos[g], key=lambda f: _orden(f[1])):
+            viejo = (f'<span class="pf">precio de la semana del '
+                     f'{fin.strftime("%d-%m-%Y")}</span>' if fin != semana else "")
+            items.append(
+                f'<li><a href="{SITIO}/productos/{slug}.html">'
+                f'<span class="pn">{html.escape(label)}{viejo}</span>'
+                f'<span class="pp">{fmt_clp(ult)} <small>por {uni}</small></span>'
+                f'</a></li>')
+        lis = "\n        ".join(items)
+        secciones.append(
+            f'    <section class="pgrupo" id="{slug_url(g)}">\n'
+            f'      <h2>{html.escape(g)} <span>· {len(grupos[g])}</span></h2>\n'
+            f'      <ul class="plista">\n        {lis}\n      </ul>\n'
+            f'    </section>')
+    n = len(filas)
+    fecha = semana.strftime("%d-%m-%Y") if semana else "·"
+    cuerpo = (
+        f'    <div class="miga">Catálogo · pesos de hoy</div>\n'
+        f'    <h1>Productos</h1>\n'
+        f'    <p class="intro">Precio de hoy de {n} productos en la Región '
+        f'Metropolitana, en pesos de hoy: el promedio de los puntos que ODEPA '
+        f'encuesta cada semana (ferias libres, supermercados y carnicerías). '
+        f'Semana del {fecha}. Cada producto enlaza a su serie semanal.</p>\n'
+        f'    <nav aria-label="Grupos de productos"><ul class="grupos">\n'
+        f'        {indice}\n'
+        f'    </ul></nav>\n' + "\n".join(secciones))
+    escribir_pagina(
+        os.path.join("productos", "index.html"), f"{SITIO}/productos/",
+        f"Precios de {n} alimentos en Chile, en pesos de hoy | Carestía",
+        f"Precio de hoy de {n} alimentos en la Región Metropolitana, en pesos "
+        f"de hoy, agrupados por tipo y con la serie semanal de cada uno. Datos "
+        f"ODEPA, actualizado cada viernes.",
+        cuerpo, actual="productos", clase="catalogo")
+
+
+# ---- textos: README (metodología) y textos/*.md (del dueño) ----
+# Los textos van LITERALES: aquí solo se les da formato HTML. Una línea es un
+# bloque; "## " título; "- " ítem de lista; **negrita**, `código`,
+# [texto](url) y los correos (mailto) en línea. Nada se reescribe.
+def md_en_linea(s: str) -> str:
+    s = html.escape(s, quote=False)
+    s = re.sub(r"`([^`]+)`", r"<code>\1</code>", s)
+    s = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", s)
+    s = re.sub(r"\[([^\]]+)\]\(([^)\s]+)\)",
+               lambda m: f'<a href="{html.escape(html.unescape(m.group(2)))}">'
+                         f'{m.group(1)}</a>', s)
+    partes = re.split(r"(<a\b[^>]*>.*?</a>)", s)
+    for i in range(0, len(partes), 2):   # fuera de los links ya armados
+        partes[i] = re.sub(r"(?<![\w.+-])([\w.+-]+@[\w-]+(?:\.[\w-]+)+)",
+                           r'<a href="mailto:\1">\1</a>', partes[i])
+    # RUT y fechas con guion (78.521.796-9, 22-07-2026) sin corte de línea;
+    # solo en el texto, nunca dentro de una etiqueta
+    partes = re.split(r"(<[^>]+>)", "".join(partes))
+    for i in range(0, len(partes), 2):
+        partes[i] = re.sub(r"(?<![\w.-])(\d+(?:[.\-]\d+)*-[\dkK]\d*)(?![\w-])",
+                           r'<span class="nw">\1</span>', partes[i])
+    return "".join(partes)
+
+
+def md_a_html(texto: str) -> str:
+    bloques, lista = [], []
+
+    def cerrar_lista():
+        if lista:
+            bloques.append("<ul>\n" + "\n".join(lista) + "\n</ul>")
+            lista.clear()
+
+    for linea in texto.splitlines():
+        s = linea.strip()
+        if not s:
+            cerrar_lista()
+            continue
+        if s.startswith("- "):
+            lista.append(f"<li>{md_en_linea(s[2:])}</li>")
+            continue
+        cerrar_lista()
+        if s.startswith("### "):
+            bloques.append(f"<h3>{md_en_linea(s[4:])}</h3>")
+        elif s.startswith("## "):
+            bloques.append(f"<h2>{md_en_linea(s[3:])}</h2>")
+        elif s.startswith("PENDIENTE"):
+            bloques.append(f'<p class="pendiente">{md_en_linea(s)}</p>')
+        elif s.startswith("Última actualización"):
+            bloques.append(f'<p class="meta">{md_en_linea(s)}</p>')
+        elif re.match(r"\d+\.\d+\.\s", s):
+            bloques.append(f'<p class="sub">{md_en_linea(s)}</p>')
+        else:
+            bloques.append(f"<p>{md_en_linea(s)}</p>")
+    cerrar_lista()
+    return "\n".join(bloques)
+
+
+def seccion_readme(titulo: str) -> str:
+    """Cuerpo LITERAL de la sección '## {titulo}' del README.md (hasta el
+    siguiente '## '), con formato HTML."""
+    with open("README.md", encoding="utf-8") as fh:
+        lineas = fh.read().splitlines()
+    if f"## {titulo}" not in lineas:
+        raise SystemExit(f"build_site.py: README.md no tiene la sección "
+                         f"'## {titulo}' (la usa /metodologia.html)")
+    cuerpo = []
+    for linea in lineas[lineas.index(f"## {titulo}") + 1:]:
+        if linea.startswith("## "):
+            break
+        cuerpo.append(linea)
+    return md_a_html("\n".join(cuerpo))
+
+
+# textos/{nombre}.md: los anexos del dueño (literales). Una línea que parte
+# con "PENDIENTE" marca un texto que aún no llega completo: el build se niega
+# a publicar (ver más abajo) salvo en una vista previa local con
+# CARESTIA_BORRADOR=1.
+TEXTOS = ["terminos", "privacidad", "acerca", "contacto",
+          "notas_metodologicas", "404"]
+
+
+def leer_texto(nombre: str) -> str:
+    ruta = os.path.join("textos", f"{nombre}.md")
+    if not os.path.exists(ruta):
+        raise SystemExit(f"build_site.py: falta {ruta}")
+    with open(ruta, encoding="utf-8") as fh:
+        return fh.read()
+
+
+def texto_pendiente(nombre: str) -> bool:
+    return any(l.strip().startswith("PENDIENTE")
+               for l in leer_texto(nombre).splitlines())
+
+
+def cargar_texto(nombre: str) -> tuple:
+    """(título, html) de textos/{nombre}.md. Si la primera línea no vacía va
+    entera en negrita, es el título de la página (h1); si no, título None."""
+    lineas = leer_texto(nombre).splitlines()
+    while lineas and not lineas[0].strip():
+        lineas.pop(0)
+    titulo = None
+    m = re.fullmatch(r"\*\*(.+)\*\*", lineas[0].strip()) if lineas else None
+    if m and "**" not in m.group(1):
+        titulo = m.group(1)
+        lineas = lineas[1:]
+    return titulo, md_a_html("\n".join(lineas))
+
+
+def fmt_cantidad(qty, uni: str) -> str:
+    n = f"{qty:g}".replace(".", ",")
+    if uni == "un":
+        return f"{n} unidad" if qty == 1 else f"{n} unidades"
+    if uni == "l":
+        return f"{n} litro" if qty == 1 else f"{n} litros"
+    return f"{n} {uni}"
+
+
+def html_canastas() -> str:
+    """Las 4 canastas con sus cantidades, generadas desde el diccionario
+    BASKETS de indices.py: la misma fuente que usa el cálculo."""
+    bloques = []
+    for code, meta in BASKETS.items():
+        filas = "\n          ".join(
+            f"<tr><td>{html.escape(lab)}</td><td>{fmt_cantidad(qty, uni)}</td></tr>"
+            for (lab, _match, qty, uni) in meta["items"])
+        bloques.append(
+            f'      <div class="canasta" id="canasta-{code}">\n'
+            f'        <h3>{html.escape(meta["nombre"])} '
+            f'<span>· {html.escape(meta["subtitulo"])}</span></h3>\n'
+            f'        <table>\n'
+            f'          <thead><tr><th scope="col">Producto</th>'
+            f'<th scope="col">Cantidad</th></tr></thead>\n'
+            f'          <tbody>\n          {filas}\n          </tbody>\n'
+            f'        </table>\n'
+            f'      </div>')
+    return '<div class="canastas">\n' + "\n".join(bloques) + '\n    </div>'
+
+
+def secciones_md(texto: str) -> list:
+    """[(título, html)] de un texto partido en sus líneas '## ' (títulos de
+    sección); lo que vaya antes del primer título queda con título None."""
+    secciones, titulo, cuerpo = [], None, []
+    for linea in texto.splitlines() + ["## "]:   # centinela: cierra la última
+        if linea.startswith("## "):
+            if titulo is not None or any(l.strip() for l in cuerpo):
+                secciones.append((titulo, md_a_html("\n".join(cuerpo))))
+            titulo, cuerpo = linea[3:].strip(), []
+        else:
+            cuerpo.append(linea)
+    return secciones
+
+
+def generar_metodologia() -> None:
+    """/metodologia.html: "Metodología (resumen)", "Fuentes" y "Deslinde"
+    literales del README.md, "Las canastas" desde BASKETS y, al final, las
+    secciones del texto del dueño (textos/notas_metodologicas.md), cada una
+    con su propio título ('## '), al mismo nivel que "Deslinde"."""
+    secciones = [
+        ("resumen", html.escape("Metodología (resumen)"), seccion_readme("Metodología (resumen)")),
+        ("canastas", html.escape("Las canastas"), html_canastas()),
+        ("fuentes", html.escape("Fuentes"), seccion_readme("Fuentes")),
+        ("deslinde", html.escape("Deslinde"), seccion_readme("Deslinde")),
+    ]
+    for titulo, contenido in secciones_md(leer_texto("notas_metodologicas")):
+        titulo = titulo or "Notas metodológicas"
+        secciones.append((slug_url(titulo), md_en_linea(titulo), contenido))
+    cuerpo = "    <h1>Metodología</h1>\n" + "\n".join(
+        f'    <section id="{sid}">\n    <h2>{t}</h2>\n{contenido}\n    </section>'
+        for sid, t, contenido in secciones)
+    escribir_pagina(
+        "metodologia.html", f"{SITIO}/metodologia.html",
+        "Metodología de los índices del costo de vida | Carestía",
+        "Cómo se calculan los índices Carestía: canastas fijas, pesos de hoy "
+        "con el IPC, percentil histórico, estacionalidad y fuentes (ODEPA y "
+        "Banco Central de Chile).",
+        cuerpo, actual="metodologia")
+
+
+# (texto, archivo, url, clave nav/pie, título si el texto no trae uno,
+#  <title>, description)
+PAGINAS_TEXTO = [
+    ("acerca", "acerca.html", f"{SITIO}/acerca.html", "acerca", "Acerca de",
+     "Acerca de | Carestía",
+     "Acerca de Carestía, índices del costo de vida en Chile."),
+    ("contacto", "contacto.html", f"{SITIO}/contacto.html", "contacto", "Contacto",
+     "Contacto | Carestía", "Contacto de Carestía."),
+    ("terminos", "terminos.html", f"{SITIO}/terminos.html", "terminos",
+     "Términos de uso", "Términos de uso | Carestía",
+     "Términos de uso de carestia.cl."),
+    ("privacidad", "privacidad.html", f"{SITIO}/privacidad.html", "privacidad",
+     "Política de privacidad", "Política de privacidad | Carestía",
+     "Política de privacidad de carestia.cl."),
+    ("404", "404.html", None, "", "Página no encontrada",
+     "Página no encontrada | Carestía", "Esta página no existe en carestia.cl."),
+]
+
+
+def generar_paginas_texto() -> None:
+    for nombre, archivo, url, clave, titulo_def, title, desc in PAGINAS_TEXTO:
+        titulo, cuerpo = cargar_texto(nombre)
+        escribir_pagina(archivo, url, title, desc,
+                        f"    <h1>{html.escape(titulo or titulo_def)}</h1>\n{cuerpo}",
+                        actual=clave)
+
 
 SITEMAP_URL = """  <url>
     <loc>{loc}</loc>
@@ -1744,11 +2390,20 @@ def generar_resumen() -> None:
         json.dump(resumen, fh, ensure_ascii=False, indent=2)
 
 
+# páginas del sitio en el sitemap (el 404 no va). Van DESPUÉS de las fichas:
+# salud.yml chequea la primera URL con /productos/ del sitemap y así sigue
+# siendo una ficha
+PAGINAS_SITEMAP = ["productos/", "metodologia.html", "acerca.html",
+                   "contacto.html", "terminos.html", "privacidad.html"]
+
+
 def generar_sitemap(slugs: list) -> None:
-    """Raíz + las URLs de producto, todas con el lastmod del build."""
+    """Raíz + las URLs de producto + las páginas del sitio, todas con el
+    lastmod del build."""
     lastmod = datetime.date.today().isoformat()
     locs = ["https://carestia.cl/"] + \
-        [f"https://carestia.cl/productos/{s}.html" for s in slugs]
+        [f"https://carestia.cl/productos/{s}.html" for s in slugs] + \
+        [f"https://carestia.cl/{p}" for p in PAGINAS_SITEMAP]
     with open("sitemap.xml", "w", encoding="utf-8") as fh:
         fh.write('<?xml version="1.0" encoding="UTF-8"?>\n')
         fh.write('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n')
@@ -1757,18 +2412,37 @@ def generar_sitemap(slugs: list) -> None:
         fh.write('</urlset>\n')
 
 
+# textos del dueño que aún no llegan completos: no se publica un sitio con
+# páginas legales a medias (el workflow falla en "Generar sitio" y no hay
+# deploy). Vista previa local, que no se publica: CARESTIA_BORRADOR=1
+PENDIENTES = [n for n in TEXTOS if texto_pendiente(n)]
+if PENDIENTES:
+    if os.environ.get("CARESTIA_BORRADOR") != "1":
+        raise SystemExit(
+            "build_site.py: textos pendientes en textos/: "
+            + ", ".join(f"{n}.md" for n in PENDIENTES)
+            + ". No se genera el sitio hasta que estén completos.")
+    print("BORRADOR: textos pendientes: " + ", ".join(PENDIENTES))
+
 with open("index.html", "w", encoding="utf-8") as fh:
-    fh.write(HTML.replace("__DATA__", json.dumps(DATA, ensure_ascii=False)))
+    fh.write(HTML.replace("__CSS_SITIO__", CSS_SITIO)
+                 .replace("__NAV__", nav_sitio("indices"))
+                 .replace("__PIE__", pie_sitio())
+                 .replace("__DATA__", json.dumps(DATA, ensure_ascii=False)))
 
 with open("robots.txt", "w", encoding="utf-8") as fh:
     fh.write(ROBOTS)
 
-SLUGS = generar_productos()
-generar_sitemap(SLUGS)
+FICHAS = generar_productos()
+generar_indice_productos(FICHAS)
+generar_metodologia()
+generar_paginas_texto()
+generar_sitemap(sorted(FICHAS))
 generar_resumen()
 
 print(f"Listo: index.html + robots.txt + sitemap.xml + resumen.json + "
-      f"{len(SLUGS)} páginas en productos/")
+      f"{len(FICHAS)} páginas en productos/ + productos/index.html + "
+      f"metodologia.html + {len(PAGINAS_TEXTO)} páginas institucionales")
 for c, d in DATA["indices"].items():
     print(f"  {d['nombre']}: {d['veredicto']} (percentil {d['percentil']})")
 if "productos" in DATA:
