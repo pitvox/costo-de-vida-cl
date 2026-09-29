@@ -1500,6 +1500,8 @@ CSS_SITIO = r"""
   .pie-links a { display:inline-block; padding:6px 0;
     font:500 11px "IBM Plex Mono",monospace; letter-spacing:.04em; }
   .pie-links a[aria-current] { text-decoration-color:var(--bone); }
+  /* RUT y fechas (78.521.796-9, 22-07-2026) no se cortan en el guion */
+  .nw { white-space:nowrap; }
 """
 
 # menú móvil: se cierra al tocar fuera o con Escape (sin JS abre y cierra
@@ -1557,8 +1559,10 @@ def pie_sitio(actual: str = "") -> str:
             f'    </ul></nav>\n'
             f'    <p class="pie-attr">{PIE_ATTR}</p>\n'
             f'    <p class="pie-disc">{PIE_DISC}</p>\n'
-            # &nbsp; antes de cada "·": al envolver, el separador no abre línea
-            f'    <p class="pie-legal">© 2026 Carestía SpA&nbsp;· RUT 78.521.796-9&nbsp;· '
+            # &nbsp; antes de cada "·": al envolver, el separador no abre
+            # línea; y el RUT no se corta en el guion
+            f'    <p class="pie-legal">© 2026 Carestía SpA&nbsp;· '
+            f'<span class="nw">RUT 78.521.796-9</span>&nbsp;· '
             f'<a href="mailto:pedro@carestia.cl">pedro@carestia.cl</a></p>\n'
             f'    <p class="pie-tv"><a href="https://www.tradingview.com/">'
             f'TradingView Lightweight Charts™ · Copyright (c) 2023 TradingView, Inc.'
@@ -2149,6 +2153,12 @@ def md_en_linea(s: str) -> str:
     for i in range(0, len(partes), 2):   # fuera de los links ya armados
         partes[i] = re.sub(r"(?<![\w.+-])([\w.+-]+@[\w-]+(?:\.[\w-]+)+)",
                            r'<a href="mailto:\1">\1</a>', partes[i])
+    # RUT y fechas con guion (78.521.796-9, 22-07-2026) sin corte de línea;
+    # solo en el texto, nunca dentro de una etiqueta
+    partes = re.split(r"(<[^>]+>)", "".join(partes))
+    for i in range(0, len(partes), 2):
+        partes[i] = re.sub(r"(?<![\w.-])(\d+(?:[.\-]\d+)*-[\dkK]\d*)(?![\w-])",
+                           r'<span class="nw">\1</span>', partes[i])
     return "".join(partes)
 
 
@@ -2268,15 +2278,16 @@ def html_canastas() -> str:
 
 def generar_metodologia() -> None:
     """/metodologia.html: "Metodología (resumen)", "Fuentes" y "Deslinde"
-    literales del README.md, "Las canastas" desde BASKETS y las "Notas
-    metodológicas" del texto del dueño (textos/notas_metodologicas.md)."""
+    literales del README.md, "Las canastas" desde BASKETS y, como sección
+    final, las "Notas metodológicas" del texto del dueño
+    (textos/notas_metodologicas.md)."""
     titulo_notas, notas = cargar_texto("notas_metodologicas")
     secciones = [
         ("resumen", "Metodología (resumen)", seccion_readme("Metodología (resumen)")),
         ("canastas", "Las canastas", html_canastas()),
-        ("notas", titulo_notas or "Notas metodológicas", notas),
         ("fuentes", "Fuentes", seccion_readme("Fuentes")),
         ("deslinde", "Deslinde", seccion_readme("Deslinde")),
+        ("notas", titulo_notas or "Notas metodológicas", notas),
     ]
     cuerpo = "    <h1>Metodología</h1>\n" + "\n".join(
         f'    <section id="{sid}">\n    <h2>{html.escape(t)}</h2>\n{contenido}\n    </section>'
