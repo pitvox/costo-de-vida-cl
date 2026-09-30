@@ -616,6 +616,7 @@ __PIE__
   // quedan para la página; el zoom sigue disponible arrastrando los ejes y
   // con dos dedos en táctil. El crosshair va en hueso tenue
   function opcionesChart(extra) {
+    extra = extra || {};
     return Object.assign({
       autoSize: true,
       layout: { background: { type: 'solid', color: 'transparent' }, textColor: COL.ash,
@@ -629,7 +630,11 @@ __PIE__
       crosshair: { mode: 0,
         vertLine: { color: COL.cruz, labelBackgroundColor: COL.line },
         horzLine: { color: COL.cruz, labelBackgroundColor: COL.line } },
-    }, extra);
+    }, extra, {
+      // fechas del eje y del crosshair siempre en castellano de Chile, sin
+      // depender del idioma del navegador
+      localization: Object.assign({ locale: 'es-CL' }, extra.localization),
+    });
   }
 
   let cur = CODES[0], vista = 'linea', nomVisible = false;
@@ -952,11 +957,19 @@ __PIE__
   }
 
   /* ---------- vista Productos ---------- */
-  // C3: paleta propia (tokens --cmp1 a --cmp8), sin azules, sin los colores
-  // del semáforo ni la brasa; 8 tonos que se distinguen también por claridad
-  const PALETTE = [1, 2, 3, 4, 5, 6, 7, 8].map(i => tok('cmp' + i));
+  // C3: cuatro tonos propios (tokens --cmp1 a --cmp4); del 5º al 8º
+  // producto se repiten con línea punteada. El estilo va por orden de
+  // selección: cada producto toma el primer puesto libre y lo conserva
+  // mientras siga elegido, así dos productos nunca comparten estilo y los
+  // que ya están no cambian de color. Máximo 8 a la vez
+  const PALETTE = [1, 2, 3, 4].map(i => tok('cmp' + i));
+  const PMAX = PALETTE.length * 2;
   const PKEYS = Object.keys(PRODS);
-  const colorOf = k => PALETTE[PKEYS.indexOf(k) % PALETTE.length];
+  const puestos = new Map();          // clave -> puesto 0..7
+  const estiloDe = k => {
+    const i = puestos.get(k);
+    return { color: PALETTE[i % PALETTE.length], punteada: i >= PALETTE.length };
+  };
 
   /* ---------- selector de catálogo: búsqueda + grupos colapsables ---------- */
   const sinTildes = s =>
@@ -1013,11 +1026,20 @@ __PIE__
     };
   }
   const psel = new Set();
+  function elegir(k) {
+    const usados = new Set(puestos.values());
+    let i = 0;
+    while (usados.has(i)) i++;
+    puestos.set(k, i);
+    psel.add(k);
+  }
+  function soltar(k) { psel.delete(k); puestos.delete(k); }
   ['asado_de_tira', 'palta', 'huevo_color'].forEach(w => {
-    if (PRODS[w]) { psel.add(w); return; }
+    if (PRODS[w]) { elegir(w); return; }
     const alt = PKEYS.find(k => k.indexOf(w.split('_')[0]) === 0);
-    if (alt) psel.add(alt);
+    if (alt) elegir(alt);
   });
+  const ppaints = [];
   const pseries = new Map();
 
   function initPChart() {
@@ -1043,7 +1065,10 @@ __PIE__
       const on = psel.has(k);
       if (on && !PRODS[k].real) return;   // aún no llega: se agrega al llegar
       if (on && !pseries.has(k)) {
-        const s = pchart.addLineSeries({ color: colorOf(k), lineWidth: 2,
+        const e = estiloDe(k);
+        const s = pchart.addLineSeries({ color: e.color, lineWidth: 2,
+          lineStyle: e.punteada ? LightweightCharts.LineStyle.Dotted
+            : LightweightCharts.LineStyle.Solid,
           priceLineVisible: false, lastValueVisible: false });
         s.setData(PRODS[k].gaps);   // con huecos donde no hubo precio
         pseries.set(k, s);
@@ -1067,16 +1092,27 @@ __PIE__
       b.className = 'pchip' + (psel.has(k) ? ' active' : '');
       b.innerHTML = '<span class="dot"></span>' + PRODS[k].label;
       const dot = b.querySelector('.dot');
+      // el chip muestra el estilo de su línea: punto lleno si es continua,
+      // anillo y borde de guiones si es punteada
       const paint = () => {
         const on = psel.has(k);
+        const e = on ? estiloDe(k) : null;
         b.classList.toggle('active', on);
-        dot.style.background = on ? colorOf(k) : 'var(--dim)';
-        b.style.borderColor = on ? colorOf(k) : 'var(--line)';
+        dot.style.background = !on ? 'var(--dim)' : e.punteada ? 'transparent' : e.color;
+        dot.style.boxShadow = on && e.punteada ? 'inset 0 0 0 2px ' + e.color : '';
+        b.style.borderColor = on ? e.color : 'var(--line)';
+        b.style.borderStyle = on && e.punteada ? 'dashed' : '';
+        b.style.opacity = (!on && psel.size >= PMAX) ? '.4' : '';
       };
+      ppaints.push(paint);
       paint();
       b.onclick = () => {
-        if (psel.has(k)) psel.delete(k); else psel.add(k);
-        paint(); syncProductos();
+        if (psel.has(k)) soltar(k);
+        else {
+          if (psel.size >= PMAX) return;   // máximo 8: nunca dos iguales
+          elegir(k);
+        }
+        ppaints.forEach(f => f()); syncProductos();
       };
       return b;
     });
@@ -1387,20 +1423,32 @@ __PIE__
     const chartW = W - pad * 2;
     const chartH = Math.round(shot.height * chartW / shot.width);
     // bajo el costo, la composición: en canasta "{label} {cantidad} {unidad}"
-    // y en productos los elegidos del spaghetti; una línea o dos si no cabe,
-    // el encabezado crece lo que ellas ocupen
+    // en una línea o dos si no cabe; en productos, los elegidos por orden de
+    // puesto, cada uno con la muestra de su línea (color y trazo del
+    // gráfico). El encabezado crece lo que ellas ocupen
     const compSize = Math.round(W * 0.013), compAlto = Math.round(compSize * 1.5);
-    const compLineas = [];
+    const compLineas = [], prodLineas = [];
+    const muestra = Math.round(compSize * 1.8), hueco = Math.round(compSize * 0.5),
+      entre = Math.round(compSize * 1.4);
+    const mctx = document.createElement('canvas').getContext('2d');
+    mctx.font = '400 ' + compSize + 'px "IBM Plex Sans", sans-serif';
     let partes = [];
     if (modo === 'canasta' && canasta.size) {
       partes = [...canasta.entries()].filter(([k]) => PRODS[k])
         .map(([k, q]) => PRODS[k].label + ' ' + fmtCant(q, PRODS[k].unidad));
     } else if (modo === 'productos') {
-      partes = PKEYS.filter(k => psel.has(k)).map(k => PRODS[k].label);
+      let fila = [], ancho = 0;
+      // en el orden de sus puestos: color 1, color 2, ... como en el gráfico
+      [...psel].filter(k => PRODS[k]).sort((a, b) => puestos.get(a) - puestos.get(b)).forEach(k => {
+        const it = Object.assign({ texto: PRODS[k].label }, estiloDe(k));
+        const w = muestra + hueco + mctx.measureText(it.texto).width;
+        if (fila.length && ancho + entre + w > chartW) { prodLineas.push(fila); fila = []; ancho = 0; }
+        ancho += (fila.length ? entre : 0) + w;
+        fila.push(it);
+      });
+      if (fila.length) prodLineas.push(fila);
     }
     if (partes.length) {
-      const mctx = document.createElement('canvas').getContext('2d');
-      mctx.font = '400 ' + compSize + 'px "IBM Plex Sans", sans-serif';
       let linea = '';
       partes.forEach(p => {
         const cand = linea ? linea + ', ' + p : p;
@@ -1415,7 +1463,7 @@ __PIE__
         compLineas.push(l2 + ' …');
       }
     }
-    const compH = compLineas.length * compAlto;
+    const compH = (compLineas.length + prodLineas.length) * compAlto;
     const headH = Math.round(W * 0.13) + compH, footH = Math.round(W * 0.07);
     const H = headH + chartH + footH;
     const cv = document.createElement('canvas');
@@ -1453,6 +1501,24 @@ __PIE__
     ctx.font = '400 ' + compSize + 'px "IBM Plex Sans", sans-serif';
     compLineas.forEach((l, i) =>
       ctx.fillText(l, pad, Math.round(W * 0.098) + i * compAlto));
+    const grosor = Math.max(2, Math.round(compSize * 0.16));
+    prodLineas.forEach((fila, i) => {
+      const y = Math.round(W * 0.098) + i * compAlto;
+      let x = pad;
+      fila.forEach(it => {
+        ctx.save();
+        ctx.strokeStyle = it.color;
+        ctx.lineWidth = grosor;
+        ctx.setLineDash(it.punteada ? [grosor, grosor * 1.5] : []);
+        ctx.beginPath();
+        ctx.moveTo(x, y + compSize * 0.6);
+        ctx.lineTo(x + muestra, y + compSize * 0.6);
+        ctx.stroke();
+        ctx.restore();
+        ctx.fillText(it.texto, x + muestra + hueco, y);
+        x += muestra + hueco + ctx.measureText(it.texto).width + entre;
+      });
+    });
     ctx.font = '400 ' + Math.round(W * 0.012) + 'px "IBM Plex Sans", sans-serif';
     ctx.fillText('semana del ' + fecha, pad, Math.round(W * 0.098) + compH);
     ctx.drawImage(shot, pad, headH, chartW, chartH);
@@ -1603,13 +1669,12 @@ CSS_BASE = r"""
     --ember:#e8743b;
     /* semáforo: solo el veredicto y las velas de los 4 índices */
     --verde:#5bbf7a; --ambar:#e0a83c; --rojo:#e0552f; --verdict:var(--rojo);
-    /* Comparar productos: ocho tonos sin azules ni celestes, cada uno con
-       su propia claridad (L de 0,56 a 0,87 en OKLCH) para distinguirse
-       también sin color; entre vecinos, diferencia de 14 o más (OKLab x100)
-       incluso con protanopía o deuteranopía simuladas. El orden deja muy
-       distintos los tres productos que Comparar muestra al entrar */
-    --cmp1:#717c16; --cmp2:#b897f0; --cmp3:#b45ea1; --cmp4:#f29db1;
-    --cmp5:#d1e25a; --cmp6:#d37daa; --cmp7:#d9b8fe; --cmp8:#9977e4;
+    /* Comparar productos: cuatro tonos muy distintos, sin azules ni
+       violetas azulados, sin verde, naranjo ni rojo (rosa, magenta, blanco
+       cálido y amarillo); del 5º al 8º producto se repiten punteados. Los
+       tres primeros, los que Comparar muestra al entrar, quedan a 18 o más
+       entre sí (OKLab x100) aun con daltonismo simulado */
+    --cmp1:#f28cc0; --cmp2:#b04fb5; --cmp3:#f4f1ea; --cmp4:#f2d74e;
     /* crosshair de los gráficos: hueso tenue */
     --cruz:rgba(228,218,204,.35);
     --sans:"IBM Plex Sans","IBM Plex Sans Fallback",system-ui,sans-serif;
@@ -1898,7 +1963,8 @@ __PIE__
       grid: { vertLines: { color: tok('grid') }, horzLines: { color: tok('grid') } },
       rightPriceScale: { borderColor: tok('line') },
       timeScale: { borderColor: tok('line') },
-      localization: { priceFormatter: fmt },
+      // fechas en castellano de Chile, como en la portada
+      localization: { locale: 'es-CL', priceFormatter: fmt },
       // misma política de gestos del sitio: la rueda y el swipe vertical
       // quedan para la página; zoom en los ejes y pinch en táctil
       handleScale: { mouseWheel: false, pinch: true, axisPressedMouseMove: true },

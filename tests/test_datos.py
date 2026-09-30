@@ -237,3 +237,21 @@ def test_tokens_en_un_solo_lugar_y_brasa_solo_en_su_token(sitio):
         for viejo in ["#17120e", "#8b8276", "#5a5348", "#1f1913", "#6ea8dc",
                       "#58c5c0", "#9a8ec4", "#8f9bb3", '"IBM Plex Mono",monospace']:
             assert viejo not in h, (p, viejo)
+
+
+def test_comparar_cuatro_tonos_por_orden_de_seleccion_y_locale(sitio):
+    d, _data = sitio
+    h = (d / "index.html").read_text(encoding="utf-8")
+    assert "--cmp1:#f28cc0; --cmp2:#b04fb5; --cmp3:#f4f1ea; --cmp4:#f2d74e;" in h
+    assert "--cmp5" not in h
+    for viejo in ["#717c16", "#b897f0", "#d1e25a", "#9977e4"]:   # paleta de 8 anterior
+        assert viejo not in h
+    # estilo por puesto de selección (no por posición en el catálogo) y
+    # repetición punteada del 5º al 8º
+    assert "PKEYS.indexOf(k) % PALETTE.length" not in h
+    assert "LightweightCharts.LineStyle.Dotted" in h
+    assert "const PMAX = PALETTE.length * 2;" in h
+    # fechas de los gráficos en es-CL, en la portada y en las fichas
+    assert "localization: Object.assign({ locale: 'es-CL' }" in h
+    ficha = (d / "productos" / "producto-000.html").read_text(encoding="utf-8")
+    assert "locale: 'es-CL'" in ficha

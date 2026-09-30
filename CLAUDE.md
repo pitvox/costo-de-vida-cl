@@ -18,3 +18,15 @@ La guardia está en `tests/test_texto.py` (pytest, sin red). Falla si aparece "�
 ## Alcance
 
 Un cambio de texto no toca la lógica, los datos, el diseño, los colores ni las URLs. `indices.py`, `validar.py`, `resumen.json` y la metodología no se modifican sin autorización del dueño.
+
+## Verificación con datos reales
+
+Todo PR que toque el sitio se verifica con el `indices.json` real de carestia.cl antes de abrirse, no solo con datos sintéticos:
+
+```bash
+curl -O https://carestia.cl/indices.json
+python build_site.py
+python -m http.server
+```
+
+El build imprime el peso de `index.html`. Se revisa en el navegador la portada, Comparar, Arma tu canasta, un link de canasta compartido y la captura PNG. Si el entorno no alcanza carestia.cl, el PR no se abre hasta poder verificarlo, y se avisa.
