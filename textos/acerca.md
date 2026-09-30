@@ -2,7 +2,7 @@
 
 Carestía mide cuánto cuesta la vida cotidiana en Chile. Publica cuatro índices de canastas fijas (Asado, Ensalada, Fruta y Desayuno) y las series de 125 productos de la Región Metropolitana, todos expresados en pesos de hoy, para que cualquiera pueda ver si algo está caro o barato respecto de su propia historia, descontada la inflación.
 
-No es un comparador de precios: no te dice dónde comprar más barato. Te dice cómo está un precio hoy frente a sus últimos años.
+Carestía no compara tiendas ni te dice dónde comprar más barato.
 
 Los datos vienen de fuentes públicas, ODEPA y el Banco Central de Chile, y se actualizan automáticamente cada viernes. [La metodología completa](/metodologia.html) está publicada en esta misma web.
 

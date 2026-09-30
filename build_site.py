@@ -43,10 +43,10 @@ HTML = r"""<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Carestía: Índices del costo de vida · Chile</title>
+<title>Carestía: índices del costo de vida en Chile</title>
 <meta name="description" content="Índices del costo de vida en Chile: asado, desayuno, ensalada y fruta en pesos de hoy, con datos públicos de ODEPA desde 2008. Actualizado cada viernes.">
 <link rel="canonical" href="https://carestia.cl/">
-<meta property="og:title" content="Carestía · Índices del costo de vida en Chile">
+<meta property="og:title" content="Carestía: índices del costo de vida en Chile">
 <meta property="og:description" content="Cuánto cuesta la vida cotidiana en Chile, en pesos de hoy. Índices propios sobre datos públicos de ODEPA, actualizados cada viernes.">
 <meta property="og:image" content="https://carestia.cl/og.png">
 <meta property="og:type" content="website">
@@ -229,6 +229,7 @@ HTML = r"""<!DOCTYPE html>
   .overlay .oname { font:500 clamp(10px,1.4vw,12px) "IBM Plex Mono",monospace;
     letter-spacing:.16em; color:var(--ash); text-transform:uppercase; }
   .overlay .oname span { color:var(--dim); text-transform:none; }
+  .overlay .oname #osub { margin-left:.6em; }
   .orow { display:flex; align-items:baseline; gap:clamp(8px,1.5vw,16px);
     margin-top:4px; flex-wrap:wrap; }
   .oprice { font:700 clamp(34px,6vw,68px)/1 "Space Grotesk","Space Grotesk Fallback",sans-serif;
@@ -269,10 +270,10 @@ HTML = r"""<!DOCTYPE html>
   .nomtoggle { border:1px solid var(--line); background:var(--bg); }
   /* referencia de velas y pista de zoom: texto de ayuda dentro de la barra;
      bajo 760px se omiten para no alargar la fila de controles en móvil */
-  .ref { display:none; white-space:nowrap;
-    font:400 10px "IBM Plex Mono",monospace; color:var(--dim); }
-  .zoomhint { display:none; white-space:nowrap;
-    font:400 10px "IBM Plex Mono",monospace; color:var(--ash); }
+  .ref { display:none; max-width:300px; text-wrap:balance;
+    font:400 10px/1.5 "IBM Plex Mono",monospace; color:var(--dim); }
+  .zoomhint { display:none; max-width:280px; text-wrap:balance;
+    font:400 10px/1.5 "IBM Plex Mono",monospace; color:var(--ash); }
   @media (min-width:760px) { .ref, .zoomhint { display:block; } }
   /* ---- franja móvil bajo el lienzo: leyenda compacta + pista táctil ---- */
   /* bajo 760px ni la leyenda completa (≥900px) ni la pista de zoom de la
@@ -285,14 +286,13 @@ HTML = r"""<!DOCTYPE html>
   .mstrip { display:none; }
   @media (max-width:759px) {
     .mstrip { display:flex; flex-wrap:wrap; align-content:flex-start;
-      align-items:center; gap:4px 14px; min-height:50px;
+      align-items:center; gap:4px 14px; min-height:66px;
       padding:7px clamp(16px,3vw,32px);
       font:400 10px/16px "IBM Plex Mono",monospace; color:var(--ash); }
     .mstrip .sw { display:inline-block; width:16px; height:0; margin-right:6px;
       vertical-align:middle; }
     .mstrip .mleg { white-space:nowrap; }
-    .mstrip .mhint { flex-basis:100%; color:var(--dim); white-space:nowrap;
-      overflow:hidden; text-overflow:ellipsis; }
+    .mstrip .mhint { flex-basis:100%; color:var(--dim); text-wrap:balance; }
   }
   .tooltip { position:absolute; display:none; z-index:7; pointer-events:none;
     background:#0f0c09; border:1px solid var(--line); padding:8px 12px; white-space:nowrap; }
@@ -405,9 +405,9 @@ __CSS_SITIO__
            vuelven flex items y innerText/copy-paste los separa con saltos
            de línea; así el wordmark es UN run inline: "CARESTÍA" -->
       <div class="wordmark"><span>CAREST<span class="i">Í</span>A</span></div>
-      <div class="tagline">Índices del costo de vida · Chile</div>
+      <div class="tagline">Índices del costo de vida en Chile</div>
     </div>
-    <div class="semana">Semana del <span id="fecha"></span> <span>· actualizado viernes</span></div>
+    <div class="semana">Semana del <span id="fecha"></span>. <span>Se actualiza los viernes.</span></div>
     __NAV__
   </header>
 
@@ -415,11 +415,11 @@ __CSS_SITIO__
 
   <div class="cbar" id="cbar">
     <div class="legend m-ind">
-      <span><span class="sw" style="border-top:2px solid #e8743b"></span>En pesos de hoy: cuánto valdría hoy ese precio antiguo por la inflación acumulada · equivale a medirlo en UF</span>
+      <span><span class="sw" style="border-top:2px solid #e8743b"></span>En pesos de hoy: lo que costaría hoy ese precio, sumando la inflación acumulada. Es parecido a medirlo en UF.</span>
       <span id="leg-nom"><span class="sw" style="border-top:1px solid #8b8276"></span>Nominal: el precio de la boleta de ese día</span>
     </div>
     <div class="cbar-right">
-      <span class="zoomhint">zoom: arrastra el eje de años o el de precios · pinch en táctil</span>
+      <span class="zoomhint">Para acercar, arrastra el eje de los años o el de los precios. En el celular, usa dos dedos.</span>
       <span class="ref m-ind" id="ref-velas"></span>
       <button class="vbtn nomtoggle m-ind" id="v-nominal">+ nominal</button>
       <div class="vtoggle m-ind">
@@ -449,15 +449,15 @@ __CSS_SITIO__
       </div>
       <div class="overlay m-prod">
         <div class="oname">COMPARAR PRODUCTOS <span id="prod-rango"></span></div>
-        <div class="onote">variación real, no precio</div>
+        <div class="onote">Cambio del precio real, en porcentaje</div>
       </div>
       <div class="overlay m-can">
-        <div class="oname">ARMA TU CANASTA <span>· y compártela</span></div>
+        <div class="oname">ARMA TU CANASTA <span>Y COMPÁRTELA</span></div>
         <div class="orow"><div class="oprice" id="ccosto"></div></div>
         <div class="cstats" id="cstats"></div>
         <div class="cstats ctemporada" id="ctemporada"></div>
         <div class="caviso" id="caviso"></div>
-        <div class="can-reg">Canasta armada por ti con datos ODEPA · no es un índice oficial Carestía</div>
+        <div class="can-reg">Esta canasta la armaste tú con datos de ODEPA. No es un índice de Carestía.</div>
       </div>
       <div class="tooltip" id="tooltip">
         <div class="tt-d" id="tt-d"></div>
@@ -471,7 +471,7 @@ __CSS_SITIO__
     <div class="mstrip">
       <span class="mleg m-ind"><span class="sw" style="border-top:2px solid #e8743b"></span>En pesos de hoy</span>
       <span class="mleg m-ind" id="mleg-nom"><span class="sw" style="border-top:1px solid #8b8276"></span>Nominal</span>
-      <span class="mhint">desliza horizontal para moverte · pinch para zoom</span>
+      <span class="mhint">Desliza hacia los lados para moverte. Usa dos dedos para acercar.</span>
     </div>
 
     <section class="contexto m-ind">
@@ -481,7 +481,7 @@ __CSS_SITIO__
         <div class="frase" id="season-frase"></div>
       </div>
       <div class="ctx-box">
-        <div class="ctx-h">COMPONENTES DE LA CANASTA <span>· aporte al total</span></div>
+        <div class="ctx-h">COMPONENTES DE LA CANASTA <span>(aporte de cada uno al total)</span></div>
         <div class="comp" id="comp"></div>
       </div>
     </section>
@@ -528,6 +528,13 @@ __PIE__
   })();
   const fmt = v => '$' + Math.round(v).toLocaleString('es-CL');
   const MESES = ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  // dentro de una frase, el mes con su nombre completo; las abreviaturas
+  // quedan solo como etiquetas de las barras
+  const MESES_LARGO = ['','enero','febrero','marzo','abril','mayo','junio','julio',
+    'agosto','septiembre','octubre','noviembre','diciembre'];
+  // nombres de los grupos ODEPA, solo al mostrarlos (las claves no cambian)
+  const GRUPO_TXT = __GRUPOS__;
+  const grupoTxt = g => GRUPO_TXT[g] || g;
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   // colores del semáforo: SOLO veredicto y velas
@@ -724,7 +731,7 @@ __PIE__
     // la leyenda compacta móvil acompaña el mismo atenuado
     document.getElementById('mleg-nom').style.opacity = nomVisible ? '' : '.35';
     document.getElementById('ref-velas').textContent =
-      linea ? '' : 'velas semanales · mecha = rango mín-máx entre locales encuestados';
+      linea ? '' : 'Velas semanales. La mecha va del precio más bajo al más alto que ODEPA encontró entre los locales encuestados.';
     chart.timeScale().fitContent();
   }
   document.getElementById('v-linea').onclick = () => { vista = 'linea'; aplicarVista(); };
@@ -754,9 +761,9 @@ __PIE__
     const nombre = d.nombre.replace(/^Índice /i, '').toLowerCase();
     const fem = /a$/.test(nombre);   // la ensalada, la fruta / el asado, el desayuno
     frase.innerHTML = (fem ? 'La ' : 'El ') + nombre + ' suele estar más ' +
-      (fem ? 'barata' : 'barato') + ' en <b>' + MESES[e.mes_barato] +
-      '</b> y más ' + (fem ? 'cara' : 'caro') + ' en <b>' + MESES[e.mes_caro] +
-      '</b> respecto de su historia · brecha estacional de ' + e.amplitud + '%.';
+      (fem ? 'barata' : 'barato') + ' en <b>' + MESES_LARGO[e.mes_barato] +
+      '</b> y más ' + (fem ? 'cara' : 'caro') + ' en <b>' + MESES_LARGO[e.mes_caro] +
+      '</b>. La diferencia entre esos meses es de ' + e.amplitud + '%.';
     const vals = Object.values(e.factores);
     const maxDev = Math.max(...vals.map(v => Math.abs(v - 1))) || 0.01;
     for (let m = 1; m <= 12; m++) {
@@ -781,7 +788,7 @@ __PIE__
     document.documentElement.style.setProperty('--verdict', d.color);
     document.getElementById('fecha').textContent = d.fecha;
     document.getElementById('oname').textContent = d.nombre.replace(/^Índice /i, '');
-    document.getElementById('osub').textContent = '· ' + d.subtitulo;
+    document.getElementById('osub').textContent = d.subtitulo;
     countUp(document.getElementById('oprice'), d.costo_real);
     document.getElementById('odelta').textContent = fmtDelta(deltaSemanal(d));
     document.getElementById('obadge').textContent = d.veredicto;
@@ -790,7 +797,8 @@ __PIE__
       'percentil ' + d.percentil + ' de ' + d.n + ' semanas';
     document.getElementById('ovs').textContent =
       (d.vs_promedio >= 0 ? '+' : '') + d.vs_promedio +
-      '% vs su promedio histórico, en pesos de hoy';
+      (d.vs_promedio >= 0 ? '% sobre' : '% bajo') +
+      ' su promedio histórico, en pesos de hoy';
     realMap = new Map(d.real.map(p => [p.time, p.value]));
     nomMap = new Map(d.nominal.map(p => [p.time, p.value]));
     if (chart) {
@@ -850,8 +858,8 @@ __PIE__
       if (!keys.length) return;
       const box = document.createElement('div'); box.className = 'pgroup';
       const head = document.createElement('button'); head.className = 'pg-head';
-      head.innerHTML = '<span class="pg-chev" aria-hidden="true">▸</span>' + g +
-        ' <span class="pg-n">· ' + keys.length + '</span>';
+      head.innerHTML = '<span class="pg-chev" aria-hidden="true">▸</span>' + grupoTxt(g) +
+        ' <span class="pg-n">(' + keys.length + ')</span>';
       const body = document.createElement('div'); body.className = 'pg-body pchips';
       const chips = keys.map(k => {
         const b = hacerChip(k);
@@ -944,7 +952,7 @@ __PIE__
       y0 = Math.min(y0, +r[0].time.slice(0, 4));
       y1 = Math.max(y1, +r[r.length - 1].time.slice(0, 4));
     });
-    document.getElementById('prod-rango').textContent = '· ' + y0 + ' a ' + y1;
+    document.getElementById('prod-rango').textContent = '(' + y0 + ' a ' + y1 + ')';
     buildSelector('pgroups', 'psearch', k => {
       const b = document.createElement('button');
       b.className = 'pchip' + (psel.has(k) ? ' active' : '');
@@ -1130,8 +1138,8 @@ __PIE__
       const prom = vals.reduce((a, b) => a + b, 0) / n;
       const vsp = Math.round((ult / prom - 1) * 100);
       stats.textContent = 'percentil ' + pct + ' de ' + n +
-        ' semanas de esta canasta · ' + (vsp >= 0 ? '+' : '') + vsp +
-        '% vs su promedio histórico';
+        ' semanas de esta canasta (' + (vsp >= 0 ? '+' : '') + vsp +
+        (vsp >= 0 ? '% sobre' : '% bajo') + ' su promedio histórico)';
       // percentil de TEMPORADA: la semana actual solo contra las semanas
       // históricas de su misma época (semana ISO a ±6, circular); con menos
       // de 30 comparables el percentil es ruido y la línea se omite
@@ -1277,13 +1285,13 @@ __PIE__
       mctx.font = '400 ' + compSize + 'px "IBM Plex Mono", monospace';
       let linea = '';
       partes.forEach(p => {
-        const cand = linea ? linea + ' · ' + p : p;
+        const cand = linea ? linea + ', ' + p : p;
         if (!linea || mctx.measureText(cand).width <= chartW) linea = cand;
         else { compLineas.push(linea); linea = p; }
       });
       if (linea) compLineas.push(linea);
       if (compLineas.length > 2) {   // nunca más de dos: recorte con …
-        let l2 = compLineas.slice(1).join(' · ');
+        let l2 = compLineas.slice(1).join(', ');
         while (l2 && mctx.measureText(l2 + ' …').width > chartW) l2 = l2.slice(0, -1);
         compLineas.length = 1;
         compLineas.push(l2 + ' …');
@@ -1308,7 +1316,7 @@ __PIE__
       precio = document.getElementById('ccosto').textContent || '·';
     } else if (modo === 'productos') {
       titulo = 'PRODUCTOS';
-      precio = 'variación real, no precio';
+      precio = 'Cambio del precio real, en porcentaje';
       precioFont = '400 ' + Math.round(W * 0.02) + 'px "IBM Plex Mono", monospace';
     } else {
       const d = INDICES[cur];
@@ -1430,8 +1438,8 @@ PIE_LINKS = [
 ]
 # atribución ODEPA CC-BY y deslinde: el mismo texto que ya tenía el pie de la
 # portada, ahora en el pie de todas las páginas
-PIE_ATTR = ('Fuente: precios al consumidor ODEPA (<a href="https://datos.odepa.gob.cl">'
-            'datos.odepa.gob.cl</a>, CC-BY) · deflactado por IPC. Cada precio es el '
+PIE_ATTR = ('Fuente: precios al consumidor de ODEPA (<a href="https://datos.odepa.gob.cl">'
+            'datos.odepa.gob.cl</a>, licencia CC-BY), deflactados con el IPC. Cada precio es el '
             'promedio de los puntos que ODEPA encuesta cada semana en la Región '
             'Metropolitana: ferias libres, supermercados y carnicerías. Por eso suele '
             'ser menor que el precio de supermercado. Canastas fijas; precios '
@@ -1559,13 +1567,12 @@ def pie_sitio(actual: str = "") -> str:
             f'    </ul></nav>\n'
             f'    <p class="pie-attr">{PIE_ATTR}</p>\n'
             f'    <p class="pie-disc">{PIE_DISC}</p>\n'
-            # &nbsp; antes de cada "·": al envolver, el separador no abre
-            # línea; y el RUT no se corta en el guion
-            f'    <p class="pie-legal">© 2026 Carestía SpA&nbsp;· '
-            f'<span class="nw">RUT 78.521.796-9</span>&nbsp;· '
-            f'<a href="mailto:pedro@carestia.cl">pedro@carestia.cl</a></p>\n'
+            # el RUT no se corta en el guion
+            f'    <p class="pie-legal">© 2026 Carestía SpA, '
+            f'<span class="nw">RUT 78.521.796-9</span>. '
+            f'Contacto: <a href="mailto:pedro@carestia.cl">pedro@carestia.cl</a></p>\n'
             f'    <p class="pie-tv"><a href="https://www.tradingview.com/">'
-            f'TradingView Lightweight Charts™ · Copyright (c) 2023 TradingView, Inc.'
+            f'TradingView Lightweight Charts™. Copyright (c) 2023 TradingView, Inc.'
             f'</a></p>\n'
             f'  </footer>\n'
             f'{JS_MENU}')
@@ -1675,21 +1682,21 @@ __CSS_SITIO__
   <header>
     <!-- span único: un solo flex item para que innerText no parta el texto -->
     <a class="wordmark" href="https://carestia.cl/"><span>CAREST<span class="i">Í</span>A</span></a>
-    <span class="tagline">Índices del costo de vida · Chile</span>
+    <span class="tagline">Índices del costo de vida en Chile</span>
     __NAV__
   </header>
 
   <main>
-    <div class="miga">Precio real en Chile · pesos de hoy</div>
+    <div class="miga">Precio real en Chile, en pesos de hoy</div>
     <h1>__LABEL__</h1>
     <div class="orow">
       <div class="oprice">__PRECIO__</div>
-      <div class="ouni">por __UNI_TXT__ · pesos de hoy</div>
+      <div class="ouni">por __UNI_TXT__, en pesos de hoy</div>
       <div class="odelta">__DELTA__ <small>sem.</small></div>
     </div>
     <p class="pct">__PCT_LINEA__</p>
     <div id="grafico"></div>
-    <div class="fecha">Semana del __FECHA__ · serie desde __ANIO__ · actualizado viernes</div>
+    <div class="fecha">Semana del __FECHA__. Serie desde __ANIO__. Se actualiza los viernes.</div>
     __OTROS__
     <p class="metodo">Cada punto es el promedio de los puntos que ODEPA encuesta
       cada semana en la Región Metropolitana: ferias libres, supermercados y
@@ -1749,6 +1756,17 @@ __PIE__
 """
 
 UNI_TXT = {"kg": "kilo", "un": "unidad", "l": "litro"}
+
+# Nombre con que se muestran los grupos ODEPA. Solo el texto visible: los
+# datos, las claves y los anclas (slug_url del nombre original) no cambian.
+GRUPO_TXT = {
+    "Carne de Cerdo - Ave - Cordero": "Carne de cerdo, ave y cordero",
+    "Lácteos - Huevos - Margarinas": "Lácteos, huevos y margarinas",
+}
+
+
+def grupo_txt(g: str) -> str:
+    return GRUPO_TXT.get(g, g)
 QDEF = {"kg": "0.5", "un": "1", "l": "1"}   # cantidad por defecto del link de canasta
 
 
@@ -1793,9 +1811,9 @@ def seccion_otros(slug: str, grupo: str, rueda: list, labels: dict) -> str:
         f'<a href="https://carestia.cl/productos/{v}.html">'
         f'{html.escape(labels[v])}</a>' for v in vecinos)
     return (f'<section class="otros" aria-label="Otros productos de '
-            f'{html.escape(grupo, quote=True)}">\n'
+            f'{html.escape(grupo_txt(grupo), quote=True)}">\n'
             f'      <h2 class="otros-h">Otros productos de '
-            f'{html.escape(grupo)}</h2>\n'
+            f'{html.escape(grupo_txt(grupo))}</h2>\n'
             f'      <nav class="otros-links">\n'
             f'      {enlaces}\n'
             f'      </nav>\n'
@@ -2024,13 +2042,12 @@ __HEAD_URL__
   /* las canastas: cantidades leídas de BASKETS (indices.py) */
   .canastas { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
     gap:26px 32px; margin-top:18px; }
-  .canastas table { width:100%; border-collapse:collapse; margin-top:10px; }
-  .canastas th, .canastas td { font:400 12px/1.5 "IBM Plex Mono",monospace;
-    text-align:left; padding:7px 0; border-bottom:1px solid var(--grid); }
-  .canastas th { font-weight:600; font-size:10px; letter-spacing:.14em;
-    text-transform:uppercase; color:var(--ash); }
-  .canastas th + th, .canastas td + td { text-align:right;
-    font-variant-numeric:tabular-nums; padding-left:12px; white-space:nowrap; }
+  .canastas .csub { font:400 12px/1.5 "IBM Plex Mono",monospace; color:var(--ash);
+    margin-top:4px; }
+  .canastas ul { list-style:none; margin-top:10px; padding-left:0; }
+  .canastas li { font:400 12px/1.5 "IBM Plex Mono",monospace; padding:7px 0;
+    border-bottom:1px solid var(--grid); }
+  .canastas li + li { margin-top:0; }
 
   /* ---- /productos/: listado estático de fichas ---- */
   .intro { font:400 13px/1.7 "IBM Plex Mono",monospace; color:var(--bone);
@@ -2067,7 +2084,7 @@ __CSS_SITIO__
   <header>
     <!-- span único: un solo flex item para que innerText no parta el texto -->
     <a class="wordmark" href="https://carestia.cl/"><span>CAREST<span class="i">Í</span>A</span></a>
-    <span class="tagline">Índices del costo de vida · Chile</span>
+    <span class="tagline">Índices del costo de vida en Chile</span>
     __NAV__
   </header>
 
@@ -2151,7 +2168,7 @@ def generar_indice_productos(fichas: dict) -> None:
     if sin_datos:
         chips.append((ID_SIN_DATOS, "Sin datos hace más de un año", len(sin_datos)))
     indice = "\n        ".join(
-        f'<li><a href="#{ancla}">{html.escape(g)} '
+        f'<li><a href="#{ancla}">{html.escape(grupo_txt(g))} '
         f'<span>{k}</span></a></li>' for ancla, g, k in chips)
     secciones = []
     for g in orden:
@@ -2159,7 +2176,7 @@ def generar_indice_productos(fichas: dict) -> None:
             item(*f[1:]) for f in sorted(grupos[g], key=lambda f: _orden(f[1])))
         secciones.append(
             f'    <section class="pgrupo" id="{slug_url(g)}">\n'
-            f'      <h2>{html.escape(g)} <span>· {len(grupos[g])}</span></h2>\n'
+            f'      <h2>{html.escape(grupo_txt(g))} <span>({len(grupos[g])})</span></h2>\n'
             f'      <ul class="plista">\n        {lis}\n      </ul>\n'
             f'    </section>')
     if sin_datos:
@@ -2167,7 +2184,7 @@ def generar_indice_productos(fichas: dict) -> None:
             item(*f[1:]) for f in sorted(sin_datos, key=lambda f: _orden(f[1])))
         secciones.append(
             f'    <section class="pgrupo" id="{ID_SIN_DATOS}">\n'
-            f'      <h2>Sin datos hace más de un año <span>· {len(sin_datos)}</span></h2>\n'
+            f'      <h2>Sin datos hace más de un año <span>({len(sin_datos)})</span></h2>\n'
             f'      <p class="intro">ODEPA no ha publicado precios de estos productos '
             f'en los últimos 12 meses. Se muestran con su último dato y su fecha.</p>\n'
             f'      <ul class="plista">\n        {lis}\n      </ul>\n'
@@ -2175,7 +2192,7 @@ def generar_indice_productos(fichas: dict) -> None:
     n = len(filas)
     fecha = semana.strftime("%d-%m-%Y") if semana else "·"
     cuerpo = (
-        f'    <div class="miga">Catálogo · pesos de hoy</div>\n'
+        f'    <div class="miga">Catálogo en pesos de hoy</div>\n'
         f'    <h1>Productos</h1>\n'
         f'    <p class="intro">Precios de {n} productos en la Región '
         f'Metropolitana, en pesos de hoy: el promedio de los puntos que ODEPA '
@@ -2193,7 +2210,7 @@ def generar_indice_productos(fichas: dict) -> None:
         cuerpo, actual="productos", clase="catalogo")
 
 
-# ---- textos: README (metodología) y textos/*.md (del dueño) ----
+# ---- textos/*.md (del dueño) ----
 # Los textos van LITERALES: aquí solo se les da formato HTML. Una línea es un
 # bloque; "## " título; "- " ítem de lista; **negrita**, `código`,
 # [texto](url) y los correos (mailto) en línea. Nada se reescribe.
@@ -2250,28 +2267,12 @@ def md_a_html(texto: str) -> str:
     return "\n".join(bloques)
 
 
-def seccion_readme(titulo: str) -> str:
-    """Cuerpo LITERAL de la sección '## {titulo}' del README.md (hasta el
-    siguiente '## '), con formato HTML."""
-    with open("README.md", encoding="utf-8") as fh:
-        lineas = fh.read().splitlines()
-    if f"## {titulo}" not in lineas:
-        raise SystemExit(f"build_site.py: README.md no tiene la sección "
-                         f"'## {titulo}' (la usa /metodologia.html)")
-    cuerpo = []
-    for linea in lineas[lineas.index(f"## {titulo}") + 1:]:
-        if linea.startswith("## "):
-            break
-        cuerpo.append(linea)
-    return md_a_html("\n".join(cuerpo))
-
-
 # textos/{nombre}.md: los anexos del dueño (literales). Una línea que parte
 # con "PENDIENTE" marca un texto que aún no llega completo: el build se niega
 # a publicar (ver más abajo) salvo en una vista previa local con
 # CARESTIA_BORRADOR=1.
 TEXTOS = ["terminos", "privacidad", "acerca", "contacto",
-          "notas_metodologicas", "404"]
+          "metodologia", "notas_metodologicas", "404"]
 
 
 def leer_texto(nombre: str) -> str:
@@ -2312,21 +2313,18 @@ def fmt_cantidad(qty, uni: str) -> str:
 
 def html_canastas() -> str:
     """Las 4 canastas con sus cantidades, generadas desde el diccionario
-    BASKETS de indices.py: la misma fuente que usa el cálculo."""
+    BASKETS de indices.py: la misma fuente que usa el cálculo. Cada producto
+    va como "Asado de tira: 1 kg"."""
     bloques = []
     for code, meta in BASKETS.items():
         filas = "\n          ".join(
-            f"<tr><td>{html.escape(lab)}</td><td>{fmt_cantidad(qty, uni)}</td></tr>"
+            f"<li>{html.escape(lab)}: {fmt_cantidad(qty, uni)}</li>"
             for (lab, _match, qty, uni) in meta["items"])
         bloques.append(
             f'      <div class="canasta" id="canasta-{code}">\n'
-            f'        <h3>{html.escape(meta["nombre"])} '
-            f'<span>· {html.escape(meta["subtitulo"])}</span></h3>\n'
-            f'        <table>\n'
-            f'          <thead><tr><th scope="col">Producto</th>'
-            f'<th scope="col">Cantidad</th></tr></thead>\n'
-            f'          <tbody>\n          {filas}\n          </tbody>\n'
-            f'        </table>\n'
+            f'        <h3>{html.escape(meta["nombre"])}</h3>\n'
+            f'        <p class="csub">{html.escape(meta["subtitulo"])}</p>\n'
+            f'        <ul>\n          {filas}\n        </ul>\n'
             f'      </div>')
     return '<div class="canastas">\n' + "\n".join(bloques) + '\n    </div>'
 
@@ -2346,16 +2344,17 @@ def secciones_md(texto: str) -> list:
 
 
 def generar_metodologia() -> None:
-    """/metodologia.html: "Metodología (resumen)", "Fuentes" y "Deslinde"
-    literales del README.md, "Las canastas" desde BASKETS y, al final, las
-    secciones del texto del dueño (textos/notas_metodologicas.md), cada una
-    con su propio título ('## '), al mismo nivel que "Deslinde"."""
-    secciones = [
-        ("resumen", html.escape("Metodología (resumen)"), seccion_readme("Metodología (resumen)")),
-        ("canastas", html.escape("Las canastas"), html_canastas()),
-        ("fuentes", html.escape("Fuentes"), seccion_readme("Fuentes")),
-        ("deslinde", html.escape("Deslinde"), seccion_readme("Deslinde")),
-    ]
+    """/metodologia.html: las secciones de textos/metodologia.md (literales,
+    "Cómo se calcula", "Fuentes" y "Deslinde"), con "Las canastas" desde
+    BASKETS tras la primera, y al final las de textos/notas_metodologicas.md.
+    Cada sección lleva su propio título ('## ')."""
+    secciones = []
+    for titulo, contenido in secciones_md(leer_texto("metodologia")):
+        titulo = titulo or "Metodología"
+        secciones.append(("resumen" if titulo == "Cómo se calcula"
+                          else slug_url(titulo), md_en_linea(titulo), contenido))
+        if titulo == "Cómo se calcula":
+            secciones.append(("canastas", html.escape("Las canastas"), html_canastas()))
     for titulo, contenido in secciones_md(leer_texto("notas_metodologicas")):
         titulo = titulo or "Notas metodológicas"
         secciones.append((slug_url(titulo), md_en_linea(titulo), contenido))
@@ -2481,6 +2480,7 @@ if PENDIENTES:
 
 with open("index.html", "w", encoding="utf-8") as fh:
     fh.write(HTML.replace("__CSS_SITIO__", CSS_SITIO)
+                 .replace("__GRUPOS__", json.dumps(GRUPO_TXT, ensure_ascii=False))
                  .replace("__NAV__", nav_sitio("indices"))
                  .replace("__PIE__", pie_sitio())
                  .replace("__DATA__", json.dumps(DATA, ensure_ascii=False)))

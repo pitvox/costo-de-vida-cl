@@ -8,4 +8,4 @@ Escríbenos a **pedro@carestia.cl**.
 
 También estamos en X: [@carestia_cl](https://x.com/carestia_cl).
 
-Carestía SpA · RUT 78.521.796-9 · Lo Barnechea, Santiago, Chile
+Carestía SpA, RUT 78.521.796-9. Lo Barnechea, Santiago, Chile.
