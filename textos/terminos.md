@@ -1,7 +1,7 @@
 **Términos de uso de carestia.cl**
 Última actualización: 29 de septiembre de 2026
 
-**1. Quiénes somos.** carestia.cl es un sitio de Carestía SpA, RUT 78.521.796-9, con domicilio en la comuna de Lo Barnechea, Santiago, Chile ("Carestía"). Puedes escribirnos a pedro@carestia.cl.
+**1. Quiénes somos.** carestia.cl es un sitio de Carestía SpA, RUT 78.521.796-9, con domicilio en Santiago, Chile ("Carestía"). Puedes escribirnos a pedro@carestia.cl.
 
 **2. Qué publicamos.** Carestía publica índices y series de precios de alimentos de la Región Metropolitana, expresados en pesos de hoy y elaborados sobre datos públicos. Los índices son de elaboración propia y no son estadísticas oficiales. Es información de consumo, con fines informativos y analíticos: no constituye asesoría ni recomendación de inversión, financiera, tributaria ni de ningún otro tipo, ni una oferta para comprar o vender nada. Las decisiones que tomes con esta información son de tu exclusiva responsabilidad. Las canastas que armes con la herramienta "Arma tu canasta" son cálculos tuyos y no son índices de Carestía.
 
