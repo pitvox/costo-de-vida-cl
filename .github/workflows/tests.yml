@@ -1,0 +1,30 @@
+name: Tests
+
+# Corre los tests (sin red) en cada pull request y en cada push a main.
+# No publica nada: el deploy vive en actualizar.yml.
+on:
+  pull_request: {}
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Clonar repo
+        uses: actions/checkout@v7
+
+      - name: Instalar Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependencias
+        run: pip install pandas numpy requests pytest
+
+      - name: Tests
+        run: python -m pytest -q tests
