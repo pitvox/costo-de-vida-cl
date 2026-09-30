@@ -6,3 +6,6 @@ charting_library/
 datafeeds/
 **/charting_library*
 **/datafeeds*
+
+# Caché de Python
+__pycache__/

@@ -229,7 +229,7 @@ HTML = r"""<!DOCTYPE html>
   .overlay .oname { font:500 clamp(10px,1.4vw,12px) "IBM Plex Mono",monospace;
     letter-spacing:.16em; color:var(--ash); text-transform:uppercase; }
   .overlay .oname span { color:var(--dim); text-transform:none; }
-  .overlay .oname #osub { margin-left:.6em; }
+  .overlay .oname #osub { display:block; margin-top:3px; }
   .orow { display:flex; align-items:baseline; gap:clamp(8px,1.5vw,16px);
     margin-top:4px; flex-wrap:wrap; }
   .oprice { font:700 clamp(34px,6vw,68px)/1 "Space Grotesk","Space Grotesk Fallback",sans-serif;
