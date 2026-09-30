@@ -8,7 +8,7 @@ La idea: que mirar cuánto cuesta lo de todos los días sea tan fácil como mira
 
 - **`indices.py`** — descarga los precios al consumidor de ODEPA (2008–2026), arma cada canasta, la deflacta a pesos de hoy con el IPC y calcula la estadística. Escribe `indices.json`.
 - **`build_site.py`** — genera `index.html`, un sitio autocontenido con las cuatro pestañas, línea/velas, estacionalidad y desglose de componentes.
-- **`textos/`** — textos institucionales y legales (términos, privacidad, acerca, contacto, notas metodológicas, 404), literales: `build_site.py` solo les da formato HTML. Las secciones *Metodología (resumen)*, *Fuentes* y *Deslinde* de este README se publican tal cual en `/metodologia.html`.
+- **`textos/`** — textos institucionales y legales (términos, privacidad, acerca, contacto, metodología, notas metodológicas, 404), literales: `build_site.py` solo les da formato HTML. `/metodologia.html` sale de `textos/metodologia.md` (Cómo se calcula, Fuentes y Deslinde), con las canastas generadas desde `BASKETS` y las notas metodológicas al final.
 - **`.github/workflows/actualizar.yml`** — recalcula y republica el sitio **todos los viernes** de forma automática, después de que ODEPA publica.
 
 Correr localmente:

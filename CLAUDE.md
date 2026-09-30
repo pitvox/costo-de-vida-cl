@@ -1,0 +1,20 @@
+# Carestía: guía para Claude
+
+## Reglas de texto
+
+Todo texto visible del sitio (páginas, meta descriptions, textos que arma el JS, leyendas de la captura PNG) suena escrito por una persona. Estas reglas valen para cualquier cambio de texto:
+
+- Nada de rayas: ni "—" ni "–". Los rangos van con palabras: "33 a 66", "2008 a 2026".
+- El "·" no une frases ni fragmentos: usa punto, coma o paréntesis. Solo puede quedar como marcador de dato faltante.
+- "vs" se reemplaza por "sobre" o "bajo" según el signo: "+14% sobre su promedio histórico", "-5% bajo su promedio histórico".
+- Dentro de una frase, los meses van con nombre completo y en minúscula ("diciembre"). Las abreviaturas ("Dic") quedan solo como etiquetas de las barras.
+- Nada de inglés en las ayudas de uso ("zoom", "pinch"): "Para acercar, arrastra el eje...", "usa dos dedos".
+- Nada de fórmulas típicas de texto generado por IA: "inédito", "al descuento", "sin precedentes" y parecidas.
+- Los textos del dueño (`textos/*.md`) se copian literales. `build_site.py` solo les da formato HTML.
+- El deslinde no se reformula: queda palabra por palabra.
+
+La guardia está en `tests/test_texto.py` (pytest, sin red). Falla si aparece "—", "–", " · ", " vs ", "inédit", "al descuento" o "sin precedentes" en `textos/*.md`, en los strings de `build_site.py` que terminan en el sitio (docstrings y `print` de consola quedan fuera) o en el HTML de un build sintético. Corre con `python -m pytest -q tests`.
+
+## Alcance
+
+Un cambio de texto no toca la lógica, los datos, el diseño, los colores ni las URLs. `indices.py`, `validar.py`, `resumen.json` y la metodología no se modifican sin autorización del dueño.
