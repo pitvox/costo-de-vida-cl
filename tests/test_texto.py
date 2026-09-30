@@ -248,6 +248,6 @@ def test_paginas_del_dueno(sitio):
         in _leer(sitio, "acerca.html")
     assert "No es un comparador de precios" not in _leer(sitio, "acerca.html")
     assert "Carestía SpA, RUT" in _leer(sitio, "contacto.html")
-    assert "Lo Barnechea, Santiago, Chile.</p>" in _leer(sitio, "contacto.html")
+    assert "78.521.796-9</span>. Santiago, Chile.</p>" in _leer(sitio, "contacto.html")
     h404 = _leer(sitio, "404.html")
     assert '<a href="/">Volver al inicio</a> o <a href="/productos/">ver los 125 productos</a>.' in h404
