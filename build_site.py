@@ -8,10 +8,16 @@ veredicto y línea/velas · Comparar productos en spaghetti · Arma tu
 canasta), con una franja de contexto que acompaña a cada modo y footer
 con atribución.
 
-Identidad: paleta 2c "Hueso protagonista", hueso/ceniza sobre carbón; la
-brasa #e8743b solo vive en el veredicto, en la í del wordmark y en la línea
-"en pesos de hoy" (con su crosshair). El verde/rojo/ámbar del semáforo
-queda reservado al veredicto y a las velas.
+Identidad (tokens en CSS_BASE, iguales en todas las páginas): base neutra
+con texto hueso; la brasa #e8743b solo vive en la í del wordmark y en la
+línea de los índices oficiales; hueso es el color de las canastas de
+usuario. El verde/ámbar/rojo del semáforo queda reservado al veredicto y a
+las velas de los 4 índices. IBM Plex Sans para la interfaz y el texto, IBM
+Plex Mono para etiquetas cortas en mayúsculas y Space Grotesk para el
+wordmark y las cifras grandes.
+
+La portada trae inline solo el primer pantallazo; las series completas van
+a datos/ y se piden a demanda (ver generar_datos).
 
 También escribe una ficha por producto (productos/{slug}.html), el listado
 /productos/, /metodologia.html, las páginas institucionales y legales (con
@@ -21,10 +27,12 @@ Todas las páginas comparten la navegación del encabezado y el pie.
 Correr:
   python indices.py
   python build_site.py
-  open index.html
+  python -m http.server   (y abrir http://localhost:8000: la portada pide
+                           datos/ por fetch, que no corre con file://)
 """
 
 import datetime
+import hashlib
 import html
 import json
 import os
@@ -51,34 +59,18 @@ HTML = r"""<!DOCTYPE html>
 <meta property="og:image" content="https://carestia.cl/og.png">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2317120e'/%3E%3Crect x='28.5' y='28' width='7' height='24' rx='2' fill='%23e4dacc'/%3E%3Cpath d='M29.5 22L39 13.5' stroke='%23e8743b' stroke-width='7' stroke-linecap='round' fill='none'/%3E%3C/svg%3E">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+__ICONO__
+__FUENTES__
 <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
 <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "101b8fafc10e4ae4b412859b124cb5ea"}'></script>
 <style>
-  /* fallback métrico: Arial ajustada a las métricas de Space Grotesk para
-     que el swap de la webfont no reacomode el wordmark ni los precios (CLS) */
-  @font-face { font-family:"Space Grotesk Fallback"; src:local("Arial");
-    size-adjust:101.7%; ascent-override:96.9%; descent-override:29.2%;
-    line-gap-override:0%; }
-  :root {
-    --bg:#17120e; --bg2:#120e0a; --panel:#1a140f;
-    --line:#2a231c; --grid:#221b14;
-    --bone:#e4dacc; --ash:#8b8276; --dim:#5a5348;
-    --ember:#e8743b; --verdict:#e0552f;
-  }
-  * { box-sizing:border-box; margin:0; padding:0; }
-  body { background:var(--bg); color:var(--bone);
-    font-family:"IBM Plex Mono",monospace; min-height:100vh; }
-  button { font-family:inherit; }
+__CSS_BASE__
 
   /* ---- ticker ---- */
   .ticker { position:sticky; top:0; z-index:50; display:flex; align-items:stretch;
-    background:var(--bg2); border-bottom:1px solid var(--line); min-height:44px; }
+    background:var(--bg); border-bottom:1px solid var(--line); min-height:44px; }
   .ticker .tag { display:none; align-items:center; padding:0 18px;
-    border-right:1px solid var(--line); font:600 10px "IBM Plex Mono",monospace;
+    border-right:1px solid var(--line); font:600 10px var(--mono);
     letter-spacing:.18em; color:var(--ash); white-space:nowrap; }
   .ticker-scroll { flex:1; overflow-x:auto; overflow-y:hidden;
     scrollbar-width:none; -webkit-overflow-scrolling:touch; }
@@ -97,12 +89,10 @@ HTML = r"""<!DOCTYPE html>
   .titem { display:flex; align-items:center; gap:10px; padding:0 22px; cursor:pointer;
     white-space:nowrap; border-right:1px solid var(--grid); background:none; border-top:0;
     border-bottom:0; border-left:0; min-height:44px; }
-  .titem:hover { background:#1f1913; }
-  .titem .tn { font:600 12px "Space Grotesk","Space Grotesk Fallback",sans-serif; letter-spacing:.1em; color:var(--bone); }
-  .titem .tp { font:500 12px "IBM Plex Mono",monospace;
-    font-variant-numeric:tabular-nums; color:var(--bone); }
-  .titem .td { font:500 11px "IBM Plex Mono",monospace;
-    font-variant-numeric:tabular-nums; color:var(--ash); } /* deltas SIEMPRE en ceniza */
+  .titem:hover { background:var(--hover); }
+  .titem .tn { font:600 11px var(--mono); letter-spacing:.1em; color:var(--bone); }
+  .titem .tp { font:500 13px var(--sans); color:var(--bone); }
+  .titem .td { font:500 12px var(--sans); color:var(--ash); } /* deltas SIEMPRE en secundario */
   @media (min-width:760px) {
     .ticker .tag { display:flex; }
     .ticker-scroll { overflow-x:hidden; }
@@ -116,7 +106,7 @@ HTML = r"""<!DOCTYPE html>
   .brand { display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 18px; }
   /* line-height y alto explícitos: el alto del wordmark depende solo del
      font-size, no de la métrica de la fuente que esté cargada (CLS) */
-  .wordmark { font:700 clamp(20px,4vw,26px)/1.15 "Space Grotesk","Space Grotesk Fallback",sans-serif;
+  .wordmark { font:700 clamp(20px,4vw,26px)/1.15 var(--display);
     letter-spacing:.06em; color:var(--bone); display:flex; align-items:baseline;
     height:1.15em; }
   /* í-brasa: el texto real del nodo lleva la Í única (innerText, copy-paste
@@ -132,10 +122,11 @@ HTML = r"""<!DOCTYPE html>
   .wordmark .i { position:relative; display:inline-block; }
   .wordmark .i::after { content:"Í"; content:"Í" / ""; position:absolute;
     left:0; top:0; pointer-events:none;
-    color:#e8743b; clip-path:inset(0 0 86% 0); }
-  .tagline { font:400 12px "IBM Plex Mono",monospace; color:var(--ash); letter-spacing:.04em; }
-  .semana { font:500 11px "IBM Plex Mono",monospace; color:var(--ash); letter-spacing:.08em;
-    text-transform:uppercase; }
+    color:var(--ember); clip-path:inset(0 0 86% 0); }
+  /* line-height fijo en el texto del encabezado: su alto no cambia con la
+     tipografía y el encuadre del lienzo (calc más abajo) sigue exacto */
+  .tagline { font:400 13px/15.6px var(--sans); color:var(--ash); }
+  .semana { font:500 12px/14.3px var(--sans); color:var(--ash); }
   .semana span { color:var(--dim); }
   /* ---- tabs de índice ---- */
   /* min-height = pill (34px) + padding: las tabs las construye JS y sin
@@ -146,20 +137,19 @@ HTML = r"""<!DOCTYPE html>
     scrollbar-width:none; -webkit-overflow-scrolling:touch; }
   .tabs::-webkit-scrollbar { display:none; }
   /* afordancia: las pills inactivas se leen como botón (fondo panel, borde
-     ceniza-dim, texto hueso) y el hover/focus responde con borde brasa;
-     todo dentro de la paleta existente */
-  .tab { flex:none; font:600 11px "IBM Plex Mono",monospace; letter-spacing:.1em;
+     de línea, texto hueso) y el hover/focus responde con borde hueso */
+  .tab { flex:none; font:600 13px var(--sans); letter-spacing:.01em;
     padding:8px 16px; min-height:34px; cursor:pointer; white-space:nowrap;
-    background:var(--panel); border:1px solid var(--dim); border-radius:999px;
+    background:var(--panel); border:1px solid var(--line); border-radius:999px;
     color:var(--bone);
     transition:background-color .15s ease, border-color .15s ease, color .15s ease; }
   .tab:not(.active):hover, .tab:not(.active):focus-visible {
-    background:#1f1913; border-color:var(--ember); }
-  .tab.active { background:var(--bone); border-color:var(--bone); color:#17120e; }
-  /* punto brasa de 6px: marca las tabs de herramienta (Comparar productos /
-     Arma tu canasta), el mismo gesto de la í del wordmark */
+    background:var(--hover); border-color:var(--bone); }
+  .tab.active { background:var(--bone); border-color:var(--bone); color:var(--bg); }
+  /* punto de 6px: marca las tabs de herramienta (Comparar productos /
+     Arma tu canasta); toma el color del texto de la pill */
   .tab .tdot { display:inline-block; width:6px; height:6px; border-radius:50%;
-    background:var(--ember); margin-right:8px; }
+    background:currentColor; margin-right:8px; vertical-align:middle; }
   /* separador fino entre los índices y las pills de herramientas */
   .tab-sep { flex:none; width:1px; align-self:stretch; background:var(--line);
     margin:0 4px; }
@@ -174,15 +164,16 @@ HTML = r"""<!DOCTYPE html>
   @media (max-width:640px) {
     .tabs { flex-wrap:wrap; overflow-x:visible; min-height:110px; }
     .tab { flex:1 1 0; min-width:0; overflow:hidden; text-overflow:ellipsis;
-      text-align:center; padding:8px 6px; font-size:10px; letter-spacing:.06em; }
+      text-align:center; padding:8px 6px; font-size:12px; letter-spacing:0; }
     .tab .tdot { margin-right:6px; }
     .tab-sep { flex-basis:100%; width:auto; height:1px; align-self:auto;
       margin:0; }
   }
 
+  /* el pulso del veredicto usa su propio color del semáforo */
   @keyframes car-pulse {
-    0%,100% { box-shadow:0 0 0 0 rgba(232,116,59,.55); }
-    50% { box-shadow:0 0 14px 3px rgba(232,116,59,.25); }
+    0%,100% { box-shadow:0 0 0 0 color-mix(in srgb, var(--verdict) 55%, transparent); }
+    50% { box-shadow:0 0 14px 3px color-mix(in srgb, var(--verdict) 25%, transparent); }
   }
   @media (prefers-reduced-motion: reduce) {
     * { animation:none !important; }
@@ -226,24 +217,28 @@ HTML = r"""<!DOCTYPE html>
   #chart, #pchart, #cchart { position:absolute; inset:0; }
   .overlay { position:absolute; left:clamp(12px,2.5vw,32px); top:clamp(12px,2.5vw,26px);
     pointer-events:none; z-index:5; max-width:88%; }
-  .overlay .oname { font:500 clamp(10px,1.4vw,12px) "IBM Plex Mono",monospace;
+  .overlay .oname { font:500 clamp(10px,1.4vw,12px) var(--mono);
     letter-spacing:.16em; color:var(--ash); text-transform:uppercase; }
   .overlay .oname span { color:var(--dim); text-transform:none; }
+  /* el nombre del índice es una etiqueta corta: mono y en mayúsculas, como
+     en el ticker; el subtítulo y el rango de años van en texto normal */
+  .overlay .oname #oname { text-transform:uppercase; }
+  .overlay .oname #osub, .overlay .oname #prod-rango {
+    font:400 clamp(11px,1.4vw,13px) var(--sans); letter-spacing:0; }
   .overlay .oname #osub { display:block; margin-top:3px; }
   .orow { display:flex; align-items:baseline; gap:clamp(8px,1.5vw,16px);
     margin-top:4px; flex-wrap:wrap; }
-  .oprice { font:700 clamp(34px,6vw,68px)/1 "Space Grotesk","Space Grotesk Fallback",sans-serif;
-    font-variant-numeric:tabular-nums; letter-spacing:-.01em; color:var(--bone); }
-  .odelta { font:600 clamp(12px,1.6vw,18px) "IBM Plex Mono",monospace;
-    font-variant-numeric:tabular-nums; color:var(--ash); }
-  .odelta small { font:400 11px "IBM Plex Mono",monospace; color:var(--dim); }
+  .oprice { font:700 clamp(34px,6vw,68px)/1 var(--display);
+    letter-spacing:-.01em; color:var(--bone); }
+  .odelta { font:600 clamp(13px,1.6vw,18px) var(--sans); color:var(--ash); }
+  .odelta small { font:400 12px var(--sans); color:var(--dim); }
   .overd { display:flex; align-items:center; gap:12px; margin-top:12px; flex-wrap:wrap; }
-  .badge { font:700 clamp(11px,1.4vw,13px) "Space Grotesk","Space Grotesk Fallback",sans-serif; letter-spacing:.14em;
+  .badge { font:600 clamp(11px,1.4vw,13px) var(--mono); letter-spacing:.14em;
     padding:5px 12px; background:var(--verdict); color:var(--bg);
     animation:car-pulse 2.4s ease-in-out infinite; }
-  .opct, .ovs { font:400 clamp(10px,1.3vw,12px) "IBM Plex Mono",monospace; color:var(--ash); }
+  .opct, .ovs { font:400 clamp(11px,1.3vw,13px) var(--sans); color:var(--ash); }
   .ovs { margin-top:8px; }
-  .onote { display:inline-block; font:500 11px "IBM Plex Mono",monospace; color:var(--ash);
+  .onote { display:inline-block; font:500 12px var(--sans); color:var(--ash);
     border:1px solid var(--line); padding:4px 10px; background:var(--panel);
     margin-top:8px; }
   /* ---- barra de controles: fuera del lienzo, sobre el gráfico ---- */
@@ -257,23 +252,27 @@ HTML = r"""<!DOCTYPE html>
   .cbar-right { margin-left:auto; display:flex; align-items:center; gap:14px; }
   .cbar-right > * { flex:none; }
   .legend { display:none; flex-direction:column; align-items:flex-start; gap:4px;
-    font:400 10px/1.5 "IBM Plex Mono",monospace; color:var(--ash);
+    font:400 11px/1.5 var(--sans); color:var(--ash);
     max-width:min(40vw,440px); text-wrap:pretty; }
   @media (min-width:900px) { .legend { display:flex; } }
   .legend .sw { display:inline-block; width:16px; height:0; margin-right:6px;
     vertical-align:middle; }
   .vtoggle { display:flex; border:1px solid var(--line); background:var(--bg); }
-  .vbtn { font:600 11px "IBM Plex Mono",monospace; letter-spacing:.1em; padding:8px 14px;
+  /* LÍNEA / VELAS son etiquetas cortas en mayúsculas (mono); los botones
+     de texto normal (+ nominal, captura PNG) van en la tipografía de la
+     interfaz */
+  .vbtn { font:600 11px var(--mono); letter-spacing:.1em; padding:8px 14px;
     border:none; cursor:pointer; background:transparent; color:var(--ash); min-height:34px; }
   .vbtn + .vbtn { border-left:1px solid var(--line); }
   .vbtn.active { background:var(--bone); color:var(--bg); }
-  .nomtoggle { border:1px solid var(--line); background:var(--bg); }
+  .nomtoggle { border:1px solid var(--line); background:var(--bg);
+    font:500 13px var(--sans); letter-spacing:0; }
   /* referencia de velas y pista de zoom: texto de ayuda dentro de la barra;
      bajo 760px se omiten para no alargar la fila de controles en móvil */
   .ref { display:none; max-width:300px; text-wrap:balance;
-    font:400 10px/1.5 "IBM Plex Mono",monospace; color:var(--dim); }
+    font:400 11px/1.5 var(--sans); color:var(--dim); }
   .zoomhint { display:none; max-width:280px; text-wrap:balance;
-    font:400 10px/1.5 "IBM Plex Mono",monospace; color:var(--ash); }
+    font:400 11px/1.5 var(--sans); color:var(--ash); }
   @media (min-width:760px) { .ref, .zoomhint { display:block; } }
   /* ---- franja móvil bajo el lienzo: leyenda compacta + pista táctil ---- */
   /* bajo 760px ni la leyenda completa (≥900px) ni la pista de zoom de la
@@ -288,20 +287,18 @@ HTML = r"""<!DOCTYPE html>
     .mstrip { display:flex; flex-wrap:wrap; align-content:flex-start;
       align-items:center; gap:4px 14px; min-height:66px;
       padding:7px clamp(16px,3vw,32px);
-      font:400 10px/16px "IBM Plex Mono",monospace; color:var(--ash); }
+      font:400 11px/16px var(--sans); color:var(--ash); }
     .mstrip .sw { display:inline-block; width:16px; height:0; margin-right:6px;
       vertical-align:middle; }
     .mstrip .mleg { white-space:nowrap; }
     .mstrip .mhint { flex-basis:100%; color:var(--dim); text-wrap:balance; }
   }
   .tooltip { position:absolute; display:none; z-index:7; pointer-events:none;
-    background:#0f0c09; border:1px solid var(--line); padding:8px 12px; white-space:nowrap; }
-  .tooltip .tt-d { font:500 10px "IBM Plex Mono",monospace; letter-spacing:.1em; color:var(--ash); }
-  .tooltip .tt-r { font:600 15px "IBM Plex Mono",monospace;
-    font-variant-numeric:tabular-nums; color:var(--bone); margin-top:2px; }
-  .tooltip .tt-r small { font:400 10px "IBM Plex Mono",monospace; color:var(--ash); }
-  .tooltip .tt-n { font:400 11px "IBM Plex Mono",monospace;
-    font-variant-numeric:tabular-nums; color:var(--ash); }
+    background:var(--panel); border:1px solid var(--line); padding:8px 12px; white-space:nowrap; }
+  .tooltip .tt-d { font:500 11px var(--sans); color:var(--ash); }
+  .tooltip .tt-r { font:600 15px var(--sans); color:var(--bone); margin-top:2px; }
+  .tooltip .tt-r small { font:400 11px var(--sans); color:var(--ash); }
+  .tooltip .tt-n { font:400 12px var(--sans); color:var(--ash); }
 
   /* ---- franja de contexto ---- */
   /* min-height en las cajas que puebla JS (barras, chips, selector): la
@@ -312,33 +309,33 @@ HTML = r"""<!DOCTYPE html>
   .ctx-box { padding:clamp(16px,3vw,24px) clamp(16px,3vw,32px); min-height:190px; }
   @media (min-width:900px) { .ctx-box + .ctx-box { border-left:1px solid var(--line); } }
   @media (max-width:899px) { .ctx-box + .ctx-box { border-top:1px solid var(--line); } }
-  .ctx-h { font:600 11px "IBM Plex Mono",monospace; letter-spacing:.16em; color:var(--ash); }
-  .ctx-h span { color:var(--dim); letter-spacing:.04em; }
+  .ctx-h { font:600 11px var(--mono); letter-spacing:.16em; color:var(--ash); }
+  .ctx-h span { font:400 12px var(--sans); color:var(--dim); letter-spacing:0; }
   .bars { display:flex; align-items:flex-end; gap:6px; height:76px; margin-top:16px; }
   .bars .mcol { flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; }
   .bars .bar { width:100%; min-height:3px; background:var(--ash); }
-  .bars .ml { font:400 9px "IBM Plex Mono",monospace; color:var(--dim); }
-  .frase { font:400 12px/1.55 "IBM Plex Mono",monospace; color:var(--bone); margin-top:16px;
+  .bars .ml { font:400 10px var(--sans); color:var(--dim); }
+  .frase { font:400 14px/1.55 var(--sans); color:var(--bone); margin-top:16px;
     text-wrap:pretty; }
   .frase b { font-weight:600; color:var(--bone); }
   .comp { display:flex; flex-wrap:wrap; gap:10px; margin-top:16px; }
   .comp .chip { display:flex; align-items:baseline; gap:10px; border:1px solid var(--line);
-    padding:9px 14px; background:var(--panel); font:400 12px "IBM Plex Mono",monospace;
+    padding:9px 14px; background:var(--panel); font:400 13px var(--sans);
     color:var(--bone); }
-  .comp .chip b { font-weight:600; font-variant-numeric:tabular-nums; }
+  .comp .chip b { font-weight:600; }
 
   /* ---- franja de contexto: productos y canasta ---- */
   .ctx-solo { border-top:1px solid var(--line); min-height:190px;
     padding:clamp(16px,3vw,24px) clamp(16px,3vw,32px) clamp(20px,3vw,28px); }
   /* selector de catálogo: búsqueda + grupos ODEPA colapsables */
-  .psearch { width:100%; font:400 12px "IBM Plex Mono",monospace; color:var(--bone);
+  .psearch { width:100%; font:400 14px var(--sans); color:var(--bone);
     background:var(--panel); border:1px solid var(--line); padding:10px 14px;
     margin-bottom:10px; border-radius:0; outline:none; -webkit-appearance:none; }
   .psearch::placeholder { color:var(--dim); }
   .psearch:focus { border-color:var(--dim); }
-  .pgroup { border-top:1px solid var(--grid); }
+  .pgroup { border-top:1px solid var(--line); }
   .pg-head { display:flex; align-items:center; gap:8px; width:100%; text-align:left;
-    font:600 11px "IBM Plex Mono",monospace; letter-spacing:.14em; color:var(--ash);
+    font:600 11px var(--mono); letter-spacing:.14em; color:var(--ash);
     text-transform:uppercase; background:none; border:none; padding:11px 2px;
     min-height:38px; cursor:pointer; }
   .pg-head:hover { color:var(--bone); }
@@ -351,44 +348,55 @@ HTML = r"""<!DOCTYPE html>
      y al borrar la búsqueda vuelve el colapso que dejó el usuario */
   .pgroup:not(.abierto):not(.buscando) .pg-body { display:none; }
   .pchips { display:flex; flex-wrap:wrap; gap:8px; }
-  .pchip { display:flex; align-items:center; gap:8px; font:500 11px "IBM Plex Mono",monospace;
+  .pchip { display:flex; align-items:center; gap:8px; font:500 13px var(--sans);
     padding:7px 12px; min-height:34px; cursor:pointer; background:transparent;
     border:1px solid var(--line); color:var(--ash); }
   .pchip .dot { width:8px; height:8px; border-radius:50%; background:var(--dim); flex:none; }
   .pchip.active { background:var(--panel); color:var(--bone); }
-  .can-reg { font:400 11px/1.6 "IBM Plex Mono",monospace; color:var(--ash); margin-top:10px; }
+  .can-reg { font:400 12px/1.6 var(--sans); color:var(--ash); margin-top:10px; }
   /* acción principal de la vista: pill como los tabs, en hueso para que
-     se lea como botón protagonista sin invadir la brasa */
-  .ccopy { font:600 11px "IBM Plex Mono",monospace; letter-spacing:.06em; padding:8px 16px;
+     se lea como botón protagonista */
+  .ccopy { font:600 13px var(--sans); padding:8px 16px;
     min-height:34px; cursor:pointer; background:transparent; border:1px solid var(--bone);
     border-radius:999px; color:var(--bone); white-space:nowrap; }
-  .ccopy:hover { background:#1f1913; }
-  .ccopy.copiado { background:var(--bone); border-color:var(--bone); color:#17120e; }
+  .ccopy:hover { background:var(--hover); }
+  .ccopy.copiado { background:var(--bone); border-color:var(--bone); color:var(--bg); }
   .can-acciones { display:flex; gap:8px; flex-wrap:wrap; margin-top:16px; }
   .citems { display:flex; flex-wrap:wrap; gap:10px; margin-top:16px; }
   .citem { display:flex; flex-direction:column; gap:6px; border:1px solid var(--line);
     background:var(--panel); padding:10px 14px; max-width:100%; }
   .ci-top { display:flex; align-items:center; justify-content:space-between;
     gap:8px 14px; flex-wrap:wrap; }
-  .ci-label { font:500 12px "IBM Plex Mono",monospace; color:var(--bone); }
+  .ci-label { font:500 14px var(--sans); color:var(--bone); }
   .ci-step { display:flex; align-items:stretch; border:1px solid var(--line); background:var(--bg); }
-  .ci-btn { font:600 15px "IBM Plex Mono",monospace; width:38px; min-height:34px; cursor:pointer;
+  .ci-btn { font:600 16px var(--sans); width:38px; min-height:34px; cursor:pointer;
     background:transparent; border:none; color:var(--bone); }
-  .ci-btn:hover { background:#1f1913; }
-  .ci-q { font:500 12px "IBM Plex Mono",monospace; font-variant-numeric:tabular-nums;
+  .ci-btn:hover { background:var(--hover); }
+  .ci-q { font:500 13px var(--sans);
     color:var(--bone); min-width:66px; display:flex; align-items:center;
     justify-content:center; padding:0 6px; border-left:1px solid var(--line);
     border-right:1px solid var(--line); }
-  .ci-eq { font:400 10px "IBM Plex Mono",monospace; color:var(--ash); }
-  .cstats { font:400 12px/1.5 "IBM Plex Mono",monospace; color:var(--ash); margin-top:8px;
+  .ci-eq { font:400 12px var(--sans); color:var(--ash); }
+  .cstats { font:400 13px/1.5 var(--sans); color:var(--ash); margin-top:8px;
     text-wrap:pretty; }
   .ctemporada { margin-top:2px; }
-  .caviso { font:400 11px/1.5 "IBM Plex Mono",monospace; color:var(--ash); margin-top:4px; }
+  .caviso { font:400 12px/1.5 var(--sans); color:var(--ash); margin-top:4px; }
 
   /* ---- footer: el pie común del sitio (CSS_SITIO, más abajo) ---- */
 
   .nochart { display:flex; align-items:center; justify-content:center; height:100%;
     color:var(--ash); font-size:13px; padding:20px; text-align:center; }
+  /* estado de carga del lienzo: centrado, sin tapar el overlay; el botón
+     de reintentar aparece solo si el pedido falló */
+  .carga { position:absolute; inset:0; z-index:6; display:flex;
+    flex-direction:column; align-items:center; justify-content:center; gap:10px;
+    padding:20px; text-align:center; pointer-events:none;
+    font:400 12px/1.5 var(--sans); color:var(--ash); }
+  .carga[hidden] { display:none; }
+  .carga:not(.error) #carga-txt { animation:car-carga 1.2s ease-in-out infinite alternate; }
+  .carga:not(.error) button { display:none; }
+  .carga button { pointer-events:auto; }
+  @keyframes car-carga { from { opacity:.45; } to { opacity:1; } }
 __CSS_SITIO__
 </style>
 </head>
@@ -415,8 +423,8 @@ __CSS_SITIO__
 
   <div class="cbar" id="cbar">
     <div class="legend m-ind">
-      <span><span class="sw" style="border-top:2px solid #e8743b"></span>En pesos de hoy: lo que costaría hoy ese precio, sumando la inflación acumulada. Es parecido a medirlo en UF.</span>
-      <span id="leg-nom"><span class="sw" style="border-top:1px solid #8b8276"></span>Nominal: el precio de la boleta de ese día</span>
+      <span><span class="sw" style="border-top:2px solid var(--ember)"></span>En pesos de hoy: lo que costaría hoy ese precio, sumando la inflación acumulada. Es parecido a medirlo en UF.</span>
+      <span id="leg-nom"><span class="sw" style="border-top:1px solid var(--ash)"></span>Nominal: el precio de la boleta de ese día</span>
     </div>
     <div class="cbar-right">
       <span class="zoomhint">Para acercar, arrastra el eje de los años o el de los precios. En el celular, usa dos dedos.</span>
@@ -459,6 +467,10 @@ __CSS_SITIO__
         <div class="caviso" id="caviso"></div>
         <div class="can-reg">Esta canasta la armaste tú con datos de ODEPA. No es un índice de Carestía.</div>
       </div>
+      <div class="carga" id="carga" role="status" hidden>
+        <span id="carga-txt"></span>
+        <button class="vbtn nomtoggle" id="carga-reintentar">Reintentar</button>
+      </div>
       <div class="tooltip" id="tooltip">
         <div class="tt-d" id="tt-d"></div>
         <div class="tt-r"><span id="tt-r"></span> <small>pesos de hoy</small></div>
@@ -469,8 +481,8 @@ __CSS_SITIO__
     <!-- franja móvil (<760px): leyenda compacta del modo índices y pista de
          gestos táctiles del lienzo; en desktop no existe -->
     <div class="mstrip">
-      <span class="mleg m-ind"><span class="sw" style="border-top:2px solid #e8743b"></span>En pesos de hoy</span>
-      <span class="mleg m-ind" id="mleg-nom"><span class="sw" style="border-top:1px solid #8b8276"></span>Nominal</span>
+      <span class="mleg m-ind"><span class="sw" style="border-top:2px solid var(--ember)"></span>En pesos de hoy</span>
+      <span class="mleg m-ind" id="mleg-nom"><span class="sw" style="border-top:1px solid var(--ash)"></span>Nominal</span>
       <span class="mhint">Desliza hacia los lados para moverte. Usa dos dedos para acercar.</span>
     </div>
 
@@ -504,28 +516,85 @@ __CSS_SITIO__
 __PIE__
 
 <script>
+  // inline viene solo el primer pantallazo: el resumen de los 4 índices, la
+  // serie del primero y la lista de productos sin series. El resto se pide
+  // a datos/ al necesitarlo (ver "datos a demanda")
   const DATA = __DATA__;
   const INDICES = DATA.indices;
   const CODES = Object.keys(INDICES);
   const PRODS = DATA.productos || {};
-  // el catálogo llega compacto: {t0, v:[...]} con null en semanas sin dato.
-  // Se expande una vez (t0 + 7 días por índice) a dos series: real = solo
-  // semanas con dato (en la canasta un null cuenta como "sin dato" para la
-  // intersección estricta) y gaps = serie completa con puntos whitespace,
-  // para que el spaghetti dibuje cortes donde no hubo precio (estacionales)
-  (function expandirProductos() {
-    const DIA = 864e5;
-    Object.values(PRODS).forEach(p => {
-      const base = Date.parse(p.t0 + 'T00:00:00Z');
-      p.real = []; p.gaps = [];
-      p.v.forEach((v, i) => {
-        const time = new Date(base + i * 7 * DIA).toISOString().slice(0, 10);
-        if (v == null) { p.gaps.push({ time }); return; }
-        p.real.push({ time, value: v });
-        p.gaps.push({ time, value: v });
-      });
+
+  /* ---------- datos a demanda ---------- */
+  // las series llegan compactas: t0 (lunes de la primera semana) y un valor
+  // por semana, null donde no hubo dato; se expanden una sola vez
+  const DIA = 864e5;
+  const semanas = t0 => {
+    const base = Date.parse(t0 + 'T00:00:00Z');
+    return i => new Date(base + i * 7 * DIA).toISOString().slice(0, 10);
+  };
+  function expandirIndice(d, s) {
+    const t = semanas(s.t0);
+    const puntos = arr => arr.reduce((out, v, i) => {
+      if (v != null) out.push({ time: t(i), value: v });
+      return out;
+    }, []);
+    d.nominal = puntos(s.nominal);
+    d.velas = s.velas.reduce((out, x, i) => {
+      if (x) out.push({ time: t(i), open: x[0], high: x[1], low: x[2], close: x[3] });
+      return out;
+    }, []);
+    d.real = puntos(s.real);   // al final: d.real marca el índice como cargado
+  }
+  // un producto se expande a dos series: real = solo semanas con dato (en la
+  // canasta un null cuenta como "sin dato" para la intersección estricta) y
+  // gaps = serie completa con puntos whitespace, para que el spaghetti dibuje
+  // cortes donde no hubo precio (estacionales)
+  function expandirProducto(p, s) {
+    const t = semanas(s.t0);
+    const real = [], gaps = [];
+    s.v.forEach((v, i) => {
+      const time = t(i);
+      if (v == null) { gaps.push({ time }); return; }
+      real.push({ time, value: v });
+      gaps.push({ time, value: v });
     });
-  })();
+    p.gaps = gaps;
+    p.real = real;
+  }
+  Object.keys(DATA.series || {}).forEach(c => expandirIndice(INDICES[c], DATA.series[c]));
+
+  // un pedido por archivo; si falla no queda guardado y se puede reintentar.
+  // La versión en la URL evita mezclar archivos de dos builds en la caché
+  const pedidos = new Map();
+  const errores = new Set();
+  function pedirJSON(ruta) {
+    if (!pedidos.has(ruta)) {
+      const p = fetch('datos/' + ruta + '?v=' + DATA.ver).then(r => {
+        if (!r.ok) throw new Error(ruta + ': ' + r.status);
+        return r.json();
+      });
+      p.catch(() => pedidos.delete(ruta));
+      pedidos.set(ruta, p);
+    }
+    return pedidos.get(ruta);
+  }
+  function cargar(clave, ruta, listo, expandir) {
+    if (listo()) return Promise.resolve();
+    errores.delete(clave);
+    return pedirJSON(ruta).then(j => { if (!listo()) expandir(j); },
+      e => { errores.add(clave); throw e; });
+  }
+  const cargarIndice = code => cargar('i:' + code, 'indices/' + code + '.json',
+    () => !!INDICES[code].real, j => expandirIndice(INDICES[code], j.serie));
+  const cargarProducto = k => cargar('p:' + k, 'productos/' + PRODS[k].slug + '.json',
+    () => !!PRODS[k].real, j => expandirProducto(PRODS[k], j));
+  // pide los productos que falten y llama a 'luego' cuando llegaron todos
+  function pedirProductos(keys, luego) {
+    const faltan = keys.filter(k => PRODS[k] && !PRODS[k].real);
+    if (!faltan.length) return;
+    Promise.all(faltan.map(cargarProducto)).then(luego, () => {}).finally(pintarCarga);
+    pintarCarga();
+  }
   const fmt = v => '$' + Math.round(v).toLocaleString('es-CL');
   const MESES = ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   // dentro de una frase, el mes con su nombre completo; las abreviaturas
@@ -537,18 +606,44 @@ __PIE__
   const grupoTxt = g => GRUPO_TXT[g] || g;
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  // colores del semáforo: SOLO veredicto y velas
-  const VELA_UP = '#5bbf7a', VELA_DOWN = '#e0552f';
+  // los colores de los gráficos y de la captura salen de los tokens de :root
+  const VARS = getComputedStyle(document.documentElement);
+  const tok = n => VARS.getPropertyValue('--' + n).trim();
+  const COL = {};
+  ['bg', 'bone', 'ash', 'dim', 'line', 'grid', 'ember', 'cruz', 'verde', 'rojo', 'sans']
+    .forEach(n => { COL[n] = tok(n); });
+  // opciones comunes de los tres lienzos: la rueda y el swipe vertical
+  // quedan para la página; el zoom sigue disponible arrastrando los ejes y
+  // con dos dedos en táctil. El crosshair va en hueso tenue
+  function opcionesChart(extra) {
+    extra = extra || {};
+    return Object.assign({
+      autoSize: true,
+      layout: { background: { type: 'solid', color: 'transparent' }, textColor: COL.ash,
+        fontFamily: COL.sans },
+      grid: { vertLines: { color: COL.grid }, horzLines: { color: COL.grid } },
+      rightPriceScale: { borderColor: COL.line },
+      timeScale: { borderColor: COL.line },
+      handleScale: { mouseWheel: false, pinch: true, axisPressedMouseMove: true },
+      handleScroll: { mouseWheel: false, vertTouchDrag: false,
+        horzTouchDrag: true, pressedMouseMove: true },
+      crosshair: { mode: 0,
+        vertLine: { color: COL.cruz, labelBackgroundColor: COL.line },
+        horzLine: { color: COL.cruz, labelBackgroundColor: COL.line } },
+    }, extra, {
+      // fechas del eje y del crosshair siempre en castellano de Chile, sin
+      // depender del idioma del navegador
+      localization: Object.assign({ locale: 'es-CL' }, extra.localization),
+    });
+  }
 
   let cur = CODES[0], vista = 'linea', nomVisible = false;
   let chart, sNom, sReal, sCandle, pchart;
   let realMap = new Map(), nomMap = new Map();
 
-  function deltaSemanal(d) {
-    const r = d.real;
-    if (!r || r.length < 2) return null;
-    return (r[r.length - 1].value / r[r.length - 2].value - 1) * 100;
-  }
+  // variación de las dos últimas semanas: viene calculada en el resumen,
+  // así el ticker no necesita las series
+  const deltaSemanal = d => d.delta;
   // C1: flechas en ceniza, nunca verde/rojo
   function fmtDelta(x) {
     if (x == null) return '·';
@@ -594,6 +689,8 @@ __PIE__
       b.dataset.code = code;
       b.textContent = INDICES[code].nombre.replace(/^Índice /i, '');
       b.onclick = () => render(code);
+      // con el puntero encima ya se pide la serie: al hacer clic suele estar
+      b.addEventListener('pointerenter', () => cargarIndice(code).catch(() => {}));
       tabsEl.appendChild(b);
     });
     if (!Object.keys(PRODS).length) return;   // sin productos no hay más modos
@@ -648,7 +745,11 @@ __PIE__
     document.body.dataset.modo = m;
     syncTabs();
     syncNav();
+    pintarCarga();
     if (!cambio) return;
+    // los productos de Comparar y de la canasta se piden al entrar al modo
+    if (m === 'productos') syncProductos();
+    else if (m === 'canasta') syncCanasta();
     // el chart recién mostrado estuvo en display:none: esperar a que el
     // ResizeObserver de autoSize le dé tamaño y recién ahí re-encuadrar,
     // recuperando la autoescala si el usuario arrastró el eje de precios
@@ -667,31 +768,16 @@ __PIE__
       el.innerHTML = '<div class="nochart">No se pudo cargar el motor de gráficos (revisa la conexión).</div>';
       return;
     }
-    chart = LightweightCharts.createChart(el, {
-      autoSize: true,
-      layout: { background: { type: 'solid', color: 'transparent' }, textColor: '#8b8276',
-        fontFamily: "'IBM Plex Mono', monospace" },
-      grid: { vertLines: { color: '#221b14' }, horzLines: { color: '#221b14' } },
-      rightPriceScale: { borderColor: '#2a231c' },
-      timeScale: { borderColor: '#2a231c' },
-      localization: { priceFormatter: fmt },
-      // la rueda y el swipe vertical quedan para la página; el zoom sigue
-      // disponible arrastrando el eje de tiempo y con pinch en táctil
-      handleScale: { mouseWheel: false, pinch: true, axisPressedMouseMove: true },
-      handleScroll: { mouseWheel: false, vertTouchDrag: false,
-        horzTouchDrag: true, pressedMouseMove: true },
-      // crosshair en brasa tenue, acompaña a la línea protagonista
-      crosshair: { mode: 0,
-        vertLine: { color: 'rgba(232,116,59,0.35)', labelBackgroundColor: '#5c3a24' },
-        horzLine: { color: 'rgba(232,116,59,0.35)', labelBackgroundColor: '#5c3a24' } },
-    });
-    sNom = chart.addLineSeries({ color: '#8b8276', lineWidth: 1,
+    chart = LightweightCharts.createChart(el,
+      opcionesChart({ localization: { priceFormatter: fmt } }));
+    sNom = chart.addLineSeries({ color: COL.ash, lineWidth: 1,
       priceLineVisible: false, lastValueVisible: false, visible: false });
-    sReal = chart.addLineSeries({ color: '#e8743b', lineWidth: 2, priceLineVisible: false });
+    // la línea de los índices oficiales: el único lugar de la brasa en los gráficos
+    sReal = chart.addLineSeries({ color: COL.ember, lineWidth: 2, priceLineVisible: false });
     // C2: convención estándar de trading, verde sube y rojo baja
     sCandle = chart.addCandlestickSeries({
-      upColor: '#5bbf7a', downColor: '#e0552f', borderVisible: false,
-      wickUpColor: '#5bbf7a', wickDownColor: '#e0552f', visible: false });
+      upColor: COL.verde, downColor: COL.rojo, borderVisible: false,
+      wickUpColor: COL.verde, wickDownColor: COL.rojo, visible: false });
     chart.subscribeCrosshairMove(onCrosshair);
   }
 
@@ -772,11 +858,11 @@ __PIE__
       const col = document.createElement('div'); col.className = 'mcol';
       const bar = document.createElement('div'); bar.className = 'bar';
       bar.style.height = (6 + Math.abs(dev) / maxDev * 50) + 'px';
-      bar.style.background = dev >= 0 ? '#e4dacc' : '#5a5348';
+      bar.style.background = dev >= 0 ? COL.bone : COL.dim;
       bar.title = MESES[m] + ': ' + (dev >= 0 ? '+' : '') + Math.round(dev * 100) + '%';
       const lab = document.createElement('div'); lab.className = 'ml';
       lab.textContent = MESES[m];
-      if (m === e.mes_caro || m === e.mes_barato) lab.style.color = '#e4dacc';
+      if (m === e.mes_caro || m === e.mes_barato) lab.style.color = COL.bone;
       col.appendChild(bar); col.appendChild(lab); cont.appendChild(col);
     }
   }
@@ -799,16 +885,7 @@ __PIE__
       (d.vs_promedio >= 0 ? '+' : '') + d.vs_promedio +
       (d.vs_promedio >= 0 ? '% sobre' : '% bajo') +
       ' su promedio histórico, en pesos de hoy';
-    realMap = new Map(d.real.map(p => [p.time, p.value]));
-    nomMap = new Map(d.nominal.map(p => [p.time, p.value]));
-    if (chart) {
-      // si el usuario arrastró el eje de precios, autoScale quedó apagado
-      // y la serie nueva caería fuera del encuadre
-      chart.priceScale('right').applyOptions({ autoScale: true });
-      sNom.setData(d.nominal); sReal.setData(d.real);
-      sCandle.setData(d.velas || []);
-      aplicarVista();
-    }
+    pintarSerie(code);
     renderEstacional(d);
     const comp = document.getElementById('comp');
     comp.innerHTML = '';
@@ -821,6 +898,55 @@ __PIE__
     });
   }
 
+  // la serie del índice: si aún no llega, el lienzo queda vacío con su
+  // estado de carga y se dibuja al llegar (si el índice sigue elegido)
+  function pintarSerie(code) {
+    const d = INDICES[code];
+    if (!d.real) {
+      realMap = new Map(); nomMap = new Map();
+      tooltip.style.display = 'none';
+      if (chart) { sNom.setData([]); sReal.setData([]); sCandle.setData([]); }
+      cargarIndice(code).then(() => { if (cur === code) pintarSerie(code); }, () => {})
+        .finally(pintarCarga);
+      pintarCarga();
+      return;
+    }
+    realMap = new Map(d.real.map(p => [p.time, p.value]));
+    nomMap = new Map(d.nominal.map(p => [p.time, p.value]));
+    if (chart) {
+      // si el usuario arrastró el eje de precios, autoScale quedó apagado
+      // y la serie nueva caería fuera del encuadre
+      chart.priceScale('right').applyOptions({ autoScale: true });
+      sNom.setData(d.nominal); sReal.setData(d.real);
+      sCandle.setData(d.velas || []);
+      aplicarVista();
+    }
+    pintarCarga();
+  }
+
+  /* ---------- estado de carga del lienzo ---------- */
+  // mientras falte alguna serie del modo activo, "Cargando datos..." sobre
+  // el lienzo; si un pedido falló, el aviso con un botón para reintentar
+  const cargaEl = document.getElementById('carga');
+  function faltantes() {
+    if (modo === 'indices') return INDICES[cur].real ? [] : ['i:' + cur];
+    const keys = modo === 'productos' ? [...psel] : [...canasta.keys()];
+    return keys.filter(k => PRODS[k] && !PRODS[k].real).map(k => 'p:' + k);
+  }
+  function pintarCarga() {
+    const faltan = faltantes();
+    const fallo = faltan.some(c => errores.has(c));
+    cargaEl.hidden = !faltan.length;
+    cargaEl.classList.toggle('error', fallo);
+    document.getElementById('carga-txt').textContent = fallo ?
+      'No se pudieron cargar los datos.' : 'Cargando datos...';
+  }
+  document.getElementById('carga-reintentar').onclick = () => {
+    if (modo === 'indices') pintarSerie(cur);
+    else if (modo === 'productos') syncProductos();
+    else syncCanasta();
+  };
+
   const vistaEl = document.getElementById('vista');
   function render(code, primera) {
     cur = code;
@@ -831,12 +957,19 @@ __PIE__
   }
 
   /* ---------- vista Productos ---------- */
-  // C3: paleta propia, sin los colores del semáforo (#5bbf7a/#e0552f/#e0a83c)
-  // ni la brasa; 8 tonos distinguibles sobre carbón.
-  const PALETTE = ['#6ea8dc', '#58c5c0', '#9a8ec4', '#cf8bc0',
-                   '#d18a92', '#c2c268', '#b58a5c', '#8f9bb3'];
+  // C3: cuatro tonos propios (tokens --cmp1 a --cmp4); del 5º al 8º
+  // producto se repiten con línea punteada. El estilo va por orden de
+  // selección: cada producto toma el primer puesto libre y lo conserva
+  // mientras siga elegido, así dos productos nunca comparten estilo y los
+  // que ya están no cambian de color. Máximo 8 a la vez
+  const PALETTE = [1, 2, 3, 4].map(i => tok('cmp' + i));
+  const PMAX = PALETTE.length * 2;
   const PKEYS = Object.keys(PRODS);
-  const colorOf = k => PALETTE[PKEYS.indexOf(k) % PALETTE.length];
+  const puestos = new Map();          // clave -> puesto 0..7
+  const estiloDe = k => {
+    const i = puestos.get(k);
+    return { color: PALETTE[i % PALETTE.length], punteada: i >= PALETTE.length };
+  };
 
   /* ---------- selector de catálogo: búsqueda + grupos colapsables ---------- */
   const sinTildes = s =>
@@ -893,11 +1026,20 @@ __PIE__
     };
   }
   const psel = new Set();
+  function elegir(k) {
+    const usados = new Set(puestos.values());
+    let i = 0;
+    while (usados.has(i)) i++;
+    puestos.set(k, i);
+    psel.add(k);
+  }
+  function soltar(k) { psel.delete(k); puestos.delete(k); }
   ['asado_de_tira', 'palta', 'huevo_color'].forEach(w => {
-    if (PRODS[w]) { psel.add(w); return; }
+    if (PRODS[w]) { elegir(w); return; }
     const alt = PKEYS.find(k => k.indexOf(w.split('_')[0]) === 0);
-    if (alt) psel.add(alt);
+    if (alt) elegir(alt);
   });
+  const ppaints = [];
   const pseries = new Map();
 
   function initPChart() {
@@ -906,31 +1048,27 @@ __PIE__
       el.innerHTML = '<div class="nochart">No se pudo cargar el motor de gráficos.</div>';
       return;
     }
-    pchart = LightweightCharts.createChart(el, {
-      autoSize: true,
-      layout: { background: { type: 'solid', color: 'transparent' }, textColor: '#8b8276',
-        fontFamily: "'IBM Plex Mono', monospace" },
-      grid: { vertLines: { color: '#221b14' }, horzLines: { color: '#221b14' } },
-      // modo percentage: rebase automático a la ventana visible
+    // misma política de gestos que el hero; modo percentage: rebase
+    // automático a la ventana visible
+    pchart = LightweightCharts.createChart(el, opcionesChart({
       rightPriceScale: { mode: LightweightCharts.PriceScaleMode.Percentage,
-        borderColor: '#2a231c' },
-      timeScale: { borderColor: '#2a231c' },
-      // misma política que el hero: rueda y swipe vertical scrollean la página
-      handleScale: { mouseWheel: false, pinch: true, axisPressedMouseMove: true },
-      handleScroll: { mouseWheel: false, vertTouchDrag: false,
-        horzTouchDrag: true, pressedMouseMove: true },
-      crosshair: { mode: 0,
-        vertLine: { color: 'rgba(228,218,204,0.35)', labelBackgroundColor: '#3a3129' },
-        horzLine: { color: 'rgba(228,218,204,0.35)', labelBackgroundColor: '#3a3129' } },
-    });
+        borderColor: COL.line },
+    }));
   }
 
   function syncProductos() {
     if (!pchart) return;
+    // las series que falten se piden solo con Comparar a la vista; al
+    // llegar todas, vuelve a sincronizar
+    if (modo === 'productos') pedirProductos([...psel], syncProductos);
     PKEYS.forEach(k => {
       const on = psel.has(k);
+      if (on && !PRODS[k].real) return;   // aún no llega: se agrega al llegar
       if (on && !pseries.has(k)) {
-        const s = pchart.addLineSeries({ color: colorOf(k), lineWidth: 2,
+        const e = estiloDe(k);
+        const s = pchart.addLineSeries({ color: e.color, lineWidth: 2,
+          lineStyle: e.punteada ? LightweightCharts.LineStyle.Dotted
+            : LightweightCharts.LineStyle.Solid,
           priceLineVisible: false, lastValueVisible: false });
         s.setData(PRODS[k].gaps);   // con huecos donde no hubo precio
         pseries.set(k, s);
@@ -941,33 +1079,40 @@ __PIE__
     });
     pchart.priceScale('right').applyOptions({ autoScale: true });
     pchart.timeScale().fitContent();
+    pintarCarga();
   }
 
   function buildProductos() {
     if (!PKEYS.length) return;   // sin productos el modo no existe (ni su pill)
-    let y0 = 9999, y1 = 0;
-    PKEYS.forEach(k => {
-      const r = PRODS[k].real;
-      if (!r.length) return;
-      y0 = Math.min(y0, +r[0].time.slice(0, 4));
-      y1 = Math.max(y1, +r[r.length - 1].time.slice(0, 4));
-    });
-    document.getElementById('prod-rango').textContent = '(' + y0 + ' a ' + y1 + ')';
+    // primer y último año con dato del catálogo, calculados en el build
+    if (DATA.rango) document.getElementById('prod-rango').textContent =
+      '(' + DATA.rango[0] + ' a ' + DATA.rango[1] + ')';
     buildSelector('pgroups', 'psearch', k => {
       const b = document.createElement('button');
       b.className = 'pchip' + (psel.has(k) ? ' active' : '');
       b.innerHTML = '<span class="dot"></span>' + PRODS[k].label;
       const dot = b.querySelector('.dot');
+      // el chip muestra el estilo de su línea: punto lleno si es continua,
+      // anillo y borde de guiones si es punteada
       const paint = () => {
         const on = psel.has(k);
+        const e = on ? estiloDe(k) : null;
         b.classList.toggle('active', on);
-        dot.style.background = on ? colorOf(k) : 'var(--dim)';
-        b.style.borderColor = on ? colorOf(k) : 'var(--line)';
+        dot.style.background = !on ? 'var(--dim)' : e.punteada ? 'transparent' : e.color;
+        dot.style.boxShadow = on && e.punteada ? 'inset 0 0 0 2px ' + e.color : '';
+        b.style.borderColor = on ? e.color : 'var(--line)';
+        b.style.borderStyle = on && e.punteada ? 'dashed' : '';
+        b.style.opacity = (!on && psel.size >= PMAX) ? '.4' : '';
       };
+      ppaints.push(paint);
       paint();
       b.onclick = () => {
-        if (psel.has(k)) psel.delete(k); else psel.add(k);
-        paint(); syncProductos();
+        if (psel.has(k)) soltar(k);
+        else {
+          if (psel.size >= PMAX) return;   // máximo 8: nunca dos iguales
+          elegir(k);
+        }
+        ppaints.forEach(f => f()); syncProductos();
       };
       return b;
     });
@@ -1048,23 +1193,10 @@ __PIE__
     // mismos gestos del hero (rueda y swipe vertical scrollean la página,
     // zoom en ejes y pinch) pero la línea va en HUESO: la brasa queda para
     // los índices oficiales; las canastas de usuario se dibujan en hueso
-    cchart = LightweightCharts.createChart(el, {
-      autoSize: true,
-      layout: { background: { type: 'solid', color: 'transparent' }, textColor: '#8b8276',
-        fontFamily: "'IBM Plex Mono', monospace" },
-      grid: { vertLines: { color: '#221b14' }, horzLines: { color: '#221b14' } },
-      rightPriceScale: { borderColor: '#2a231c' },
-      timeScale: { borderColor: '#2a231c' },
-      localization: { priceFormatter: fmt },
-      handleScale: { mouseWheel: false, pinch: true, axisPressedMouseMove: true },
-      handleScroll: { mouseWheel: false, vertTouchDrag: false,
-        horzTouchDrag: true, pressedMouseMove: true },
-      crosshair: { mode: 0,
-        vertLine: { color: 'rgba(232,116,59,0.35)', labelBackgroundColor: '#5c3a24' },
-        horzLine: { color: 'rgba(232,116,59,0.35)', labelBackgroundColor: '#5c3a24' } },
-    });
+    cchart = LightweightCharts.createChart(el,
+      opcionesChart({ localization: { priceFormatter: fmt } }));
     // el label de precio del eje toma el color de la serie: acompaña
-    cserie = cchart.addLineSeries({ color: '#e4dacc', lineWidth: 2, priceLineVisible: false });
+    cserie = cchart.addLineSeries({ color: COL.bone, lineWidth: 2, priceLineVisible: false });
   }
 
   function renderCItems() {
@@ -1118,6 +1250,14 @@ __PIE__
   };
 
   function syncCanasta() {
+    // la intersección necesita todas las series: si falta alguna, se pide
+    // (solo con la canasta a la vista) y el cálculo espera a que lleguen
+    const faltan = [...canasta.keys()].some(k => PRODS[k] && !PRODS[k].real);
+    if (faltan) {
+      if (modo === 'canasta') pedirProductos([...canasta.keys()], syncCanasta);
+      pintarCarga();
+      return;
+    }
     const r = calcularCanasta();
     const costo = document.getElementById('ccosto');
     const stats = document.getElementById('cstats');
@@ -1173,6 +1313,7 @@ __PIE__
       cserie.setData(r.serie);
       cchart.timeScale().fitContent();
     }
+    pintarCarga();
   }
 
   function buildCanasta() {
@@ -1189,8 +1330,9 @@ __PIE__
       const paint = () => {
         const on = canasta.has(k);
         b.classList.toggle('active', on);
-        dot.style.background = on ? '#e8743b' : 'var(--dim)';
-        b.style.borderColor = on ? '#e8743b' : 'var(--line)';
+        // la canasta de usuario va en hueso, como su línea
+        dot.style.background = on ? 'var(--bone)' : 'var(--dim)';
+        b.style.borderColor = on ? 'var(--bone)' : 'var(--line)';
         b.style.opacity = (!on && canasta.size >= CMAX) ? '.4' : '';
       };
       cpaints.push(paint);
@@ -1231,29 +1373,41 @@ __PIE__
   }
 
   /* ---------- captura PNG compartible (estilo TradingView) ---------- */
-  // la marca va en tres segmentos medidos para pintar SOLO la í en brasa
+  // la marca va en tres segmentos medidos para pintar SOLO la í en brasa,
+  // en la tipografía del wordmark
   function marcaDeAgua(ctx, xDer, yBase, size) {
-    ctx.font = '500 ' + size + 'px "IBM Plex Mono", monospace';
+    ctx.font = '700 ' + size + 'px "Space Grotesk", sans-serif';
     ctx.textBaseline = 'alphabetic';
     const seg = ['carest', 'í', 'a.cl'];
     const w = seg.map(s => ctx.measureText(s).width);
     let x = xDer - (w[0] + w[1] + w[2]);
-    ctx.globalAlpha = 0.4; ctx.fillStyle = '#e4dacc'; ctx.fillText(seg[0], x, yBase);
-    ctx.globalAlpha = 1;   ctx.fillStyle = '#e8743b'; ctx.fillText(seg[1], x + w[0], yBase);
-    ctx.globalAlpha = 0.4; ctx.fillStyle = '#e4dacc'; ctx.fillText(seg[2], x + w[0] + w[1], yBase);
+    ctx.globalAlpha = 0.4; ctx.fillStyle = COL.bone;  ctx.fillText(seg[0], x, yBase);
+    ctx.globalAlpha = 1;   ctx.fillStyle = COL.ember; ctx.fillText(seg[1], x + w[0], yBase);
+    ctx.globalAlpha = 0.4; ctx.fillStyle = COL.bone;  ctx.fillText(seg[2], x + w[0] + w[1], yBase);
     ctx.globalAlpha = 1;
+  }
+
+  // las series del modo activo: si alguna aún viene en camino, la captura
+  // la espera (y se omite si el pedido falla)
+  function datosDelModo() {
+    if (modo === 'indices') return cargarIndice(cur);
+    const keys = modo === 'productos' ? [...psel] : [...canasta.keys()];
+    return Promise.all(keys.filter(k => PRODS[k]).map(cargarProducto));
   }
 
   async function capturarPNG() {
     const ch = chartActivo();
     if (!ch) return;
+    try { await datosDelModo(); } catch (e) { pintarCarga(); return; }
+    // dos cuadros: el lienzo alcanza a dibujar lo que acaba de llegar
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
     // el canvas no dispara la carga perezosa de webfonts: si un peso aún
     // no se usó en el DOM, fillText caería a la fuente del sistema.
     // Cargar explícitamente cada peso que dibuja el snapshot (título,
     // costo, fecha y marca de agua) antes de componer
     try {
       await Promise.all([
-        document.fonts.load('400 16px "IBM Plex Mono"'),
+        document.fonts.load('400 16px "IBM Plex Sans"'),
         document.fonts.load('500 16px "IBM Plex Mono"'),
         document.fonts.load('700 16px "Space Grotesk"'),
       ]);
@@ -1269,20 +1423,32 @@ __PIE__
     const chartW = W - pad * 2;
     const chartH = Math.round(shot.height * chartW / shot.width);
     // bajo el costo, la composición: en canasta "{label} {cantidad} {unidad}"
-    // y en productos los elegidos del spaghetti; una línea o dos si no cabe,
-    // el encabezado crece lo que ellas ocupen
+    // en una línea o dos si no cabe; en productos, los elegidos por orden de
+    // puesto, cada uno con la muestra de su línea (color y trazo del
+    // gráfico). El encabezado crece lo que ellas ocupen
     const compSize = Math.round(W * 0.013), compAlto = Math.round(compSize * 1.5);
-    const compLineas = [];
+    const compLineas = [], prodLineas = [];
+    const muestra = Math.round(compSize * 1.8), hueco = Math.round(compSize * 0.5),
+      entre = Math.round(compSize * 1.4);
+    const mctx = document.createElement('canvas').getContext('2d');
+    mctx.font = '400 ' + compSize + 'px "IBM Plex Sans", sans-serif';
     let partes = [];
     if (modo === 'canasta' && canasta.size) {
       partes = [...canasta.entries()].filter(([k]) => PRODS[k])
         .map(([k, q]) => PRODS[k].label + ' ' + fmtCant(q, PRODS[k].unidad));
     } else if (modo === 'productos') {
-      partes = PKEYS.filter(k => psel.has(k)).map(k => PRODS[k].label);
+      let fila = [], ancho = 0;
+      // en el orden de sus puestos: color 1, color 2, ... como en el gráfico
+      [...psel].filter(k => PRODS[k]).sort((a, b) => puestos.get(a) - puestos.get(b)).forEach(k => {
+        const it = Object.assign({ texto: PRODS[k].label }, estiloDe(k));
+        const w = muestra + hueco + mctx.measureText(it.texto).width;
+        if (fila.length && ancho + entre + w > chartW) { prodLineas.push(fila); fila = []; ancho = 0; }
+        ancho += (fila.length ? entre : 0) + w;
+        fila.push(it);
+      });
+      if (fila.length) prodLineas.push(fila);
     }
     if (partes.length) {
-      const mctx = document.createElement('canvas').getContext('2d');
-      mctx.font = '400 ' + compSize + 'px "IBM Plex Mono", monospace';
       let linea = '';
       partes.forEach(p => {
         const cand = linea ? linea + ', ' + p : p;
@@ -1297,7 +1463,7 @@ __PIE__
         compLineas.push(l2 + ' …');
       }
     }
-    const compH = compLineas.length * compAlto;
+    const compH = (compLineas.length + prodLineas.length) * compAlto;
     const headH = Math.round(W * 0.13) + compH, footH = Math.round(W * 0.07);
     const H = headH + chartH + footH;
     const cv = document.createElement('canvas');
@@ -1305,7 +1471,7 @@ __PIE__
     const ctx = cv.getContext('2d');
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
-    ctx.fillStyle = '#17120e';
+    ctx.fillStyle = COL.bg;
     ctx.fillRect(0, 0, W, H);
     // contexto arriba a la izquierda: qué es, cuánto vale, de cuándo;
     // productos no tiene un costo único y lleva su etiqueta en vez del monto
@@ -1317,7 +1483,7 @@ __PIE__
     } else if (modo === 'productos') {
       titulo = 'PRODUCTOS';
       precio = 'Cambio del precio real, en porcentaje';
-      precioFont = '400 ' + Math.round(W * 0.02) + 'px "IBM Plex Mono", monospace';
+      precioFont = '400 ' + Math.round(W * 0.02) + 'px "IBM Plex Sans", sans-serif';
     } else {
       const d = INDICES[cur];
       titulo = d.nombre.replace(/^Índice /i, '').toUpperCase();
@@ -1325,17 +1491,35 @@ __PIE__
     }
     const fecha = document.getElementById('fecha').textContent;
     ctx.textBaseline = 'top';
-    ctx.fillStyle = '#8b8276';
+    ctx.fillStyle = COL.ash;
     ctx.font = '500 ' + Math.round(W * 0.014) + 'px "IBM Plex Mono", monospace';
     ctx.fillText(titulo, pad, Math.round(W * 0.028));
-    ctx.fillStyle = '#e4dacc';
+    ctx.fillStyle = COL.bone;
     ctx.font = precioFont;
     ctx.fillText(precio, pad, Math.round(W * 0.05));
-    ctx.fillStyle = '#8b8276';
-    ctx.font = '400 ' + compSize + 'px "IBM Plex Mono", monospace';
+    ctx.fillStyle = COL.ash;
+    ctx.font = '400 ' + compSize + 'px "IBM Plex Sans", sans-serif';
     compLineas.forEach((l, i) =>
       ctx.fillText(l, pad, Math.round(W * 0.098) + i * compAlto));
-    ctx.font = '400 ' + Math.round(W * 0.012) + 'px "IBM Plex Mono", monospace';
+    const grosor = Math.max(2, Math.round(compSize * 0.16));
+    prodLineas.forEach((fila, i) => {
+      const y = Math.round(W * 0.098) + i * compAlto;
+      let x = pad;
+      fila.forEach(it => {
+        ctx.save();
+        ctx.strokeStyle = it.color;
+        ctx.lineWidth = grosor;
+        ctx.setLineDash(it.punteada ? [grosor, grosor * 1.5] : []);
+        ctx.beginPath();
+        ctx.moveTo(x, y + compSize * 0.6);
+        ctx.lineTo(x + muestra, y + compSize * 0.6);
+        ctx.stroke();
+        ctx.restore();
+        ctx.fillText(it.texto, x + muestra + hueco, y);
+        x += muestra + hueco + ctx.measureText(it.texto).width + entre;
+      });
+    });
+    ctx.font = '400 ' + Math.round(W * 0.012) + 'px "IBM Plex Sans", sans-serif';
     ctx.fillText('semana del ' + fecha, pad, Math.round(W * 0.098) + compH);
     ctx.drawImage(shot, pad, headH, chartW, chartH);
     marcaDeAgua(ctx, W - pad, H - Math.round(footH * 0.35), Math.round(W * 0.02));
@@ -1447,17 +1631,73 @@ PIE_ATTR = ('Fuente: precios al consumidor de ODEPA (<a href="https://datos.odep
 PIE_DISC = ('Información de consumo con fines analíticos. No constituye asesoría '
             'ni recomendación de inversión.')
 
+# ---------------- Identidad común: fuentes, tokens y base ----------------
+# Una sola llamada a Google Fonts, igual en todas las páginas, con los pesos
+# que se usan: IBM Plex Sans para la interfaz y el texto, IBM Plex Mono solo
+# para etiquetas cortas en mayúsculas y Space Grotesk solo para el wordmark y
+# las cifras grandes.
+FUENTES = """<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">"""
+
+# Favicon: la í del wordmark (tallo hueso, acento brasa) sobre el fondo.
+ICONO = ("<link rel=\"icon\" href=\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' "
+         "viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230f0f0e'/%3E"
+         "%3Crect x='28.5' y='28' width='7' height='24' rx='2' fill='%23e4dacc'/%3E"
+         "%3Cpath d='M29.5 22L39 13.5' stroke='%23e8743b' stroke-width='7' "
+         "stroke-linecap='round' fill='none'/%3E%3C/svg%3E\">")
+
+# Los tokens de color y de familia viven SOLO aquí (cada página los recibe en
+# su :root); los gráficos y la captura PNG los leen con getComputedStyle.
+CSS_BASE = r"""
+  /* fallbacks métricos: Arial ajustada a las métricas de cada webfont para
+     que el swap no reacomode el wordmark, las cifras ni el texto (CLS) */
+  @font-face { font-family:"Space Grotesk Fallback"; src:local("Arial");
+    size-adjust:101.7%; ascent-override:96.9%; descent-override:29.2%;
+    line-gap-override:0%; }
+  @font-face { font-family:"IBM Plex Sans Fallback"; src:local("Arial");
+    size-adjust:99.5%; ascent-override:103%; descent-override:27.6%;
+    line-gap-override:0%; }
+  :root {
+    /* base neutra. Sobre --bg, hueso 13,9:1, secundario 7,2:1 y
+       terciario 5,0:1 (AA); sobre --panel, 13,0, 6,7 y 4,6 */
+    --bg:#0f0f0e; --panel:#171716; --line:#2b2a27;
+    --bone:#e4dacc; --ash:#a39e95; --dim:#86817a;
+    /* derivados de la base: hover de los controles y grilla de gráficos */
+    --hover:#201f1d; --grid:#1c1c1a;
+    /* brasa: solo la í del wordmark y la línea de los índices oficiales */
+    --ember:#e8743b;
+    /* semáforo: solo el veredicto y las velas de los 4 índices */
+    --verde:#5bbf7a; --ambar:#e0a83c; --rojo:#e0552f; --verdict:var(--rojo);
+    /* Comparar productos: cuatro tonos muy distintos, sin azules ni
+       violetas azulados, sin verde, naranjo ni rojo (rosa, magenta, blanco
+       cálido y amarillo); del 5º al 8º producto se repiten punteados. Los
+       tres primeros, los que Comparar muestra al entrar, quedan a 18 o más
+       entre sí (OKLab x100) aun con daltonismo simulado */
+    --cmp1:#f28cc0; --cmp2:#b04fb5; --cmp3:#f4f1ea; --cmp4:#f2d74e;
+    /* crosshair de los gráficos: hueso tenue */
+    --cruz:rgba(228,218,204,.35);
+    --sans:"IBM Plex Sans","IBM Plex Sans Fallback",system-ui,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,monospace;
+    --display:"Space Grotesk","Space Grotesk Fallback",sans-serif;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--bone); font-family:var(--sans);
+    font-variant-numeric:tabular-nums; min-height:100vh; }
+  button, input { font-family:inherit; }
+"""
+
 CSS_SITIO = r"""
   /* ---- navegación del sitio (común a todas las páginas) ---- */
   .sitenav { flex-basis:100%; }
   .sitenav ul { list-style:none; }
   .snav-links { display:flex; flex-wrap:wrap; gap:0 22px; }
-  .snav-links a, .snav-panel a { font:500 11px "IBM Plex Mono",monospace;
+  .snav-links a, .snav-panel a { font:500 11px var(--mono);
     letter-spacing:.08em; text-transform:uppercase; text-decoration:none; }
   .snav-links a { display:inline-block; padding:6px 0 5px; color:var(--ash);
     border-bottom:1px solid transparent; }
   .snav-links a:hover, .snav-links a:focus-visible { color:var(--bone);
-    border-bottom-color:var(--ember); }
+    border-bottom-color:var(--dim); }
   .snav-links a[aria-current] { color:var(--bone); border-bottom-color:var(--bone); }
   /* móvil: el <summary> mide 34px de alto (área táctil de las pills) pero
      el margen negativo deja su caja en 22px, el alto de la fila del
@@ -1466,9 +1706,9 @@ CSS_SITIO = r"""
   .snav-menu > summary { display:flex; align-items:center; gap:8px;
     min-height:34px; margin:-6px 0; padding:0 14px; cursor:pointer;
     list-style:none; -webkit-user-select:none; user-select:none;
-    font:600 11px "IBM Plex Mono",monospace; letter-spacing:.1em;
+    font:600 11px var(--mono); letter-spacing:.1em;
     text-transform:uppercase; color:var(--bone); background:var(--panel);
-    border:1px solid var(--dim); border-radius:999px; }
+    border:1px solid var(--line); border-radius:999px; }
   .snav-menu > summary::-webkit-details-marker { display:none; }
   .snav-menu > summary::after { content:"▾"; content:"▾" / ""; color:var(--ash); }
   .snav-menu[open] > summary { border-color:var(--bone); }
@@ -1476,10 +1716,10 @@ CSS_SITIO = r"""
     min-width:230px; max-width:calc(100vw - 32px); padding:4px 0;
     background:var(--panel); border:1px solid var(--line);
     box-shadow:0 14px 34px rgba(0,0,0,.55); }
-  .snav-panel li + li { border-top:1px solid var(--grid); }
+  .snav-panel li + li { border-top:1px solid var(--line); }
   .snav-panel a { display:flex; align-items:center; min-height:44px;
     padding:0 18px; font-size:12px; color:var(--bone); }
-  .snav-panel a:hover, .snav-panel a:focus-visible { background:#1f1913; }
+  .snav-panel a:hover, .snav-panel a:focus-visible { background:var(--hover); }
   .snav-panel a[aria-current] { box-shadow:inset 3px 0 0 var(--bone); }
   @media (max-width:640px) {
     header { display:grid; grid-template-columns:minmax(0,1fr) auto;
@@ -1494,19 +1734,19 @@ CSS_SITIO = r"""
   }
 
   /* ---- pie común ---- */
-  /* todo el texto del pie cumple AA sobre --bg2: ceniza 5,1:1 y hueso
-     13,9:1 (el deslinde estaba en --dim, 2,6:1) */
-  .sitefoot { border-top:1px solid var(--line); background:var(--bg2);
+  /* todo el texto del pie cumple AA sobre --bg: secundario 7,2:1 y
+     hueso 13,9:1 */
+  .sitefoot { border-top:1px solid var(--line); background:var(--bg);
     padding:18px clamp(16px,3vw,32px) 24px; display:flex;
     flex-direction:column; gap:8px; }
-  .sitefoot p { font:400 11px/1.6 "IBM Plex Mono",monospace; color:var(--ash);
+  .sitefoot p { font:400 12px/1.6 var(--sans); color:var(--ash);
     text-wrap:pretty; }
   .sitefoot a { color:var(--bone); text-decoration:underline;
     text-decoration-color:var(--dim); text-underline-offset:3px; }
-  .sitefoot a:hover, .sitefoot a:focus-visible { text-decoration-color:var(--ember); }
+  .sitefoot a:hover, .sitefoot a:focus-visible { text-decoration-color:var(--bone); }
   .pie-links { display:flex; flex-wrap:wrap; gap:0 20px; list-style:none; }
   .pie-links a { display:inline-block; padding:6px 0;
-    font:500 11px "IBM Plex Mono",monospace; letter-spacing:.04em; }
+    font:500 13px var(--sans); }
   .pie-links a[aria-current] { text-decoration-color:var(--bone); }
   /* RUT y fechas (78.521.796-9, 22-07-2026) no se cortan en el guion */
   .nw { white-space:nowrap; }
@@ -1596,29 +1836,16 @@ PRODUCT_HTML = r"""<!DOCTYPE html>
 <meta property="og:image" content="https://carestia.cl/og.png">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2317120e'/%3E%3Crect x='28.5' y='28' width='7' height='24' rx='2' fill='%23e4dacc'/%3E%3Cpath d='M29.5 22L39 13.5' stroke='%23e8743b' stroke-width='7' stroke-linecap='round' fill='none'/%3E%3C/svg%3E">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+__ICONO__
+__FUENTES__
 <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
 <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "101b8fafc10e4ae4b412859b124cb5ea"}'></script>
 <style>
-  /* fallback métrico: el swap de Space Grotesk no mueve wordmark ni precio */
-  @font-face { font-family:"Space Grotesk Fallback"; src:local("Arial");
-    size-adjust:101.7%; ascent-override:96.9%; descent-override:29.2%;
-    line-gap-override:0%; }
-  :root {
-    --bg:#17120e; --bg2:#120e0a; --panel:#1a140f;
-    --line:#2a231c; --grid:#221b14;
-    --bone:#e4dacc; --ash:#8b8276; --dim:#5a5348; --ember:#e8743b;
-  }
-  * { box-sizing:border-box; margin:0; padding:0; }
-  body { background:var(--bg); color:var(--bone);
-    font-family:"IBM Plex Mono",monospace; min-height:100vh; }
+__CSS_BASE__
   header { display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 14px;
     padding:14px clamp(16px,3vw,32px); border-bottom:1px solid var(--line);
     min-height:51px; }
-  .wordmark { font:700 20px/1.1 "Space Grotesk","Space Grotesk Fallback",sans-serif; letter-spacing:.06em;
+  .wordmark { font:700 20px/1.1 var(--display); letter-spacing:.06em;
     color:var(--bone); text-decoration:none; display:inline-flex;
     align-items:baseline; height:22px; overflow:hidden; }
   /* í-brasa: misma construcción del index; el texto del nodo lleva la Í
@@ -1627,51 +1854,48 @@ PRODUCT_HTML = r"""<!DOCTYPE html>
   .wordmark .i::after { content:"Í"; content:"Í" / ""; position:absolute;
     left:0; top:0; pointer-events:none;
     color:var(--ember); clip-path:inset(0 0 86% 0); }
-  .tagline { font:400 11px "IBM Plex Mono",monospace; color:var(--ash);
-    letter-spacing:.04em; }
+  .tagline { font:400 12px/14.3px var(--sans); color:var(--ash); }
   main { max-width:980px; margin:0 auto;
     padding:clamp(20px,4vw,36px) clamp(16px,3vw,32px) clamp(28px,4vw,44px); }
-  .miga { font:500 10px "IBM Plex Mono",monospace; letter-spacing:.16em;
+  .miga { font:500 10px var(--mono); letter-spacing:.16em;
     color:var(--ash); text-transform:uppercase; }
-  h1 { font:700 clamp(26px,5vw,42px)/1.1 "Space Grotesk","Space Grotesk Fallback",sans-serif;
-    letter-spacing:.01em; margin-top:6px; }
+  h1 { font:600 clamp(26px,5vw,40px)/1.15 var(--sans);
+    letter-spacing:-.005em; margin-top:6px; }
   .orow { display:flex; align-items:baseline; gap:clamp(10px,2vw,18px);
     flex-wrap:wrap; margin-top:14px; min-height:52px; }
-  .oprice { font:700 clamp(38px,7vw,64px)/1 "Space Grotesk","Space Grotesk Fallback",sans-serif;
-    font-variant-numeric:tabular-nums; letter-spacing:-.01em; color:var(--bone); }
-  .ouni { font:400 12px "IBM Plex Mono",monospace; color:var(--ash); }
-  .odelta { font:600 15px "IBM Plex Mono",monospace;
-    font-variant-numeric:tabular-nums; color:var(--ash); } /* deltas SIEMPRE en ceniza */
-  .odelta small { font:400 11px "IBM Plex Mono",monospace; color:var(--dim); }
-  .pct { font:400 13px/1.6 "IBM Plex Mono",monospace; color:var(--bone);
+  .oprice { font:700 clamp(38px,7vw,64px)/1 var(--display);
+    letter-spacing:-.01em; color:var(--bone); }
+  .ouni { font:400 13px var(--sans); color:var(--ash); }
+  .odelta { font:600 15px var(--sans); color:var(--ash); } /* deltas SIEMPRE en secundario */
+  .odelta small { font:400 12px var(--sans); color:var(--dim); }
+  .pct { font:400 15px/1.6 var(--sans); color:var(--bone);
     margin-top:12px; text-wrap:pretty; }
   /* altura reservada por CSS ANTES de que Lightweight Charts monte: la
      página no salta al renderizar (svh: estable frente a la barra móvil) */
   #grafico { position:relative; height:clamp(300px,52vh,480px);
     height:clamp(300px,52svh,480px); margin-top:22px; }
-  .fecha { font:500 11px "IBM Plex Mono",monospace; color:var(--ash);
-    letter-spacing:.08em; text-transform:uppercase; margin-top:14px; }
+  .fecha { font:500 12px var(--sans); color:var(--ash); margin-top:14px; }
   /* otros productos del grupo: interlinking sobrio al pie, misma paleta
-     del sitio (panel/línea/hueso, hover en brasa como .links) */
+     del sitio (panel/línea/hueso, hover con borde hueso como .links) */
   .otros { margin-top:26px; }
-  .otros-h { font:600 11px "IBM Plex Mono",monospace; letter-spacing:.16em;
+  .otros-h { font:600 11px var(--mono); letter-spacing:.16em;
     color:var(--ash); text-transform:uppercase; }
   .otros-links { display:flex; flex-wrap:wrap; gap:10px; margin-top:12px; }
-  .otros-links a { font:500 12px "IBM Plex Mono",monospace; padding:9px 14px;
+  .otros-links a { font:500 13px var(--sans); padding:9px 14px;
     min-height:34px; display:inline-flex; align-items:center;
     text-decoration:none; border:1px solid var(--line); color:var(--bone);
     background:var(--panel); }
-  .otros-links a:hover { border-color:var(--ember); background:#1f1913; }
-  .metodo { font:400 11px/1.6 "IBM Plex Mono",monospace; color:var(--ash);
+  .otros-links a:hover { border-color:var(--bone); background:var(--hover); }
+  .metodo { font:400 12px/1.6 var(--sans); color:var(--ash);
     margin-top:18px; text-wrap:pretty; }
-  .disc { font:400 11px/1.6 "IBM Plex Mono",monospace; color:var(--dim);
+  .disc { font:400 12px/1.6 var(--sans); color:var(--dim);
     margin-top:6px; }
   .links { display:flex; gap:12px; flex-wrap:wrap; margin-top:24px; }
-  .links a { font:600 11px "IBM Plex Mono",monospace; letter-spacing:.06em;
+  .links a { font:600 13px var(--sans);
     padding:9px 16px; min-height:34px; display:inline-flex; align-items:center;
     text-decoration:none; border:1px solid var(--line); color:var(--bone);
     background:var(--panel); border-radius:999px; }
-  .links a:hover { border-color:var(--ember); background:#1f1913; }
+  .links a:hover { border-color:var(--bone); background:var(--hover); }
   .nochart { display:flex; align-items:center; justify-content:center;
     height:100%; color:var(--ash); font-size:13px; padding:20px; text-align:center; }
 __CSS_SITIO__
@@ -1729,24 +1953,30 @@ __PIE__
       el.innerHTML = '<div class="nochart">No se pudo cargar el motor de gráficos (revisa la conexión).</div>';
       return;
     }
+    // colores desde los tokens de :root
+    const vars = getComputedStyle(document.documentElement);
+    const tok = n => vars.getPropertyValue('--' + n).trim();
     const chart = LightweightCharts.createChart(el, {
       autoSize: true,
-      layout: { background: { type: 'solid', color: 'transparent' }, textColor: '#8b8276',
-        fontFamily: "'IBM Plex Mono', monospace" },
-      grid: { vertLines: { color: '#221b14' }, horzLines: { color: '#221b14' } },
-      rightPriceScale: { borderColor: '#2a231c' },
-      timeScale: { borderColor: '#2a231c' },
-      localization: { priceFormatter: fmt },
+      layout: { background: { type: 'solid', color: 'transparent' }, textColor: tok('ash'),
+        fontFamily: tok('sans') },
+      grid: { vertLines: { color: tok('grid') }, horzLines: { color: tok('grid') } },
+      rightPriceScale: { borderColor: tok('line') },
+      timeScale: { borderColor: tok('line') },
+      // fechas en castellano de Chile, como en la portada
+      localization: { locale: 'es-CL', priceFormatter: fmt },
       // misma política de gestos del sitio: la rueda y el swipe vertical
       // quedan para la página; zoom en los ejes y pinch en táctil
       handleScale: { mouseWheel: false, pinch: true, axisPressedMouseMove: true },
       handleScroll: { mouseWheel: false, vertTouchDrag: false,
         horzTouchDrag: true, pressedMouseMove: true },
       crosshair: { mode: 0,
-        vertLine: { color: 'rgba(232,116,59,0.35)', labelBackgroundColor: '#5c3a24' },
-        horzLine: { color: 'rgba(232,116,59,0.35)', labelBackgroundColor: '#5c3a24' } },
+        vertLine: { color: tok('cruz'), labelBackgroundColor: tok('line') },
+        horzLine: { color: tok('cruz'), labelBackgroundColor: tok('line') } },
     });
-    chart.addLineSeries({ color: '#e8743b', lineWidth: 2, priceLineVisible: false })
+    // un producto no es un índice oficial: su línea va en hueso (la brasa
+    // queda para los índices)
+    chart.addLineSeries({ color: tok('bone'), lineWidth: 2, priceLineVisible: false })
       .setData(serie);
     chart.timeScale().fitContent();
   });
@@ -1841,6 +2071,200 @@ def sin_datos_hace_un_anio(fin: datetime.date, semana: datetime.date) -> bool:
     return semana is not None and (semana - fin).days > SEMANAS_SIN_DATOS * 7
 
 
+# ---------------- Datos a demanda (datos/) ----------------
+# La portada lleva inline solo el primer pantallazo: el resumen de los 4
+# índices, la serie del índice que se muestra al cargar y la lista de
+# productos sin series (los selectores y los links de canasta la necesitan
+# de entrada). El resto se pide al necesitarlo:
+#   datos/indices/{codigo}.json   el índice completo, con su serie
+#   datos/productos/{slug}.json   la serie de un producto (Comparar y canasta)
+#   datos/catalogo.json           resumen liviano por producto
+# indices.json se sigue generando y publicando igual. Las series de índice
+# van compactas, como las de producto: t0 (lunes de la primera semana) y un
+# valor por semana consecutiva, null donde no hay dato; las velas como
+# [open, high, low, close]. El build verifica que se expanden sin pérdida.
+DATOS = "datos"
+SERIES_INDICE = ("real", "nominal", "velas")
+RESUMEN_INDICE = ("nombre", "subtitulo", "fecha", "costo_real", "veredicto",
+                  "color", "percentil", "n", "vs_promedio")
+
+
+def _json(obj) -> str:
+    """JSON compacto, con tildes literales."""
+    return json.dumps(obj, ensure_ascii=False, separators=(",", ":"))
+
+
+def expandir_indice(c: dict) -> dict:
+    """Inversa de compactar_indice; la portada hace lo mismo en el navegador."""
+    if not c["t0"]:
+        return {k: [] for k in SERIES_INDICE}
+    base = datetime.date.fromisoformat(c["t0"])
+
+    def t(i):
+        return (base + datetime.timedelta(weeks=i)).isoformat()
+    return {
+        "real": [{"time": t(i), "value": v}
+                 for i, v in enumerate(c["real"]) if v is not None],
+        "nominal": [{"time": t(i), "value": v}
+                    for i, v in enumerate(c["nominal"]) if v is not None],
+        "velas": [{"time": t(i), "open": x[0], "high": x[1], "low": x[2], "close": x[3]}
+                  for i, x in enumerate(c["velas"]) if x is not None],
+    }
+
+
+def compactar_indice(code: str, d: dict) -> dict:
+    """real, nominal y velas de un índice en forma compacta. Si la serie no
+    cae en la grilla semanal o no vuelve idéntica al expandirla, el build se
+    detiene: nunca se publica una serie distinta de la de indices.json."""
+    tiempos = [p["time"] for k in SERIES_INDICE for p in d.get(k) or []]
+    if not tiempos:
+        return {"t0": None, **{k: [] for k in SERIES_INDICE}}
+    base = datetime.date.fromisoformat(min(tiempos))
+
+    def arreglo(puntos, valor):
+        out = []
+        for p in puntos:
+            dias = (datetime.date.fromisoformat(p["time"]) - base).days
+            if dias % 7:
+                raise SystemExit(f"build_site.py: {code}: {p['time']} no cae en "
+                                 f"la grilla semanal que parte el {base}.")
+            i = dias // 7
+            out.extend([None] * (i + 1 - len(out)))
+            out[i] = valor(p)
+        return out
+    c = {"t0": base.isoformat(),
+         "real": arreglo(d.get("real") or [], lambda p: p["value"]),
+         "nominal": arreglo(d.get("nominal") or [], lambda p: p["value"]),
+         "velas": arreglo(d.get("velas") or [],
+                          lambda p: [p["open"], p["high"], p["low"], p["close"]])}
+    if expandir_indice(c) != {k: d.get(k) or [] for k in SERIES_INDICE}:
+        raise SystemExit(f"build_site.py: {code}: la serie compacta no reproduce "
+                         f"la de indices.json.")
+    return c
+
+
+def resumen_indice(d: dict) -> dict:
+    """Lo que la portada muestra de un índice sin su serie: el overlay, el
+    ticker, la estacionalidad y los componentes. La variación semanal es la
+    misma cuenta que hacía el navegador con las dos últimas semanas, sin
+    redondear, para que la cifra mostrada no cambie."""
+    r = {k: d[k] for k in RESUMEN_INDICE}
+    real = d.get("real") or []
+    r["delta"] = ((real[-1]["value"] / real[-2]["value"] - 1) * 100
+                  if len(real) >= 2 and real[-2]["value"] else None)
+    r["estacionalidad"] = d.get("estacionalidad") or {}
+    r["componentes"] = [{k: c.get(k) for k in ("label", "qty", "unidad", "aporte")}
+                        for c in d.get("componentes") or []]
+    return r
+
+
+def slugs_de_datos(prods: dict, fichas: dict) -> dict:
+    """{clave: slug} para datos/productos/{slug}.json. Es el slug de la ficha
+    (productos/{slug}.html) cuando la hay; si no (label sin slug o colisión),
+    uno derivado que no pisa ninguno. La clave sigue siendo la de indices.json:
+    es la que usan los links de canasta ya compartidos."""
+    out = {clave: slug for slug, (clave, _label) in fichas.items()}
+    usados = set(out.values()) | {"index"}
+    for clave in sorted(prods):
+        if clave in out:
+            continue
+        base = slug_url(prods[clave]["label"]) or "producto"
+        slug, n = base, 2
+        while slug in usados:
+            slug, n = f"{base}-{n}", n + 1
+        usados.add(slug)
+        out[clave] = slug
+    return out
+
+
+def generar_catalogo(prods: dict, slugs: dict) -> dict:
+    """datos/catalogo.json: una fila liviana por producto con datos, en el
+    orden de /productos/ (grupo A-Z, "Otros" al final, y nombre). Variaciones
+    en pesos de hoy contra 1, 13 y 52 semanas antes (null si esa semana no
+    tiene dato); percentil como el de los índices (semanas con precio menor
+    o igual al último); las últimas 52 semanas del calendario, con null donde
+    no hubo precio."""
+    filas = []
+    for clave, p in prods.items():
+        v = p["v"]
+        con_dato = [i for i, x in enumerate(v) if x is not None]
+        if not con_dato:
+            continue
+        i = con_dato[-1]
+        ult = v[i]
+
+        def variacion(k, i=i, ult=ult, v=v):
+            j = i - k
+            return round((ult / v[j] - 1) * 100, 1) if j >= 0 and v[j] else None
+        vals = [v[j] for j in con_dato]
+        grupo = p.get("grupo") or "Otros"
+        semana = (datetime.date.fromisoformat(p["t0"]) +
+                  datetime.timedelta(weeks=i)).isoformat()
+        filas.append(((grupo == "Otros", _orden(grupo), _orden(p["label"])), {
+            "slug": slugs[clave],
+            "clave": clave,
+            "nombre": p["label"],
+            "grupo": grupo_txt(grupo),
+            "unidad": p["unidad"],
+            "semana": semana,
+            "precio_pesos_hoy": ult,
+            "variacion_1s_pct": variacion(1),
+            "variacion_13s_pct": variacion(13),
+            "variacion_52s_pct": variacion(52),
+            "percentil": round(100 * sum(1 for x in vals if x <= ult) / len(vals)),
+            "ultimas_52": [None if x is None else int(round(x))
+                           for x in v[max(0, i - 51):i + 1]],
+        }))
+    filas.sort(key=lambda f: f[0])
+    productos = [f[1] for f in filas]
+    return {"semana": max((f["semana"] for f in productos), default=None),
+            "productos": productos}
+
+
+def rango_productos(prods: dict) -> list:
+    """[primer año, último año] con dato en todo el catálogo (Comparar)."""
+    anios = []
+    for p in prods.values():
+        con_dato = [i for i, x in enumerate(p["v"]) if x is not None]
+        if con_dato:
+            t0 = datetime.date.fromisoformat(p["t0"])
+            anios += [(t0 + datetime.timedelta(weeks=con_dato[0])).year,
+                      (t0 + datetime.timedelta(weeks=con_dato[-1])).year]
+    return [min(anios), max(anios)] if anios else None
+
+
+def escribir_json(ruta: str, obj) -> None:
+    os.makedirs(os.path.dirname(ruta), exist_ok=True)
+    with open(ruta, "w", encoding="utf-8") as fh:
+        fh.write(_json(obj))
+
+
+def generar_datos(slugs: dict) -> dict:
+    """Escribe datos/ y devuelve lo que va inline en la portada."""
+    indices = DATA["indices"]
+    prods = DATA.get("productos", {})
+    series = {code: compactar_indice(code, d) for code, d in indices.items()}
+    for code, d in indices.items():
+        completo = {k: v for k, v in d.items() if k not in SERIES_INDICE}
+        completo["serie"] = series[code]
+        escribir_json(os.path.join(DATOS, "indices", f"{code}.json"), completo)
+    for clave, p in prods.items():
+        escribir_json(os.path.join(DATOS, "productos", f"{slugs[clave]}.json"), p)
+    escribir_json(os.path.join(DATOS, "catalogo.json"), generar_catalogo(prods, slugs))
+    primero = next(iter(indices))
+    return {
+        "indices": {code: resumen_indice(d) for code, d in indices.items()},
+        "series": {primero: series[primero]},
+        "productos": {clave: {"label": p["label"], "grupo": p.get("grupo") or "Otros",
+                              "unidad": p["unidad"], "slug": slugs[clave]}
+                      for clave, p in prods.items()},
+        "rango": rango_productos(prods),
+        # versión de los datos: los pedidos a datos/ la llevan en la URL para
+        # que el navegador no mezcle archivos de dos builds distintos
+        "ver": hashlib.sha1(_json(DATA).encode("utf-8")).hexdigest()[:10],
+    }
+
+
 def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
                     semana: datetime.date = None) -> str:
     """Renderiza la página estática de UN producto con sus datos inline.
@@ -1908,7 +2332,10 @@ def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
         # HTML ya renderizado (seccion_otros escapa labels y grupo), no
         # se vuelve a escapar aquí
         ("__OTROS__", otros_html),
-        # navegación y pie comunes; la ficha vive bajo /productos/
+        # identidad, navegación y pie comunes; la ficha vive bajo /productos/
+        ("__ICONO__", ICONO),
+        ("__FUENTES__", FUENTES),
+        ("__CSS_BASE__", CSS_BASE),
         ("__CSS_SITIO__", CSS_SITIO),
         ("__NAV__", nav_sitio("productos", exacto=False)),
         ("__PIE__", pie_sitio()),
@@ -1917,12 +2344,11 @@ def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
     return out
 
 
-def generar_productos() -> dict:
-    """Escribe productos/{slug}.html por cada producto del catálogo y devuelve
-    las fichas generadas, {slug: (clave, label)} (para el sitemap y
-    /productos/). Detecta colisiones de slug: son URLs públicas indexables y
-    dos labels no pueden compartir una."""
-    prods = DATA.get("productos", {})
+def asignar_fichas(prods: dict) -> dict:
+    """Las fichas a publicar, {slug: (clave, label)} (para las fichas, el
+    sitemap, /productos/ y los nombres de datos/productos/). Detecta
+    colisiones de slug: son URLs públicas indexables y dos labels no pueden
+    compartir una."""
     slugs = {}
     for key in sorted(prods):
         p = prods[key]
@@ -1940,6 +2366,12 @@ def generar_productos() -> dict:
                   f"{p['label']!r}; se omite el segundo.")
             continue
         slugs[slug] = (key, p["label"])
+    return slugs
+
+
+def generar_productos(slugs: dict) -> None:
+    """Escribe productos/{slug}.html por cada ficha de asignar_fichas."""
+    prods = DATA.get("productos", {})
     # interlinking: rueda alfabética de slugs por grupo ODEPA (determinista)
     por_grupo = {}
     for slug, (key, _label) in slugs.items():
@@ -1956,7 +2388,6 @@ def generar_productos() -> dict:
         with open(os.path.join("productos", f"{slug}.html"), "w",
                   encoding="utf-8") as fh:
             fh.write(pagina_producto(key, prods[key], slug, otros, semana))
-    return slugs
 
 
 # ---------------- Páginas del sitio ----------------
@@ -1977,53 +2408,39 @@ __HEAD_URL__
 <meta property="og:image" content="https://carestia.cl/og.png">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2317120e'/%3E%3Crect x='28.5' y='28' width='7' height='24' rx='2' fill='%23e4dacc'/%3E%3Cpath d='M29.5 22L39 13.5' stroke='%23e8743b' stroke-width='7' stroke-linecap='round' fill='none'/%3E%3C/svg%3E">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+__ICONO__
+__FUENTES__
 <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "101b8fafc10e4ae4b412859b124cb5ea"}'></script>
 <style>
-  /* fallback métrico: el swap de Space Grotesk no mueve wordmark ni título */
-  @font-face { font-family:"Space Grotesk Fallback"; src:local("Arial");
-    size-adjust:101.7%; ascent-override:96.9%; descent-override:29.2%;
-    line-gap-override:0%; }
-  :root {
-    --bg:#17120e; --bg2:#120e0a; --panel:#1a140f;
-    --line:#2a231c; --grid:#221b14;
-    --bone:#e4dacc; --ash:#8b8276; --dim:#5a5348; --ember:#e8743b;
-  }
-  * { box-sizing:border-box; margin:0; padding:0; }
-  body { background:var(--bg); color:var(--bone);
-    font-family:"IBM Plex Mono",monospace; min-height:100vh; }
+__CSS_BASE__
   /* encabezado: el mismo de las fichas */
   header { display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 14px;
     padding:14px clamp(16px,3vw,32px); border-bottom:1px solid var(--line);
     min-height:51px; }
-  .wordmark { font:700 20px/1.1 "Space Grotesk","Space Grotesk Fallback",sans-serif; letter-spacing:.06em;
+  .wordmark { font:700 20px/1.1 var(--display); letter-spacing:.06em;
     color:var(--bone); text-decoration:none; display:inline-flex;
     align-items:baseline; height:22px; overflow:hidden; }
   .wordmark .i { position:relative; display:inline-block; }
   .wordmark .i::after { content:"Í"; content:"Í" / ""; position:absolute;
     left:0; top:0; pointer-events:none;
     color:var(--ember); clip-path:inset(0 0 86% 0); }
-  .tagline { font:400 11px "IBM Plex Mono",monospace; color:var(--ash);
-    letter-spacing:.04em; }
+  .tagline { font:400 12px/14.3px var(--sans); color:var(--ash); }
   main { max-width:980px; margin:0 auto;
     padding:clamp(20px,4vw,36px) clamp(16px,3vw,32px) clamp(28px,4vw,44px); }
-  .miga { font:500 10px "IBM Plex Mono",monospace; letter-spacing:.16em;
+  .miga { font:500 10px var(--mono); letter-spacing:.16em;
     color:var(--ash); text-transform:uppercase; }
-  h1 { font:700 clamp(26px,5vw,42px)/1.1 "Space Grotesk","Space Grotesk Fallback",sans-serif;
-    letter-spacing:.01em; margin-top:6px; text-wrap:balance; }
+  h1 { font:600 clamp(26px,5vw,40px)/1.15 var(--sans);
+    letter-spacing:-.005em; margin-top:6px; text-wrap:balance; }
 
   /* ---- textos: metodología, institucionales y legales ---- */
   .doc { max-width:760px; }
   .doc > h1:first-child { margin-top:0; }
-  .doc h2 { font:600 11px "IBM Plex Mono",monospace; letter-spacing:.16em;
+  .doc h2 { font:600 11px var(--mono); letter-spacing:.16em;
     color:var(--ash); text-transform:uppercase; margin-top:40px; }
-  .doc h3 { font:600 13px "IBM Plex Mono",monospace; color:var(--bone); }
+  .doc h3 { font:600 16px var(--sans); color:var(--bone); }
   .doc h3 span { font-weight:400; color:var(--ash); }
-  .doc p, .doc li { font:400 13px/1.75 "IBM Plex Mono",monospace;
-    color:var(--bone); max-width:74ch; text-wrap:pretty; }
+  .doc p, .doc li { font:400 15px/1.7 var(--sans);
+    color:var(--bone); max-width:70ch; text-wrap:pretty; }
   .doc p { margin-top:14px; }
   .doc ul { margin-top:12px; padding-left:18px; }
   .doc li + li { margin-top:8px; }
@@ -2034,48 +2451,48 @@ __HEAD_URL__
     -webkit-box-decoration-break:clone; box-decoration-break:clone; }
   .doc a { color:var(--bone); text-decoration:underline;
     text-decoration-color:var(--dim); text-underline-offset:3px; }
-  .doc a:hover, .doc a:focus-visible { text-decoration-color:var(--ember); }
-  .doc .meta { font-size:12px; color:var(--ash); }
+  .doc a:hover, .doc a:focus-visible { text-decoration-color:var(--bone); }
+  .doc .meta { font-size:13px; color:var(--ash); }
   .doc .sub { padding-left:3ch; }   /* sub-cláusulas: 4.1., 4.2., ... */
-  .doc .pendiente { border:1px dashed var(--ember); padding:12px 16px;
+  .doc .pendiente { border:1px dashed var(--dim); padding:12px 16px;
     color:var(--ash); }
   /* las canastas: cantidades leídas de BASKETS (indices.py) */
   .canastas { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
     gap:26px 32px; margin-top:18px; }
-  .canastas .csub { font:400 12px/1.5 "IBM Plex Mono",monospace; color:var(--ash);
+  .canastas .csub { font:400 13px/1.5 var(--sans); color:var(--ash);
     margin-top:4px; }
   .canastas ul { list-style:none; margin-top:10px; padding-left:0; }
-  .canastas li { font:400 12px/1.5 "IBM Plex Mono",monospace; padding:7px 0;
-    border-bottom:1px solid var(--grid); }
+  .canastas li { font:400 14px/1.5 var(--sans); padding:7px 0;
+    border-bottom:1px solid var(--line); }
   .canastas li + li { margin-top:0; }
 
   /* ---- /productos/: listado estático de fichas ---- */
-  .intro { font:400 13px/1.7 "IBM Plex Mono",monospace; color:var(--bone);
-    margin-top:14px; max-width:74ch; text-wrap:pretty; }
+  .intro { font:400 15px/1.7 var(--sans); color:var(--bone);
+    margin-top:14px; max-width:70ch; text-wrap:pretty; }
   .grupos { display:flex; flex-wrap:wrap; gap:8px; margin-top:20px; list-style:none; }
   .grupos a { display:inline-flex; align-items:center; gap:8px; min-height:34px;
-    padding:7px 12px; font:500 12px "IBM Plex Mono",monospace;
+    padding:7px 12px; font:500 13px var(--sans);
     text-decoration:none; color:var(--bone); background:var(--panel);
     border:1px solid var(--line); }
-  .grupos a span { color:var(--ash); font-variant-numeric:tabular-nums; }
-  .grupos a:hover, .grupos a:focus-visible { border-color:var(--ember); background:#1f1913; }
+  .grupos a span { color:var(--ash); }
+  .grupos a:hover, .grupos a:focus-visible { border-color:var(--bone); background:var(--hover); }
   .pgrupo { margin-top:36px; scroll-margin-top:12px; }
-  .pgrupo h2 { font:600 11px "IBM Plex Mono",monospace; letter-spacing:.16em;
+  .pgrupo h2 { font:600 11px var(--mono); letter-spacing:.16em;
     color:var(--ash); text-transform:uppercase; }
   .pgrupo h2 span { letter-spacing:.04em; }
   .plista { list-style:none; margin-top:10px; display:grid;
     grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); column-gap:32px; }
   .plista a { display:flex; align-items:baseline; justify-content:space-between;
     gap:14px; min-height:44px; padding:11px 0; text-decoration:none;
-    color:var(--bone); border-bottom:1px solid var(--grid); }
+    color:var(--bone); border-bottom:1px solid var(--line); }
   .plista a:hover .pn, .plista a:focus-visible .pn { text-decoration:underline;
-    text-decoration-color:var(--ember); text-underline-offset:3px; }
-  .pn { font:500 13px/1.4 "IBM Plex Mono",monospace; }
-  .pf { display:block; font:400 11px "IBM Plex Mono",monospace; color:var(--ash);
+    text-decoration-color:var(--bone); text-underline-offset:3px; }
+  .pn { font:500 14px/1.4 var(--sans); }
+  .pf { display:block; font:400 12px var(--sans); color:var(--ash);
     margin-top:2px; }
-  .pp { font:600 13px "IBM Plex Mono",monospace; font-variant-numeric:tabular-nums;
+  .pp { font:600 14px var(--sans);
     white-space:nowrap; text-align:right; }
-  .pp small { font:400 11px "IBM Plex Mono",monospace; color:var(--ash); }
+  .pp small { font:400 12px var(--sans); color:var(--ash); }
 __CSS_SITIO__
 </style>
 </head>
@@ -2111,6 +2528,9 @@ def escribir_pagina(archivo: str, url: str, titulo: str, desc: str, cuerpo: str,
         ("__TITLE__", html.escape(titulo, quote=True)),
         ("__DESC__", html.escape(desc, quote=True)),
         ("__HEAD_URL__", head_url),
+        ("__ICONO__", ICONO),
+        ("__FUENTES__", FUENTES),
+        ("__CSS_BASE__", CSS_BASE),
         ("__CSS_SITIO__", CSS_SITIO),
         ("__NAV__", nav_sitio(actual)),
         ("__PIE__", pie_sitio(actual)),
@@ -2478,17 +2898,24 @@ if PENDIENTES:
             + ". No se genera el sitio hasta que estén completos.")
     print("BORRADOR: textos pendientes: " + ", ".join(PENDIENTES))
 
+FICHAS = asignar_fichas(DATA.get("productos", {}))
+PORTADA = generar_datos(slugs_de_datos(DATA.get("productos", {}), FICHAS))
+
 with open("index.html", "w", encoding="utf-8") as fh:
-    fh.write(HTML.replace("__CSS_SITIO__", CSS_SITIO)
+    fh.write(HTML.replace("__ICONO__", ICONO)
+                 .replace("__FUENTES__", FUENTES)
+                 .replace("__CSS_BASE__", CSS_BASE)
+                 .replace("__CSS_SITIO__", CSS_SITIO)
                  .replace("__GRUPOS__", json.dumps(GRUPO_TXT, ensure_ascii=False))
                  .replace("__NAV__", nav_sitio("indices"))
                  .replace("__PIE__", pie_sitio())
-                 .replace("__DATA__", json.dumps(DATA, ensure_ascii=False)))
+                 # "</" escapado: un label nunca puede cerrar el <script>
+                 .replace("__DATA__", _json(PORTADA).replace("</", "<\\/")))
 
 with open("robots.txt", "w", encoding="utf-8") as fh:
     fh.write(ROBOTS)
 
-FICHAS = generar_productos()
+generar_productos(FICHAS)
 generar_indice_productos(FICHAS)
 generar_metodologia()
 generar_paginas_texto()
@@ -2497,7 +2924,11 @@ generar_resumen()
 
 print(f"Listo: index.html + robots.txt + sitemap.xml + resumen.json + "
       f"{len(FICHAS)} páginas en productos/ + productos/index.html + "
-      f"metodologia.html + {len(PAGINAS_TEXTO)} páginas institucionales")
+      f"metodologia.html + {len(PAGINAS_TEXTO)} páginas institucionales + "
+      f"datos/ ({len(DATA['indices'])} índices, "
+      f"{len(DATA.get('productos', {}))} productos y catalogo.json)")
+print(f"  index.html: {os.path.getsize('index.html'):,} bytes; "
+      f"catalogo.json: {os.path.getsize(os.path.join(DATOS, 'catalogo.json')):,} bytes")
 for c, d in DATA["indices"].items():
     print(f"  {d['nombre']}: {d['veredicto']} (percentil {d['percentil']})")
 if "productos" in DATA:

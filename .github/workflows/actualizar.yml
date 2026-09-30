@@ -62,6 +62,7 @@ jobs:
           cp privacidad.html public/privacidad.html
           cp 404.html public/404.html
           cp -r productos public/productos
+          cp -r datos public/datos
 
       - name: Preparar artefacto de Pages
         uses: actions/upload-pages-artifact@v5
