@@ -77,7 +77,9 @@ def test_workflow_clona_la_libreria_despues_del_checkout():
     # la última versión estable: el tag vX.Y.Z más alto (sin -beta ni -rc),
     # salvo que la variable del repo fije otro
     assert 'git -C "$RUNNER_TEMP" ls-remote --tags --refs "$REPO"' in paso
-    assert r"grep -E '^v?[0-9]+(\.[0-9]+)*$' | sort -V | tail -n 1" in paso
+    assert r"sed -nE 's#.*refs/tags/(v?)([0-9]+(\.[0-9]+)*)$#\2 \1\2#p'" in paso
+    assert "| sort -V | tail -n 1 | cut -d' ' -f2)" in paso
+    assert "export GIT_HTTP_LOW_SPEED_LIMIT=1000 GIT_HTTP_LOW_SPEED_TIME=60" in paso
     assert 'git -C "$RUNNER_TEMP" clone --quiet --depth 1 --branch "$tag"' in paso
     # git corre fuera del repo: dentro, el encabezado del checkout se suma al
     # de la librería y GitHub responde 400 (primer deploy, 01-10-2026)
@@ -153,14 +155,28 @@ class _ServidorGit(http.server.BaseHTTPRequestHandler):
         pass
 
 
-def _correr_paso_libreria(tmp_path, token, tag=""):
-    """El paso "Librería TradingView" tal cual, contra un repo git local con
-    tags de versión, corriendo desde un workspace con el encabezado que deja
-    actions/checkout (includeIf a un archivo de credenciales). Devuelve
-    (salida del paso, $GITHUB_OUTPUT, workspace, Authorization por pedido)."""
+# como corre Actions un paso con "shell: bash"
+SHELL_ACTIONS = ["bash", "--noprofile", "--norc", "-e", "-o", "pipefail", "-c"]
+TAGS = ["9.0", "v31.2.0", "v32.2.0", "v32.3.0-beta"]
+
+
+def _correr_paso_libreria(tmp_path, token, tag="", tags=TAGS, token_repo="tok-123"):
+    """El paso "Librería TradingView" tal cual, con el shell de Actions,
+    contra un repo git local con 'tags' (cada uno con su
+    charting_library.standalone.js) que solo acepta 'token_repo', corriendo desde un workspace con el
+    encabezado que deja actions/checkout (includeIf a un archivo de
+    credenciales). Devuelve (salida del paso, $GITHUB_OUTPUT, workspace,
+    Authorization por pedido)."""
     if not shutil.which("git") or not shutil.which("bash"):
         pytest.skip("sin git o bash")
-    git = lambda *a, **k: subprocess.run(["git", *a], check=True, capture_output=True, **k)
+    # el git del armado tampoco lee la config de quien corre los tests
+    env_git = dict(os.environ, HOME=str(tmp_path), GIT_CONFIG_GLOBAL=os.devnull,
+                   GIT_CONFIG_NOSYSTEM="1")
+
+    def git(*a):
+        r = subprocess.run(["git", *a], capture_output=True, text=True, env=env_git)
+        assert r.returncode == 0, (a, r.stderr)
+        return r.stdout
     src = tmp_path / "src"
     (src / "charting_library" / "bundles").mkdir(parents=True)
     (src / "datafeeds").mkdir()
@@ -169,44 +185,51 @@ def _correr_paso_libreria(tmp_path, token, tag=""):
     (src / "charting_library" / "bundles" / "a.js").write_text("x")
     lib = src / "charting_library" / "charting_library.standalone.js"
     git("init", "-q", str(src))
-    ident = ["-c", "user.email=t@t", "-c", "user.name=t"]
-    for version in ["9.0", "v31.2.0", "v32.2.0", "v32.3.0-beta"]:
+    for version in tags:
         lib.write_text(f"// {version}")
         git("-C", str(src), "add", "-A")
-        git("-C", str(src), *ident, "commit", "-qm", version)
+        git("-C", str(src), "-c", "user.email=t@t", "-c", "user.name=t",
+            "commit", "-q", "--allow-empty", "-m", version)
         git("-C", str(src), "tag", version)
     raiz = tmp_path / "srv"
     git("clone", "-q", "--bare", str(src), str(raiz / "tradingview" / "charting_library.git"))
 
-    esperado = "basic " + base64.b64encode(f"x-access-token:{token}".encode()).decode()
-    manejador = type("H", (_ServidorGit,), {"raiz": str(raiz), "esperado": esperado, "pedidos": []})
-    srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), manejador)
-    threading.Thread(target=srv.serve_forever, daemon=True).start()
-    base = f"http://127.0.0.1:{srv.server_address[1]}/"
-
     m = re.search(r"- name: Librería TradingView\n.*?run: \|\n(.*?)(?=\n      - name: )", _wf(), re.S)
-    script = textwrap.dedent(m.group(1)).replace("https://github.com/", base)
-    temp = tmp_path / "work" / "_temp"
-    temp.mkdir(parents=True)
-    ws = tmp_path / "work" / "repo" / "repo"
-    git("init", "-q", str(ws))
-    cred = temp / "git-credentials-checkout.config"
-    cred.write_text(f'[http "{base}"]\n\textraheader = AUTHORIZATION: basic Z2l0aHViLXRva2Vu\n')
-    git("-C", str(ws), "config", "--local", f"includeIf.gitdir:{ws}/.git.path", str(cred))
-    salida = temp / "github_output"
-    env = {"PATH": os.environ["PATH"], "HOME": str(tmp_path), "RUNNER_TEMP": str(temp),
-           "GITHUB_OUTPUT": str(salida), "GITHUB_STEP_SUMMARY": str(temp / "resumen"),
-           "TV_LIBRARY_TOKEN": token, "TV_LIBRARY_TAG": tag}
-    try:
-        r = subprocess.run(["bash", "-c", script], cwd=ws, env=env, capture_output=True,
-                           text=True, timeout=120)
-    finally:
-        srv.shutdown()
-    assert r.returncode == 0, r.stdout + r.stderr   # el paso nunca corta el build
+    assert m, "no está el paso Librería TradingView"
+    esperado = "basic " + base64.b64encode(f"x-access-token:{token_repo}".encode()).decode()
+    manejador = type("H", (_ServidorGit,), {"raiz": str(raiz), "esperado": esperado, "pedidos": []})
+    with http.server.ThreadingHTTPServer(("127.0.0.1", 0), manejador) as srv:
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        try:
+            base = f"http://127.0.0.1:{srv.server_address[1]}/"
+            script = textwrap.dedent(m.group(1)).replace("https://github.com/", base)
+            temp = tmp_path / "work" / "_temp"
+            temp.mkdir(parents=True)
+            ws = tmp_path / "work" / "repo" / "repo"
+            git("init", "-q", str(ws))
+            cred = temp / "git-credentials-checkout.config"
+            cred.write_text(f'[http "{base}"]\n\textraheader = AUTHORIZATION: basic Z2l0aHViLXRva2Vu\n')
+            git("-C", str(ws), "config", "--local", f"includeIf.gitdir:{ws}/.git.path", str(cred))
+            # control: dentro del workspace sí se ve el encabezado del checkout
+            assert git("-C", str(ws), "config", "--get-all", f"http.{base}.extraheader").strip() == \
+                "AUTHORIZATION: basic Z2l0aHViLXRva2Vu"
+            salida = temp / "github_output"
+            env = {"PATH": os.environ["PATH"], "HOME": str(tmp_path), "RUNNER_TEMP": str(temp),
+                   "GITHUB_OUTPUT": str(salida), "GITHUB_STEP_SUMMARY": str(temp / "resumen"),
+                   "TV_LIBRARY_TOKEN": token, "TV_LIBRARY_TAG": tag}
+            r = subprocess.run([*SHELL_ACTIONS, script], cwd=ws, env=env, capture_output=True,
+                               text=True, timeout=120)
+        finally:
+            srv.shutdown()
+    # el paso nunca corta el build: siempre termina en 0 con ok o falla
+    assert r.returncode == 0, r.stdout + r.stderr
     return r.stdout + r.stderr, salida.read_text(), ws, manejador.pedidos
 
 
 def test_paso_libreria_con_el_encabezado_del_checkout(tmp_path):
+    """Regresión del primer deploy (01-10-2026): con git dentro del repo, el
+    encabezado del checkout se sumaba al de la librería y GitHub respondía
+    400. Falla con el workflow anterior."""
     log, out, ws, pedidos = _correr_paso_libreria(tmp_path, "tok-123")
     assert out == "libreria=ok\n", log
     assert "Librería TradingView v32.2.0 en public/charting_library/" in log
@@ -220,13 +243,28 @@ def test_paso_libreria_con_el_encabezado_del_checkout(tmp_path):
         ["git-credentials-checkout.config", "github_output", "resumen"]
 
 
+def test_paso_libreria_elige_la_version_estable_mas_alta(tmp_path):
+    # con y sin v: se compara el número
+    log, out, ws, _ = _correr_paso_libreria(tmp_path, "tok-123",
+                                            tags=["v32.2.0", "33.0.0", "v32.10.0", "v34.0.0-rc1"])
+    assert out == "libreria=ok\n", log
+    assert (ws / "public/charting_library/charting_library.standalone.js").read_text() == "// 33.0.0"
+
+
 def test_paso_libreria_tag_fijo_y_falla_sin_cortar_el_build(tmp_path):
     log, out, ws, _ = _correr_paso_libreria(tmp_path / "fijo", "tok-123", tag="v31.2.0")
     assert out == "libreria=ok\n", log
     assert (ws / "public/charting_library/charting_library.standalone.js").read_text() == "// v31.2.0"
-    log, out, ws, _ = _correr_paso_libreria(tmp_path / "mal", "")
-    assert out == "libreria=falla\n" and "falta el secreto TV_LIBRARY_TOKEN" in log
-    assert not (ws / "public").exists()
+    for nombre, kw, motivo in [
+        ("sin-token", {"token": ""}, "falta el secreto TV_LIBRARY_TOKEN"),
+        ("token-malo", {"token": "otro"}, "no se pudieron leer los tags del repo"),
+        ("solo-betas", {"token": "tok-123", "tags": ["v32.3.0-beta", "v33.0.0-rc1"]},
+         "el repo no tiene tags de versión estable"),
+        ("tag-inexistente", {"token": "tok-123", "tag": "v99.0.0"}, "no se pudo clonar el tag v99.0.0"),
+    ]:
+        log, out, ws, _ = _correr_paso_libreria(tmp_path / nombre, **kw)
+        assert out == "libreria=falla\n" and motivo in log, (nombre, log)
+        assert not (ws / "public").exists(), nombre
 
 
 def test_workflow_publica_la_pagina_de_prueba_y_el_datafeed():
