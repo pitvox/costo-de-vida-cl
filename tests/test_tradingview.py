@@ -70,8 +70,11 @@ def test_workflow_clona_la_libreria_despues_del_checkout():
     paso = _paso(wf, "Librería TradingView")
     assert "TV_LIBRARY_TOKEN: ${{ secrets.TV_LIBRARY_TOKEN }}" in paso
     assert "https://github.com/tradingview/charting_library.git" in paso
-    # la última versión estable: el tag vX.Y.Z más alto (sin -beta ni -rc),
-    # salvo que la variable del repo fije otro
+    # un tag estable fijo, que la variable del repo puede reemplazar; con los
+    # dos vacíos, el tag vX.Y.Z más alto (sin -beta ni -rc)
+    fijo = re.search(r"TV_LIBRARY_TAG: \$\{\{ vars\.TV_LIBRARY_TAG \|\| '([^']*)' \}\}", paso)
+    assert fijo and re.fullmatch(r"v?[0-9]+(\.[0-9]+)*", fijo.group(1)), paso
+    assert 'tag="$TV_LIBRARY_TAG"' in paso
     assert "git ls-remote --tags --refs" in paso
     assert r"grep -E '^v?[0-9]+(\.[0-9]+)*$' | sort -V | tail -n 1" in paso
     assert 'git clone --quiet --depth 1 --branch "$tag"' in paso

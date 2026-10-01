@@ -33,19 +33,20 @@ jobs:
 
       # Licencia TradingView: la librería Advanced Charts vive solo en el sitio
       # publicado, nunca en este repo. Se clona del repo privado fuera del árbol
-      # (RUNNER_TEMP), en la última versión estable (el tag vX.Y.Z más alto, o
-      # el que fije la variable TV_LIBRARY_TAG del repo), y se copia solo
-      # charting_library/ a public/charting_library/. git corre desde
-      # RUNNER_TEMP, fuera del checkout, para no leer su .git/config; por eso
-      # public/ va con ruta absoluta. Si algo falla, el build sigue sin ella
-      # (las páginas dibujan con Lightweight Charts) y el job aviso-libreria
-      # falla después del deploy para que llegue el correo.
+      # (RUNNER_TEMP), en el tag fijado abajo (o el que fije la variable
+      # TV_LIBRARY_TAG del repo; con los dos vacíos, el tag vX.Y.Z más alto),
+      # y se copia solo charting_library/ a public/charting_library/. git
+      # corre desde RUNNER_TEMP, fuera del checkout, para no leer su
+      # .git/config; por eso public/ va con ruta absoluta. Si algo falla, el
+      # build sigue sin ella (las páginas dibujan con Lightweight Charts) y el
+      # job aviso-libreria falla después del deploy para que llegue el correo.
       - name: Librería TradingView
         id: tv
         shell: bash
         env:
           TV_LIBRARY_TOKEN: ${{ secrets.TV_LIBRARY_TOKEN }}
-          TV_LIBRARY_TAG: ${{ vars.TV_LIBRARY_TAG }}
+          # v32.2.0: la primera versión publicada en el sitio (1 de octubre de 2026)
+          TV_LIBRARY_TAG: ${{ vars.TV_LIBRARY_TAG || 'v32.2.0' }}
         run: |
           set -uo pipefail
           DEST="$RUNNER_TEMP/tv"
