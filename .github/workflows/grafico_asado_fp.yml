@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   grafico:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Clonar repo
         uses: actions/checkout@v7
