@@ -1,5 +1,5 @@
 **Política de privacidad de carestia.cl**
-Última actualización: 29 de septiembre de 2026
+Última actualización: 1 de octubre de 2026
 
 **1. Responsable.** Carestía SpA, RUT 78.521.796-9, con domicilio en Santiago, Chile. Contacto: pedro@carestia.cl.
 
