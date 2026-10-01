@@ -160,11 +160,45 @@ def test_html_del_build_sin_rayas_ni_muletillas(sitio):
     assert malos == []
 
 
-def test_portada_textos_nuevos(sitio):
+def test_portada_textos(sitio):
     h = _leer(sitio, "index.html")
     for esperado in [
         "<title>Carestía: índices del costo de vida en Chile</title>",
         'content="Carestía: índices del costo de vida en Chile"',
+        "Índices del costo de vida en Chile</div>",
+        "Se actualiza los viernes.",
+        ">Índices Carestía</h2>",
+        "Canastas fijas en pesos de hoy. El color dice si están caras o baratas "
+        "respecto de su propia historia.",
+        "Nivel frente a su historia",
+        "+14% sobre su promedio",       # vs_promedio positivo
+        "-5% bajo su promedio",         # y negativo: "bajo", nunca "vs"
+        ">Esta semana</h2>",
+        "<h3>Más subieron</h3>", "<h3>Más bajaron</h3>",
+        "<h3>Más caros respecto de su historia</h3>",
+        "Contra la semana anterior, en pesos de hoy",
+        ">Productos</h2>",
+        "Precios al consumidor ODEPA, Región Metropolitana, en pesos de hoy.",
+        "Percentil en su historia",
+        ">Ver todos los productos</a>",
+        "© 2026 Carestía SpA, ",
+        "TradingView Lightweight Charts™. Copyright (c) 2023 TradingView, Inc.",
+        "Fuente: precios al consumidor de ODEPA",
+        "licencia CC-BY), deflactados con el IPC.",
+    ]:
+        assert esperado in h, esperado
+    assert ("Información de consumo con fines analíticos. No constituye asesoría "
+            "ni recomendación de inversión.") in h
+    # los textos de ejemplo de la referencia no llegan al sitio
+    for ejemplo in ["Cifras de ejemplo", "Los 125 productos", "Ver los 125 productos",
+                    ".dc.html"]:
+        assert ejemplo not in h, ejemplo
+
+
+def test_graficos_textos(sitio):
+    h = _leer(sitio, "graficos.html")
+    for esperado in [
+        "<title>Gráficos de los índices del costo de vida en Chile | Carestía</title>",
         "Índices del costo de vida en Chile</div>",
         "Se actualiza los viernes.",
         "lo que costaría hoy ese precio, sumando la inflación acumulada. "

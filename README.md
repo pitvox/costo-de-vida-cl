@@ -7,7 +7,7 @@ La idea: que mirar cuánto cuesta lo de todos los días sea tan fácil como mira
 ## Cómo funciona
 
 - **`indices.py`** — descarga los precios al consumidor de ODEPA (2008–2026), arma cada canasta, la deflacta a pesos de hoy con el IPC y calcula la estadística. Escribe `indices.json`.
-- **`build_site.py`** — genera `index.html` con las cuatro pestañas, línea/velas, estacionalidad y desglose de componentes. La portada trae inline solo el primer pantallazo (el resumen de los 4 índices, la serie del primero y la lista de productos); el resto va a `datos/` y se pide a demanda: `datos/indices/{codigo}.json` (cada índice con su serie completa), `datos/productos/{slug}.json` (la serie de cada producto, para Comparar y Arma tu canasta) y `datos/catalogo.json` (una fila liviana por producto). `indices.json` se sigue publicando igual.
+- **`build_site.py`** — genera la portada `index.html` en formato tabla (los 4 índices con su veredicto, lo que más se movió esta semana y la tabla de productos, en HTML estático: cada fila lleva a su ficha) y `graficos.html`, la app con las cuatro pestañas, línea/velas, estacionalidad, desglose de componentes, Comparar y Arma tu canasta. Los links viejos de la app que entraban por la portada (`/#comparar`, `/#canasta=...`) se redirigen a `graficos.html` con el mismo hash. `graficos.html` trae inline solo el primer pantallazo (el resumen de los 4 índices, la serie del primero y la lista de productos); el resto va a `datos/` y se pide a demanda: `datos/indices/{codigo}.json` (cada índice con su serie completa), `datos/productos/{slug}.json` (la serie de cada producto, para Comparar y Arma tu canasta) y `datos/catalogo.json` (una fila liviana por producto, de donde sale también la portada). `indices.json` se sigue publicando igual.
 - **`textos/`** — textos institucionales y legales (términos, privacidad, acerca, contacto, metodología, notas metodológicas, 404), literales: `build_site.py` solo les da formato HTML. `/metodologia.html` sale de `textos/metodologia.md` (Cómo se calcula, Fuentes y Deslinde), con las canastas generadas desde `BASKETS` y las notas metodológicas al final.
 - **`.github/workflows/actualizar.yml`** — recalcula y republica el sitio **todos los viernes** de forma automática, después de que ODEPA publica.
 
@@ -17,7 +17,7 @@ Correr localmente:
 pip install pandas numpy requests
 python indices.py
 python build_site.py
-python -m http.server   # y abrir http://localhost:8000 (datos/ se pide por fetch: no funciona abriendo el archivo directo)
+python -m http.server   # y abrir http://localhost:8000 (graficos.html pide datos/ por fetch: no funciona abriendo el archivo directo)
 ```
 
 ## Metodología (resumen)

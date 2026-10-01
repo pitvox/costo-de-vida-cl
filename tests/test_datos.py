@@ -2,10 +2,12 @@
 en un directorio temporal con un indices.json sintético del tamaño del real
 (4 índices semanales desde 2008 con velas completas y 125 productos).
 
-Verifica que la portada lleve inline solo el primer pantallazo y quede bajo
-200 KB, que datos/ reproduzca indices.json sin pérdida, el formato de
-datos/catalogo.json, que el workflow publique datos/ y que todas las páginas
-compartan los mismos tokens y la misma llamada a Google Fonts."""
+Verifica que /graficos.html (la app que antes era la portada) lleve inline
+solo el primer pantallazo, que la portada y /graficos.html queden bajo 200 KB,
+que datos/ reproduzca indices.json sin pérdida, el formato de
+datos/catalogo.json, que el workflow publique datos/ y graficos.html y que
+todas las páginas compartan los mismos tokens y la misma llamada a Google
+Fonts."""
 import datetime
 import json
 import os
@@ -93,7 +95,7 @@ def _json(ruta):
 
 
 def _inline(d) -> dict:
-    h = (d / "index.html").read_text(encoding="utf-8")
+    h = (d / "graficos.html").read_text(encoding="utf-8")
     m = re.search(r"const DATA = (\{.*?\});\n", h)
     return json.loads(m.group(1).replace("<\\/", "</"))
 
@@ -111,15 +113,25 @@ def expandir(c: dict) -> dict:
     }
 
 
-# ---------- portada liviana ----------
-def test_portada_bajo_200_kb_con_datos_del_tamano_real(sitio):
+# ---------- portada y /graficos.html livianos ----------
+def test_portada_y_graficos_bajo_200_kb_con_datos_del_tamano_real(sitio):
     d, _data = sitio
-    # el sintético pesa lo que el real: sin partir los datos, la portada no cabría
+    # el sintético pesa lo que el real: sin partir los datos, no cabrían
     assert os.path.getsize(d / "indices.json") > 1_000_000
     assert os.path.getsize(d / "index.html") < LIMITE_PORTADA
+    assert os.path.getsize(d / "graficos.html") < LIMITE_PORTADA
 
 
-def test_portada_lleva_inline_solo_el_primer_pantallazo(sitio):
+def test_portada_sin_datos_inline_ni_motor_de_graficos(sitio):
+    d, _data = sitio
+    h = (d / "index.html").read_text(encoding="utf-8")
+    assert "const DATA" not in h
+    assert "lightweight-charts" not in h
+    # las 125 filas van en el HTML estático (todas con precio esta semana)
+    assert h.count('<a class="fila" href="/productos/') == 125
+
+
+def test_graficos_lleva_inline_solo_el_primer_pantallazo(sitio):
     d, data = sitio
     inline = _inline(d)
     codes = list(data["indices"])
@@ -200,11 +212,12 @@ def test_workflow_publica_datos():
         wf = fh.read()
     assert "cp -r datos public/datos" in wf
     assert "cp indices.json public/indices.json" in wf   # se sigue publicando
+    assert "cp graficos.html public/graficos.html" in wf
 
 
 # ---------- tokens y tipografía ----------
 def _paginas(d):
-    return [d / "index.html", d / "productos" / "producto-000.html",
+    return [d / "index.html", d / "graficos.html", d / "productos" / "producto-000.html",
             d / "productos" / "index.html", d / "metodologia.html", d / "404.html"]
 
 
@@ -241,7 +254,7 @@ def test_tokens_en_un_solo_lugar_y_brasa_solo_en_su_token(sitio):
 
 def test_comparar_cuatro_tonos_por_orden_de_seleccion_y_locale(sitio):
     d, _data = sitio
-    h = (d / "index.html").read_text(encoding="utf-8")
+    h = (d / "graficos.html").read_text(encoding="utf-8")
     assert "--cmp1:#f28cc0; --cmp2:#b04fb5; --cmp3:#f4f1ea; --cmp4:#f2d74e;" in h
     assert "--cmp5" not in h
     for viejo in ["#717c16", "#b897f0", "#d1e25a", "#9977e4"]:   # paleta de 8 anterior

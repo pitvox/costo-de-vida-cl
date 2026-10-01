@@ -1,23 +1,32 @@
 """
 build_site.py - genera el sitio Carestía
 ========================================
-Lee 'indices.json' (lo produce indices.py) y escribe 'index.html': un sitio
-autocontenido con cinta ticker y una sola superficie: el hero es el único
-lienzo de gráfico y las tabs lo cambian de MODO en el lugar (índices con
-veredicto y línea/velas · Comparar productos en spaghetti · Arma tu
-canasta), con una franja de contexto que acompaña a cada modo y footer
-con atribución.
+Lee 'indices.json' (lo produce indices.py) y escribe dos páginas principales:
+
+- index.html, la portada en formato tabla: cinta de índices, las 4 tarjetas
+  de "Índices Carestía" (el único lugar del semáforo), lo que más se movió
+  esta semana y la tabla de productos, todo en HTML estático (cada fila es un
+  link a su ficha); el JS solo ordena y filtra. Los links viejos de la app
+  que entraban por la portada (#comparar, #canasta=..., un índice) se
+  redirigen a /graficos.html con el mismo hash.
+- graficos.html, la app de gráficos: cinta ticker y una sola superficie; el
+  hero es el único lienzo de gráfico y las tabs lo cambian de MODO en el
+  lugar (índices con veredicto y línea/velas, Comparar productos en
+  spaghetti, Arma tu canasta), con una franja de contexto que acompaña a
+  cada modo. #asado, #ensalada, #fruta y #desayuno abren ese índice.
 
 Identidad (tokens en CSS_BASE, iguales en todas las páginas): base neutra
 con texto hueso; la brasa #e8743b solo vive en la í del wordmark y en la
 línea de los índices oficiales; hueso es el color de las canastas de
-usuario. El verde/ámbar/rojo del semáforo queda reservado al veredicto y a
-las velas de los 4 índices. IBM Plex Sans para la interfaz y el texto, IBM
-Plex Mono para etiquetas cortas en mayúsculas y Space Grotesk para el
-wordmark y las cifras grandes.
+usuario. El verde/ámbar/rojo del semáforo queda reservado a los 4 índices
+(veredicto, zonas del percentil de sus tarjetas y velas); los productos van
+sin semáforo. IBM Plex Sans para la interfaz y el texto, IBM Plex Mono para
+etiquetas cortas en mayúsculas y Space Grotesk para el wordmark, los títulos
+de sección de la portada y las cifras grandes.
 
-La portada trae inline solo el primer pantallazo; las series completas van
-a datos/ y se piden a demanda (ver generar_datos).
+/graficos.html trae inline solo el primer pantallazo; las series completas
+van a datos/ y se piden a demanda (ver generar_datos). La portada no lleva
+datos inline: sus cifras salen de datos/catalogo.json en el build.
 
 También escribe una ficha por producto (productos/{slug}.html), el listado
 /productos/, /metodologia.html, las páginas institucionales y legales (con
@@ -27,8 +36,8 @@ Todas las páginas comparten la navegación del encabezado y el pie.
 Correr:
   python indices.py
   python build_site.py
-  python -m http.server   (y abrir http://localhost:8000: la portada pide
-                           datos/ por fetch, que no corre con file://)
+  python -m http.server   (y abrir http://localhost:8000: /graficos.html
+                           pide datos/ por fetch, que no corre con file://)
 """
 
 import datetime
@@ -46,16 +55,16 @@ from indices import BASKETS
 with open("indices.json", encoding="utf-8") as fh:
     DATA = json.load(fh)
 
-HTML = r"""<!DOCTYPE html>
+GRAFICOS_HTML = r"""<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Carestía: índices del costo de vida en Chile</title>
-<meta name="description" content="Índices del costo de vida en Chile: asado, desayuno, ensalada y fruta en pesos de hoy, con datos públicos de ODEPA desde 2008. Actualizado cada viernes.">
-<link rel="canonical" href="https://carestia.cl/">
-<meta property="og:title" content="Carestía: índices del costo de vida en Chile">
-<meta property="og:description" content="Cuánto cuesta la vida cotidiana en Chile, en pesos de hoy. Índices propios sobre datos públicos de ODEPA, actualizados cada viernes.">
+<title>Gráficos de los índices del costo de vida en Chile | Carestía</title>
+<meta name="description" content="Gráficos semanales de los índices Carestía en pesos de hoy, con velas y estacionalidad. Compara productos y arma tu propia canasta con datos públicos de ODEPA.">
+<link rel="canonical" href="https://carestia.cl/graficos.html">
+<meta property="og:title" content="Gráficos de los índices del costo de vida en Chile | Carestía">
+<meta property="og:description" content="Los índices Carestía en pesos de hoy desde 2008, para comparar productos y armar tu propia canasta. Datos públicos de ODEPA, actualizados cada viernes.">
 <meta property="og:image" content="https://carestia.cl/og.png">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
@@ -66,68 +75,7 @@ __FUENTES__
 <style>
 __CSS_BASE__
 
-  /* ---- ticker ---- */
-  .ticker { position:sticky; top:0; z-index:50; display:flex; align-items:stretch;
-    background:var(--bg); border-bottom:1px solid var(--line); min-height:44px; }
-  .ticker .tag { display:none; align-items:center; padding:0 18px;
-    border-right:1px solid var(--line); font:600 10px var(--mono);
-    letter-spacing:.18em; color:var(--ash); white-space:nowrap; }
-  .ticker-scroll { flex:1; overflow-x:auto; overflow-y:hidden;
-    scrollbar-width:none; -webkit-overflow-scrolling:touch; }
-  .ticker-scroll::-webkit-scrollbar { display:none; }
-  .ticker-track { display:flex; width:max-content; min-height:44px;
-    animation:car-marquee 60s linear infinite; }
-  /* pausa al foco y, en táctil, mientras el dedo esté sobre el ticker
-     (.tocado la pone touchstart y la saca touchend); pausado, el scroll
-     manual sigue disponible. El hover pausa solo donde existe hover real:
-     en táctil queda pegado tras el toque y no reanudaría nunca */
-  .ticker-scroll:focus-within .ticker-track,
-  .ticker-scroll.tocado .ticker-track { animation-play-state:paused; }
-  @media (hover:hover) {
-    .ticker-scroll:hover .ticker-track { animation-play-state:paused; }
-  }
-  .titem { display:flex; align-items:center; gap:10px; padding:0 22px; cursor:pointer;
-    white-space:nowrap; border-right:1px solid var(--grid); background:none; border-top:0;
-    border-bottom:0; border-left:0; min-height:44px; }
-  .titem:hover { background:var(--hover); }
-  .titem .tn { font:600 11px var(--mono); letter-spacing:.1em; color:var(--bone); }
-  .titem .tp { font:500 13px var(--sans); color:var(--bone); }
-  .titem .td { font:500 12px var(--sans); color:var(--ash); } /* deltas SIEMPRE en secundario */
-  @media (min-width:760px) {
-    .ticker .tag { display:flex; }
-    .ticker-scroll { overflow-x:hidden; }
-  }
-  @keyframes car-marquee { from{transform:translateX(0)} to{transform:translateX(-50%)} }
-
-  /* ---- header ---- */
-  header { display:flex; flex-wrap:wrap; align-items:baseline; gap:8px 18px;
-    justify-content:space-between; padding:16px clamp(16px,3vw,32px) 12px;
-    border-bottom:1px solid var(--line); }
-  .brand { display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 18px; }
-  /* line-height y alto explícitos: el alto del wordmark depende solo del
-     font-size, no de la métrica de la fuente que esté cargada (CLS) */
-  .wordmark { font:700 clamp(20px,4vw,26px)/1.15 var(--display);
-    letter-spacing:.06em; color:var(--bone); display:flex; align-items:baseline;
-    height:1.15em; }
-  /* í-brasa: el texto real del nodo lleva la Í única (innerText, copy-paste
-     y lectores de pantalla leen CARESTÍA); el adorno es un ::after
-     decorativo que repinta la misma Í en brasa y el clip-path deja visible
-     solo el acento, tapando el de hueso que queda debajo (mismo glifo,
-     misma posición: solape exacto). Al cuerpo del header (20-26px) la
-     tilde va siempre plana, sin glow: a ese tamaño el halo es más grande
-     que el acento y lo vuelve una mancha. El 86% está calibrado al pixel
-     en Chromium a 20 y 26px: menos corta el tallo, más corta el acento.
-     El box del span no cambia (la altura la fija line-height, no el
-     glifo): el fix de CLS del wordmark queda intacto */
-  .wordmark .i { position:relative; display:inline-block; }
-  .wordmark .i::after { content:"Í"; content:"Í" / ""; position:absolute;
-    left:0; top:0; pointer-events:none;
-    color:var(--ember); clip-path:inset(0 0 86% 0); }
-  /* line-height fijo en el texto del encabezado: su alto no cambia con la
-     tipografía y el encuadre del lienzo (calc más abajo) sigue exacto */
-  .tagline { font:400 13px/15.6px var(--sans); color:var(--ash); }
-  .semana { font:500 12px/14.3px var(--sans); color:var(--ash); }
-  .semana span { color:var(--dim); }
+__CSS_CABECERA__
   /* ---- tabs de índice ---- */
   /* min-height = pill (34px) + padding: las tabs las construye JS y sin
      reserva la fila nacía vacía y empujaba todo al poblarse (CLS) */
@@ -412,7 +360,7 @@ __CSS_SITIO__
       <!-- un único span envuelve el texto: con flex, los nodos sueltos se
            vuelven flex items y innerText/copy-paste los separa con saltos
            de línea; así el wordmark es UN run inline: "CARESTÍA" -->
-      <div class="wordmark"><span>CAREST<span class="i">Í</span>A</span></div>
+      <a class="wordmark" href="https://carestia.cl/"><span>CAREST<span class="i">Í</span>A</span></a>
       <div class="tagline">Índices del costo de vida en Chile</div>
     </div>
     <div class="semana">Semana del <span id="fecha"></span>. <span>Se actualiza los viernes.</span></div>
@@ -588,6 +536,14 @@ __PIE__
     () => !!INDICES[code].real, j => expandirIndice(INDICES[code], j.serie));
   const cargarProducto = k => cargar('p:' + k, 'productos/' + PRODS[k].slug + '.json',
     () => !!PRODS[k].real, j => expandirProducto(PRODS[k], j));
+  // #asado, #ensalada, #fruta, #desayuno abren ese índice (las tarjetas y la
+  // cinta de la portada llevan aquí); su serie se pide de inmediato, sin
+  // esperar a que cargue la página
+  const indiceDelHash = () => {
+    const c = location.hash.slice(1);
+    return CODES.indexOf(c) !== -1 ? c : null;
+  };
+  if (indiceDelHash()) cargarIndice(indiceDelHash()).catch(() => {});
   // pide los productos que falten y llama a 'luego' cuando llegaron todos
   function pedirProductos(keys, luego) {
     const faltan = keys.filter(k => PRODS[k] && !PRODS[k].real);
@@ -718,7 +674,7 @@ __PIE__
   function chartActivo() {
     return modo === 'productos' ? pchart : modo === 'canasta' ? cchart : chart;
   }
-  // navegación del sitio: en la portada, Índices / Comparar / Arma tu
+  // navegación del sitio: en /graficos.html, Índices / Comparar / Arma tu
   // canasta del encabezado cambian el modo EN EL LUGAR, igual que las tabs
   // (sin recargar y aunque el hash ya sea el mismo); sin JS, o sin
   // productos, siguen siendo links normales a los deep links
@@ -1561,6 +1517,8 @@ __PIE__
   // rearmar la canasta desde cero y cambiar de modo; guardarHash usa
   // replaceState, así que los cambios propios no disparan este evento
   window.addEventListener('hashchange', () => {
+    const code = indiceDelHash();
+    if (code) { render(code); return; }
     const m = modoDelHash();
     if (!m) return;
     if (/canasta=/.test(location.hash)) {
@@ -1577,13 +1535,457 @@ __PIE__
     buildTicker();
     buildTabs();
     initChart();
-    render(CODES[0], true);
+    render(indiceDelHash() || CODES[0], true);
     initPChart();
     buildProductos();
     syncProductos();
     buildCanasta();
     activarDeepLink();
   });
+</script>
+</body>
+</html>
+"""
+
+# ---------------- Portada (formato tabla) ----------------
+# Índices arriba, lo que más se movió esta semana y la tabla de productos.
+# Todo va en el HTML estático (las filas son <a href> a cada ficha: se leen
+# sin JS y las indexan los buscadores); el JS solo ordena, filtra por grupo
+# y cambia las pestañas de "Esta semana" en móvil. Sin Lightweight Charts ni
+# datos inline: los gráficos viven en /graficos.html.
+PORTADA_HTML = r"""<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+  // los links de la app (un índice, Comparar, Arma tu canasta y las canastas
+  // compartidas) apuntaban a la portada: siguen funcionando, ahora en
+  // /graficos.html con el mismo hash. Va primero para no pintar la portada
+  (function () {
+    function mudar() {
+      if (/^#(?:__HASHES__)$/.test(location.hash))
+        location.replace('graficos.html' + location.search + location.hash);
+    }
+    mudar();
+    window.addEventListener('hashchange', mudar);
+    document.documentElement.className = 'js';
+  })();
+</script>
+<title>Carestía: índices del costo de vida en Chile</title>
+<meta name="description" content="Índices del costo de vida en Chile: asado, desayuno, ensalada y fruta en pesos de hoy, con datos públicos de ODEPA desde 2008. Actualizado cada viernes.">
+<link rel="canonical" href="https://carestia.cl/">
+<meta property="og:title" content="Carestía: índices del costo de vida en Chile">
+<meta property="og:description" content="Cuánto cuesta la vida cotidiana en Chile, en pesos de hoy. Índices propios sobre datos públicos de ODEPA, actualizados cada viernes.">
+<meta property="og:image" content="https://carestia.cl/og.png">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+__ICONO__
+__FUENTES__
+<script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "101b8fafc10e4ae4b412859b124cb5ea"}'></script>
+<style>
+__CSS_BASE__
+__CSS_CABECERA__
+  main { display:flex; flex-direction:column; gap:clamp(28px,4vw,48px);
+    padding:clamp(16px,3vw,40px) clamp(16px,3vw,32px) clamp(32px,4vw,56px); }
+  .vh { position:absolute; width:1px; height:1px; overflow:hidden;
+    clip-path:inset(50%); white-space:nowrap; }
+  .bloque { display:flex; flex-direction:column; gap:16px; }
+  .bloque h2 { font:700 26px/1.15 var(--display); letter-spacing:-.01em; }
+  .bloque h2.chico { font-size:22px; }
+  .sec-head { display:flex; align-items:flex-end; justify-content:space-between;
+    flex-wrap:wrap; gap:12px 24px; }
+  .sec-tit { display:flex; flex-direction:column; gap:6px; }
+  .sec-tit p { font:400 14px/1.5 var(--sans); color:var(--ash); max-width:72ch;
+    text-wrap:pretty; }
+  .sec-link { font:400 14px var(--sans); color:var(--ash);
+    text-decoration:underline; text-decoration-color:var(--dim);
+    text-underline-offset:3px; }
+  .sec-link:hover, .sec-link:focus-visible { color:var(--bone);
+    text-decoration-color:var(--bone); }
+  /* flechas siempre neutras: el color no dice si algo subió o bajó */
+  .f { font-style:normal; color:var(--dim); }
+  /* la cinta queda quieta para quien pidió menos movimiento, como en
+     /graficos.html */
+  @media (prefers-reduced-motion: reduce) {
+    * { animation:none !important; }
+  }
+
+  /* ---- Índices Carestía: el semáforo vive solo aquí ---- */
+  .icards { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; }
+  .icard { display:flex; flex-direction:column; gap:14px; padding:20px;
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    color:var(--bone); text-decoration:none;
+    transition:border-color .15s ease, background-color .15s ease; }
+  .icard:hover, .icard:focus-visible { border-color:var(--bone); background:var(--hover); }
+  .ic-top { display:flex; flex-wrap:wrap; justify-content:space-between;
+    align-items:center; gap:6px 8px; }
+  .ic-ey { font:500 11px var(--mono); letter-spacing:.14em; color:var(--ash); }
+  .ic-pill { font:500 11px var(--mono); letter-spacing:.08em; padding:3px 9px;
+    border-radius:999px; color:var(--bg); }
+  .ic-mid { display:flex; flex-direction:column; gap:4px; }
+  .ic-sub { font:400 13px var(--sans); color:var(--ash); }
+  .ic-precio { font:700 38px/1.05 var(--display); letter-spacing:-.02em; }
+  .ic-ph { font:400 12px var(--sans); color:var(--dim); }
+  .ic-niv { display:flex; flex-direction:column; gap:7px; }
+  .ic-nl { display:flex; justify-content:space-between; gap:8px;
+    font:400 12px var(--sans); }
+  .ic-nl span:first-child { color:var(--ash); }
+  /* las tres zonas del percentil (0 a 33, 33 a 66, 66 a 100) y la marca */
+  .zonas { position:relative; height:8px; display:flex; gap:2px; }
+  .zonas .z { flex:33 1 0; }
+  .zonas .z1 { background:color-mix(in srgb, var(--verde) 28%, transparent);
+    border-radius:4px 0 0 4px; }
+  .zonas .z2 { background:color-mix(in srgb, var(--ambar) 28%, transparent); }
+  .zonas .z3 { flex-grow:34; border-radius:0 4px 4px 0;
+    background:color-mix(in srgb, var(--rojo) 28%, transparent); }
+  .zonas .marca { position:absolute; top:-4px; width:3px; height:16px;
+    margin-left:-1px; background:var(--bone); border-radius:2px; }
+  .ic-pie { display:flex; flex-wrap:wrap; justify-content:space-between; gap:4px 8px;
+    font:400 12px/1.5 var(--sans); color:var(--ash);
+    border-top:1px solid var(--line); padding-top:12px; }
+  /* las 4 tarjetas miden lo mismo: si el pie no cabe en una línea, va en dos
+     en todas, no solo en las de cifras más largas */
+  .icard { container-type:inline-size; }
+  @container (max-width:264px) { .ic-pie { flex-direction:column; } }
+  .ic-m { display:none; }
+
+  /* ---- Esta semana ---- */
+  .sem-tabs { display:none; }
+  .sem-listas { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+  .sem-l { background:var(--panel); border:1px solid var(--line);
+    border-radius:14px; overflow:hidden; }
+  .sem-h { display:flex; flex-direction:column; gap:3px; padding:16px 18px 12px; }
+  .sem-h h3 { font:600 15px var(--sans); }
+  .sem-h span { font:400 12px var(--sans); color:var(--dim); }
+  .sem-l ul { list-style:none; }
+  .sem-l a { display:flex; justify-content:space-between; align-items:center;
+    gap:12px; min-height:44px; padding:8px 18px; border-top:1px solid var(--hover);
+    color:var(--bone); text-decoration:none; }
+  .sem-l a:hover, .sem-l a:focus-visible { background:var(--hover); }
+  .sem-l .vacio { padding:12px 18px; border-top:1px solid var(--hover);
+    font:400 13px var(--sans); color:var(--ash); }
+  .sn { display:flex; flex-wrap:wrap; align-items:baseline; gap:0 8px; min-width:0; }
+  .sn b { font:500 14px var(--sans); }
+  .sn small { font:400 12px var(--sans); color:var(--dim); }
+  .sv { display:flex; align-items:baseline; gap:6px; font:400 14px var(--sans);
+    white-space:nowrap; }
+  .sv .f { font-size:11px; }
+
+  /* ---- Productos ---- */
+  .orden { display:flex; align-items:center; gap:10px; font:400 13px var(--sans);
+    color:var(--ash); }
+  .orden select { height:36px; padding:0 10px; background:var(--panel);
+    color:var(--bone); border:1px solid var(--line); border-radius:9px;
+    font:400 13px var(--sans); }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; }
+  .chips button { min-height:36px; padding:0 14px; border-radius:999px;
+    cursor:pointer; font:500 13px var(--sans); background:transparent;
+    color:var(--ash); border:1px solid var(--line); }
+  .chips button:hover, .chips button:focus-visible { color:var(--bone);
+    border-color:var(--bone); }
+  .chips button[aria-pressed="true"] { background:var(--bone); color:var(--bg);
+    border-color:var(--bone); }
+  /* sin JS no hay orden ni filtro: las filas igual quedan en el HTML */
+  html:not(.js) .orden, html:not(.js) .chips { display:none; }
+  .tabla { background:var(--panel); border:1px solid var(--line);
+    border-radius:14px; overflow:hidden; }
+  .thead, .fila { display:grid; align-items:center; gap:12px; padding:0 16px;
+    grid-template-columns:minmax(0,2.4fr) minmax(0,1.1fr) minmax(0,.9fr)
+      minmax(0,.9fr) minmax(0,.9fr) minmax(0,1.7fr) 124px 24px; }
+  .thead { border-bottom:1px solid var(--line); }
+  .thead > * { display:flex; justify-content:flex-end; align-items:center; gap:4px;
+    min-height:40px; padding:0; background:none; border:0; text-align:right;
+    font:500 12px var(--sans); color:var(--dim); }
+  .thead > :first-child { justify-content:flex-start; text-align:left; }
+  .thead button { cursor:pointer; }
+  .thead button:hover, .thead button:focus-visible,
+  .thead button[aria-pressed="true"] { color:var(--bone); }
+  .fila { min-height:60px; padding-top:8px; padding-bottom:8px;
+    border-bottom:1px solid var(--hover); color:var(--bone); text-decoration:none; }
+  .fila:last-child { border-bottom:0; }
+  .fila[hidden] { display:none; }
+  .fila:hover, .fila:focus-visible { background:var(--hover); }
+  /* la flecha de la fila: abre la ficha */
+  .fila::after { content:""; justify-self:end; width:7px; height:7px;
+    margin-right:5px; border-top:2px solid var(--dim); border-right:2px solid var(--dim);
+    transform:rotate(45deg); }
+  .c-n { display:flex; flex-direction:column; gap:2px; min-width:0; }
+  .nm { font:500 15px/1.3 var(--sans); }
+  .mt { font:400 12px/1.4 var(--sans); color:var(--dim); }
+  .mp { display:none; }
+  .c-p { text-align:right; font:500 15px var(--sans); }
+  .c-p small { display:block; font:400 11px var(--sans); color:var(--dim); }
+  .c-v { text-align:right; font:400 14px var(--sans); white-space:nowrap; }
+  .c-v .f { font-size:10px; }
+  /* percentil en su historia: barra neutra, sin semáforo */
+  .c-c { display:flex; align-items:center; justify-content:flex-end; gap:10px; }
+  .bar { position:relative; flex:none; width:96px; height:4px;
+    background:var(--line); border-radius:2px; }
+  .bar span { position:absolute; left:0; top:0; bottom:0; background:var(--ash);
+    border-radius:2px; }
+  .cn { width:28px; text-align:right; font:400 13px var(--sans); }
+  .sp { justify-self:end; width:112px; height:28px; overflow:visible; }
+  .sp path { fill:none; stroke:var(--bone); stroke-width:1.5; stroke-linejoin:round;
+    stroke-linecap:round; vector-effect:non-scaling-stroke; }
+  .ver-todos { align-self:center; display:flex; align-items:center;
+    justify-content:center; min-height:44px; padding:0 20px;
+    border:1px solid var(--line); border-radius:10px;
+    font:500 14px var(--sans); color:var(--bone); text-decoration:none; }
+  .ver-todos:hover, .ver-todos:focus-visible { border-color:var(--bone);
+    background:var(--hover); }
+
+  /* ---- escritorio angosto: 2 índices por fila, la tabla sin "3 meses" ---- */
+  @media (max-width:1099px) {
+    .icards { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  }
+  @media (max-width:1023px) {
+    .thead, .fila { grid-template-columns:minmax(0,2.4fr) minmax(0,1.1fr)
+      minmax(0,.9fr) minmax(0,.9fr) minmax(0,1.3fr) 96px 16px; }
+    .c-t { display:none; }
+    .bar { width:56px; }
+    .sp { width:96px; }
+  }
+
+  /* ---- móvil ---- */
+  @media (max-width:760px) {
+    /* Esta semana: una tarjeta con tres pestañas (sin JS, las tres listas
+       una bajo otra) */
+    .sem { background:var(--panel); border:1px solid var(--line);
+      border-radius:12px; overflow:hidden; }
+    .sem-listas { display:block; }
+    .sem-l { background:none; border:0; border-radius:0; }
+    .sem-l + .sem-l { border-top:1px solid var(--line); }
+    .js .sem-tabs { display:flex; gap:4px; padding:6px;
+      border-bottom:1px solid var(--hover); }
+    .sem-tabs button { flex:1 1 0; min-width:0; min-height:40px; border:0;
+      border-radius:8px; cursor:pointer; font:500 14px var(--sans);
+      background:transparent; color:var(--ash); }
+    .sem-tabs button[aria-pressed="true"] { background:var(--line); color:var(--bone); }
+    .js .sem-l:not(.on) { display:none; }
+    .js .sem-l + .sem-l { border-top:0; }
+    .js .sem-h { position:absolute; width:1px; height:1px; padding:0;
+      overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+    .sem-l a { min-height:48px; padding:8px 14px; border-top:0;
+      border-bottom:1px solid var(--hover); }
+    .sem-l a .sn b, .sem-l a .sv { font-size:15px; }
+
+    /* Productos: lista con nombre, unidad y percentil, sparkline, precio y
+       cambio semanal; el selector de orden baja bajo los grupos */
+    .prod-head { display:contents; }
+    .prod-head .sec-tit { order:0; }
+    .chips { order:1; }
+    .orden { order:2; width:100%; }
+    .orden select { flex:1; min-width:0; height:44px; }
+    .tabla { order:3; background:none; border:0; border-radius:0; overflow:visible; }
+    .ver-todos { order:4; align-self:stretch; min-height:48px; }
+    .thead { display:none; }
+    .fila { grid-template-columns:minmax(0,1fr) 64px 92px; grid-template-rows:auto auto;
+      gap:3px 12px; min-height:66px; padding:10px 0;
+      border-bottom:1px solid var(--hover); }
+    .fila:last-child { border-bottom:1px solid var(--hover); }
+    .fila:hover, .fila:focus-visible { background:none; }
+    .fila::after { display:none; }
+    .c-n { grid-column:1; grid-row:1 / 3; gap:3px; }
+    .sp { grid-column:2; grid-row:1 / 3; width:64px; height:24px; }
+    .c-p { grid-column:3; grid-row:1; align-self:end; }
+    .c-w { grid-column:3; grid-row:2; align-self:start; font-size:12px; }
+    .c-t, .c-y, .c-c, .mg { display:none; }
+    .mp { display:inline; }
+    .sec-tit p .d-only { display:none; }
+  }
+  @media (max-width:640px) {
+    .bloque { gap:12px; }
+    .bloque h2 { font-size:22px; }
+    .bloque h2.chico { font-size:20px; }
+    .sec-tit p { font-size:13px; }
+    .ind-head .sec-tit p, .ind-head .sec-link { display:none; }
+    /* Índices: 2 por fila, tarjeta compacta */
+    .icards { gap:10px; }
+    .icard { gap:8px; padding:14px; border-radius:12px; }
+    .ic-ind, .ic-sub, .ic-ph, .ic-nl, .ic-pie { display:none; }
+    .ic-ey { font-size:10px; letter-spacing:.12em; }
+    .ic-pill { font-size:10px; letter-spacing:.06em; padding:2px 7px; }
+    .ic-precio { font-size:24px; line-height:1.1; }
+    .zonas { height:6px; }
+    .zonas .marca { top:-3px; height:12px; }
+    .ic-m { display:block; font:400 11px/1.4 var(--sans); color:var(--ash); }
+  }
+__CSS_SITIO__
+</style>
+</head>
+<body>
+
+  <div class="ticker">
+    <div class="tag">ÍNDICES</div>
+    <div class="ticker-scroll"><div class="ticker-track">
+__CINTA__
+    </div></div>
+  </div>
+
+  <header>
+    <div class="brand">
+      <!-- un único span envuelve el texto: innerText y copy-paste leen
+           "CARESTÍA" en un solo run -->
+      <div class="wordmark"><span>CAREST<span class="i">Í</span>A</span></div>
+      <div class="tagline">Índices del costo de vida en Chile</div>
+    </div>
+    <div class="semana">Semana del <span class="nw">__FECHA__</span>. <span>Se actualiza los viernes.</span></div>
+    __NAV__
+  </header>
+
+  <main>
+    <h1 class="vh">Carestía: el costo de vida en Chile, en pesos de hoy</h1>
+
+    <section class="bloque" aria-labelledby="h-indices">
+      <div class="sec-head ind-head">
+        <div class="sec-tit">
+          <h2 id="h-indices">Índices Carestía</h2>
+          <p>Canastas fijas en pesos de hoy. El color dice si están caras o baratas respecto de su propia historia.</p>
+        </div>
+        <a class="sec-link" href="/metodologia.html">Cómo se calculan</a>
+      </div>
+      <div class="icards">
+__TARJETAS__
+      </div>
+    </section>
+
+    <section class="bloque" aria-labelledby="h-semana">
+      <h2 class="chico" id="h-semana">Esta semana</h2>
+      <div class="sem" id="sem">
+        <div class="sem-tabs" role="group" aria-label="Listas de esta semana">
+          <button type="button" aria-pressed="true" aria-controls="sem-sub">Subieron</button>
+          <button type="button" aria-pressed="false" aria-controls="sem-baj">Bajaron</button>
+          <button type="button" aria-pressed="false" aria-controls="sem-car">Más caros</button>
+        </div>
+        <div class="sem-listas">
+__LISTAS__
+        </div>
+      </div>
+    </section>
+
+    <section class="bloque" aria-labelledby="h-productos">
+      <div class="sec-head prod-head">
+        <div class="sec-tit">
+          <h2 id="h-productos">Productos</h2>
+          <p>Precios al consumidor ODEPA, Región Metropolitana, en pesos de hoy.<span class="d-only"> Cada fila abre su gráfico.</span></p>
+        </div>
+        <label class="orden">Ordenar por
+          <select id="orden">
+            <option value="n:1">Alfabético</option>
+            <option value="w:-1">Más subió esta semana</option>
+            <option value="w:1">Más bajó esta semana</option>
+            <option value="c:-1">Más caro frente a su historia</option>
+            <option value="y:-1">Mayor alza en un año</option>
+            <option value="" hidden></option>
+          </select>
+        </label>
+      </div>
+      <div class="chips" role="group" aria-label="Filtrar por grupo">
+__CHIPS__
+      </div>
+      <div class="tabla">
+        <div class="thead">
+          <button type="button" data-k="n" aria-pressed="true">Producto <span aria-hidden="true">▾</span></button>
+          <button type="button" data-k="p" aria-pressed="false">Precio hoy <span aria-hidden="true"></span></button>
+          <button type="button" data-k="w" aria-pressed="false">1 semana <span aria-hidden="true"></span></button>
+          <button type="button" class="c-t" data-k="t" aria-pressed="false">3 meses <span aria-hidden="true"></span></button>
+          <button type="button" data-k="y" aria-pressed="false">1 año <span aria-hidden="true"></span></button>
+          <button type="button" data-k="c" aria-pressed="false">Percentil en su historia <span aria-hidden="true"></span></button>
+          <span>Último año</span>
+          <span></span>
+        </div>
+        <div id="filas">
+__FILAS__
+        </div>
+      </div>
+      <a class="ver-todos" href="/productos/">Ver todos los productos</a>
+    </section>
+  </main>
+
+__PIE__
+
+<script>
+  // cinta: en táctil se pausa mientras el dedo está encima
+  const tscroll = document.querySelector('.ticker-scroll');
+  tscroll.addEventListener('touchstart',
+    () => tscroll.classList.add('tocado'), { passive: true });
+  ['touchend', 'touchcancel'].forEach(ev => tscroll.addEventListener(ev,
+    () => tscroll.classList.remove('tocado'), { passive: true }));
+
+  // Esta semana, en móvil: una tarjeta con tres pestañas
+  const semTabs = [...document.querySelectorAll('.sem-tabs button')];
+  semTabs.forEach(b => b.addEventListener('click', () => semTabs.forEach(t => {
+    const on = t === b;
+    t.setAttribute('aria-pressed', on);
+    document.getElementById(t.getAttribute('aria-controls')).classList.toggle('on', on);
+  })));
+
+  // Productos: las filas ya vienen en el HTML, en orden alfabético; aquí solo
+  // se reordenan (encabezados y selector) y se ocultan las de otros grupos.
+  // Los valores van en data-*: p precio, w 1 semana, t 3 meses, y 1 año,
+  // c percentil y g el grupo; sin el atributo, la fila no tiene ese dato y
+  // va al final
+  const cont = document.getElementById('filas');
+  const filas = [...cont.children];
+  const POS = new Map(filas.map((f, i) => [f, i]));
+  // sentido de partida de cada columna: A a Z, y de mayor a menor en cifras
+  const DEF = { n: 1, p: -1, w: -1, t: -1, y: -1, c: -1 };
+  const NOMBRE = { n: 'Producto', p: 'Precio hoy', w: '1 semana', t: '3 meses',
+    y: '1 año', c: 'Percentil en su historia' };
+  const heads = [...document.querySelectorAll('.thead button')];
+  const sel = document.getElementById('orden');
+  const libre = sel.querySelector('option[hidden]');
+  const chips = [...document.querySelectorAll('.chips button')];
+  let clave = 'n', dir = 1, grupo = '';
+  const valor = (f, k) => {
+    if (k === 'n') return POS.get(f);
+    const v = f.getAttribute('data-' + k);
+    return v === null ? null : +v;
+  };
+  function comparar(a, b, k, d) {
+    const x = valor(a, k), y = valor(b, k);
+    if (x === null || y === null) return x === y ? 0 : x === null ? 1 : -1;
+    return (x - y) * d;
+  }
+  function pintar() {
+    // empates de percentil: primero el que más subió en un año, como en
+    // "Más caros respecto de su historia"
+    const orden = filas.slice().sort((a, b) => comparar(a, b, clave, dir) ||
+      (clave === 'c' ? comparar(a, b, 'y', -1) : 0) || POS.get(a) - POS.get(b));
+    orden.forEach(f => {
+      f.hidden = grupo !== '' && f.dataset.g !== grupo;
+      cont.appendChild(f);
+    });
+    heads.forEach(h => {
+      const on = h.dataset.k === clave;
+      h.setAttribute('aria-pressed', on);
+      h.lastElementChild.textContent = on ? (dir === DEF[clave] ? '▾' : '▴') : '';
+    });
+    const v = clave + ':' + dir;
+    if ([...sel.options].some(o => o.value === v)) { sel.value = v; return; }
+    libre.textContent = NOMBRE[clave] + (clave === 'n' ?
+      (dir === 1 ? ', de la A a la Z' : ', de la Z a la A') :
+      (dir === -1 ? ', de mayor a menor' : ', de menor a mayor'));
+    sel.value = '';
+  }
+  heads.forEach(h => h.addEventListener('click', () => {
+    const k = h.dataset.k;
+    dir = k === clave ? -dir : DEF[k];
+    clave = k;
+    pintar();
+  }));
+  sel.addEventListener('change', () => {
+    if (!sel.value) return;
+    const [k, d] = sel.value.split(':');
+    clave = k; dir = +d;
+    pintar();
+  });
+  chips.forEach(c => c.addEventListener('click', () => {
+    grupo = c.dataset.g;
+    chips.forEach(x => x.setAttribute('aria-pressed', x === c));
+    pintar();
+  }));
 </script>
 </body>
 </html>
@@ -1603,12 +2005,12 @@ Sitemap: https://carestia.cl/sitemap.xml
 # pliegan en un <details> "Menú" que ocupa la fila del wordmark: sin scroll
 # horizontal, sin JS y sin sumar filas al encabezado de la portada.
 SITIO = "https://carestia.cl"
-NAV = [   # (clave, texto, href, modo de la portada que abre en el lugar)
-    ("indices", "Índices", f"{SITIO}/", "indices"),
+NAV = [   # (clave, texto, href, modo de /graficos.html que abre en el lugar)
+    ("indices", "Índices", f"{SITIO}/graficos.html", "indices"),
     ("productos", "Productos", f"{SITIO}/productos/", None),
-    # deep links que ya existen en la portada (#comparar = alias de #productos)
-    ("comparar", "Comparar", f"{SITIO}/#comparar", "productos"),
-    ("canasta", "Arma tu canasta", f"{SITIO}/#canasta", "canasta"),
+    # deep links de /graficos.html (#comparar = alias de #productos)
+    ("comparar", "Comparar", f"{SITIO}/graficos.html#comparar", "productos"),
+    ("canasta", "Arma tu canasta", f"{SITIO}/graficos.html#canasta", "canasta"),
     ("metodologia", "Metodología", f"{SITIO}/metodologia.html", None),
     ("acerca", "Acerca de", f"{SITIO}/acerca.html", None),
 ]
@@ -1634,8 +2036,8 @@ PIE_DISC = ('Información de consumo con fines analíticos. No constituye asesor
 # ---------------- Identidad común: fuentes, tokens y base ----------------
 # Una sola llamada a Google Fonts, igual en todas las páginas, con los pesos
 # que se usan: IBM Plex Sans para la interfaz y el texto, IBM Plex Mono solo
-# para etiquetas cortas en mayúsculas y Space Grotesk solo para el wordmark y
-# las cifras grandes.
+# para etiquetas cortas en mayúsculas y Space Grotesk solo para el wordmark,
+# los títulos de sección de la portada y las cifras grandes.
 FUENTES = """<link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">"""
@@ -1685,6 +2087,74 @@ CSS_BASE = r"""
   body { background:var(--bg); color:var(--bone); font-family:var(--sans);
     font-variant-numeric:tabular-nums; min-height:100vh; }
   button, input { font-family:inherit; }
+"""
+
+# Cinta de índices y encabezado con el wordmark grande: los comparten la
+# portada y /graficos.html (la portada arma la cinta en el HTML, con links
+# a cada índice; en /graficos.html la arma el JS, con botones).
+CSS_CABECERA = r"""  /* ---- ticker ---- */
+  .ticker { position:sticky; top:0; z-index:50; display:flex; align-items:stretch;
+    background:var(--bg); border-bottom:1px solid var(--line); min-height:44px; }
+  .ticker .tag { display:none; align-items:center; padding:0 18px;
+    border-right:1px solid var(--line); font:600 10px var(--mono);
+    letter-spacing:.18em; color:var(--ash); white-space:nowrap; }
+  .ticker-scroll { flex:1; overflow-x:auto; overflow-y:hidden;
+    scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+  .ticker-scroll::-webkit-scrollbar { display:none; }
+  .ticker-track { display:flex; width:max-content; min-height:44px;
+    animation:car-marquee 60s linear infinite; }
+  /* pausa al foco y, en táctil, mientras el dedo esté sobre el ticker
+     (.tocado la pone touchstart y la saca touchend); pausado, el scroll
+     manual sigue disponible. El hover pausa solo donde existe hover real:
+     en táctil queda pegado tras el toque y no reanudaría nunca */
+  .ticker-scroll:focus-within .ticker-track,
+  .ticker-scroll.tocado .ticker-track { animation-play-state:paused; }
+  @media (hover:hover) {
+    .ticker-scroll:hover .ticker-track { animation-play-state:paused; }
+  }
+  .titem { display:flex; align-items:center; gap:10px; padding:0 22px; cursor:pointer;
+    white-space:nowrap; border-right:1px solid var(--grid); background:none; border-top:0;
+    border-bottom:0; border-left:0; min-height:44px; }
+  .titem:hover { background:var(--hover); }
+  .titem .tn { font:600 11px var(--mono); letter-spacing:.1em; color:var(--bone); }
+  .titem .tp { font:500 13px var(--sans); color:var(--bone); }
+  .titem .td { font:500 12px var(--sans); color:var(--ash); } /* deltas SIEMPRE en secundario */
+  @media (min-width:760px) {
+    .ticker .tag { display:flex; }
+    .ticker-scroll { overflow-x:hidden; }
+  }
+  @keyframes car-marquee { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+
+  /* ---- header ---- */
+  header { display:flex; flex-wrap:wrap; align-items:baseline; gap:8px 18px;
+    justify-content:space-between; padding:16px clamp(16px,3vw,32px) 12px;
+    border-bottom:1px solid var(--line); }
+  .brand { display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 18px; }
+  /* line-height y alto explícitos: el alto del wordmark depende solo del
+     font-size, no de la métrica de la fuente que esté cargada (CLS) */
+  .wordmark { font:700 clamp(20px,4vw,26px)/1.15 var(--display);
+    letter-spacing:.06em; color:var(--bone); display:flex; align-items:baseline;
+    height:1.15em; }
+  /* í-brasa: el texto real del nodo lleva la Í única (innerText, copy-paste
+     y lectores de pantalla leen CARESTÍA); el adorno es un ::after
+     decorativo que repinta la misma Í en brasa y el clip-path deja visible
+     solo el acento, tapando el de hueso que queda debajo (mismo glifo,
+     misma posición: solape exacto). Al cuerpo del header (20-26px) la
+     tilde va siempre plana, sin glow: a ese tamaño el halo es más grande
+     que el acento y lo vuelve una mancha. El 86% está calibrado al pixel
+     en Chromium a 20 y 26px: menos corta el tallo, más corta el acento.
+     El box del span no cambia (la altura la fija line-height, no el
+     glifo): el fix de CLS del wordmark queda intacto */
+  .wordmark .i { position:relative; display:inline-block; }
+  .wordmark .i::after { content:"Í"; content:"Í" / ""; position:absolute;
+    left:0; top:0; pointer-events:none;
+    color:var(--ember); clip-path:inset(0 0 86% 0); }
+  /* line-height fijo en el texto del encabezado: su alto no cambia con la
+     tipografía y el encuadre del lienzo (calc más abajo) sigue exacto */
+  .tagline { font:400 13px/15.6px var(--sans); color:var(--ash); }
+  .semana { font:500 12px/14.3px var(--sans); color:var(--ash); }
+  .semana span { color:var(--dim); }
+  a.wordmark, a.titem { text-decoration:none; }
 """
 
 CSS_SITIO = r"""
@@ -1930,7 +2400,7 @@ __CSS_SITIO__
       asesoría ni recomendación de inversión.</p>
     <nav class="links">
       <a href="https://carestia.cl/">← todos los índices</a>
-      <a href="https://carestia.cl/#canasta=__CANASTA__">ármalo en una canasta →</a>
+      <a href="https://carestia.cl/graficos.html#canasta=__CANASTA__">ármalo en una canasta →</a>
     </nav>
   </main>
 
@@ -2072,7 +2542,7 @@ def sin_datos_hace_un_anio(fin: datetime.date, semana: datetime.date) -> bool:
 
 
 # ---------------- Datos a demanda (datos/) ----------------
-# La portada lleva inline solo el primer pantallazo: el resumen de los 4
+# /graficos.html lleva inline solo el primer pantallazo: el resumen de los 4
 # índices, la serie del índice que se muestra al cargar y la lista de
 # productos sin series (los selectores y los links de canasta la necesitan
 # de entrada). El resto se pide al necesitarlo:
@@ -2144,8 +2614,9 @@ def compactar_indice(code: str, d: dict) -> dict:
 
 
 def resumen_indice(d: dict) -> dict:
-    """Lo que la portada muestra de un índice sin su serie: el overlay, el
-    ticker, la estacionalidad y los componentes. La variación semanal es la
+    """Lo que /graficos.html (y la cinta y las tarjetas de la portada)
+    muestra de un índice sin su serie: el overlay, el ticker, la
+    estacionalidad y los componentes. La variación semanal es la
     misma cuenta que hacía el navegador con las dos últimas semanas, sin
     redondear, para que la cifra mostrada no cambie."""
     r = {k: d[k] for k in RESUMEN_INDICE}
@@ -2239,8 +2710,8 @@ def escribir_json(ruta: str, obj) -> None:
         fh.write(_json(obj))
 
 
-def generar_datos(slugs: dict) -> dict:
-    """Escribe datos/ y devuelve lo que va inline en la portada."""
+def generar_datos(slugs: dict, catalogo: dict) -> dict:
+    """Escribe datos/ y devuelve lo que va inline en /graficos.html."""
     indices = DATA["indices"]
     prods = DATA.get("productos", {})
     series = {code: compactar_indice(code, d) for code, d in indices.items()}
@@ -2250,7 +2721,7 @@ def generar_datos(slugs: dict) -> dict:
         escribir_json(os.path.join(DATOS, "indices", f"{code}.json"), completo)
     for clave, p in prods.items():
         escribir_json(os.path.join(DATOS, "productos", f"{slugs[clave]}.json"), p)
-    escribir_json(os.path.join(DATOS, "catalogo.json"), generar_catalogo(prods, slugs))
+    escribir_json(os.path.join(DATOS, "catalogo.json"), catalogo)
     primero = next(iter(indices))
     return {
         "indices": {code: resumen_indice(d) for code, d in indices.items()},
@@ -2630,6 +3101,226 @@ def generar_indice_productos(fichas: dict) -> None:
         cuerpo, actual="productos", clase="catalogo")
 
 
+# ---------------- Portada ----------------
+# La tabla muestra los productos con precio en las últimas 4 semanas; las
+# listas de "Esta semana", solo los que tienen precio en la semana vigente.
+# Todo sale de datos/catalogo.json (el mismo cálculo) y cada fila lleva a la
+# ficha del producto.
+SEMANAS_TABLA = 4
+TOP_SEMANA = 5
+# el semáforo de cada veredicto, por su token (solo en los 4 índices)
+SEMAFORO = {"BARATO": "var(--verde)", "NORMAL": "var(--ambar)", "CARO": "var(--rojo)"}
+
+
+def cambio(x, sep: str = " ") -> str:
+    """Variación con flecha neutra: ▲ sube, ▼ baja, = si redondea a 0,0.
+    Sin dato, el marcador "·"."""
+    if x is None:
+        return "·"
+    r = round(x, 1)
+    f = "=" if r == 0 else ("▲" if r > 0 else "▼")
+    num = f"{abs(r):.1f}".replace(".", ",")
+    return f'<i class="f">{f}</i>{sep}{num}%'
+
+
+def sparkline(vals: list) -> str:
+    """Path SVG del último año (52 semanas, la más reciente a la derecha) en
+    un viewBox 0 0 51 100 que se estira al tamaño de cada pantalla; donde no
+    hubo precio la línea se corta. Enteros y lineto implícitos: pocos bytes
+    por fila."""
+    nums = [v for v in vals if v is not None]
+    if len(nums) < 2:
+        return ""
+    lo, hi = min(nums), max(nums)
+    desde = 52 - len(vals)
+    trazos, trazo = [], []
+    for i, v in enumerate(vals):
+        if v is None:
+            if trazo:
+                trazos.append(trazo)
+            trazo = []
+            continue
+        y = 50 if hi == lo else round(96 - (v - lo) / (hi - lo) * 92)
+        trazo.append(f"{desde + i} {y}")
+    if trazo:
+        trazos.append(trazo)
+    d = "".join("M" + " ".join(t) + ("h0" if len(t) == 1 else "") for t in trazos)
+    return (f'<svg class="sp" viewBox="0 0 51 100" preserveAspectRatio="none" '
+            f'aria-hidden="true"><path d="{d}"/></svg>')
+
+
+def html_cinta(indices: dict) -> str:
+    """La cinta de índices, dos veces seguidas para el desplazamiento continuo
+    (la segunda copia queda fuera del orden de tabulación y de los lectores
+    de pantalla). Cada índice abre su gráfico."""
+    items = []
+    for code, d in indices.items():
+        r = resumen_indice(d)
+        items.append(
+            f'<a class="titem" href="/graficos.html#{code}"__OCULTA__>'
+            f'<span class="tn">{html.escape(d["nombre"].replace("Índice ", "").upper())}</span>'
+            f'<span class="tp">{fmt_clp(d["costo_real"])}</span>'
+            f'<span class="td">{cambio(r["delta"], "")}</span></a>')
+    return "\n".join(["      " + i.replace("__OCULTA__", "") for i in items] +
+                     ["      " + i.replace("__OCULTA__", ' aria-hidden="true" tabindex="-1"')
+                      for i in items])
+
+
+def html_tarjetas(indices: dict) -> str:
+    """Las 4 tarjetas de "Índices Carestía": veredicto con su color del
+    semáforo, costo en pesos de hoy, percentil sobre las tres zonas, cambio
+    semanal y distancia a su promedio. Cada una abre /graficos.html#codigo."""
+    out = []
+    for code, d in indices.items():
+        r = resumen_indice(d)
+        corto = html.escape(d["nombre"].replace("Índice ", "").upper())
+        color = SEMAFORO.get(d["veredicto"], html.escape(d["color"]))
+        pct = d["percentil"]
+        vs = d["vs_promedio"]
+        vs_txt = f"+{vs}% sobre" if vs >= 0 else f"{vs}% bajo"
+        # sin la semana anterior no hay cambio que mostrar
+        semana = (f'{cambio(r["delta"])} esta semana' if r["delta"] is not None
+                  else "sin la semana anterior")
+        semana_m = (f'{cambio(r["delta"])} (p{pct})' if r["delta"] is not None
+                    else f"percentil {pct}")
+        out.append(
+            f'        <a class="icard" href="/graficos.html#{code}">\n'
+            f'          <div class="ic-top"><span class="ic-ey"><span class="ic-ind">ÍNDICE </span>{corto}</span>'
+            f'<span class="ic-pill" style="background:{color}">{html.escape(d["veredicto"])}</span></div>\n'
+            f'          <div class="ic-mid"><span class="ic-sub">{html.escape(d["subtitulo"])}</span>'
+            f'<span class="ic-precio">{fmt_clp(d["costo_real"])}</span>'
+            f'<span class="ic-ph">en pesos de hoy</span></div>\n'
+            f'          <div class="ic-niv"><div class="ic-nl"><span>Nivel frente a su historia</span>'
+            f'<span>percentil {pct}</span></div>'
+            f'<div class="zonas" aria-hidden="true"><span class="z z1"></span><span class="z z2"></span>'
+            f'<span class="z z3"></span><span class="marca" style="left:{pct}%"></span></div></div>\n'
+            f'          <div class="ic-pie"><span>{semana}</span>'
+            f'<span>{vs_txt} su promedio</span></div>\n'
+            f'          <div class="ic-m">{semana_m}</div>\n'
+            f'        </a>')
+    return "\n".join(out)
+
+
+def filas_portada(catalogo: dict, fichas: dict) -> tuple:
+    """(tabla, vigentes): las filas del catálogo con ficha publicada y precio
+    en las últimas SEMANAS_TABLA semanas, en orden alfabético, y de ellas las
+    que tienen precio en la semana vigente (las listas de "Esta semana")."""
+    con_ficha = set(fichas)
+    vigente = catalogo["semana"]
+    if not vigente:
+        return [], []
+    corte = (datetime.date.fromisoformat(vigente) -
+             datetime.timedelta(weeks=SEMANAS_TABLA - 1)).isoformat()
+    tabla = sorted((f for f in catalogo["productos"]
+                    if f["slug"] in con_ficha and f["semana"] >= corte),
+                   key=lambda f: _orden(f["nombre"]))
+    return tabla, [f for f in tabla if f["semana"] == vigente]
+
+
+def html_listas(vigentes: list) -> str:
+    """Más subieron, más bajaron y más caros respecto de su historia: 5 de
+    cada una. Empates de percentil: primero el que más subió en un año."""
+    sube = sorted((f for f in vigentes if (f["variacion_1s_pct"] or 0) > 0),
+                  key=lambda f: (-f["variacion_1s_pct"], _orden(f["nombre"])))
+    baja = sorted((f for f in vigentes if (f["variacion_1s_pct"] or 0) < 0),
+                  key=lambda f: (f["variacion_1s_pct"], _orden(f["nombre"])))
+    caros = sorted(vigentes, key=lambda f: (
+        -f["percentil"], f["variacion_52s_pct"] is None,
+        -(f["variacion_52s_pct"] or 0), _orden(f["nombre"])))
+    listas = [
+        ("sem-sub", "Más subieron", "Contra la semana anterior, en pesos de hoy",
+         sube, lambda f: cambio(f["variacion_1s_pct"])),
+        ("sem-baj", "Más bajaron", "Contra la semana anterior, en pesos de hoy",
+         baja, lambda f: cambio(f["variacion_1s_pct"])),
+        ("sem-car", "Más caros respecto de su historia", "Percentil de su serie completa",
+         caros, lambda f: f"percentil {f['percentil']}"),
+    ]
+    out = []
+    for i, (lid, titulo, sub, filas, valor) in enumerate(listas):
+        lis = "\n".join(
+            f'            <li><a href="/productos/{f["slug"]}.html"><span class="sn">'
+            f'<b>{html.escape(f["nombre"])}</b> '
+            f'<small>{UNI_TXT.get(f["unidad"], f["unidad"])}</small></span>'
+            f'<span class="sv">{valor(f)}</span></a></li>'
+            for f in filas[:TOP_SEMANA])
+        if not lis:
+            lis = '            <li class="vacio">Sin productos esta semana.</li>'
+        out.append(
+            f'          <div class="sem-l{" on" if i == 0 else ""}" id="{lid}">\n'
+            f'            <div class="sem-h"><h3>{titulo}</h3><span>{sub}</span></div>\n'
+            f'            <ul>\n{lis}\n            </ul>\n'
+            f'          </div>')
+    return "\n".join(out)
+
+
+def html_productos(tabla: list, vigente: str) -> tuple:
+    """(chips, filas) de la tabla de productos. Cada fila es un <a href> a la
+    ficha con sus valores en data-* para ordenar en el navegador; el grupo va
+    como índice de su chip."""
+    grupos = list(dict.fromkeys(f["grupo"] for f in sorted(
+        tabla, key=lambda f: (f["grupo"] == "Otros", _orden(f["grupo"])))))
+    chips = ['        <button type="button" data-g="" aria-pressed="true">Todos</button>'] + [
+        f'        <button type="button" data-g="{i}" aria-pressed="false">'
+        f'{html.escape(g)}</button>' for i, g in enumerate(grupos)]
+
+    def dato(k, x):
+        return "" if x is None else f' data-{k}="{x}"'
+    filas = []
+    for f in tabla:
+        uni = UNI_TXT.get(f["unidad"], f["unidad"])
+        pct = f["percentil"]
+        viejo = ("" if f["semana"] == vigente else
+                 f'<small>semana del {f["semana"][8:10]}-{f["semana"][5:7]}</small>')
+        filas.append(
+            f'          <a class="fila" href="/productos/{f["slug"]}.html" '
+            f'data-g="{grupos.index(f["grupo"])}"'
+            f'{dato("p", f["precio_pesos_hoy"])}{dato("w", f["variacion_1s_pct"])}'
+            f'{dato("t", f["variacion_13s_pct"])}{dato("y", f["variacion_52s_pct"])}'
+            f'{dato("c", pct)}>'
+            f'<span class="c-n"><span class="nm">{html.escape(f["nombre"])}</span>'
+            f'<span class="mt"><span class="mg">{html.escape(f["grupo"])}, </span>por {uni}'
+            f'<span class="mp">, percentil {pct}</span></span></span>'
+            f'<span class="c-p">{fmt_clp(f["precio_pesos_hoy"])}{viejo}</span>'
+            f'<span class="c-v c-w">{cambio(f["variacion_1s_pct"])}</span>'
+            f'<span class="c-v c-t">{cambio(f["variacion_13s_pct"])}</span>'
+            f'<span class="c-v c-y">{cambio(f["variacion_52s_pct"])}</span>'
+            f'<span class="c-c"><span class="bar"><span style="width:{pct}%"></span></span>'
+            f'<span class="cn">{pct}</span></span>'
+            f'{sparkline(f["ultimas_52"])}</a>')
+    return "\n".join(chips), "\n".join(filas)
+
+
+def generar_portada(catalogo: dict, fichas: dict) -> None:
+    """index.html: la portada en formato tabla (ver PORTADA_HTML)."""
+    indices = DATA["indices"]
+    tabla, vigentes = filas_portada(catalogo, fichas)
+    chips, filas = html_productos(tabla, catalogo["semana"])
+    # hashes de la app que redirigen a /graficos.html
+    hashes = "|".join(["canasta(?:=.*)?", "comparar", "productos"] +
+                      [re.escape(c) for c in indices])
+    fecha = next(iter(indices.values()))["fecha"] if indices else "·"
+    out = PORTADA_HTML
+    for token, valor in [
+        ("__HASHES__", hashes),
+        ("__ICONO__", ICONO),
+        ("__FUENTES__", FUENTES),
+        ("__CSS_BASE__", CSS_BASE),
+        ("__CSS_CABECERA__", CSS_CABECERA),
+        ("__CSS_SITIO__", CSS_SITIO),
+        ("__NAV__", nav_sitio()),
+        ("__PIE__", pie_sitio()),
+        ("__FECHA__", html.escape(fecha)),
+        ("__CINTA__", html_cinta(indices)),
+        ("__TARJETAS__", html_tarjetas(indices)),
+        ("__LISTAS__", html_listas(vigentes)),
+        ("__CHIPS__", chips),
+        ("__FILAS__", filas),   # al final: HTML ya renderizado
+    ]:
+        out = out.replace(token, valor)
+    with open("index.html", "w", encoding="utf-8") as fh:
+        fh.write(out)
+
+
 # ---- textos/*.md (del dueño) ----
 # Los textos van LITERALES: aquí solo se les da formato HTML. Una línea es un
 # bloque; "## " título; "- " ítem de lista; **negrita**, `código`,
@@ -2867,7 +3558,7 @@ def generar_resumen() -> None:
 # páginas del sitio en el sitemap (el 404 no va). Van DESPUÉS de las fichas:
 # salud.yml chequea la primera URL con /productos/ del sitemap y así sigue
 # siendo una ficha
-PAGINAS_SITEMAP = ["productos/", "metodologia.html", "acerca.html",
+PAGINAS_SITEMAP = ["graficos.html", "productos/", "metodologia.html", "acerca.html",
                    "contacto.html", "terminos.html", "privacidad.html"]
 
 
@@ -2899,18 +3590,23 @@ if PENDIENTES:
     print("BORRADOR: textos pendientes: " + ", ".join(PENDIENTES))
 
 FICHAS = asignar_fichas(DATA.get("productos", {}))
-PORTADA = generar_datos(slugs_de_datos(DATA.get("productos", {}), FICHAS))
+SLUGS = slugs_de_datos(DATA.get("productos", {}), FICHAS)
+CATALOGO = generar_catalogo(DATA.get("productos", {}), SLUGS)
+APP = generar_datos(SLUGS, CATALOGO)
 
-with open("index.html", "w", encoding="utf-8") as fh:
-    fh.write(HTML.replace("__ICONO__", ICONO)
-                 .replace("__FUENTES__", FUENTES)
-                 .replace("__CSS_BASE__", CSS_BASE)
-                 .replace("__CSS_SITIO__", CSS_SITIO)
-                 .replace("__GRUPOS__", json.dumps(GRUPO_TXT, ensure_ascii=False))
-                 .replace("__NAV__", nav_sitio("indices"))
-                 .replace("__PIE__", pie_sitio())
-                 # "</" escapado: un label nunca puede cerrar el <script>
-                 .replace("__DATA__", _json(PORTADA).replace("</", "<\\/")))
+with open("graficos.html", "w", encoding="utf-8") as fh:
+    fh.write(GRAFICOS_HTML.replace("__ICONO__", ICONO)
+                          .replace("__FUENTES__", FUENTES)
+                          .replace("__CSS_BASE__", CSS_BASE)
+                          .replace("__CSS_CABECERA__", CSS_CABECERA)
+                          .replace("__CSS_SITIO__", CSS_SITIO)
+                          .replace("__GRUPOS__", json.dumps(GRUPO_TXT, ensure_ascii=False))
+                          .replace("__NAV__", nav_sitio("indices"))
+                          .replace("__PIE__", pie_sitio())
+                          # "</" escapado: un label nunca puede cerrar el <script>
+                          .replace("__DATA__", _json(APP).replace("</", "<\\/")))
+
+generar_portada(CATALOGO, FICHAS)
 
 with open("robots.txt", "w", encoding="utf-8") as fh:
     fh.write(ROBOTS)
@@ -2922,12 +3618,13 @@ generar_paginas_texto()
 generar_sitemap(sorted(FICHAS))
 generar_resumen()
 
-print(f"Listo: index.html + robots.txt + sitemap.xml + resumen.json + "
+print(f"Listo: index.html + graficos.html + robots.txt + sitemap.xml + resumen.json + "
       f"{len(FICHAS)} páginas en productos/ + productos/index.html + "
       f"metodologia.html + {len(PAGINAS_TEXTO)} páginas institucionales + "
       f"datos/ ({len(DATA['indices'])} índices, "
       f"{len(DATA.get('productos', {}))} productos y catalogo.json)")
 print(f"  index.html: {os.path.getsize('index.html'):,} bytes; "
+      f"graficos.html: {os.path.getsize('graficos.html'):,} bytes; "
       f"catalogo.json: {os.path.getsize(os.path.join(DATOS, 'catalogo.json')):,} bytes")
 for c, d in DATA["indices"].items():
     print(f"  {d['nombre']}: {d['veredicto']} (percentil {d['percentil']})")
