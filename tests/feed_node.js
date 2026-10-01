@@ -102,8 +102,11 @@ function velas(bars, t) {
     ok(JSON.stringify(info.supported_resolutions) === '["1W"]' && info.has_weekly_and_monthly === true
        && info.has_intraday === false, t + ': semanal');
     ok(info.visible_plots_set === (s.clase === 'indice' ? 'ohlc' : 'c'), t + ': velas solo en índices');
-    ok(info.description === s.descripcion && /, (nominal|en pesos de hoy)$/.test(info.description),
-       t + ': descripción en español');
+    // nombre corto (leyenda del celular) y largo (pantallas anchas y búsqueda)
+    ok(info.long_description === s.descripcion && /, (nominal|en pesos de hoy)$/.test(info.long_description),
+       t + ': descripción larga en español');
+    ok(info.description === s.corto && info.description.length < info.long_description.length &&
+       / nominal$/.test(info.description) === s.nominal, t + ': nombre corto');
   }
   const asado = await llamar((res, rej) => feed.resolveSymbol('Carestía:' + CODES[0].toUpperCase(), res, rej));
   ok(asado.ticker === CODES[0], 'resolveSymbol tolera prefijo de fuente y mayúsculas');
@@ -275,6 +278,51 @@ function velas(bars, t) {
      ['downColor', 'borderDownColor', 'wickDownColor'].every(k => ov['mainSeriesProperties.candleStyle.' + k] === TOK.rojo),
      'widget: velas verde sube, rojo baja');
   ok(o.loading_screen.backgroundColor === TOK.bg, 'widget: pantalla de carga con el fondo');
+
+  // ---- configuración común: celular y páginas del sitio ----
+  const base = { contenedor: 'tv', libreria: '/charting_library/', simbolo: 'asado', datafeed: feed,
+    tok: n => TOK[n], css: 'x' };
+  const esc = TV.opcionesWidget(Object.assign({ movil: false }, base));
+  const mov = TV.opcionesWidget(Object.assign({ movil: true }, base));
+  const sit = TV.opcionesWidget(Object.assign({ movil: false, sitio: true,
+    comparar: [{ symbol: 'palta-nominal', title: 'Palta, nominal' }] }, base));
+  const leyenda = x => ['symbolTextSource', 'showInterval', 'showExchange']
+    .map(k => x.overrides['mainSeriesProperties.statusViewStyle.' + k]).join(',');
+  ok(leyenda(esc) === 'long-description,true,true', 'escritorio: leyenda con el nombre largo');
+  ok(leyenda(mov) === 'description,false,false', 'celular: leyenda con el nombre corto, sin intervalo ni fuente');
+  ok(['header_resolutions', 'header_symbol_search', 'header_settings', 'header_undo_redo',
+      'header_quick_search', 'header_screenshot', 'header_saveload'].every(f => mov.disabled_features.includes(f)),
+     'celular: sin selector de intervalo ni lo que no cabe');
+  ok(!['header_compare', 'header_indicators', 'header_chart_type', 'header_fullscreen_button',
+       'left_toolbar', 'header_widget'].some(f => mov.disabled_features.includes(f) ||
+       sit.disabled_features.includes(f)),
+     'celular y sitio: quedan comparar, indicadores, tipo de gráfico, dibujo y pantalla completa');
+  ok(['header_symbol_search', 'symbol_search_hot_key', 'header_saveload', 'mouse_wheel_scale',
+      'mouse_wheel_scroll', 'vert_touch_drag_scroll'].every(f => sit.disabled_features.includes(f)) &&
+     !sit.disabled_features.includes('horz_touch_drag_scroll') && !sit.disabled_features.includes('pinch_scale'),
+     'sitio: la rueda y el deslizamiento vertical son de la página; un dedo mueve y dos acercan');
+  ok(!('load_last_chart' in sit) && !('auto_save_delay' in sit), 'sitio: no abre ni guarda gráficos solo');
+  ok(JSON.stringify(sit.compare_symbols) === '[{"symbol":"palta-nominal","title":"Palta, nominal"}]',
+     'sitio: símbolos a mano en Comparar');
+  ok([esc, mov, sit].every(x => x.time_scale && x.time_scale.min_bar_spacing <= 0.1),
+     'toda la historia cabe en pantallas angostas');
+
+  // ---- la ficha: su producto y su serie, sin esperar el catálogo ----
+  const pedidos2 = [];
+  const p0 = CAT.productos[0], j0 = leer(path.join('datos', 'productos', p0.slug + '.json'));
+  const feed2 = TV.crearDatafeed({ indices: INDICES,
+    productos: [{ slug: p0.slug, nombre: p0.nombre, unidad: p0.unidad }],
+    precargados: { ['productos/' + p0.slug + '.json']: { t0: j0.t0, v: j0.v } },
+    // el catálogo nunca llega
+    pedir: r => { pedidos2.push(r); return r === 'catalogo.json' ? new Promise(() => {}) :
+      Promise.resolve(leer(path.join('datos', r))); } });
+  await llamar(res => feed2.onReady(res));
+  const i2 = await llamar((res, rej) => feed2.resolveSymbol(p0.slug, res, rej));
+  const b2 = await llamar((res, rej) => feed2.getBars(i2, '1W', { from: 0, to: 4e9, countBack: 2000,
+    firstDataRequest: true }, b => res(b), rej));
+  ok(i2.ticker === p0.slug && b2.length === j0.v.filter(x => x != null).length &&
+     b2[b2.length - 1].close === p0.precio_pesos_hoy, 'ficha: su producto sin esperar el catálogo');
+  ok(JSON.stringify(pedidos2) === '["catalogo.json"]', 'ficha: la serie precargada no se pide');
 
   ok(pedidos.every(r => /^(catalogo\.json|indices\/[a-z0-9_-]+\.json|productos\/[a-z0-9-]+\.json)$/.test(r)),
      'solo lee archivos de datos/');

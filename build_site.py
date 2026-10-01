@@ -75,7 +75,11 @@ GRAFICOS_HTML = r"""<!DOCTYPE html>
 <meta name="twitter:card" content="summary_large_image">
 __ICONO__
 __FUENTES__
-<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+<!-- índices y Comparar van en Advanced Charts (carestia-tv.js monta la
+     librería al cargar la página); Lightweight dibuja Arma tu canasta y el
+     respaldo -->
+<script defer src="/__TV_JS__?v=__VER_TV__"></script>
+<script defer src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
 <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "101b8fafc10e4ae4b412859b124cb5ea"}'></script>
 <style>
 __CSS_BASE__
@@ -166,8 +170,26 @@ __CSS_CABECERA__
     @supports (height:100svh) {
       .hero-wrap { height:calc(100svh - 419px); } } }
   @media (max-width:759px) { .overlay .oname, .overlay .cstats, .overlay .caviso,
-    .overlay .can-reg { max-width:calc(100vw - 160px); } }
+    .overlay .can-reg { max-width:calc(100vw - 160px); }
+    body.tv-ind .overlay.m-ind .oname { max-width:none; } }
   #chart, #pchart, #cchart { position:absolute; inset:0; }
+  /* ---- Advanced Charts (índices y Comparar) ---- */
+  /* la librería trae su barra arriba y su leyenda: el texto del índice sale
+     del lienzo a una franja propia sobre el gráfico, en una fila que se
+     envuelve, y el widget ocupa el resto del alto reservado */
+  .tvbox { display:none; }
+  body.tv-ind .hero-wrap, body.tv-prod .hero-wrap { display:flex; flex-direction:column; }
+  body.tv-ind #tvind, body.tv-prod #tvprod { display:block; position:relative;
+    flex:1 1 auto; min-height:0; }
+  body.tv-ind #chart, body.tv-prod #pchart { display:none; }
+  body.tv-ind .overlay.m-ind, body.tv-prod .overlay.m-prod { position:static;
+    max-width:none; display:flex; flex-wrap:wrap; align-items:baseline;
+    gap:4px 16px; padding:10px clamp(16px,3vw,32px) 9px;
+    border-bottom:1px solid var(--line); }
+  body.tv-ind .overlay.m-ind .orow, body.tv-ind .overlay.m-ind .overd,
+  body.tv-ind .overlay.m-ind .ovs, body.tv-prod .overlay.m-prod .onote { margin-top:0; }
+  body.tv-ind .overlay.m-ind .oprice { font-size:clamp(24px,3.4vw,38px); }
+  body.tv-ind .overlay.m-ind .oname #osub { display:inline; margin-left:6px; }
   .overlay { position:absolute; left:clamp(12px,2.5vw,32px); top:clamp(12px,2.5vw,26px);
     pointer-events:none; z-index:5; max-width:88%; }
   .overlay .oname { font:500 clamp(10px,1.4vw,12px) var(--mono);
@@ -212,7 +234,7 @@ __CSS_CABECERA__
     vertical-align:middle; }
   .vtoggle { display:flex; border:1px solid var(--line); background:var(--bg); }
   /* LÍNEA / VELAS son etiquetas cortas en mayúsculas (mono); los botones
-     de texto normal (+ nominal, captura PNG) van en la tipografía de la
+     de texto normal (captura PNG) van en la tipografía de la
      interfaz */
   .vbtn { font:600 11px var(--mono); letter-spacing:.1em; padding:8px 14px;
     border:none; cursor:pointer; background:transparent; color:var(--ash); min-height:34px; }
@@ -220,6 +242,15 @@ __CSS_CABECERA__
   .vbtn.active { background:var(--bone); color:var(--bg); }
   .nomtoggle { border:1px solid var(--line); background:var(--bg);
     font:500 13px var(--sans); letter-spacing:0; }
+  /* celular: PESOS DE HOY / NOMINAL, LÍNEA / VELAS y la captura caben en la
+     fila (a 360px) con botones más justos y "HOY" en vez de "PESOS DE HOY" */
+  @media (max-width:640px) {
+    .cbar, .cbar-right { gap:8px; }
+    .cbar .vbtn { padding:8px 9px; letter-spacing:.06em; }
+    .cbar .solo-ancho { display:none; }
+  }
+  @media (max-width:380px) { .cbar { padding-left:12px; padding-right:12px; }
+    .cbar, .cbar-right { gap:6px; } }
   /* referencia de velas y pista de zoom: texto de ayuda dentro de la barra;
      bajo 760px se omiten para no alargar la fila de controles en móvil */
   .ref { display:none; max-width:300px; text-wrap:balance;
@@ -376,13 +407,16 @@ __CSS_SITIO__
 
   <div class="cbar" id="cbar">
     <div class="legend m-ind">
-      <span><span class="sw" style="border-top:2px solid var(--ember)"></span>En pesos de hoy: lo que costaría hoy ese precio, sumando la inflación acumulada. Es parecido a medirlo en UF.</span>
-      <span id="leg-nom"><span class="sw" style="border-top:1px solid var(--ash)"></span>Nominal: el precio de la boleta de ese día</span>
+      <span id="leg-real"><span class="sw" style="border-top:2px solid var(--ember)"></span>En pesos de hoy: lo que costaría hoy ese precio, sumando la inflación acumulada. Es parecido a medirlo en UF.</span>
+      <span id="leg-nom"><span class="sw" style="border-top:2px solid var(--ember)"></span>Nominal: el precio de la boleta de ese día</span>
     </div>
     <div class="cbar-right">
       <span class="zoomhint">Para acercar, arrastra el eje de los años o el de los precios. En el celular, usa dos dedos.</span>
       <span class="ref m-ind" id="ref-velas"></span>
-      <button class="vbtn nomtoggle m-ind" id="v-nominal">+ nominal</button>
+      <div class="vtoggle m-ind" id="v-serie">
+        <button class="vbtn active" id="v-real" aria-label="Pesos de hoy"><span class="solo-ancho">PESOS DE </span>HOY</button>
+        <button class="vbtn" id="v-nominal">NOMINAL</button>
+      </div>
       <div class="vtoggle m-ind">
         <button class="vbtn active" id="v-linea">LÍNEA</button>
         <button class="vbtn" id="v-velas">VELAS</button>
@@ -420,6 +454,8 @@ __CSS_SITIO__
         <div class="caviso" id="caviso"></div>
         <div class="can-reg">Esta canasta la armaste tú con datos de ODEPA. No es un índice de Carestía.</div>
       </div>
+      <div id="tvind" class="tvbox m-ind"></div>
+      <div id="tvprod" class="tvbox m-prod"></div>
       <div class="carga" id="carga" role="status" hidden>
         <span id="carga-txt"></span>
         <button class="vbtn nomtoggle" id="carga-reintentar">Reintentar</button>
@@ -434,8 +470,8 @@ __CSS_SITIO__
     <!-- franja móvil (<760px): leyenda compacta del modo índices y pista de
          gestos táctiles del lienzo; en desktop no existe -->
     <div class="mstrip">
-      <span class="mleg m-ind"><span class="sw" style="border-top:2px solid var(--ember)"></span>En pesos de hoy</span>
-      <span class="mleg m-ind" id="mleg-nom"><span class="sw" style="border-top:1px solid var(--ash)"></span>Nominal</span>
+      <span class="mleg m-ind" id="mleg-real"><span class="sw" style="border-top:2px solid var(--ember)"></span>En pesos de hoy</span>
+      <span class="mleg m-ind" id="mleg-nom"><span class="sw" style="border-top:2px solid var(--ember)"></span>Nominal</span>
       <span class="mhint">Desliza hacia los lados para moverte. Usa dos dedos para acercar.</span>
     </div>
 
@@ -598,7 +634,81 @@ __PIE__
     });
   }
 
-  let cur = CODES[0], vista = 'linea', nomVisible = false;
+  /* ---------- motor: Advanced Charts, con respaldo en Lightweight ---------- */
+  // índices y Comparar van en Advanced Charts, un widget para cada uno que se
+  // monta la primera vez que su modo está a la vista; Arma tu canasta sigue
+  // en Lightweight. Si la librería no está o un widget no inicia en 8
+  // segundos, ese modo dibuja con Lightweight como siempre
+  const LIBRERIA = '/charting_library/';
+  const TV_CSS = '/__TV_CSS__?v=__VER_CSS__';
+  let TV = null, feed = null;
+  const tv = { indices: { estado: 'nada', caja: 'tvind', clase: 'tv-ind', dato: 'motorIndices' },
+               productos: { estado: 'nada', caja: 'tvprod', clase: 'tv-prod', dato: 'motorProductos' } };
+  const tvListo = m => tv[m].estado === 'listo';
+  const usaLW = m => tv[m].estado === 'falla';
+  const sinFuente = t => String(t || '').split(':').pop();
+  // en el load: carestia-tv.js y Lightweight llegan con defer
+  function prepararTV() {
+    TV = window.CarestiaTV || null;
+    if (!TV) {
+      ['indices', 'productos'].forEach(m => { tv[m].estado = 'falla'; document.body.dataset[tv[m].dato] = 'lightweight'; });
+      return;
+    }
+    // el índice que viene inline y los productos de la página no se piden
+    const precargados = {};
+    Object.keys(DATA.series || {}).forEach(c => {
+      precargados['indices/' + c + '.json'] = { serie: DATA.series[c] };
+    });
+    feed = TV.crearDatafeed({ base: '/datos/', ver: DATA.ver, precargados,
+      indices: CODES.map(c => ({ codigo: c, nombre: INDICES[c].nombre })),
+      productos: Object.keys(PRODS).map(k => ({ slug: PRODS[k].slug, nombre: PRODS[k].label,
+        unidad: PRODS[k].unidad, grupo: PRODS[k].grupo })) });
+    TV.cargarLibreria(LIBRERIA).catch(() => {});   // empieza a bajar de inmediato
+  }
+  function montarTV(m) {
+    const e = tv[m];
+    if (!TV || e.estado !== 'nada') return;
+    e.estado = 'cargando';
+    document.body.dataset[e.dato] = 'cargando';
+    pintarCarga();
+    const caja = document.getElementById(e.caja);
+    const primero = m === 'productos' ? elegidosEnOrden()[0] || Object.keys(PRODS)[0] : null;
+    TV.montar({ contenedor: caja, libreria: LIBRERIA, datafeed: feed, tok, sitio: true,
+      css: location.origin + TV_CSS,
+      simbolo: m === 'indices' ? simboloIndice(cur) : PRODS[primero].slug,
+      // Comparar pone sus propios colores
+      estilo: m === 'indices' })
+      .then(w => {
+        e.w = w;
+        e.estado = 'listo';
+        document.body.classList.add(e.clase);
+        document.body.dataset[e.dato] = 'advanced';
+        if (m === 'indices') {
+          // si la persona cambia el tipo desde la barra de la librería, los
+          // botones LÍNEA / VELAS la siguen
+          w.activeChart().onChartTypeChanged().subscribe(null, t => {
+            if (t === 1 || t === 2) { vista = t === 2 ? 'linea' : 'velas'; aplicarVista(); }
+          });
+          pintarSerie(cur);
+        } else syncProductos();
+        pintarCarga();
+      }, () => {
+        e.estado = 'falla';
+        caja.remove();
+        document.body.dataset[e.dato] = 'lightweight';
+        if (m === 'indices') { initChart(); pintarSerie(cur); }
+        else { initPChart(); syncProductos(); }
+        pintarCarga();
+      });
+  }
+  const simboloIndice = code => code + (serieNom ? '-nominal' : '');
+  function ponerSimbolo(w, sim) {
+    const c = w.activeChart();
+    if (sinFuente(c.symbol()) === sim) return Promise.resolve();
+    return Promise.resolve(c.setSymbol(sim)).catch(() => {});
+  }
+
+  let cur = CODES[0], vista = 'linea', serieNom = false;
   let chart, sNom, sReal, sCandle, pchart;
   let realMap = new Map(), nomMap = new Map();
 
@@ -676,9 +786,13 @@ __PIE__
       b.classList.toggle('active', modo === 'indices' ?
         b.dataset.code === cur : b.dataset.modo === modo));
   }
+  // el gráfico Lightweight del modo (null si el modo va en Advanced Charts)
   function chartActivo() {
     return modo === 'productos' ? pchart : modo === 'canasta' ? cchart : chart;
   }
+  // el widget de Advanced Charts del modo, si está listo
+  const widgetActivo = () => (modo === 'indices' || modo === 'productos') && tvListo(modo) ?
+    tv[modo].w : null;
   // navegación del sitio: en /graficos.html, Índices / Comparar / Arma tu
   // canasta del encabezado cambian el modo EN EL LUGAR, igual que las tabs
   // (sin recargar y aunque el hash ya sea el mismo); sin JS, o sin
@@ -707,6 +821,11 @@ __PIE__
     syncTabs();
     syncNav();
     pintarCarga();
+    // el widget del modo se monta la primera vez que está a la vista; después
+    // de los deep links del load (que pueden cambiar el modo de entrada)
+    if ((m === 'indices' || m === 'productos') && tv[m].estado === 'nada') {
+      setTimeout(() => { if (modo === m) montarTV(m); }, 0);
+    }
     if (!cambio) return;
     // los productos de Comparar y de la canasta se piden al entrar al modo
     if (m === 'productos') syncProductos();
@@ -731,8 +850,9 @@ __PIE__
     }
     chart = LightweightCharts.createChart(el,
       opcionesChart({ localization: { priceFormatter: fmt } }));
-    sNom = chart.addLineSeries({ color: COL.ash, lineWidth: 1,
-      priceLineVisible: false, lastValueVisible: false, visible: false });
+    // nominal: la misma línea del índice, en otra unidad (se ve una u otra)
+    sNom = chart.addLineSeries({ color: COL.ember, lineWidth: 2,
+      priceLineVisible: false, visible: false });
     // la línea de los índices oficiales: el único lugar de la brasa en los gráficos
     sReal = chart.addLineSeries({ color: COL.ember, lineWidth: 2, priceLineVisible: false });
     // C2: convención estándar de trading, verde sube y rojo baja
@@ -763,27 +883,43 @@ __PIE__
     tooltip.style.top = Math.min(param.point.y + 14, el.clientHeight - 80) + 'px';
   }
 
+  // LÍNEA / VELAS y PESOS DE HOY / NOMINAL. En Advanced Charts el nominal es
+  // otro símbolo (con sus velas) y LÍNEA / VELAS cambia el tipo de gráfico;
+  // en Lightweight las velas son en pesos de hoy y el par se oculta con ellas
   function aplicarVista() {
-    if (!chart) return;
-    const linea = vista === 'linea';
-    sNom.applyOptions({ visible: linea && nomVisible });
-    sReal.applyOptions({ visible: linea });
-    sCandle.applyOptions({ visible: !linea });
+    const linea = vista === 'linea', w = tvListo('indices') ? tv.indices.w : null;
     document.getElementById('v-linea').classList.toggle('active', linea);
     document.getElementById('v-velas').classList.toggle('active', !linea);
-    const nb = document.getElementById('v-nominal');
-    nb.classList.toggle('active', nomVisible);
-    nb.style.visibility = linea ? 'visible' : 'hidden';   // solo aplica a la vista Línea
-    document.getElementById('leg-nom').style.opacity = nomVisible ? '' : '.35';
-    // la leyenda compacta móvil acompaña el mismo atenuado
-    document.getElementById('mleg-nom').style.opacity = nomVisible ? '' : '.35';
+    document.getElementById('v-real').classList.toggle('active', !serieNom);
+    document.getElementById('v-nominal').classList.toggle('active', serieNom);
+    document.getElementById('v-serie').style.visibility = linea || w ? 'visible' : 'hidden';
+    // la leyenda (y la compacta del celular) atenúa la serie que no está a la vista
+    ['leg-real', 'mleg-real'].forEach(id => {
+      document.getElementById(id).style.opacity = serieNom ? '.35' : ''; });
+    ['leg-nom', 'mleg-nom'].forEach(id => {
+      document.getElementById(id).style.opacity = serieNom ? '' : '.35'; });
     document.getElementById('ref-velas').textContent =
       linea ? '' : 'Velas semanales. La mecha va del precio más bajo al más alto que ODEPA encontró entre los locales encuestados.';
+    if (w) {
+      const c = w.activeChart(), tipo = linea ? 2 : 1;
+      if (c.chartType() !== tipo) Promise.resolve(c.setChartType(tipo)).catch(() => {});
+      return;
+    }
+    if (!chart) return;
+    sNom.applyOptions({ visible: linea && serieNom });
+    sReal.applyOptions({ visible: linea && !serieNom });
+    sCandle.applyOptions({ visible: !linea });
     chart.timeScale().fitContent();
   }
   document.getElementById('v-linea').onclick = () => { vista = 'linea'; aplicarVista(); };
   document.getElementById('v-velas').onclick = () => { vista = 'velas'; aplicarVista(); };
-  document.getElementById('v-nominal').onclick = () => { nomVisible = !nomVisible; aplicarVista(); };
+  function ponerSerie(nominal) {
+    serieNom = nominal;
+    if (tvListo('indices')) ponerSimbolo(tv.indices.w, simboloIndice(cur));
+    aplicarVista();
+  }
+  document.getElementById('v-real').onclick = () => ponerSerie(false);
+  document.getElementById('v-nominal').onclick = () => ponerSerie(true);
 
   /* ---------- count-up del precio (~600ms) ---------- */
   let lastPrice = 0;
@@ -862,6 +998,12 @@ __PIE__
   // la serie del índice: si aún no llega, el lienzo queda vacío con su
   // estado de carga y se dibuja al llegar (si el índice sigue elegido)
   function pintarSerie(code) {
+    if (!usaLW('indices')) {
+      // Advanced Charts: el mismo widget, con el símbolo del índice
+      if (tvListo('indices')) { ponerSimbolo(tv.indices.w, simboloIndice(code)); aplicarVista(); }
+      pintarCarga();
+      return;
+    }
     const d = INDICES[code];
     if (!d.real) {
       realMap = new Map(); nomMap = new Map();
@@ -890,6 +1032,9 @@ __PIE__
   // el lienzo; si un pedido falló, el aviso con un botón para reintentar
   const cargaEl = document.getElementById('carga');
   function faltantes() {
+    if ((modo === 'indices' || modo === 'productos') && !usaLW(modo)) {
+      return tvListo(modo) ? [] : ['tv'];
+    }
     if (modo === 'indices') return INDICES[cur].real ? [] : ['i:' + cur];
     const keys = modo === 'productos' ? [...psel] : [...canasta.keys()];
     return keys.filter(k => PRODS[k] && !PRODS[k].real).map(k => 'p:' + k);
@@ -1017,7 +1162,61 @@ __PIE__
     }));
   }
 
+  // los elegidos en el orden de sus puestos (color 1, color 2, ...)
+  const elegidosEnOrden = () => [...psel].filter(k => PRODS[k])
+    .sort((a, b) => puestos.get(a) - puestos.get(b));
+
+  // Comparar en Advanced Charts: el primer elegido es la serie principal y el
+  // resto va con la comparación de la librería, en escala porcentual, con los
+  // colores de cada puesto (del 5º al 8º, punteados). Los cambios van en fila
+  // para que dos clics rápidos no se crucen
+  const comparados = new Map();       // clave -> id del estudio Compare
+  let filaComparar = Promise.resolve();
+  function compararTV() {
+    filaComparar = filaComparar.then(compararAhora, compararAhora);
+    return filaComparar;
+  }
+  async function compararAhora() {
+    const w = tv.productos.w, c = w.activeChart(), serie = c.getSeries();
+    const elegidos = elegidosEnOrden();
+    const quitar = keep => [...comparados].forEach(([k, id]) => {
+      if (keep.includes(k)) return;
+      try { c.removeEntity(id); } catch (e) {}
+      comparados.delete(k);
+    });
+    if (!elegidos.length) { quitar([]); serie.setVisible(false); return; }
+    const [primero, ...resto] = elegidos;
+    quitar(resto);
+    if (sinFuente(c.symbol()) !== PRODS[primero].slug) {
+      await Promise.resolve(c.setSymbol(PRODS[primero].slug)).catch(() => {});
+    }
+    serie.setVisible(true);
+    const e0 = estiloDe(primero);
+    w.applyOverrides({ 'mainSeriesProperties.lineStyle.color': e0.color,
+      'mainSeriesProperties.lineStyle.linestyle': e0.punteada ? 1 : 0,
+      'mainSeriesProperties.lineStyle.linewidth': 2 });
+    if (c.chartType() !== 2) await Promise.resolve(c.setChartType(2)).catch(() => {});
+    for (const k of resto) {
+      if (comparados.has(k)) continue;
+      const e = estiloDe(k);
+      try {
+        const id = await c.createStudy('Compare', false, false,
+          { source: 'close', symbol: PRODS[k].slug },
+          { 'plot.color': e.color, 'plot.linestyle': e.punteada ? 1 : 0, 'plot.linewidth': 2 });
+        if (id) comparados.set(k, id);
+      } catch (err) {}
+    }
+    // cambio del precio en porcentaje, como siempre en Comparar
+    const escala = c.getPanes()[0].getMainSourcePriceScale();
+    if (escala && escala.getMode() !== 2) escala.setMode(2);
+  }
+
   function syncProductos() {
+    if (!usaLW('productos')) {
+      if (tvListo('productos')) compararTV().then(pintarCarga);
+      pintarCarga();
+      return;
+    }
     if (!pchart) return;
     // las series que falten se piden solo con Comparar a la vista; al
     // llegar todas, vuelve a sincronizar
@@ -1356,12 +1555,24 @@ __PIE__
     return Promise.all(keys.filter(k => PRODS[k]).map(cargarProducto));
   }
 
+  // el costo nominal de la última semana del índice (para el encabezado de
+  // la captura con NOMINAL a la vista)
+  function ultimoNominal(code) {
+    if (feed) return feed.barras(code + '-nominal').then(b => b && b.length ? b[b.length - 1].close : null);
+    const n = INDICES[code].nominal;
+    return Promise.resolve(n && n.length ? n[n.length - 1].value : null);
+  }
+
   async function capturarPNG() {
-    const ch = chartActivo();
-    if (!ch) return;
-    try { await datosDelModo(); } catch (e) { pintarCarga(); return; }
-    // dos cuadros: el lienzo alcanza a dibujar lo que acaba de llegar
-    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    // Advanced Charts: su captura del lado del cliente (nunca la del servidor
+    // de TradingView); Lightweight: la suya, como siempre
+    const w = widgetActivo(), ch = w ? null : chartActivo();
+    if (!w && !ch) return;
+    if (!w) {
+      try { await datosDelModo(); } catch (e) { pintarCarga(); return; }
+      // dos cuadros: el lienzo alcanza a dibujar lo que acaba de llegar
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    }
     // el canvas no dispara la carga perezosa de webfonts: si un peso aún
     // no se usó en el DOM, fillText caería a la fuente del sistema.
     // Cargar explícitamente cada peso que dibuja el snapshot (título,
@@ -1374,7 +1585,7 @@ __PIE__
       ]);
       await document.fonts.ready;
     } catch (e) {}
-    const shot = ch.takeScreenshot();
+    const shot = w ? await TV.capturaCliente(w, tok).catch(() => null) : ch.takeScreenshot();
     if (!shot || !shot.width) return;
     // lienzo de salida legible para compartir: nunca menos de 1200px de
     // ancho; takeScreenshot ya viene a devicePixelRatio y si aun así es
@@ -1449,6 +1660,11 @@ __PIE__
       const d = INDICES[cur];
       titulo = d.nombre.replace(/^Índice /i, '').toUpperCase();
       precio = fmt(d.costo_real);
+      if (serieNom) {
+        titulo += ' NOMINAL';
+        const n = await ultimoNominal(cur).catch(() => null);
+        if (n != null) precio = fmt(n);
+      }
     }
     const fecha = document.getElementById('fecha').textContent;
     ctx.textBaseline = 'top';
@@ -1484,7 +1700,7 @@ __PIE__
     ctx.fillText('semana del ' + fecha, pad, Math.round(W * 0.098) + compH);
     ctx.drawImage(shot, pad, headH, chartW, chartH);
     marcaDeAgua(ctx, W - pad, H - Math.round(footH * 0.35), Math.round(W * 0.02));
-    const nombre = 'carestia_' + (modo === 'indices' ? cur : modo) + '_' +
+    const nombre = 'carestia_' + (modo === 'indices' ? simboloIndice(cur) : modo) + '_' +
       new Date().toISOString().slice(0, 10) + '.png';
     cv.toBlob(async blob => {
       if (!blob) return;
@@ -1537,11 +1753,13 @@ __PIE__
   });
 
   window.addEventListener('load', () => {
+    prepararTV();
     buildTicker();
     buildTabs();
-    initChart();
+    // sin carestia-tv.js, Lightweight desde el principio, como antes
+    if (usaLW('indices')) initChart();
     render(indiceDelHash() || CODES[0], true);
-    initPChart();
+    if (usaLW('productos')) initPChart();
     buildProductos();
     syncProductos();
     buildCanasta();
@@ -2320,7 +2538,6 @@ PRODUCT_HTML = r"""<!DOCTYPE html>
 <meta name="twitter:card" content="summary_large_image">
 __ICONO__
 __FUENTES__
-<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
 <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "101b8fafc10e4ae4b412859b124cb5ea"}'></script>
 <style>
 __CSS_BASE__
@@ -2380,6 +2597,9 @@ __CSS_BASE__
   .links a:hover { border-color:var(--bone); background:var(--hover); }
   .nochart { display:flex; align-items:center; justify-content:center;
     height:100%; color:var(--ash); font-size:13px; padding:20px; text-align:center; }
+  /* el gráfico llega después del primer pantallazo: mientras, un aviso tenue
+     en el alto ya reservado */
+  #grafico .cargando { color:var(--dim); }
 __CSS_SITIO__
 </style>
 </head>
@@ -2401,7 +2621,7 @@ __CSS_SITIO__
       <div class="odelta">__DELTA__ <small>sem.</small></div>
     </div>
     <p class="pct">__PCT_LINEA__</p>
-    <div id="grafico"></div>
+    <div id="grafico"><div class="nochart cargando">Cargando el gráfico...</div></div>
     <div class="fecha">Semana del __FECHA__. Serie desde __ANIO__. Se actualiza los viernes.</div>
     __OTROS__
     <p class="metodo">Cada punto es el promedio de los puntos que ODEPA encuesta
@@ -2420,47 +2640,84 @@ __PIE__
 
 <script>
   // serie compacta del producto: t0 + valores semanales consecutivos, null en
-  // semanas sin dato (estacionales); se expande a puntos con huecos visibles
+  // semanas sin dato (estacionales). La cifra y el texto ya están en el HTML:
+  // el gráfico se arma después del primer pantallazo, en Advanced Charts
+  // (línea en hueso; el nominal, a mano en Comparar) o, si la librería no
+  // está o no inicia en 8 segundos, en Lightweight como siempre
   const T0 = '__T0__';
   const V = __V__;
-  const DIA = 864e5, base = Date.parse(T0 + 'T00:00:00Z');
-  const serie = V.map((v, i) => {
-    const time = new Date(base + i * 7 * DIA).toISOString().slice(0, 10);
-    return v == null ? { time } : { time, value: v };
-  });
+  const SLUG = '__SLUG__';
+  const NOMBRE = __NOMBRE__;
+  const UNIDAD = '__UNIDAD__';
+  const INDICES = __INDICES__;
+  const LIGHTWEIGHT = 'https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js';
   const fmt = v => '$' + Math.round(v).toLocaleString('es-CL');
-  window.addEventListener('load', () => {
-    const el = document.getElementById('grafico');
-    if (!window.LightweightCharts) {
-      el.innerHTML = '<div class="nochart">No se pudo cargar el motor de gráficos (revisa la conexión).</div>';
-      return;
-    }
-    // colores desde los tokens de :root
-    const vars = getComputedStyle(document.documentElement);
-    const tok = n => vars.getPropertyValue('--' + n).trim();
-    const chart = LightweightCharts.createChart(el, {
-      autoSize: true,
-      layout: { background: { type: 'solid', color: 'transparent' }, textColor: tok('ash'),
-        fontFamily: tok('sans') },
-      grid: { vertLines: { color: tok('grid') }, horzLines: { color: tok('grid') } },
-      rightPriceScale: { borderColor: tok('line') },
-      timeScale: { borderColor: tok('line') },
-      // fechas en castellano de Chile, como en la portada
-      localization: { locale: 'es-CL', priceFormatter: fmt },
-      // misma política de gestos del sitio: la rueda y el swipe vertical
-      // quedan para la página; zoom en los ejes y pinch en táctil
-      handleScale: { mouseWheel: false, pinch: true, axisPressedMouseMove: true },
-      handleScroll: { mouseWheel: false, vertTouchDrag: false,
-        horzTouchDrag: true, pressedMouseMove: true },
-      crosshair: { mode: 0,
-        vertLine: { color: tok('cruz'), labelBackgroundColor: tok('line') },
-        horzLine: { color: tok('cruz'), labelBackgroundColor: tok('line') } },
+  // colores desde los tokens de :root
+  const vars = getComputedStyle(document.documentElement);
+  const tok = n => vars.getPropertyValue('--' + n).trim();
+  const el = document.getElementById('grafico');
+  function cargarScript(src) {
+    return new Promise((ok, mal) => {
+      const s = document.createElement('script');
+      s.src = src;
+      s.onload = ok;
+      s.onerror = mal;
+      document.head.appendChild(s);
     });
-    // un producto no es un índice oficial: su línea va en hueso (la brasa
-    // queda para los índices)
-    chart.addLineSeries({ color: tok('bone'), lineWidth: 2, priceLineVisible: false })
-      .setData(serie);
-    chart.timeScale().fitContent();
+  }
+
+  function lightweight() {
+    el.dataset.motor = 'lightweight';
+    cargarScript(LIGHTWEIGHT).then(() => {
+      if (!window.LightweightCharts) throw new Error('sin motor');
+      el.innerHTML = '';
+      const DIA = 864e5, base = Date.parse(T0 + 'T00:00:00Z');
+      const serie = V.map((v, i) => {
+        const time = new Date(base + i * 7 * DIA).toISOString().slice(0, 10);
+        return v == null ? { time } : { time, value: v };
+      });
+      const chart = LightweightCharts.createChart(el, {
+        autoSize: true,
+        layout: { background: { type: 'solid', color: 'transparent' }, textColor: tok('ash'),
+          fontFamily: tok('sans') },
+        grid: { vertLines: { color: tok('grid') }, horzLines: { color: tok('grid') } },
+        rightPriceScale: { borderColor: tok('line') },
+        timeScale: { borderColor: tok('line') },
+        // fechas en castellano de Chile, como en la portada
+        localization: { locale: 'es-CL', priceFormatter: fmt },
+        // misma política de gestos del sitio: la rueda y el swipe vertical
+        // quedan para la página; zoom en los ejes y pinch en táctil
+        handleScale: { mouseWheel: false, pinch: true, axisPressedMouseMove: true },
+        handleScroll: { mouseWheel: false, vertTouchDrag: false,
+          horzTouchDrag: true, pressedMouseMove: true },
+        crosshair: { mode: 0,
+          vertLine: { color: tok('cruz'), labelBackgroundColor: tok('line') },
+          horzLine: { color: tok('cruz'), labelBackgroundColor: tok('line') } },
+      });
+      // un producto no es un índice oficial: su línea va en hueso (la brasa
+      // queda para los índices)
+      chart.addLineSeries({ color: tok('bone'), lineWidth: 2, priceLineVisible: false })
+        .setData(serie);
+      chart.timeScale().fitContent();
+    }).catch(() => {
+      el.innerHTML = '<div class="nochart">No se pudo cargar el motor de gráficos (revisa la conexión).</div>';
+    });
+  }
+
+  window.addEventListener('load', () => {
+    cargarScript('/__TV_JS__?v=__VER_TV__').then(() => {
+      const TV = window.CarestiaTV;
+      if (!TV) throw new Error('sin carestia-tv.js');
+      // la serie ya viene en la página: el datafeed no la vuelve a pedir
+      const feed = TV.crearDatafeed({ base: '/datos/', ver: '__VER__', indices: INDICES,
+        productos: [{ slug: SLUG, nombre: NOMBRE, unidad: UNIDAD }],
+        precargados: { ['productos/' + SLUG + '.json']: { t0: T0, v: V } } });
+      el.innerHTML = '';
+      return TV.montar({ contenedor: el, libreria: '/charting_library/', simbolo: SLUG,
+        datafeed: feed, tok, sitio: true, css: location.origin + '/__TV_CSS__?v=__VER_CSS__',
+        // su nominal, listo para superponer desde Comparar
+        comparar: [{ symbol: SLUG + '-nominal', title: NOMBRE + ', nominal' }] });
+    }).then(() => { el.dataset.motor = 'advanced'; }, lightweight);
   });
 </script>
 </body>
@@ -2812,6 +3069,15 @@ def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
         ("__CANASTA__", f"{key}:{QDEF.get(p['unidad'], '1')}"),
         ("__T0__", p["t0"]),
         ("__V__", json.dumps(p["v"])),
+        # Advanced Charts: el datafeed, sus versiones y lo que la ficha ya sabe
+        ("__NOMBRE__", json.dumps(p["label"], ensure_ascii=False).replace("</", "<\\/")),
+        ("__UNIDAD__", p["unidad"]),
+        ("__INDICES__", indices_tv()),
+        ("__TV_JS__", TV_JS),
+        ("__VER_TV__", _ver(FEED_JS)),
+        ("__TV_CSS__", TV_CSS),
+        ("__VER_CSS__", _ver(tv_css())),
+        ("__VER__", APP["ver"]),
         # HTML ya renderizado (seccion_otros escapa labels y grupo), no
         # se vuelve a escapar aquí
         ("__OTROS__", otros_html),
@@ -2994,16 +3260,21 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
     return out;
   }
 
-  // opciones: { base: '/datos/', ver, indices: [{ codigo, nombre }], pedir }
+  // opciones: { base: '/datos/', ver, indices: [{ codigo, nombre }], pedir,
+  //   productos: [{ slug, nombre, unidad }], precargados: { ruta: json } }
   // 'pedir(ruta)' devuelve una promesa con el JSON de datos/{ruta}; por
-  // defecto, fetch con la versión del build en la URL
+  // defecto, fetch con la versión del build en la URL. 'productos' son los
+  // que la página ya conoce (la ficha, el suyo): se resuelven sin esperar el
+  // catálogo. 'precargados' son archivos de datos/ que la página trae inline
   function crearDatafeed(opciones) {
     const base = opciones.base || '/datos/';
     const ver = opciones.ver ? '?v=' + encodeURIComponent(opciones.ver) : '';
-    const pedir = opciones.pedir || (ruta => fetch(base + ruta + ver).then(r => {
+    const precargados = opciones.precargados || {};
+    const traer = opciones.pedir || (ruta => fetch(base + ruta + ver).then(r => {
       if (!r.ok) throw new Error(ruta + ': ' + r.status);
       return r.json();
     }));
+    const pedir = ruta => ruta in precargados ? Promise.resolve(precargados[ruta]) : traer(ruta);
     const memo = new Map();
     const una = (clave, f) => {
       if (!memo.has(clave)) {
@@ -3017,29 +3288,35 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
 
     // símbolos: cada serie en pesos de hoy y su versión nominal. El ticker es
     // el slug (el código del índice o el de la ficha del producto), sin
-    // paréntesis ni dos puntos
+    // paréntesis ni dos puntos. Cada uno con un nombre corto (la leyenda en
+    // el celular) y uno largo (la leyenda en pantallas anchas y la búsqueda)
     const simbolos = new Map();
     function agregar(s) {
       [false, true].forEach(nominal => {
         const ticker = s.ticker + (nominal ? SUFIJO_NOMINAL : '');
         if (simbolos.has(ticker)) return;   // nunca dos símbolos con un ticker
         const desc = s.nombre + (nominal ? ', nominal' : ', en pesos de hoy');
-        simbolos.set(ticker, Object.assign({}, s, { ticker, nominal, desc,
+        const corto = s.corto + (nominal ? ' nominal' : '');
+        simbolos.set(ticker, Object.assign({}, s, { ticker, nominal, desc, corto,
           buscar: sinTildes(ticker + ' ' + desc + ' ' + s.nombre) }));
       });
     }
+    const agregarProducto = p => agregar({ ticker: p.slug, clase: 'producto', corto: p.nombre,
+      nombre: p.nombre + ' por ' + (UNIDAD[p.unidad] || p.unidad), grupo: p.grupo,
+      ruta: 'productos/' + p.slug + '.json' });
     indices.forEach(d => agregar({ ticker: d.codigo, clase: 'indice', nombre: d.nombre,
-      ruta: 'indices/' + d.codigo + '.json' }));
+      corto: d.nombre.replace(/^Índice /, ''), ruta: 'indices/' + d.codigo + '.json' }));
+    (opciones.productos || []).forEach(agregarProducto);
     const listo = pedir('catalogo.json').then(cat => {
-      (cat.productos || []).forEach(p => agregar({ ticker: p.slug, clase: 'producto',
-        nombre: p.nombre + ' por ' + (UNIDAD[p.unidad] || p.unidad), grupo: p.grupo,
-        ruta: 'productos/' + p.slug + '.json' }));
+      (cat.productos || []).forEach(agregarProducto);
     }).catch(() => {});   // sin catálogo quedan los índices
 
     const simbolo = nombre => {
       // por si llega con prefijo de fuente ("Carestía:asado") o en mayúsculas
       const t = String(nombre || '').split(':').pop().trim().toLowerCase();
-      return listo.then(() => simbolos.get(t) || null);
+      // los que la página ya conoce no esperan el catálogo
+      return simbolos.has(t) ? Promise.resolve(simbolos.get(t)) :
+        listo.then(() => simbolos.get(t) || null);
     };
     const factor = () => una('factor', () =>
       Promise.all(indices.map(d => pedir('indices/' + d.codigo + '.json')))
@@ -3059,7 +3336,8 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
       return {
         name: s.ticker,
         ticker: s.ticker,
-        description: s.desc,
+        description: s.corto,
+        long_description: s.desc,
         type: TIPO[s.clase],
         session: '24x7',
         timezone: ZONA,
@@ -3084,8 +3362,9 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
     // la API pide todos los callbacks en otra macrotarea
     const despues = f => setTimeout(f, 0);
     return {
+      // la configuración no depende del catálogo: no lo espera
       onReady(cb) {
-        listo.then(() => despues(() => cb({
+        despues(() => cb({
           supported_resolutions: [RESOLUCION],
           exchanges: [],
           symbols_types: [
@@ -3096,7 +3375,7 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
           supports_marks: false,
           supports_timescale_marks: false,
           supports_time: false,
-        })));
+        }));
       },
       // búsqueda solo entre los símbolos de Carestía: todas las palabras
       // escritas, sin tildes ni mayúsculas, en el ticker o el nombre
@@ -3152,7 +3431,8 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
       barras,
       simbolo,
       lista: () => listo.then(() => [...simbolos.values()].map(s =>
-        ({ ticker: s.ticker, descripcion: s.desc, clase: s.clase, nominal: s.nominal }))),
+        ({ ticker: s.ticker, descripcion: s.desc, corto: s.corto, clase: s.clase,
+          nominal: s.nominal }))),
       info: nombre => simbolo(nombre).then(s => s && info(s)),
     };
   }
@@ -3284,9 +3564,35 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
     return { 'mainSeriesProperties.lineStyle.color': c };
   };
 
-  // opciones: { contenedor, libreria, simbolo, datafeed, tok, css }
+  // pantallas de celular: hasta 640px, como el menú del sitio
+  const MOVIL = '(max-width: 640px)';
+  const esMovil = () => typeof matchMedia === 'function' && matchMedia(MOVIL).matches;
+  // en el celular la barra de arriba deja solo comparar, indicadores, tipo de
+  // gráfico y pantalla completa (más el dibujo, en su propia barra): sin el
+  // selector de intervalo (solo existe 1S) ni lo que no cabe
+  const SOLO_ESCRITORIO = ['header_resolutions', 'header_symbol_search', 'header_settings',
+    'header_undo_redo', 'header_quick_search', 'header_screenshot', 'header_saveload'];
+  // páginas del sitio: el símbolo lo eligen las pestañas y los selectores de
+  // la página (sin buscador de la librería ni guardar y cargar gráficos), y
+  // los gestos son los de siempre: la rueda y el deslizamiento vertical
+  // mueven la página; arrastrar hacia los lados mueve el gráfico, dos dedos
+  // o arrastrar los ejes acercan
+  const FUERA_DEL_SITIO = ['header_symbol_search', 'symbol_search_hot_key', 'header_saveload',
+    'mouse_wheel_scale', 'mouse_wheel_scroll', 'vert_touch_drag_scroll'];
+
+  // la configuración común de todas las páginas.
+  // o: { contenedor, libreria, simbolo, datafeed, tok, css, movil, sitio,
+  //      comparar: [{ symbol, title }] }
   function opcionesWidget(o) {
-    return {
+    const movil = o.movil != null ? o.movil : esMovil();
+    const fuera = new Set([...(movil ? SOLO_ESCRITORIO : []), ...(o.sitio ? FUERA_DEL_SITIO : [])]);
+    const ov = overrides(o.tok);
+    // la leyenda: en el celular el nombre corto, sin intervalo ni fuente, para
+    // que no se corte; en pantallas anchas el nombre largo
+    ov['mainSeriesProperties.statusViewStyle.symbolTextSource'] = movil ? 'description' : 'long-description';
+    ov['mainSeriesProperties.statusViewStyle.showInterval'] = !movil;
+    ov['mainSeriesProperties.statusViewStyle.showExchange'] = !movil;
+    const opciones = {
       container: o.contenedor,
       library_path: o.libreria,
       datafeed: o.datafeed,
@@ -3300,14 +3606,14 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
       custom_font_family: "'IBM Plex Sans', system-ui, sans-serif",
       loading_screen: { backgroundColor: o.tok('bg'), foregroundColor: o.tok('ember') },
       toolbar_bg: o.tok('panel'),
-      overrides: overrides(o.tok),
+      overrides: ov,
       custom_formatters: formateadores(),
       numeric_formatting: { decimal_sign: ',', grouping_separator: '.' },
       // guardar y cargar gráficos, plantillas y dibujos: en el navegador
       save_load_adapter: almacenLocal('carestia-tv:'),
-      auto_save_delay: 5,
-      load_last_chart: true,
       favorites: { intervals: [RESOLUCION], chartTypes: ['Candles', 'Line'] },
+      // toda la historia cabe aun a 390px de ancho
+      time_scale: { min_bar_spacing: 0.1 },
       // plazos de la barra inferior, todos semanales (los de fábrica piden
       // resoluciones de minutos o días, que estos datos no tienen)
       time_frames: [
@@ -3318,21 +3624,33 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
         { text: '10y', resolution: RESOLUCION, description: '10 años', title: '10A' },
         { text: '20y', resolution: RESOLUCION, description: 'Toda la serie', title: 'Todo' },
       ],
-      // todas las funciones de fábrica quedan activas (dibujo, indicadores,
-      // comparar, tipos de gráfico, guardar y cargar en el navegador, captura
-      // para descargar o copiar); se suman las plantillas de indicadores y
-      // se quita el ancho mínimo del gráfico (a 390px desbordaría la página).
-      // No se configura nada que guarde fuera del navegador: ni
+      // las funciones de fábrica quedan activas (dibujo, indicadores, comparar,
+      // tipos de gráfico, captura para descargar o copiar), más las plantillas
+      // de indicadores y sin el ancho mínimo del gráfico (a 390px desbordaría
+      // la página), salvo lo que no va en el celular o en las páginas del
+      // sitio. No se configura nada que guarde fuera del navegador: ni
       // charts_storage_url ni snapshot_url
       enabled_features: ['study_templates', 'no_min_chart_width'],
-      disabled_features: [],
+      disabled_features: [...fuera],
     };
+    // la página de prueba guarda sola en el navegador y abre lo último guardado
+    if (!o.sitio) Object.assign(opciones, { auto_save_delay: 5, load_last_chart: true });
+    // símbolos a mano en Comparar de la librería (la ficha: su nominal)
+    if (o.comparar) opciones.compare_symbols = o.comparar;
+    return opciones;
   }
 
   // con el gráfico listo: estilo según el símbolo (índices con velas en el
   // semáforo, productos como línea en hueso) y guardado automático en el
   // navegador
   function alistarWidget(widget, feed, tok) {
+    estiloPorSimbolo(widget, feed, tok);
+    widget.subscribe('onAutoSaveNeeded', () => {
+      Promise.resolve(widget.saveChartToServer({ defaultChartName: 'Mi gráfico' }))
+        .catch(() => {});
+    });
+  }
+  function estiloPorSimbolo(widget, feed, tok) {
     const chart = widget.activeChart();
     let clase = null;
     const estilo = () => feed.simbolo(chart.symbol()).then(s => {
@@ -3349,16 +3667,82 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
     });
     estilo();
     chart.onSymbolChanged().subscribe(null, estilo);
-    widget.subscribe('onAutoSaveNeeded', () => {
-      Promise.resolve(widget.saveChartToServer({ defaultChartName: 'Mi gráfico' }))
-        .catch(() => {});
-    });
   }
   // la librería quedó lista (chartReady desde v32; onChartReady antes)
   const listoWidget = w => w.chartReady ? w.chartReady() : new Promise(r => w.onChartReady(r));
 
+  // toda la historia de la serie a la vista
+  function verTodo(widget, feed) {
+    const chart = widget.activeChart();
+    return feed.barras(chart.symbol()).then(b => {
+      if (!b || !b.length) return;
+      return chart.setVisibleRange({ from: b[0].time / 1000, to: b[b.length - 1].time / 1000 },
+        { applyDefaultRightMargin: true });
+    }).catch(() => {});
+  }
+
+  // la librería se pide una sola vez por página
+  let libreria = null;
+  function cargarLibreria(ruta) {
+    if (!libreria) {
+      libreria = new Promise((ok, mal) => {
+        const lista = () => typeof window.TradingView === 'object' && window.TradingView &&
+          typeof window.TradingView.widget === 'function';
+        if (lista()) return ok();
+        const s = document.createElement('script');
+        s.src = ruta + 'charting_library.standalone.js';
+        s.onload = () => (lista() ? ok() : mal('falta'));
+        s.onerror = () => mal('falta');
+        document.head.appendChild(s);
+      });
+    }
+    return libreria;
+  }
+
+  // monta Advanced Charts con la configuración común. Resuelve con el widget
+  // listo, con toda la historia a la vista (también en cada cambio de
+  // símbolo); rechaza con 'falta' (la librería no está), 'tarde' (no inició
+  // en 'espera' ms) o 'error', y entonces la página dibuja con Lightweight.
+  // o: lo de opcionesWidget, más { espera = 8000, estilo = true (velas o
+  // línea y color según el símbolo; Comparar maneja los suyos) }
+  const ESPERA = 8000;
+  function montar(o) {
+    return new Promise((ok, mal) => {
+      let widget = null, hecho = false;
+      const reloj = setTimeout(() => fin('tarde'), o.espera || ESPERA);
+      function fin(motivo) {
+        if (hecho) return;
+        hecho = true;
+        clearTimeout(reloj);
+        if (!motivo) { ok(widget); return; }
+        if (widget) { try { widget.remove(); } catch (e) {} }
+        mal(motivo);
+      }
+      cargarLibreria(o.libreria).then(() => {
+        if (hecho) return;
+        try { widget = new window.TradingView.widget(opcionesWidget(o)); }
+        catch (e) { fin('error'); return; }
+        listoWidget(widget).then(() => {
+          if (hecho) return;
+          if (o.estilo !== false) estiloPorSimbolo(widget, o.datafeed, o.tok);
+          widget.activeChart().onSymbolChanged().subscribe(null, () => verTodo(widget, o.datafeed));
+          verTodo(widget, o.datafeed).then(() => fin());
+        }, () => fin('error'));
+      }, motivo => fin(motivo || 'falta'));
+    });
+  }
+
+  // captura del gráfico del lado del cliente (nunca la del servidor de
+  // TradingView): un canvas para componer la imagen compartible
+  function capturaCliente(widget, tok) {
+    return widget.takeClientScreenshot({ backgroundColor: tok('bg'), borderColor: tok('line'),
+      font: "'IBM Plex Sans', system-ui, sans-serif", fontSize: 12, legendMode: 'horizontal',
+      hideResolution: true });
+  }
+
   const api = { crearDatafeed, miles, fecha, almacenLocal, formateadores, overrides,
-    opcionesWidget, alistarWidget, listoWidget, RESOLUCION, ZONA };
+    opcionesWidget, alistarWidget, listoWidget, montar, verTodo, cargarLibreria,
+    capturaCliente, colorLinea, MOVIL, RESOLUCION, ZONA };
   raiz.CarestiaTV = api;
   if (typeof module === 'object' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);
@@ -3676,6 +4060,12 @@ def t_sans() -> str:
     return re.search(r"--sans:([^;]+);", CSS_BASE).group(1)
 
 
+def indices_tv() -> str:
+    """Los 4 índices para el datafeed (código y nombre), en JSON para el JS."""
+    return _json([{"codigo": c, "nombre": d["nombre"]}
+                  for c, d in DATA["indices"].items()]).replace("</", "<\\/")
+
+
 def _ver(texto: str) -> str:
     return hashlib.sha1(texto.encode("utf-8")).hexdigest()[:10]
 
@@ -3686,7 +4076,6 @@ def generar_tradingview(app: dict, catalogo: dict) -> None:
     for archivo, texto in [(TV_JS, FEED_JS), (TV_CSS, css)]:
         with open(archivo, "w", encoding="utf-8") as fh:
             fh.write(texto)
-    indices = [{"codigo": c, "nombre": d["nombre"]} for c, d in DATA["indices"].items()]
     simbolo = "asado" if "asado" in DATA["indices"] else next(iter(DATA["indices"]))
     out = PRUEBA_HTML
     for token, valor in [
@@ -3704,7 +4093,7 @@ def generar_tradingview(app: dict, catalogo: dict) -> None:
         ("__SIMBOLO__", simbolo),
         ("__VER__", app["ver"]),
         # "</" escapado: un nombre nunca puede cerrar el <script>
-        ("__INDICES__", _json(indices).replace("</", "<\\/")),
+        ("__INDICES__", indices_tv()),
     ]:
         out = out.replace(token, valor)
     with open(TV_PRUEBA, "w", encoding="utf-8") as fh:
@@ -4453,6 +4842,10 @@ with open("graficos.html", "w", encoding="utf-8") as fh:
                           .replace("__GRUPOS__", json.dumps(GRUPO_TXT, ensure_ascii=False))
                           .replace("__NAV__", nav_sitio("indices"))
                           .replace("__PIE__", pie_sitio(graficos=True))
+                          .replace("__TV_JS__", TV_JS)
+                          .replace("__VER_TV__", _ver(FEED_JS))
+                          .replace("__TV_CSS__", TV_CSS)
+                          .replace("__VER_CSS__", _ver(tv_css()))
                           # "</" escapado: un label nunca puede cerrar el <script>
                           .replace("__DATA__", _json(APP).replace("</", "<\\/")))
 

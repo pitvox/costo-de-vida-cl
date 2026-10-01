@@ -395,6 +395,99 @@ def test_pagina_de_prueba_advanced_charts_con_respaldo(sitio):
     assert "tradingview.com/charting_library" not in h and "charting_library.esm" not in h
 
 
+# ---------- paso B: los gráficos del sitio en Advanced Charts ----------
+def _script(h):
+    """El JS inline de la página (el último <script> sin src)."""
+    return re.findall(r"<script>\n(.*?)</script>", h, re.S)[-1]
+
+
+def test_graficos_carga_los_motores_sin_bloquear(sitio):
+    h = _leer(sitio, "graficos.html")
+    cab = h[:h.index("</head>")]
+    assert re.search(r'<script defer src="/carestia-tv\.js\?v=[0-9a-f]{10}"></script>', cab)
+    # Lightweight sigue (Arma tu canasta y el respaldo), sin bloquear el pintado
+    assert ('<script defer src="https://unpkg.com/lightweight-charts@4.1.3/dist/'
+            'lightweight-charts.standalone.production.js"></script>') in cab
+    assert not re.search(r"<script src=", cab)
+    assert "charting_library" not in cab
+
+
+def test_graficos_indices_y_comparar_en_advanced_charts(sitio):
+    js = _script(_leer(sitio, "graficos.html"))
+    # la configuración común, un widget por modo, montado al estar a la vista
+    assert js.count("TV.montar(") == 1
+    assert "sitio: true" in js and "estilo: m === 'indices'" in js
+    assert "if (modo === m) montarTV(m);" in js
+    # las tabs cambian el símbolo del mismo widget; nominal es otro símbolo
+    assert "const simboloIndice = code => code + (serieNom ? '-nominal' : '');" in js
+    assert "ponerSimbolo(tv.indices.w, simboloIndice(code))" in js
+    # LÍNEA / VELAS cambia el tipo de gráfico
+    assert "const c = w.activeChart(), tipo = linea ? 2 : 1;" in js
+    # Comparar: comparación de la librería en escala porcentual, colores por puesto
+    assert "c.createStudy('Compare', false, false," in js
+    assert "{ 'plot.color': e.color, 'plot.linestyle': e.punteada ? 1 : 0, 'plot.linewidth': 2 }" in js
+    assert "escala.setMode(2)" in js
+    # Arma tu canasta sigue en Lightweight
+    assert "cchart = LightweightCharts.createChart(el," in js
+    # respaldo: el modo que no inicia dibuja con Lightweight
+    assert "if (m === 'indices') { initChart(); pintarSerie(cur); }" in js
+    assert "else { initPChart(); syncProductos(); }" in js
+
+
+def test_graficos_controles_y_captura(sitio):
+    h = _leer(sitio, "graficos.html")
+    assert ('<button class="vbtn active" id="v-real" aria-label="Pesos de hoy">'
+            '<span class="solo-ancho">PESOS DE </span>HOY</button>') in h
+    assert '<button class="vbtn" id="v-nominal">NOMINAL</button>' in h
+    assert '<button class="vbtn active" id="v-linea">LÍNEA</button>' in h
+    assert "+ nominal" not in h
+    assert '<div id="tvind" class="tvbox m-ind"></div>' in h
+    assert '<div id="tvprod" class="tvbox m-prod"></div>' in h
+    js = _script(h)
+    # la captura de Advanced Charts es la del cliente; nunca la del servidor
+    assert "TV.capturaCliente(w, tok)" in js
+    assert not re.search(r"\bw\.takeScreenshot\(", js)
+    assert "titulo += ' NOMINAL';" in js
+    tvjs = _leer(sitio, "carestia-tv.js")
+    assert "widget.takeClientScreenshot({" in tvjs
+    assert "takeScreenshot()" not in tvjs and "snapshot_url:" not in tvjs
+
+
+def test_ficha_con_advanced_charts_despues_del_primer_pantallazo(sitio):
+    h = _leer(sitio, "productos/producto-000.html")
+    cab = h[:h.index("</head>")]
+    # ningún motor de gráficos en el <head>: la cifra y el texto no esperan
+    assert not re.search(r"lightweight-charts|charting_library|carestia-tv", cab)
+    assert '<div id="grafico"><div class="nochart cargando">Cargando el gráfico...</div></div>' in h
+    js = _script(h)
+    assert "window.addEventListener('load', () => {" in js
+    assert re.search(r"cargarScript\('/carestia-tv\.js\?v=[0-9a-f]{10}'\)", js)
+    assert "TV.montar({ contenedor: el, libreria: '/charting_library/', simbolo: SLUG," in js
+    assert "sitio: true" in js
+    # su nominal, para superponer desde Comparar
+    assert "comparar: [{ symbol: SLUG + '-nominal', title: NOMBRE + ', nominal' }]" in js
+    assert "const SLUG = 'producto-000';" in js and 'const NOMBRE = "Producto 000";' in js
+    # la serie de la página alimenta el datafeed (no se vuelve a pedir)
+    assert "precargados: { ['productos/' + SLUG + '.json']: { t0: T0, v: V } }" in js
+    # respaldo: Lightweight como siempre, en hueso y con fechas es-CL
+    assert "}).then(() => { el.dataset.motor = 'advanced'; }, lightweight);" in js
+    assert "chart.addLineSeries({ color: tok('bone'), lineWidth: 2, priceLineVisible: false })" in js
+    assert "localization: { locale: 'es-CL', priceFormatter: fmt }" in js
+
+
+def test_configuracion_comun_en_una_funcion(sitio):
+    tvjs = _leer(sitio, "carestia-tv.js")
+    assert tvjs.count("function opcionesWidget(o)") == 1
+    assert "widget = new window.TradingView.widget(opcionesWidget(o));" in tvjs
+    # toda la historia al abrir y en cada cambio de símbolo
+    assert "onSymbolChanged().subscribe(null, () => verTodo(widget, o.datafeed));" in tvjs
+    assert "const MOVIL = '(max-width: 640px)';" in tvjs
+    # las tres páginas con Advanced Charts usan la misma configuración
+    for pagina in ["graficos.html", "productos/producto-000.html"]:
+        assert "TV.montar(" in _leer(sitio, pagina), pagina
+    assert "TV.opcionesWidget({" in _leer(sitio, "prueba-graficos.html")
+
+
 # ---------- atribución ----------
 def _links_tv(h):
     return re.findall(r'<a\b[^>]*href="https://www\.tradingview\.com/"[^>]*>[^<]*</a>', h)
