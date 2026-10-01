@@ -429,6 +429,12 @@ def test_graficos_indices_y_comparar_en_advanced_charts(sitio):
     assert "escala.setMode(2)" in js
     # Arma tu canasta sigue en Lightweight
     assert "cchart = LightweightCharts.createChart(el," in js
+    # la caja con su tamaño final antes de crear el widget; sin ella, al respaldo
+    montar = js[js.index("function montarTV(m)"):js.index("const simboloIndice")]
+    assert montar.index("document.body.classList.add(e.clase);") < montar.index("TV.montar(")
+    assert "document.body.classList.remove(e.clase);" in montar
+    # la librería devuelve el símbolo en mayúsculas
+    assert "const sinFuente = t => String(t || '').split(':').pop().toLowerCase();" in js
     # respaldo: el modo que no inicia dibuja con Lightweight
     assert "if (m === 'indices') { initChart(); pintarSerie(cur); }" in js
     assert "else { initPChart(); syncProductos(); }" in js
@@ -480,7 +486,15 @@ def test_configuracion_comun_en_una_funcion(sitio):
     assert tvjs.count("function opcionesWidget(o)") == 1
     assert "widget = new window.TradingView.widget(opcionesWidget(o));" in tvjs
     # toda la historia al abrir y en cada cambio de símbolo
-    assert "onSymbolChanged().subscribe(null, () => verTodo(widget, o.datafeed));" in tvjs
+    assert "onSymbolChanged().subscribe(null, () => verTodo(widget, o.datafeed, caja));" in tvjs
+    # con la caja oculta el rango espera a que vuelva a tener ancho
+    assert "if (caja && !caja.clientWidth && typeof ResizeObserver === 'function') {" in tvjs
+    # al cambiar de símbolo, el rango espera a que lleguen las barras
+    assert "return datos.then(() => feed.barras(chart.symbol())).then(b => {" in tvjs
+    assert "const op = { applyDefaultRightMargin: true, rejectByTimeout: 3000 };" in tvjs
+    assert "if (v && v.from > rango.from + 86400) return chart.setVisibleRange(rango, op);" in tvjs
+    # v32 dibuja la línea con degradé si no se pide sólida: el color del sitio
+    assert tvjs.count("'mainSeriesProperties.lineStyle.colorType': 'solid'") == 2
     assert "const MOVIL = '(max-width: 640px)';" in tvjs
     # las tres páginas con Advanced Charts usan la misma configuración
     for pagina in ["graficos.html", "productos/producto-000.html"]:
