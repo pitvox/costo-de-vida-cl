@@ -646,7 +646,8 @@ __PIE__
                productos: { estado: 'nada', caja: 'tvprod', clase: 'tv-prod', dato: 'motorProductos' } };
   const tvListo = m => tv[m].estado === 'listo';
   const usaLW = m => tv[m].estado === 'falla';
-  const sinFuente = t => String(t || '').split(':').pop();
+  // la librería devuelve el símbolo en mayúsculas y a veces con la fuente
+  const sinFuente = t => String(t || '').split(':').pop().toLowerCase();
   // en el load: carestia-tv.js y Lightweight llegan con defer
   function prepararTV() {
     TV = window.CarestiaTV || null;
@@ -670,6 +671,9 @@ __PIE__
     if (!TV || e.estado !== 'nada') return;
     e.estado = 'cargando';
     document.body.dataset[e.dato] = 'cargando';
+    // la caja a la vista y con su tamaño final desde antes de crear el
+    // widget: oculta, la librería mide cero y el rango inicial no queda
+    document.body.classList.add(e.clase);
     pintarCarga();
     const caja = document.getElementById(e.caja);
     const primero = m === 'productos' ? elegidosEnOrden()[0] || Object.keys(PRODS)[0] : null;
@@ -681,7 +685,6 @@ __PIE__
       .then(w => {
         e.w = w;
         e.estado = 'listo';
-        document.body.classList.add(e.clase);
         document.body.dataset[e.dato] = 'advanced';
         if (m === 'indices') {
           // si la persona cambia el tipo desde la barra de la librería, los
@@ -695,6 +698,7 @@ __PIE__
       }, () => {
         e.estado = 'falla';
         caja.remove();
+        document.body.classList.remove(e.clase);
         document.body.dataset[e.dato] = 'lightweight';
         if (m === 'indices') { initChart(); pintarSerie(cur); }
         else { initPChart(); syncProductos(); }
@@ -1192,7 +1196,8 @@ __PIE__
     }
     serie.setVisible(true);
     const e0 = estiloDe(primero);
-    w.applyOverrides({ 'mainSeriesProperties.lineStyle.color': e0.color,
+    w.applyOverrides({ 'mainSeriesProperties.lineStyle.colorType': 'solid',
+      'mainSeriesProperties.lineStyle.color': e0.color,
       'mainSeriesProperties.lineStyle.linestyle': e0.punteada ? 1 : 0,
       'mainSeriesProperties.lineStyle.linewidth': 2 });
     if (c.chartType() !== 2) await Promise.resolve(c.setChartType(2)).catch(() => {});
@@ -3544,6 +3549,8 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
       'scalesProperties.textColor': tok('ash'),
       'scalesProperties.lineColor': tok('line'),
       'mainSeriesProperties.style': 1,
+      // v32 dibuja la línea con degradé si no se pide un color sólido
+      'mainSeriesProperties.lineStyle.colorType': 'solid',
       'mainSeriesProperties.lineStyle.color': tok('ember'),
       'mainSeriesProperties.lineStyle.linewidth': 2,
     };
@@ -3561,7 +3568,7 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
   }
   const colorLinea = (tok, indice) => {
     const c = tok(indice ? 'ember' : 'bone');
-    return { 'mainSeriesProperties.lineStyle.color': c };
+    return { 'mainSeriesProperties.lineStyle.colorType': 'solid', 'mainSeriesProperties.lineStyle.color': c };
   };
 
   // pantallas de celular: hasta 640px, como el menú del sitio
@@ -3672,12 +3679,39 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
   const listoWidget = w => w.chartReady ? w.chartReady() : new Promise(r => w.onChartReady(r));
 
   // toda la historia de la serie a la vista
-  function verTodo(widget, feed) {
+  // con la caja oculta (display:none, otro modo a la vista) la librería mide
+  // cero y el rango no queda: se aplica cuando la caja vuelve a tener ancho
+  const esperandoAncho = new WeakSet();
+  function verTodo(widget, feed, caja) {
+    if (caja && !caja.clientWidth && typeof ResizeObserver === 'function') {
+      if (esperandoAncho.has(widget)) return Promise.resolve();
+      esperandoAncho.add(widget);
+      const ro = new ResizeObserver(() => {
+        if (!caja.clientWidth) return;
+        ro.disconnect();
+        esperandoAncho.delete(widget);
+        // la librería toma el ancho nuevo en su propio cuadro
+        setTimeout(() => verTodo(widget, feed, caja), 100);
+      });
+      ro.observe(caja);
+      return Promise.resolve();
+    }
     const chart = widget.activeChart();
-    return feed.barras(chart.symbol()).then(b => {
+    // al cambiar de símbolo el aviso llega antes que las barras (sin datos,
+    // setVisibleRange falla): primero se espera a que el gráfico los tenga
+    const datos = typeof chart.dataReady === 'function' ? Promise.resolve(chart.dataReady()) : Promise.resolve();
+    return datos.then(() => feed.barras(chart.symbol())).then(b => {
       if (!b || !b.length) return;
-      return chart.setVisibleRange({ from: b[0].time / 1000, to: b[b.length - 1].time / 1000 },
-        { applyDefaultRightMargin: true });
+      const rango = { from: b[0].time / 1000, to: b[b.length - 1].time / 1000 };
+      // la librería no garantiza que setVisibleRange termine: con plazo
+      const op = { applyDefaultRightMargin: true, rejectByTimeout: 3000 };
+      return Promise.resolve(chart.setVisibleRange(rango, op)).then(() => {
+        // la historia más antigua llega mientras se aplica el rango y, con
+        // semanas sin dato, puede quedar corto por la izquierda: una vez
+        // más, ya con todo cargado
+        const v = typeof chart.getVisibleRange === 'function' ? chart.getVisibleRange() : null;
+        if (v && v.from > rango.from + 86400) return chart.setVisibleRange(rango, op);
+      });
     }).catch(() => {});
   }
 
@@ -3725,8 +3759,11 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
         listoWidget(widget).then(() => {
           if (hecho) return;
           if (o.estilo !== false) estiloPorSimbolo(widget, o.datafeed, o.tok);
-          widget.activeChart().onSymbolChanged().subscribe(null, () => verTodo(widget, o.datafeed));
-          verTodo(widget, o.datafeed).then(() => fin());
+          const caja = typeof o.contenedor === 'string' ? document.getElementById(o.contenedor) : o.contenedor;
+          widget.activeChart().onSymbolChanged().subscribe(null, () => verTodo(widget, o.datafeed, caja));
+          // el rango no frena el arranque: el widget ya inició
+          verTodo(widget, o.datafeed, caja);
+          fin();
         }, () => fin('error'));
       }, motivo => fin(motivo || 'falta'));
     });
