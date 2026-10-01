@@ -75,12 +75,30 @@ def test_workflow_clona_la_libreria_despues_del_checkout():
     assert "git ls-remote --tags --refs" in paso
     assert r"grep -E '^v?[0-9]+(\.[0-9]+)*$' | sort -V | tail -n 1" in paso
     assert 'git clone --quiet --depth 1 --branch "$tag"' in paso
-    # fuera del árbol del repo; a public/ va solo charting_library/
+    # fuera del árbol del repo; a public/ (ruta absoluta) va solo charting_library/
     assert 'DEST="$RUNNER_TEMP/tv"' in paso
+    assert 'PUBLIC="$GITHUB_WORKSPACE/public"' in paso
     assert re.findall(r"cp -r (\S+) (\S+)", paso) == \
-        [('"$DEST/charting_library"', "public/charting_library")]
+        [('"$DEST/charting_library"', '"$PUBLIC/charting_library"')]
     # el token nunca en la URL
     assert "x-access-token:%s" in paso and "@github.com" not in paso
+
+
+def test_workflow_manda_un_solo_encabezado_de_autorizacion():
+    """Si git lee la configuración del checkout, al encabezado del
+    TV_LIBRARY_TOKEN se suma el del GITHUB_TOKEN y GitHub responde 400
+    ("Duplicate header: Authorization"). El checkout no persiste credenciales
+    y git corre desde RUNNER_TEMP, fuera del árbol."""
+    wf = _wf()
+    assert re.search(r"uses: actions/checkout@\S+\n\s+with:\n\s+persist-credentials: false\n",
+                     _paso(wf, "Clonar repo"))
+    paso = _paso(wf, "Librería TradingView")
+    cd = paso.index('cd "$RUNNER_TEMP"')
+    assert cd < paso.index("git ls-remote") and cd < paso.index("git clone")
+    assert "GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null" in paso
+    # nada relativo al checkout después del cd
+    assert not re.search(r"(?<![$/\w])public/", paso[cd:].replace(
+        'echo "Librería TradingView $tag en public/charting_library/"', ""))
 
 
 def test_workflow_sigue_sin_la_libreria_y_avisa_despues_del_deploy():
@@ -89,7 +107,7 @@ def test_workflow_sigue_sin_la_libreria_y_avisa_despues_del_deploy():
     assert "set -e" not in paso and "continue-on-error" not in paso
     falla = re.search(r"fallar\(\) \{(.*?)\n          \}", paso, re.S).group(1)
     assert 'echo "libreria=falla" >> "$GITHUB_OUTPUT"' in falla
-    assert "rm -rf" in falla and "public/charting_library" in falla
+    assert 'rm -rf "$DEST" "$PUBLIC/charting_library"' in falla
     assert "exit 0" in falla
     assert "libreria: ${{ steps.tv.outputs.libreria }}" in wf
     aviso = wf[wf.index("\n  aviso-libreria:"):]
@@ -105,6 +123,16 @@ def test_workflow_publica_la_pagina_de_prueba_y_el_datafeed():
         assert f"cp {archivo} public/{archivo}" in generar
     # nunca se commitea nada desde el workflow
     assert not re.search(r"git (add|commit|push)", _wf())
+
+
+def test_workflows_con_runner_fijo():
+    """ubuntu-latest cambia de imagen sin aviso en el repo; cada job fija la suya."""
+    carpeta = os.path.join(RAIZ, ".github", "workflows")
+    for nombre in sorted(os.listdir(carpeta)):
+        with open(os.path.join(carpeta, nombre), encoding="utf-8") as fh:
+            wf = fh.read()
+        runners = re.findall(r"runs-on: (\S+)", wf)
+        assert runners and set(runners) == {"ubuntu-24.04"}, (nombre, runners)
 
 
 # ---------- la librería nunca entra al repo ----------

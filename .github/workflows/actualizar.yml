@@ -18,20 +18,28 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       libreria: ${{ steps.tv.outputs.libreria }}
     steps:
+      # Sin credenciales persistidas: checkout dejaría en .git/config un
+      # includeIf con el GITHUB_TOKEN como http.extraheader, y git lo sumaría
+      # al encabezado de TV_LIBRARY_TOKEN (GitHub responde 400 por
+      # "Duplicate header: Authorization"). Nada del build usa git después.
       - name: Clonar repo
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       # Licencia TradingView: la librería Advanced Charts vive solo en el sitio
       # publicado, nunca en este repo. Se clona del repo privado fuera del árbol
       # (RUNNER_TEMP), en la última versión estable (el tag vX.Y.Z más alto, o
       # el que fije la variable TV_LIBRARY_TAG del repo), y se copia solo
-      # charting_library/ a public/charting_library/. Si algo falla, el build
-      # sigue sin ella (las páginas dibujan con Lightweight Charts) y el job
-      # aviso-libreria falla después del deploy para que llegue el correo.
+      # charting_library/ a public/charting_library/. git corre desde
+      # RUNNER_TEMP, fuera del checkout, para no leer su .git/config; por eso
+      # public/ va con ruta absoluta. Si algo falla, el build sigue sin ella
+      # (las páginas dibujan con Lightweight Charts) y el job aviso-libreria
+      # falla después del deploy para que llegue el correo.
       - name: Librería TradingView
         id: tv
         shell: bash
@@ -41,15 +49,18 @@ jobs:
         run: |
           set -uo pipefail
           DEST="$RUNNER_TEMP/tv"
+          PUBLIC="$GITHUB_WORKSPACE/public"
           fallar() {
             echo "::warning::No se pudo descargar la librería de TradingView: $1"
             echo "libreria=falla" >> "$GITHUB_OUTPUT"
-            rm -rf "$DEST" public/charting_library
+            rm -rf "$DEST" "$PUBLIC/charting_library"
             exit 0
           }
+          cd "$RUNNER_TEMP" || fallar "no se pudo entrar a RUNNER_TEMP"
           [ -n "$TV_LIBRARY_TOKEN" ] || fallar "falta el secreto TV_LIBRARY_TOKEN"
           # el token va en un encabezado (nunca en la URL ni en los argumentos)
-          # y git no lee otra configuración: ni la global ni la del checkout
+          # y git no lee otra configuración: ni la del sistema ni la global, y
+          # la del checkout tampoco, porque git corre fuera de él
           auth=$(printf 'x-access-token:%s' "$TV_LIBRARY_TOKEN" | base64 -w0)
           echo "::add-mask::$auth"
           export GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null GIT_TERMINAL_PROMPT=0
@@ -68,8 +79,8 @@ jobs:
             || fallar "no se pudo clonar el tag $tag"
           [ -f "$DEST/charting_library/charting_library.standalone.js" ] \
             || fallar "el tag $tag no trae charting_library/charting_library.standalone.js"
-          mkdir -p public
-          cp -r "$DEST/charting_library" public/charting_library \
+          mkdir -p "$PUBLIC"
+          cp -r "$DEST/charting_library" "$PUBLIC/charting_library" \
             || fallar "no se pudo copiar charting_library/"
           rm -rf "$DEST"
           echo "libreria=ok" >> "$GITHUB_OUTPUT"
@@ -128,7 +139,7 @@ jobs:
 
   deploy:
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -142,7 +153,7 @@ jobs:
   aviso-libreria:
     needs: [build, deploy]
     if: ${{ !cancelled() && needs.build.outputs.libreria == 'falla' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Avisar que falta la librería
