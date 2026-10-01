@@ -50,6 +50,7 @@ jobs:
           python build_site.py
           mkdir -p public
           cp index.html public/index.html
+          cp graficos.html public/graficos.html
           cp indices.json public/indices.json
           cp resumen.json public/resumen.json
           cp og.png public/og.png
