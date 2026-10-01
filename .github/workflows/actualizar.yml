@@ -49,9 +49,14 @@ jobs:
           }
           [ -n "$TV_LIBRARY_TOKEN" ] || fallar "falta el secreto TV_LIBRARY_TOKEN"
           # el token va en un encabezado (nunca en la URL ni en los argumentos)
-          # y git no lee otra configuración: ni la global ni la del checkout
+          # y git no lee más configuración que esa: corre en RUNNER_TEMP, fuera
+          # del repo y sin buscar uno más arriba (dentro del repo, la
+          # configuración local que deja el checkout suma su propio
+          # Authorization y GitHub responde 400, "Duplicate header"), y sin la
+          # configuración global ni la del sistema
           auth=$(printf 'x-access-token:%s' "$TV_LIBRARY_TOKEN" | base64 -w0)
           echo "::add-mask::$auth"
+          export GIT_CEILING_DIRECTORIES="$(dirname "$RUNNER_TEMP")"
           export GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null GIT_TERMINAL_PROMPT=0
           export GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_0=http.https://github.com/.extraheader
           export GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $auth"
@@ -59,12 +64,13 @@ jobs:
           REPO=https://github.com/tradingview/charting_library.git
           tag="$TV_LIBRARY_TAG"
           if [ -z "$tag" ]; then
-            refs=$(git ls-remote --tags --refs "$REPO") || fallar "no se pudieron leer los tags del repo"
+            refs=$(git -C "$RUNNER_TEMP" ls-remote --tags --refs "$REPO") \
+              || fallar "no se pudieron leer los tags del repo"
             tag=$(printf '%s\n' "$refs" | sed 's#.*refs/tags/##' \
                   | grep -E '^v?[0-9]+(\.[0-9]+)*$' | sort -V | tail -n 1)
             [ -n "$tag" ] || fallar "el repo no tiene tags de versión estable"
           fi
-          git clone --quiet --depth 1 --branch "$tag" "$REPO" "$DEST" \
+          git -C "$RUNNER_TEMP" clone --quiet --depth 1 --branch "$tag" "$REPO" "$DEST" \
             || fallar "no se pudo clonar el tag $tag"
           [ -f "$DEST/charting_library/charting_library.standalone.js" ] \
             || fallar "el tag $tag no trae charting_library/charting_library.standalone.js"
