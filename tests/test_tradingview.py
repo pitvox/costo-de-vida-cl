@@ -10,12 +10,18 @@ Lightweight Charts), la atribución a TradingView en el pie de las páginas con
 gráficos, los textos del dueño y el datafeed (tests/feed_node.js, si hay
 Node). Con CARESTIA_INDICES_REAL=ruta/a/indices.json, el datafeed se prueba
 además con los datos reales (curl -O https://carestia.cl/indices.json)."""
+import base64
+import http.server
 import json
 import os
 import re
 import shutil
+import socket
 import subprocess
 import sys
+import textwrap
+import threading
+import time
 
 import pytest
 
@@ -76,7 +82,10 @@ def test_workflow_clona_la_libreria_despues_del_checkout():
     assert fijo and re.fullmatch(r"v?[0-9]+(\.[0-9]+)*", fijo.group(1)), paso
     assert 'tag="$TV_LIBRARY_TAG"' in paso
     assert "git ls-remote --tags --refs" in paso
-    assert r"grep -E '^v?[0-9]+(\.[0-9]+)*$' | sort -V | tail -n 1" in paso
+    assert r"sed -nE 's#.*refs/tags/(v?)([0-9]+(\.[0-9]+)*)$#\2 \1\2#p'" in paso
+    assert "| sort -V | tail -n 1 | cut -d' ' -f2)" in paso
+    # si GitHub no responde, git corta al minuto
+    assert "export GIT_HTTP_LOW_SPEED_LIMIT=1000 GIT_HTTP_LOW_SPEED_TIME=60" in paso
     assert 'git clone --quiet --depth 1 --branch "$tag"' in paso
     # fuera del árbol del repo; a public/ (ruta absoluta) va solo charting_library/
     assert 'DEST="$RUNNER_TEMP/tv"' in paso
@@ -118,6 +127,182 @@ def test_workflow_sigue_sin_la_libreria_y_avisa_despues_del_deploy():
     assert "if: ${{ !cancelled() && needs.build.outputs.libreria == 'falla' }}" in aviso
     assert 'echo "::error::No se pudo descargar la librería de TradingView"' in aviso
     assert aviso.rstrip().endswith("exit 1")
+
+
+# ---------- el paso, corriendo de verdad ----------
+# Actions corre un paso con "shell: bash" así: con -e, además del
+# "set -uo pipefail" del script. El paso tiene que terminar siempre en 0.
+SHELL_ACTIONS = ["bash", "--noprofile", "--norc", "-e", "-o", "pipefail", "-c"]
+TOKEN = "tok-123"
+
+
+class _ServidorGit(http.server.BaseHTTPRequestHandler):
+    """git smart-HTTP (git http-backend) que, como GitHub, responde 400 ante
+    dos Authorization y 401 si falta o no es el del token."""
+    raiz = esperado = None
+    pedidos = []
+
+    def _servir(self):
+        auths = self.headers.get_all("Authorization") or []
+        self.pedidos.append(auths)
+        if auths != [self.esperado]:
+            self.send_response(400 if len(auths) > 1 else 401)
+            self.send_header("WWW-Authenticate", 'Basic realm="git"')
+            self.end_headers()
+            return
+        ruta, _, qs = self.path.partition("?")
+        cuerpo = self.rfile.read(int(self.headers.get("Content-Length") or 0))
+        env = dict(os.environ, GIT_PROJECT_ROOT=self.raiz, GIT_HTTP_EXPORT_ALL="1",
+                   PATH_INFO=ruta, QUERY_STRING=qs, REQUEST_METHOD=self.command,
+                   CONTENT_TYPE=self.headers.get("Content-Type", ""),
+                   CONTENT_LENGTH=str(len(cuerpo)), REMOTE_ADDR="127.0.0.1")
+        out = subprocess.run(["git", "http-backend"], input=cuerpo, env=env,
+                             capture_output=True).stdout
+        cab, _, resto = out.partition(b"\r\n\r\n")
+        estado, campos = 200, []
+        for linea in cab.decode().split("\r\n"):
+            k, _, v = linea.partition(":")
+            if k.lower() == "status":
+                estado = int(v.split()[0])
+            elif k:
+                campos.append((k, v.strip()))
+        self.send_response(estado)
+        for k, v in campos:
+            self.send_header(k, v)
+        self.send_header("Content-Length", str(len(resto)))
+        self.end_headers()
+        self.wfile.write(resto)
+
+    do_GET = do_POST = _servir
+
+    def log_message(self, *a):
+        pass
+
+
+def _script_del_paso(base, cambios=()):
+    m = re.search(r"\n      - name: Librería TradingView\n.*?run: \|\n(.*?)(?=\n      - name: )",
+                  _wf(), re.S)
+    assert m, "no está el paso Librería TradingView"
+    script = textwrap.dedent(m.group(1)).replace("https://github.com/", base)
+    for viejo, nuevo in cambios:
+        assert viejo in script, viejo
+        script = script.replace(viejo, nuevo)
+    return script
+
+
+def _correr(tmp_path, script, token, tag):
+    """Corre el paso con el entorno de Actions: el workspace es un repo git
+    (con el encabezado que dejaría un checkout con credenciales) y git debe
+    trabajar desde RUNNER_TEMP. Devuelve (log, $GITHUB_OUTPUT, workspace)."""
+    temp = tmp_path / "work" / "_temp"
+    ws = tmp_path / "work" / "repo" / "repo"
+    temp.mkdir(parents=True)
+    ws.mkdir(parents=True)
+    salida = temp / "github_output"
+    env = {"PATH": os.environ["PATH"], "HOME": str(tmp_path), "RUNNER_TEMP": str(temp),
+           "GITHUB_WORKSPACE": str(ws), "GITHUB_OUTPUT": str(salida),
+           "GITHUB_STEP_SUMMARY": str(temp / "resumen"), "TV_LIBRARY_TOKEN": token,
+           "TV_LIBRARY_TAG": tag}
+    r = subprocess.run([*SHELL_ACTIONS, script], cwd=ws, env=env, capture_output=True,
+                       text=True, timeout=120)
+    # el paso nunca corta el build: siempre 0, con ok o falla
+    assert r.returncode == 0, r.stdout + r.stderr
+    return r.stdout + r.stderr, salida.read_text(), ws
+
+
+def _paso_libreria(tmp_path, token=TOKEN, tag="", tags=("9.0", "v31.2.0", "v32.2.0", "v32.3.0-beta")):
+    """El paso tal cual contra un repo git local con 'tags' (cada uno con su
+    charting_library.standalone.js) que solo acepta TOKEN. Devuelve
+    (log, $GITHUB_OUTPUT, workspace, Authorization de cada pedido)."""
+    if not shutil.which("git"):
+        pytest.skip("sin git")
+    # el git que arma el repo no lee la config de quien corre los tests
+    env_git = dict(os.environ, HOME=str(tmp_path), GIT_CONFIG_GLOBAL=os.devnull,
+                   GIT_CONFIG_NOSYSTEM="1")
+
+    def git(*a):
+        r = subprocess.run(["git", *a], capture_output=True, text=True, env=env_git)
+        assert r.returncode == 0, (a, r.stderr)
+    src = tmp_path / "src"
+    (src / "charting_library" / "bundles").mkdir(parents=True)
+    (src / "datafeeds").mkdir()
+    (src / "datafeeds" / "udf.js").write_text("x")
+    (src / "index.html").write_text("x")
+    (src / "charting_library" / "bundles" / "a.js").write_text("x")
+    git("init", "-q", str(src))
+    for version in tags:
+        (src / "charting_library" / "charting_library.standalone.js").write_text(f"// {version}")
+        git("-C", str(src), "add", "-A")
+        git("-C", str(src), "-c", "user.email=t@t", "-c", "user.name=t",
+            "commit", "-q", "--allow-empty", "-m", version)
+        git("-C", str(src), "tag", version)
+    raiz = tmp_path / "srv"
+    git("clone", "-q", "--bare", str(src), str(raiz / "tradingview" / "charting_library.git"))
+    esperado = "basic " + base64.b64encode(f"x-access-token:{TOKEN}".encode()).decode()
+    manejador = type("H", (_ServidorGit,), {"raiz": str(raiz), "esperado": esperado, "pedidos": []})
+    with http.server.ThreadingHTTPServer(("127.0.0.1", 0), manejador) as srv:
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        try:
+            base = f"http://127.0.0.1:{srv.server_address[1]}/"
+            log, out, ws = _correr(tmp_path, _script_del_paso(base), token, tag)
+        finally:
+            srv.shutdown()
+    return log, out, ws, manejador.pedidos
+
+
+def _publicados(ws):
+    return sorted(str(p.relative_to(ws)) for p in (ws / "public").rglob("*") if p.is_file())
+
+
+def test_paso_libreria_descarga_la_version_estable_mas_alta(tmp_path):
+    log, out, ws, pedidos = _paso_libreria(tmp_path)
+    assert out == "libreria=ok\n", log
+    assert "Librería TradingView v32.2.0 en public/charting_library/" in log
+    assert pedidos and all(len(a) == 1 for a in pedidos), pedidos
+    # a public/ va solo charting_library/ (ni datafeeds/ ni los html de ejemplo)
+    assert _publicados(ws) == ["public/charting_library/bundles/a.js",
+                               "public/charting_library/charting_library.standalone.js"]
+    assert sorted(os.listdir(tmp_path / "work" / "_temp")) == ["github_output", "resumen"]
+    # con y sin v se compara el número: 33.0.0 le gana a v32.10.0
+    log, out, ws, _ = _paso_libreria(tmp_path / "mezcla",
+                                     tags=("v32.2.0", "33.0.0", "v32.10.0", "v34.0.0-rc1"))
+    assert out == "libreria=ok\n", log
+    assert (ws / "public/charting_library/charting_library.standalone.js").read_text() == "// 33.0.0"
+
+
+def test_paso_libreria_tag_fijo(tmp_path):
+    log, out, ws, _ = _paso_libreria(tmp_path, tag="v31.2.0")
+    assert out == "libreria=ok\n", log
+    assert (ws / "public/charting_library/charting_library.standalone.js").read_text() == "// v31.2.0"
+
+
+@pytest.mark.parametrize("caso, kw, motivo", [
+    ("sin-token", {"token": ""}, "falta el secreto TV_LIBRARY_TOKEN"),
+    ("token-malo", {"token": "otro"}, "no se pudieron leer los tags del repo"),
+    ("solo-betas", {"tags": ("v32.3.0-beta", "v33.0.0-rc1")}, "el repo no tiene tags de versión estable"),
+    ("sin-tags", {"tags": ()}, "el repo no tiene tags de versión estable"),
+    ("tag-inexistente", {"tag": "v99.0.0"}, "no se pudo clonar el tag v99.0.0"),
+])
+def test_paso_libreria_falla_sin_cortar_el_build(tmp_path, caso, kw, motivo):
+    log, out, ws, _ = _paso_libreria(tmp_path, **kw)
+    assert out == "libreria=falla\n" and motivo in log, log
+    assert not (ws / "public" / "charting_library").exists()
+
+
+def test_paso_libreria_corta_si_github_no_responde(tmp_path):
+    """Un servidor que acepta la conexión y nunca contesta: git corta por el
+    límite de velocidad (en el workflow, 60 s; aquí 2 s) y el paso avisa."""
+    if not shutil.which("git"):
+        pytest.skip("sin git")
+    with socket.socket() as mudo:
+        mudo.bind(("127.0.0.1", 0))
+        mudo.listen(8)
+        base = f"http://127.0.0.1:{mudo.getsockname()[1]}/"
+        script = _script_del_paso(base, [("GIT_HTTP_LOW_SPEED_TIME=60", "GIT_HTTP_LOW_SPEED_TIME=2")])
+        t0 = time.monotonic()
+        log, out, ws = _correr(tmp_path, script, TOKEN, "")
+    assert time.monotonic() - t0 < 60
+    assert out == "libreria=falla\n" and "no se pudieron leer los tags del repo" in log, log
 
 
 def test_workflow_publica_la_pagina_de_prueba_y_el_datafeed():
