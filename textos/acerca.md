@@ -12,4 +12,6 @@ Los datos vienen de fuentes públicas, ODEPA y el Banco Central de Chile, y se a
 
 Carestía es un proyecto de Carestía SpA, fundada en 2026 por Pedro Larraín.
 
+Los gráficos usan la librería Advanced Charts de [TradingView](https://www.tradingview.com/).
+
 Contacto: pedro@carestia.cl

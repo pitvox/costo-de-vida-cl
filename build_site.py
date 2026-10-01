@@ -33,6 +33,11 @@ También escribe una ficha por producto (productos/{slug}.html), el listado
 los textos literales de textos/), robots.txt, sitemap.xml y resumen.json.
 Todas las páginas comparten la navegación del encabezado y el pie.
 
+TradingView Advanced Charts (paso A): carestia-tv.js (el datafeed sobre
+datos/), carestia-tv.css (el tema para el iframe de la librería) y la página
+oculta /prueba-graficos.html. La librería no está en este repo: el workflow
+la descarga al publicar (ver generar_tradingview).
+
 Correr:
   python indices.py
   python build_site.py
@@ -1991,8 +1996,11 @@ __PIE__
 </html>
 """
 
+# la librería de TradingView se publica en /charting_library/ (la inyecta el
+# workflow al publicar) y no tiene nada que indexar
 ROBOTS = """User-agent: *
 Allow: /
+Disallow: /charting_library/
 
 Sitemap: https://carestia.cl/sitemap.xml
 """
@@ -2262,10 +2270,12 @@ def nav_sitio(actual: str = "", exacto: bool = True) -> str:
             f'    </nav>')
 
 
-def pie_sitio(actual: str = "") -> str:
+def pie_sitio(actual: str = "", graficos: bool = False) -> str:
     """Pie común: links institucionales y legales, atribución ODEPA CC-BY,
     deslinde, razón social y el aviso de atribución de Lightweight Charts
-    tal cual su NOTICE, con link directo a tradingview.com (sin rel)."""
+    tal cual su NOTICE, con link directo a tradingview.com (sin rel). En las
+    páginas con gráficos ('graficos'), además la atribución de Advanced
+    Charts: "Gráficos de TradingView", también con link sin rel."""
     items = []
     for clave, texto, href in PIE_LINKS:
         cur = ' aria-current="page"' if clave == actual else ""
@@ -2281,6 +2291,8 @@ def pie_sitio(actual: str = "") -> str:
             f'    <p class="pie-legal">© 2026 Carestía SpA, '
             f'<span class="nw">RUT 78.521.796-9</span>. '
             f'Contacto: <a href="mailto:pedro@carestia.cl">pedro@carestia.cl</a></p>\n'
+            + (f'    <p class="pie-tv"><a href="https://www.tradingview.com/">'
+               f'Gráficos de TradingView</a></p>\n' if graficos else '') +
             f'    <p class="pie-tv"><a href="https://www.tradingview.com/">'
             f'TradingView Lightweight Charts™. Copyright (c) 2023 TradingView, Inc.'
             f'</a></p>\n'
@@ -2809,7 +2821,7 @@ def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
         ("__CSS_BASE__", CSS_BASE),
         ("__CSS_SITIO__", CSS_SITIO),
         ("__NAV__", nav_sitio("productos", exacto=False)),
-        ("__PIE__", pie_sitio()),
+        ("__PIE__", pie_sitio(graficos=True)),
     ]:
         out = out.replace(token, valor)
     return out
@@ -2859,6 +2871,844 @@ def generar_productos(slugs: dict) -> None:
         with open(os.path.join("productos", f"{slug}.html"), "w",
                   encoding="utf-8") as fh:
             fh.write(pagina_producto(key, prods[key], slug, otros, semana))
+
+
+# ---------------- Advanced Charts (TradingView) ----------------
+# La librería no vive en este repo (licencia): el workflow la clona del repo
+# privado al publicar y la deja en /charting_library/. Aquí va lo propio:
+#   carestia-tv.js         el datafeed (API de datafeed de la librería) sobre
+#                          los archivos de datos/, más el guardado en el
+#                          navegador y los formatos de precio y fecha
+#   carestia-tv.css        el tema del sitio para el iframe de la librería
+#   prueba-graficos.html   página oculta de prueba (noindex, fuera del menú y
+#                          del sitemap); si la librería no está o no inicia en
+#                          8 segundos, dibuja con Lightweight Charts
+# Símbolos: los 4 índices y los productos del catálogo, cada uno en pesos de
+# hoy y su versión nominal ("{slug}-nominal"); el ticker es el slug (el código
+# del índice o el de la ficha del producto). Semanales (1W), en CLP sin
+# decimales y en America/Santiago.
+TV_JS = "carestia-tv.js"
+TV_CSS = "carestia-tv.css"
+TV_PRUEBA = "prueba-graficos.html"
+FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de datos/.
+   Lo genera build_site.py; lo usan las páginas con gráficos. */
+(function (raiz) {
+  'use strict';
+
+  const RESOLUCION = '1W';
+  const ZONA = 'America/Santiago';
+  const FUENTE = 'Carestía';
+  const SEMANA = 7 * 864e5;
+  const UNIDAD = { kg: 'kilo', un: 'unidad', l: 'litro' };
+  const TIPO = { indice: 'index', producto: 'commodity' };
+  const SUFIJO_NOMINAL = '-nominal';
+
+  const sinTildes = s => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+  // precios en pesos, sin decimales y con punto de miles: 26467 -> "26.467"
+  function miles(x) {
+    const r = Math.round(x);
+    return (r < 0 ? '-' : '') + String(Math.abs(r)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  }
+  // fechas dd-mm-aaaa; las barras semanales llegan a las 00:00 UTC del lunes
+  function fecha(d) {
+    const dos = n => String(n).padStart(2, '0');
+    return dos(d.getUTCDate()) + '-' + dos(d.getUTCMonth() + 1) + '-' + d.getUTCFullYear();
+  }
+
+  // series compactas de datos/ (t0, el lunes de la primera semana, y un valor
+  // por semana consecutiva, null donde no hubo dato) a barras de la librería:
+  // time en milisegundos UTC del lunes, como pide la API para barras semanales
+  const tiempos = t0 => {
+    const base = Date.parse(t0 + 'T00:00:00Z');
+    return i => base + i * SEMANA;
+  };
+  const mesDe = ms => new Date(ms).toISOString().slice(0, 7);
+
+  // índice en pesos de hoy: las velas de indices.py (apertura = cierre
+  // anterior, mecha = mínimo y máximo entre puntos de venta, cierre = promedio)
+  function barrasIndice(s) {
+    const t = tiempos(s.t0), out = [];
+    s.real.forEach((c, i) => {
+      if (c == null) return;
+      const v = s.velas && s.velas[i];
+      if (v) out.push({ time: t(i), open: v[0], high: v[1], low: v[2], close: v[3] });
+      else {
+        const o = out.length ? out[out.length - 1].close : c;
+        out.push({ time: t(i), open: o, high: Math.max(o, c), low: Math.min(o, c), close: c });
+      }
+    });
+    return out;
+  }
+  // índice nominal: la misma vela en pesos de cada semana. El cierre es el
+  // nominal publicado y la apertura el cierre nominal anterior; la mecha se
+  // lleva a pesos de esa semana con el mismo factor del IPC que usó
+  // indices.py (nominal / real de la semana)
+  function barrasIndiceNominal(s) {
+    const t = tiempos(s.t0), out = [];
+    s.nominal.forEach((c, i) => {
+      if (c == null) return;
+      const o = out.length ? out[out.length - 1].close : c;
+      const v = s.velas && s.velas[i], r = s.real[i];
+      const k = v && r ? c / r : null;
+      out.push({ time: t(i), open: o, close: c,
+        high: Math.max(o, c, k ? Math.round(v[1] * k) : c),
+        low: Math.min(o, c, k ? Math.round(v[2] * k) : c) });
+    });
+    return out;
+  }
+  // producto: una línea (apertura, máximo y mínimo iguales al cierre)
+  function barrasProducto(p, factor) {
+    const t = tiempos(p.t0), out = [];
+    p.v.forEach((x, i) => {
+      if (x == null) return;
+      const ms = t(i);
+      let c = x;
+      if (factor) {
+        const f = factor.get(mesDe(ms));
+        if (f == null) return;   // mes sin factor: esa semana no tiene nominal
+        c = Math.round(x * f);
+      }
+      out.push({ time: ms, open: c, high: c, low: c, close: c });
+    });
+    return out;
+  }
+  // factor de pesos de hoy a pesos de cada mes: indices.py deflacta con el IPC
+  // del mes (el mismo para índices y productos), así que el cociente entre el
+  // nominal y el real publicados de los índices lo devuelve. Se suman los
+  // cuatro índices de cada mes para que el redondeo a pesos no pese
+  function factorMensual(series) {
+    const nom = new Map(), real = new Map();
+    series.forEach(s => {
+      const t = tiempos(s.t0);
+      s.real.forEach((r, i) => {
+        const n = s.nominal[i];
+        if (r == null || n == null) return;
+        const m = mesDe(t(i));
+        nom.set(m, (nom.get(m) || 0) + n);
+        real.set(m, (real.get(m) || 0) + r);
+      });
+    });
+    const out = new Map();
+    real.forEach((r, m) => { if (r) out.set(m, nom.get(m) / r); });
+    return out;
+  }
+
+  // opciones: { base: '/datos/', ver, indices: [{ codigo, nombre }], pedir }
+  // 'pedir(ruta)' devuelve una promesa con el JSON de datos/{ruta}; por
+  // defecto, fetch con la versión del build en la URL
+  function crearDatafeed(opciones) {
+    const base = opciones.base || '/datos/';
+    const ver = opciones.ver ? '?v=' + encodeURIComponent(opciones.ver) : '';
+    const pedir = opciones.pedir || (ruta => fetch(base + ruta + ver).then(r => {
+      if (!r.ok) throw new Error(ruta + ': ' + r.status);
+      return r.json();
+    }));
+    const memo = new Map();
+    const una = (clave, f) => {
+      if (!memo.has(clave)) {
+        const p = f();
+        p.catch(() => memo.delete(clave));   // un pedido fallido se puede repetir
+        memo.set(clave, p);
+      }
+      return memo.get(clave);
+    };
+    const indices = opciones.indices || [];
+
+    // símbolos: cada serie en pesos de hoy y su versión nominal. El ticker es
+    // el slug (el código del índice o el de la ficha del producto), sin
+    // paréntesis ni dos puntos
+    const simbolos = new Map();
+    function agregar(s) {
+      [false, true].forEach(nominal => {
+        const ticker = s.ticker + (nominal ? SUFIJO_NOMINAL : '');
+        if (simbolos.has(ticker)) return;   // nunca dos símbolos con un ticker
+        const desc = s.nombre + (nominal ? ', nominal' : ', en pesos de hoy');
+        simbolos.set(ticker, Object.assign({}, s, { ticker, nominal, desc,
+          buscar: sinTildes(ticker + ' ' + desc + ' ' + s.nombre) }));
+      });
+    }
+    indices.forEach(d => agregar({ ticker: d.codigo, clase: 'indice', nombre: d.nombre,
+      ruta: 'indices/' + d.codigo + '.json' }));
+    const listo = pedir('catalogo.json').then(cat => {
+      (cat.productos || []).forEach(p => agregar({ ticker: p.slug, clase: 'producto',
+        nombre: p.nombre + ' por ' + (UNIDAD[p.unidad] || p.unidad), grupo: p.grupo,
+        ruta: 'productos/' + p.slug + '.json' }));
+    }).catch(() => {});   // sin catálogo quedan los índices
+
+    const simbolo = nombre => {
+      // por si llega con prefijo de fuente ("Carestía:asado") o en mayúsculas
+      const t = String(nombre || '').split(':').pop().trim().toLowerCase();
+      return listo.then(() => simbolos.get(t) || null);
+    };
+    const factor = () => una('factor', () =>
+      Promise.all(indices.map(d => pedir('indices/' + d.codigo + '.json')))
+        .then(js => factorMensual(js.map(j => j.serie))));
+    // las barras de un símbolo, completas y en orden; null si no existe
+    function barras(nombre) {
+      return simbolo(nombre).then(s => {
+        if (!s) return null;
+        return una('b:' + s.ticker, () => pedir(s.ruta).then(j => {
+          if (s.clase === 'indice') return s.nominal ? barrasIndiceNominal(j.serie) : barrasIndice(j.serie);
+          return s.nominal ? factor().then(f => barrasProducto(j, f)) : barrasProducto(j, null);
+        }));
+      });
+    }
+
+    function info(s) {
+      return {
+        name: s.ticker,
+        ticker: s.ticker,
+        description: s.desc,
+        type: TIPO[s.clase],
+        session: '24x7',
+        timezone: ZONA,
+        exchange: FUENTE,
+        listed_exchange: FUENTE,
+        format: 'price',
+        minmov: 1,
+        pricescale: 1,                    // pesos sin decimales
+        has_intraday: false,
+        has_daily: false,
+        has_weekly_and_monthly: true,     // las semanas vienen hechas
+        weekly_multipliers: ['1'],
+        supported_resolutions: [RESOLUCION],
+        // los índices traen velas; los productos, solo el cierre
+        visible_plots_set: s.clase === 'indice' ? 'ohlc' : 'c',
+        data_status: 'endofday',
+        currency_code: 'CLP',
+        volume_precision: 0,
+      };
+    }
+
+    // la API pide todos los callbacks en otra macrotarea
+    const despues = f => setTimeout(f, 0);
+    return {
+      onReady(cb) {
+        listo.then(() => despues(() => cb({
+          supported_resolutions: [RESOLUCION],
+          exchanges: [],
+          symbols_types: [
+            { name: 'Todos', value: '' },
+            { name: 'Índices', value: TIPO.indice },
+            { name: 'Productos', value: TIPO.producto },
+          ],
+          supports_marks: false,
+          supports_timescale_marks: false,
+          supports_time: false,
+        })));
+      },
+      // búsqueda solo entre los símbolos de Carestía: todas las palabras
+      // escritas, sin tildes ni mayúsculas, en el ticker o el nombre
+      searchSymbols(texto, _fuente, tipo, cb) {
+        listo.then(() => {
+          const palabras = sinTildes(texto || '').split(/\s+/).filter(Boolean);
+          const out = [];
+          simbolos.forEach(s => {
+            if (tipo && TIPO[s.clase] !== tipo) return;
+            if (!palabras.every(w => s.buscar.indexOf(w) !== -1)) return;
+            out.push({ symbol: s.ticker, ticker: s.ticker, description: s.desc,
+              exchange: FUENTE, type: TIPO[s.clase] });
+          });
+          despues(() => cb(out));
+        });
+      },
+      resolveSymbol(nombre, alResolver, alFallar) {
+        simbolo(nombre).then(s => despues(() => {
+          if (s) alResolver(info(s));
+          else alFallar('unknown_symbol');
+        }));
+      },
+      // historia semanal; countBack manda sobre from (la API lo pide así):
+      // si en [from, to) hay menos barras, se devuelven las anteriores a to
+      getBars(symbolInfo, resolucion, periodo, alResultado, alFallar) {
+        if (!/^1?W$/.test(resolucion)) {
+          despues(() => alResultado([], { noData: true }));
+          return;
+        }
+        barras(symbolInfo.ticker || symbolInfo.name).then(todas => {
+          if (!todas) { despues(() => alFallar('unknown_symbol')); return; }
+          const desde = periodo.from * 1000, hasta = periodo.to * 1000;
+          let fin = 0;
+          while (fin < todas.length && todas[fin].time < hasta) fin++;
+          let ini = fin;
+          while (ini > 0 && todas[ini - 1].time >= desde) ini--;
+          if (periodo.countBack && fin - ini < periodo.countBack) {
+            ini = Math.max(0, fin - periodo.countBack);
+          }
+          // sin countBack y sin barras en el tramo: las anteriores (la API
+          // pide al menos dos), para que el pedido siguiente siga hacia atrás;
+          // noData solo cuando no queda historia
+          if (ini === fin && fin > 0) ini = Math.max(0, fin - 2);
+          // copias: la librería puede modificar las barras que recibe
+          const out = todas.slice(ini, fin).map(b => Object.assign({}, b));
+          despues(() => alResultado(out, { noData: !out.length }));
+        }, e => despues(() => alFallar(String(e && e.message || e))));
+      },
+      // datos semanales publicados los viernes: sin tiempo real
+      subscribeBars() {},
+      unsubscribeBars() {},
+      // para el respaldo con Lightweight Charts y las pruebas
+      barras,
+      simbolo,
+      lista: () => listo.then(() => [...simbolos.values()].map(s =>
+        ({ ticker: s.ticker, descripcion: s.desc, clase: s.clase, nominal: s.nominal }))),
+      info: nombre => simbolo(nombre).then(s => s && info(s)),
+    };
+  }
+
+  // ---------- guardado en el navegador ----------
+  // save_load_adapter sobre localStorage: los gráficos guardados (con sus
+  // dibujos) y las plantillas quedan en el navegador de cada persona; nada
+  // va a servidores de TradingView ni de Carestía
+  function almacenLocal(prefijo) {
+    const leer = (k, def) => {
+      try { const v = localStorage.getItem(prefijo + k); return v ? JSON.parse(v) : def; }
+      catch (e) { return def; }
+    };
+    const escribir = (k, v) => {
+      try { localStorage.setItem(prefijo + k, JSON.stringify(v)); return Promise.resolve(); }
+      catch (e) { return Promise.reject(new Error('No hay espacio en el navegador')); }
+    };
+    const ya = v => Promise.resolve(v);
+    const graficos = () => leer('graficos', []);
+    // reemplaza (o quita, sin 'agregar') la entrada con ese nombre
+    const porNombre = (k, nombre, agregar) => {
+      const lista = leer(k, []).filter(x => x.name !== nombre);
+      if (agregar) lista.push(agregar);
+      return escribir(k, lista);
+    };
+    const contenido = (k, nombre) => {
+      const x = leer(k, []).find(t => t.name === nombre);
+      return x ? ya(x.content) : Promise.reject(new Error('No existe'));
+    };
+    return {
+      getAllCharts: () => ya(graficos().map(g => ({ id: g.id, name: g.name,
+        symbol: g.symbol, resolution: g.resolution, timestamp: g.timestamp }))),
+      removeChart: id => escribir('graficos', graficos().filter(g => g.id !== id)),
+      saveChart: d => {
+        const lista = graficos();
+        const id = d.id != null ? d.id : 'g' + Date.now().toString(36);
+        const g = { id, name: d.name, symbol: d.symbol, resolution: d.resolution,
+          content: d.content, timestamp: Math.floor(Date.now() / 1000) };
+        const i = lista.findIndex(x => x.id === id);
+        if (i === -1) lista.push(g); else lista[i] = g;
+        return escribir('graficos', lista).then(() => id);
+      },
+      getChartContent: id => {
+        const g = graficos().find(x => x.id === id);
+        return g ? ya(g.content) : Promise.reject(new Error('No existe'));
+      },
+      getAllStudyTemplates: () => ya(leer('indicadores', []).map(t => ({ name: t.name }))),
+      removeStudyTemplate: t => porNombre('indicadores', t.name),
+      saveStudyTemplate: t => porNombre('indicadores', t.name, { name: t.name, content: t.content }),
+      getStudyTemplateContent: t => contenido('indicadores', t.name),
+      getDrawingTemplates: herramienta => ya(Object.keys(leer('dibujos', {})[herramienta] || {})),
+      loadDrawingTemplate: (herramienta, nombre) => {
+        const x = (leer('dibujos', {})[herramienta] || {})[nombre];
+        return x != null ? ya(x) : Promise.reject(new Error('No existe'));
+      },
+      removeDrawingTemplate: (herramienta, nombre) => {
+        const todo = leer('dibujos', {});
+        if (todo[herramienta]) delete todo[herramienta][nombre];
+        return escribir('dibujos', todo);
+      },
+      saveDrawingTemplate: (herramienta, nombre, texto) => {
+        const todo = leer('dibujos', {});
+        (todo[herramienta] = todo[herramienta] || {})[nombre] = texto;
+        return escribir('dibujos', todo);
+      },
+      getAllChartTemplates: () => ya(leer('temas', []).map(t => t.name)),
+      getChartTemplateContent: nombre => contenido('temas', nombre).then(content => ({ content })),
+      saveChartTemplate: (nombre, tema) => porNombre('temas', nombre, { name: nombre, content: tema }),
+      removeChartTemplate: nombre => porNombre('temas', nombre),
+      // solo se usan con saveload_separate_drawings_storage (apagado): los
+      // dibujos viajan dentro de cada gráfico guardado
+      saveLineToolsAndGroups: () => ya(),
+      loadLineToolsAndGroups: () => ya(null),
+    };
+  }
+
+  // ---------- el widget ----------
+  // formatos: precios en pesos con punto de miles y fechas dd-mm-aaaa
+  function formateadores() {
+    const precio = { format: (x, o) => {
+      const signo = (o === true || (o && o.signPositive)) && x > 0 ? '+' : '';
+      return signo + miles(x);
+    } };
+    return {
+      priceFormatterFactory: () => precio,
+      dateFormatter: {
+        format: fecha,
+        formatLocal: d => fecha(new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()))),
+        // lo que se escribe en "Ir a": dd-mm-aaaa a aaaa-mm-dd
+        parse: t => {
+          const m = /^\s*(\d{1,2})-(\d{1,2})-(\d{4})\s*$/.exec(t);
+          return m ? m[3] + '-' + m[2].padStart(2, '0') + '-' + m[1].padStart(2, '0') : t;
+        },
+      },
+    };
+  }
+
+  // colores de la librería con los tokens del sitio: velas verde y rojo; la
+  // línea en brasa para los índices oficiales y en hueso para los productos
+  function overrides(tok) {
+    const verde = tok('verde'), rojo = tok('rojo');
+    const o = {
+      'paneProperties.backgroundType': 'solid',
+      'paneProperties.background': tok('bg'),
+      'paneProperties.vertGridProperties.color': tok('grid'),
+      'paneProperties.horzGridProperties.color': tok('grid'),
+      'paneProperties.crossHairProperties.color': tok('dim'),
+      'paneProperties.separatorColor': tok('line'),
+      'scalesProperties.textColor': tok('ash'),
+      'scalesProperties.lineColor': tok('line'),
+      'mainSeriesProperties.style': 1,
+      'mainSeriesProperties.lineStyle.color': tok('ember'),
+      'mainSeriesProperties.lineStyle.linewidth': 2,
+    };
+    ['candleStyle', 'hollowCandleStyle', 'haStyle'].forEach(e => {
+      o['mainSeriesProperties.' + e + '.upColor'] = verde;
+      o['mainSeriesProperties.' + e + '.downColor'] = rojo;
+      o['mainSeriesProperties.' + e + '.borderUpColor'] = verde;
+      o['mainSeriesProperties.' + e + '.borderDownColor'] = rojo;
+      o['mainSeriesProperties.' + e + '.wickUpColor'] = verde;
+      o['mainSeriesProperties.' + e + '.wickDownColor'] = rojo;
+    });
+    o['mainSeriesProperties.barStyle.upColor'] = verde;
+    o['mainSeriesProperties.barStyle.downColor'] = rojo;
+    return o;
+  }
+  const colorLinea = (tok, indice) => {
+    const c = tok(indice ? 'ember' : 'bone');
+    return { 'mainSeriesProperties.lineStyle.color': c };
+  };
+
+  // opciones: { contenedor, libreria, simbolo, datafeed, tok, css }
+  function opcionesWidget(o) {
+    return {
+      container: o.contenedor,
+      library_path: o.libreria,
+      datafeed: o.datafeed,
+      symbol: o.simbolo,
+      interval: RESOLUCION,
+      timezone: ZONA,
+      locale: 'es',
+      theme: 'dark',
+      autosize: true,
+      custom_css_url: o.css,
+      custom_font_family: "'IBM Plex Sans', system-ui, sans-serif",
+      loading_screen: { backgroundColor: o.tok('bg'), foregroundColor: o.tok('ember') },
+      toolbar_bg: o.tok('panel'),
+      overrides: overrides(o.tok),
+      custom_formatters: formateadores(),
+      numeric_formatting: { decimal_sign: ',', grouping_separator: '.' },
+      // guardar y cargar gráficos, plantillas y dibujos: en el navegador
+      save_load_adapter: almacenLocal('carestia-tv:'),
+      auto_save_delay: 5,
+      load_last_chart: true,
+      favorites: { intervals: [RESOLUCION], chartTypes: ['Candles', 'Line'] },
+      // plazos de la barra inferior, todos semanales (los de fábrica piden
+      // resoluciones de minutos o días, que estos datos no tienen)
+      time_frames: [
+        { text: '6m', resolution: RESOLUCION, description: '6 meses', title: '6M' },
+        { text: '1y', resolution: RESOLUCION, description: '1 año', title: '1A' },
+        { text: '3y', resolution: RESOLUCION, description: '3 años', title: '3A' },
+        { text: '5y', resolution: RESOLUCION, description: '5 años', title: '5A' },
+        { text: '10y', resolution: RESOLUCION, description: '10 años', title: '10A' },
+        { text: '20y', resolution: RESOLUCION, description: 'Toda la serie', title: 'Todo' },
+      ],
+      // todas las funciones de fábrica quedan activas (dibujo, indicadores,
+      // comparar, tipos de gráfico, guardar y cargar en el navegador, captura
+      // para descargar o copiar); se suman las plantillas de indicadores y
+      // se quita el ancho mínimo del gráfico (a 390px desbordaría la página).
+      // No se configura nada que guarde fuera del navegador: ni
+      // charts_storage_url ni snapshot_url
+      enabled_features: ['study_templates', 'no_min_chart_width'],
+      disabled_features: [],
+    };
+  }
+
+  // con el gráfico listo: estilo según el símbolo (índices con velas en el
+  // semáforo, productos como línea en hueso) y guardado automático en el
+  // navegador
+  function alistarWidget(widget, feed, tok) {
+    const chart = widget.activeChart();
+    let clase = null;
+    const estilo = () => feed.simbolo(chart.symbol()).then(s => {
+      if (!s) return;
+      const indice = s.clase === 'indice';
+      widget.applyOverrides(colorLinea(tok, indice));
+      // al cambiar de índice a producto o al revés; entre dos índices (o dos
+      // productos) queda el tipo de gráfico que eligió la persona. Al abrir,
+      // un índice parte con las velas de 'overrides' (o lo guardado)
+      if (clase ? clase !== s.clase : !indice) {
+        Promise.resolve(chart.setChartType(indice ? 1 : 2)).catch(() => {});
+      }
+      clase = s.clase;
+    });
+    estilo();
+    chart.onSymbolChanged().subscribe(null, estilo);
+    widget.subscribe('onAutoSaveNeeded', () => {
+      Promise.resolve(widget.saveChartToServer({ defaultChartName: 'Mi gráfico' }))
+        .catch(() => {});
+    });
+  }
+  // la librería quedó lista (chartReady desde v32; onChartReady antes)
+  const listoWidget = w => w.chartReady ? w.chartReady() : new Promise(r => w.onChartReady(r));
+
+  const api = { crearDatafeed, miles, fecha, almacenLocal, formateadores, overrides,
+    opcionesWidget, alistarWidget, listoWidget, RESOLUCION, ZONA };
+  raiz.CarestiaTV = api;
+  if (typeof module === 'object' && module.exports) module.exports = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+"""
+
+
+PRUEBA_HTML = r"""<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gráficos de prueba | Carestía</title>
+<meta name="description" content="Página de prueba de los gráficos de Carestía.">
+<meta name="robots" content="noindex, nofollow">
+__ICONO__
+__FUENTES__
+<script src="/__TV_JS__?v=__VER_JS__"></script>
+<script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "101b8fafc10e4ae4b412859b124cb5ea"}'></script>
+<style>
+__CSS_BASE__
+  /* encabezado: el mismo de las páginas del sitio */
+  header { display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 14px;
+    padding:14px clamp(16px,3vw,32px); border-bottom:1px solid var(--line);
+    min-height:51px; }
+  .wordmark { font:700 20px/1.1 var(--display); letter-spacing:.06em;
+    color:var(--bone); text-decoration:none; display:inline-flex;
+    align-items:baseline; height:22px; overflow:hidden; }
+  .wordmark .i { position:relative; display:inline-block; }
+  .wordmark .i::after { content:"Í"; content:"Í" / ""; position:absolute;
+    left:0; top:0; pointer-events:none;
+    color:var(--ember); clip-path:inset(0 0 86% 0); }
+  .tagline { font:400 12px/14.3px var(--sans); color:var(--ash); }
+  main { max-width:1280px; margin:0 auto;
+    padding:clamp(20px,3vw,32px) clamp(16px,3vw,32px) clamp(28px,4vw,44px); }
+  .miga { font:500 10px var(--mono); letter-spacing:.16em;
+    color:var(--ash); text-transform:uppercase; }
+  h1 { font:600 clamp(24px,4vw,34px)/1.15 var(--sans);
+    letter-spacing:-.005em; margin-top:6px; text-wrap:balance; }
+  .intro { font:400 14px/1.6 var(--sans); color:var(--bone); margin-top:10px;
+    max-width:76ch; text-wrap:pretty; }
+  /* el lienzo: alto reservado antes de que monte cualquiera de los dos
+     motores (CLS); en svh, estable frente a la barra del navegador móvil.
+     Deja aire arriba y abajo para mover la página con el dedo fuera del
+     gráfico */
+  .marco { position:relative; margin-top:18px; border:1px solid var(--line);
+    background:var(--bg); height:clamp(380px,calc(100vh - 230px),820px);
+    height:clamp(380px,calc(100svh - 230px),820px); overflow:hidden; }
+  #tv, #lw { position:absolute; inset:0; }
+  /* respaldo con Lightweight Charts: los controles van sobre el lienzo, en
+     una fila propia que no se desborda en móvil */
+  .lw-barra { display:none; flex-wrap:wrap; align-items:center; gap:10px;
+    margin-top:18px; }
+  body[data-motor="lightweight"] .lw-barra { display:flex; }
+  body[data-motor="lightweight"] .marco { margin-top:10px; }
+  .vtoggle { display:flex; border:1px solid var(--line); background:var(--bg); }
+  .vbtn { font:600 11px var(--mono); letter-spacing:.1em; padding:8px 14px;
+    border:none; cursor:pointer; background:transparent; color:var(--ash);
+    min-height:34px; }
+  .vbtn + .vbtn { border-left:1px solid var(--line); }
+  .vbtn.active { background:var(--bone); color:var(--bg); }
+  .nomtoggle { border:1px solid var(--line); background:var(--bg);
+    font:500 13px var(--sans); letter-spacing:0; }
+  .lw-ref { font:400 11px/1.5 var(--sans); color:var(--dim); max-width:46ch; }
+  .carga { position:absolute; inset:0; display:flex; align-items:center;
+    justify-content:center; padding:20px; text-align:center;
+    font:400 12px/1.5 var(--sans); color:var(--ash); pointer-events:none; }
+  .carga[hidden] { display:none; }
+  .nochart { display:flex; align-items:center; justify-content:center;
+    height:100%; color:var(--ash); font-size:13px; padding:20px; text-align:center; }
+  .motor { font:400 12px/1.6 var(--sans); color:var(--ash); margin-top:12px;
+    text-wrap:pretty; }
+  /* pista de gestos: solo en pantallas táctiles angostas */
+  .gestos { display:none; font:400 12px/1.6 var(--sans); color:var(--dim);
+    margin-top:4px; }
+  @media (max-width:759px) { .gestos { display:block; } }
+__CSS_SITIO__
+</style>
+</head>
+<body data-motor="cargando">
+
+  <header>
+    <!-- span único: un solo flex item para que innerText no parta el texto -->
+    <a class="wordmark" href="https://carestia.cl/"><span>CAREST<span class="i">Í</span>A</span></a>
+    <span class="tagline">Índices del costo de vida en Chile</span>
+    __NAV__
+  </header>
+
+  <main>
+    <div class="miga">Página de prueba</div>
+    <h1>Gráficos de prueba</h1>
+    <p class="intro">El Índice Asado en la librería Advanced Charts de TradingView. Con el buscador de símbolos abres los otros índices y los __N_PRODUCTOS__ productos, en pesos de hoy o nominales (por ejemplo, asado-nominal), y con Comparar los superpones.</p>
+    <div class="lw-barra" aria-label="Vista del gráfico de respaldo">
+      <div class="vtoggle">
+        <button class="vbtn active" id="lw-linea">LÍNEA</button>
+        <button class="vbtn" id="lw-velas">VELAS</button>
+      </div>
+      <button class="vbtn nomtoggle" id="lw-nominal">+ nominal</button>
+      <span class="lw-ref" id="lw-ref"></span>
+    </div>
+    <div class="marco" id="marco">
+      <div id="tv"></div>
+      <div id="lw" hidden></div>
+      <div class="carga" id="carga" role="status">Cargando el gráfico...</div>
+    </div>
+    <p class="motor" id="motor" role="status"></p>
+    <p class="gestos" id="gestos"></p>
+  </main>
+
+__PIE__
+
+<script>
+(function () {
+  'use strict';
+  // índices (código y nombre) y versión de datos/, del build
+  const INDICES = __INDICES__;
+  const VER = '__VER__';
+  const SIMBOLO = '__SIMBOLO__';
+  const ESPERA = 8000;   // ms para que Advanced Charts quede lista
+  const LIBRERIA = '/charting_library/';
+  const LIGHTWEIGHT = 'https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js';
+  const TEXTO = {
+    advanced: 'Gráfico con la librería Advanced Charts de TradingView.',
+    falta: 'Gráfico de respaldo con Lightweight Charts: la librería Advanced Charts no está disponible en este sitio.',
+    tarde: 'Gráfico de respaldo con Lightweight Charts: la librería Advanced Charts no inició en 8 segundos.',
+    error: 'Gráfico de respaldo con Lightweight Charts: la librería Advanced Charts no pudo iniciar.',
+    sin: 'No se pudo cargar el motor de gráficos (revisa la conexión).',
+    gestosTv: 'Usa un dedo para moverte y dos para acercar.',
+    gestosLw: 'Desliza hacia los lados para moverte. Usa dos dedos para acercar.',
+    velas: 'Velas semanales. La mecha va del precio más bajo al más alto que ODEPA encontró entre los locales encuestados.',
+  };
+  const $ = id => document.getElementById(id);
+  const TV = window.CarestiaTV;
+  // los colores salen de los tokens de :root
+  const VARS = getComputedStyle(document.documentElement);
+  const tok = n => VARS.getPropertyValue('--' + n).trim();
+
+  let resuelto = false, widget = null;
+  function usar(motor, texto, gestos) {
+    resuelto = true;
+    clearTimeout(reloj);
+    document.body.dataset.motor = motor;
+    $('carga').hidden = true;
+    $('motor').textContent = texto;
+    $('gestos').textContent = gestos || '';
+  }
+  const reloj = setTimeout(() => respaldo('tarde'), ESPERA);
+  function cargarScript(src) {
+    return new Promise((ok, mal) => {
+      const s = document.createElement('script');
+      s.src = src;
+      s.onload = ok;
+      s.onerror = mal;
+      document.head.appendChild(s);
+    });
+  }
+  if (!TV) { usar('ninguno', TEXTO.sin); return; }
+  const feed = TV.crearDatafeed({ base: '/datos/', ver: VER, indices: INDICES });
+
+  /* ---------- Advanced Charts ---------- */
+  cargarScript(LIBRERIA + 'charting_library.standalone.js').then(iniciar, () => respaldo('falta'));
+
+  function iniciar() {
+    if (resuelto) return;
+    if (!window.TradingView || typeof TradingView.widget !== 'function') { respaldo('falta'); return; }
+    try {
+      widget = new TradingView.widget(TV.opcionesWidget({
+        contenedor: $('tv'), libreria: LIBRERIA, simbolo: SIMBOLO, datafeed: feed,
+        tok, css: location.origin + '/__TV_CSS__?v=__VER_CSS__',
+      }));
+    } catch (e) {
+      respaldo('error');
+      return;
+    }
+    const w = widget;
+    TV.listoWidget(w).then(() => {
+      if (resuelto || w !== widget) return;   // ya se dibujó el respaldo
+      usar('advanced', TEXTO.advanced, TEXTO.gestosTv);
+      TV.alistarWidget(w, feed, tok);
+    }, () => respaldo('error'));
+  }
+
+  /* ---------- respaldo: Lightweight Charts, como en /graficos.html ---------- */
+  function respaldo(motivo) {
+    if (resuelto) return;
+    if (widget) { try { widget.remove(); } catch (e) {} widget = null; }
+    $('tv').remove();
+    usar('lightweight', TEXTO[motivo], TEXTO.gestosLw);
+    const dia = ms => new Date(ms).toISOString().slice(0, 10);
+    Promise.all([cargarScript(LIGHTWEIGHT), feed.barras(SIMBOLO), feed.barras(SIMBOLO + '-nominal')])
+      .then(([, real, nominal]) => {
+        if (!window.LightweightCharts || !real) throw new Error('sin motor');
+        const lw = $('lw');
+        lw.hidden = false;
+        const fmt = v => '$' + TV.miles(v);
+        const chart = LightweightCharts.createChart(lw, {
+          autoSize: true,
+          layout: { background: { type: 'solid', color: 'transparent' }, textColor: tok('ash'),
+            fontFamily: tok('sans') },
+          grid: { vertLines: { color: tok('grid') }, horzLines: { color: tok('grid') } },
+          rightPriceScale: { borderColor: tok('line') },
+          timeScale: { borderColor: tok('line') },
+          // misma política de gestos del sitio: la rueda y el deslizamiento
+          // vertical quedan para la página; zoom en los ejes y con dos dedos
+          handleScale: { mouseWheel: false, pinch: true, axisPressedMouseMove: true },
+          handleScroll: { mouseWheel: false, vertTouchDrag: false,
+            horzTouchDrag: true, pressedMouseMove: true },
+          crosshair: { mode: 0,
+            vertLine: { color: tok('cruz'), labelBackgroundColor: tok('line') },
+            horzLine: { color: tok('cruz'), labelBackgroundColor: tok('line') } },
+          localization: { locale: 'es-CL', priceFormatter: fmt },
+        });
+        const sNom = chart.addLineSeries({ color: tok('ash'), lineWidth: 1,
+          priceLineVisible: false, lastValueVisible: false, visible: false });
+        // la línea de los índices oficiales, en brasa
+        const sReal = chart.addLineSeries({ color: tok('ember'), lineWidth: 2,
+          priceLineVisible: false });
+        const sVelas = chart.addCandlestickSeries({ upColor: tok('verde'),
+          downColor: tok('rojo'), borderVisible: false, wickUpColor: tok('verde'),
+          wickDownColor: tok('rojo'), visible: false });
+        sNom.setData((nominal || []).map(b => ({ time: dia(b.time), value: b.close })));
+        sReal.setData(real.map(b => ({ time: dia(b.time), value: b.close })));
+        sVelas.setData(real.map(b => ({ time: dia(b.time), open: b.open, high: b.high,
+          low: b.low, close: b.close })));
+        let vista = 'linea', nom = false;
+        const aplicar = () => {
+          const linea = vista === 'linea';
+          sReal.applyOptions({ visible: linea });
+          sNom.applyOptions({ visible: linea && nom });
+          sVelas.applyOptions({ visible: !linea });
+          $('lw-linea').classList.toggle('active', linea);
+          $('lw-velas').classList.toggle('active', !linea);
+          $('lw-nominal').classList.toggle('active', nom);
+          $('lw-nominal').style.visibility = linea ? 'visible' : 'hidden';
+          $('lw-ref').textContent = linea ? '' : TEXTO.velas;
+          chart.timeScale().fitContent();
+        };
+        $('lw-linea').onclick = () => { vista = 'linea'; aplicar(); };
+        $('lw-velas').onclick = () => { vista = 'velas'; aplicar(); };
+        $('lw-nominal').onclick = () => { nom = !nom; aplicar(); };
+        aplicar();
+      })
+      .catch(() => {
+        $('lw').hidden = false;
+        $('lw').innerHTML = '<div class="nochart">' + TEXTO.sin + '</div>';
+        $('motor').textContent = TEXTO.sin;
+      });
+  }
+})();
+</script>
+</body>
+</html>
+"""
+
+
+# variables de color de la interfaz de la librería (toolbars, menús y
+# diálogos) para el tema oscuro, con los tokens del sitio
+TV_COLORES = """.theme-dark:root {{
+  --tv-color-platform-background: {bg};
+  --tv-color-pane-background: {bg};
+  --tv-color-toolbar-button-background-hover: {hover};
+  --tv-color-toolbar-button-background-expanded: {hover};
+  --tv-color-toolbar-button-background-active: {hover};
+  --tv-color-toolbar-button-background-active-hover: {hover};
+  --tv-color-toolbar-button-text: {ash};
+  --tv-color-toolbar-button-text-hover: {bone};
+  --tv-color-toolbar-button-text-active: {bone};
+  --tv-color-toolbar-button-text-active-hover: {bone};
+  --tv-color-item-active-text: {bone};
+  --tv-color-toolbar-toggle-button-background-active: {line};
+  --tv-color-toolbar-toggle-button-background-active-hover: {line};
+  --tv-color-toolbar-divider-background: {line};
+  --tv-color-toolbar-save-layout-loader: {dim};
+  --tv-color-popup-background: {panel};
+  --tv-color-popup-element-text: {bone};
+  --tv-color-popup-element-text-hover: {bone};
+  --tv-color-popup-element-background-hover: {hover};
+  --tv-color-popup-element-divider-background: {line};
+  --tv-color-popup-element-secondary-text: {ash};
+  --tv-color-popup-element-hint-text: {dim};
+  --tv-color-popup-element-text-active: {bone};
+  --tv-color-popup-element-background-active: {line};
+  --tv-color-popup-element-toolbox-text: {ash};
+  --tv-color-popup-element-toolbox-text-hover: {bone};
+  --tv-color-popup-element-toolbox-text-active-hover: {bone};
+  --tv-color-popup-element-toolbox-background-hover: {hover};
+  --tv-color-popup-element-toolbox-background-active-hover: {hover};
+}}
+"""
+
+
+def tokens_css() -> dict:
+    """Los tokens de color de CSS_BASE ({nombre: valor}): el tema del iframe
+    de la librería sale de los mismos valores que el resto del sitio."""
+    return dict(re.findall(r"--([a-z0-9]+):(#[0-9a-f]{6}|rgba\([^)]*\))", CSS_BASE))
+
+
+def tv_css() -> str:
+    """carestia-tv.css: el tema del sitio dentro del iframe de Advanced Charts
+    (custom_css_url). Plex Sans con la misma llamada a Google Fonts del sitio
+    (el iframe es otro documento: no hereda las fuentes de la página) y los
+    colores de la interfaz de la librería con los tokens."""
+    t = tokens_css()
+    fuentes = re.search(r'https://fonts\.googleapis\.com/css2\?[^"]+', FUENTES).group(0)
+    colores = TV_COLORES.format(**t)
+    return (f'/* Tema de Carestía para Advanced Charts: tokens de build_site.py */\n'
+            f'@import url("{fuentes}");\n'
+            f'{colores}'
+            # menús y diálogos en Plex Sans (el lienzo la toma de
+            # custom_font_family)
+            f'html, body {{ font-family: {t_sans()}; }}\n')
+
+
+def t_sans() -> str:
+    """La familia --sans de CSS_BASE."""
+    return re.search(r"--sans:([^;]+);", CSS_BASE).group(1)
+
+
+def _ver(texto: str) -> str:
+    return hashlib.sha1(texto.encode("utf-8")).hexdigest()[:10]
+
+
+def generar_tradingview(app: dict, catalogo: dict) -> None:
+    """carestia-tv.js, carestia-tv.css y /prueba-graficos.html."""
+    css = tv_css()
+    for archivo, texto in [(TV_JS, FEED_JS), (TV_CSS, css)]:
+        with open(archivo, "w", encoding="utf-8") as fh:
+            fh.write(texto)
+    indices = [{"codigo": c, "nombre": d["nombre"]} for c, d in DATA["indices"].items()]
+    simbolo = "asado" if "asado" in DATA["indices"] else next(iter(DATA["indices"]))
+    out = PRUEBA_HTML
+    for token, valor in [
+        ("__TV_JS__", TV_JS),
+        ("__VER_JS__", _ver(FEED_JS)),
+        ("__TV_CSS__", TV_CSS),
+        ("__VER_CSS__", _ver(css)),
+        ("__ICONO__", ICONO),
+        ("__FUENTES__", FUENTES),
+        ("__CSS_BASE__", CSS_BASE),
+        ("__CSS_SITIO__", CSS_SITIO),
+        ("__NAV__", nav_sitio()),
+        ("__PIE__", pie_sitio(graficos=True)),
+        ("__N_PRODUCTOS__", str(len(catalogo["productos"]))),
+        ("__SIMBOLO__", simbolo),
+        ("__VER__", app["ver"]),
+        # "</" escapado: un nombre nunca puede cerrar el <script>
+        ("__INDICES__", _json(indices).replace("</", "<\\/")),
+    ]:
+        out = out.replace(token, valor)
+    with open(TV_PRUEBA, "w", encoding="utf-8") as fh:
+        fh.write(out)
 
 
 # ---------------- Páginas del sitio ----------------
@@ -3602,7 +4452,7 @@ with open("graficos.html", "w", encoding="utf-8") as fh:
                           .replace("__CSS_SITIO__", CSS_SITIO)
                           .replace("__GRUPOS__", json.dumps(GRUPO_TXT, ensure_ascii=False))
                           .replace("__NAV__", nav_sitio("indices"))
-                          .replace("__PIE__", pie_sitio())
+                          .replace("__PIE__", pie_sitio(graficos=True))
                           # "</" escapado: un label nunca puede cerrar el <script>
                           .replace("__DATA__", _json(APP).replace("</", "<\\/")))
 
@@ -3617,6 +4467,7 @@ generar_metodologia()
 generar_paginas_texto()
 generar_sitemap(sorted(FICHAS))
 generar_resumen()
+generar_tradingview(APP, CATALOGO)
 
 print(f"Listo: index.html + graficos.html + robots.txt + sitemap.xml + resumen.json + "
       f"{len(FICHAS)} páginas en productos/ + productos/index.html + "

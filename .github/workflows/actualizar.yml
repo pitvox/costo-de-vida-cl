@@ -19,9 +19,62 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      libreria: ${{ steps.tv.outputs.libreria }}
     steps:
       - name: Clonar repo
         uses: actions/checkout@v7
+
+      # Licencia TradingView: la librería Advanced Charts vive solo en el sitio
+      # publicado, nunca en este repo. Se clona del repo privado fuera del árbol
+      # (RUNNER_TEMP), en la última versión estable (el tag vX.Y.Z más alto, o
+      # el que fije la variable TV_LIBRARY_TAG del repo), y se copia solo
+      # charting_library/ a public/charting_library/. Si algo falla, el build
+      # sigue sin ella (las páginas dibujan con Lightweight Charts) y el job
+      # aviso-libreria falla después del deploy para que llegue el correo.
+      - name: Librería TradingView
+        id: tv
+        shell: bash
+        env:
+          TV_LIBRARY_TOKEN: ${{ secrets.TV_LIBRARY_TOKEN }}
+          TV_LIBRARY_TAG: ${{ vars.TV_LIBRARY_TAG }}
+        run: |
+          set -uo pipefail
+          DEST="$RUNNER_TEMP/tv"
+          fallar() {
+            echo "::warning::No se pudo descargar la librería de TradingView: $1"
+            echo "libreria=falla" >> "$GITHUB_OUTPUT"
+            rm -rf "$DEST" public/charting_library
+            exit 0
+          }
+          [ -n "$TV_LIBRARY_TOKEN" ] || fallar "falta el secreto TV_LIBRARY_TOKEN"
+          # el token va en un encabezado (nunca en la URL ni en los argumentos)
+          # y git no lee otra configuración: ni la global ni la del checkout
+          auth=$(printf 'x-access-token:%s' "$TV_LIBRARY_TOKEN" | base64 -w0)
+          echo "::add-mask::$auth"
+          export GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null GIT_TERMINAL_PROMPT=0
+          export GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_0=http.https://github.com/.extraheader
+          export GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $auth"
+          export GIT_CONFIG_KEY_1=advice.detachedHead GIT_CONFIG_VALUE_1=false
+          REPO=https://github.com/tradingview/charting_library.git
+          tag="$TV_LIBRARY_TAG"
+          if [ -z "$tag" ]; then
+            refs=$(git ls-remote --tags --refs "$REPO") || fallar "no se pudieron leer los tags del repo"
+            tag=$(printf '%s\n' "$refs" | sed 's#.*refs/tags/##' \
+                  | grep -E '^v?[0-9]+(\.[0-9]+)*$' | sort -V | tail -n 1)
+            [ -n "$tag" ] || fallar "el repo no tiene tags de versión estable"
+          fi
+          git clone --quiet --depth 1 --branch "$tag" "$REPO" "$DEST" \
+            || fallar "no se pudo clonar el tag $tag"
+          [ -f "$DEST/charting_library/charting_library.standalone.js" ] \
+            || fallar "el tag $tag no trae charting_library/charting_library.standalone.js"
+          mkdir -p public
+          cp -r "$DEST/charting_library" public/charting_library \
+            || fallar "no se pudo copiar charting_library/"
+          rm -rf "$DEST"
+          echo "libreria=ok" >> "$GITHUB_OUTPUT"
+          echo "Librería TradingView $tag en public/charting_library/"
+          echo "Librería TradingView: $tag" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Instalar Python
         uses: actions/setup-python@v7
@@ -51,6 +104,9 @@ jobs:
           mkdir -p public
           cp index.html public/index.html
           cp graficos.html public/graficos.html
+          cp prueba-graficos.html public/prueba-graficos.html
+          cp carestia-tv.js public/carestia-tv.js
+          cp carestia-tv.css public/carestia-tv.css
           cp indices.json public/indices.json
           cp resumen.json public/resumen.json
           cp og.png public/og.png
@@ -80,3 +136,21 @@ jobs:
       - name: Publicar en GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
+
+  # La librería no se pudo descargar: el sitio ya quedó publicado (con
+  # Lightweight Charts), pero el run termina en rojo para que llegue el correo.
+  aviso-libreria:
+    needs: [build, deploy]
+    if: ${{ !cancelled() && needs.build.outputs.libreria == 'falla' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Avisar que falta la librería
+        run: |
+          echo "::error::No se pudo descargar la librería de TradingView"
+          {
+            echo "## No se pudo descargar la librería de TradingView"
+            echo "El sitio se publicó sin ella y los gráficos usan Lightweight Charts."
+            echo "El motivo está en el paso «Librería TradingView» del job build."
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 1
