@@ -305,10 +305,11 @@ function velas(bars, t) {
        'left_toolbar', 'header_widget'].some(f => mov.disabled_features.includes(f) ||
        sit.disabled_features.includes(f)),
      'celular y sitio: quedan comparar, indicadores, tipo de gráfico, dibujo y pantalla completa');
-  ok(['header_symbol_search', 'symbol_search_hot_key', 'header_saveload', 'mouse_wheel_scale',
-      'mouse_wheel_scroll', 'vert_touch_drag_scroll'].every(f => sit.disabled_features.includes(f)) &&
-     !sit.disabled_features.includes('horz_touch_drag_scroll') && !sit.disabled_features.includes('pinch_scale'),
-     'sitio: la rueda y el deslizamiento vertical son de la página; un dedo mueve y dos acercan');
+  ok(['header_symbol_search', 'symbol_search_hot_key', 'header_saveload', 'vert_touch_drag_scroll']
+      .every(f => sit.disabled_features.includes(f)) &&
+     ['mouse_wheel_scale', 'mouse_wheel_scroll', 'horz_touch_drag_scroll', 'pinch_scale']
+      .every(f => !sit.disabled_features.includes(f)),
+     'sitio: la rueda acerca y mueve el gráfico; el deslizamiento vertical es de la página; dos dedos acercan');
   ok(!('load_last_chart' in sit) && !('auto_save_delay' in sit), 'sitio: no abre ni guarda gráficos solo');
   ok(JSON.stringify(sit.compare_symbols) === '[{"symbol":"palta-nominal","title":"Palta, nominal"}]',
      'sitio: símbolos a mano en Comparar');

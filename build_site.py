@@ -617,9 +617,9 @@ __PIE__
   const COL = {};
   ['bg', 'bone', 'ash', 'dim', 'line', 'grid', 'ember', 'cruz', 'verde', 'rojo', 'sans']
     .forEach(n => { COL[n] = tok(n); });
-  // opciones comunes de los tres lienzos: la rueda y el swipe vertical
-  // quedan para la página; el zoom sigue disponible arrastrando los ejes y
-  // con dos dedos en táctil. El crosshair va en hueso tenue
+  // opciones comunes de los tres lienzos: la rueda acerca y mueve el
+  // gráfico, como en Advanced Charts; el deslizamiento vertical en táctil
+  // queda para la página y dos dedos acercan. El crosshair va en hueso tenue
   function opcionesChart(extra) {
     extra = extra || {};
     return Object.assign({
@@ -629,8 +629,8 @@ __PIE__
       grid: { vertLines: { color: COL.grid }, horzLines: { color: COL.grid } },
       rightPriceScale: { borderColor: COL.line },
       timeScale: { borderColor: COL.line },
-      handleScale: { mouseWheel: false, pinch: true, axisPressedMouseMove: true },
-      handleScroll: { mouseWheel: false, vertTouchDrag: false,
+      handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: true },
+      handleScroll: { mouseWheel: true, vertTouchDrag: false,
         horzTouchDrag: true, pressedMouseMove: true },
       crosshair: { mode: 0,
         vertLine: { color: COL.cruz, labelBackgroundColor: COL.line },
@@ -2569,8 +2569,10 @@ __CSS_BASE__
     left:0; top:0; pointer-events:none;
     color:var(--ember); clip-path:inset(0 0 86% 0); }
   .tagline { font:400 12px/14.3px var(--sans); color:var(--ash); }
-  main { max-width:980px; margin:0 auto;
+  main { margin:0 auto;
     padding:clamp(20px,4vw,36px) clamp(16px,3vw,32px) clamp(28px,4vw,44px); }
+  /* el texto en su columna de lectura; el gráfico usa el ancho de la página */
+  main > * { max-width:916px; margin-left:auto; margin-right:auto; }
   .miga { font:500 10px var(--mono); letter-spacing:.16em;
     color:var(--ash); text-transform:uppercase; }
   h1 { font:600 clamp(26px,5vw,40px)/1.15 var(--sans);
@@ -2586,10 +2588,10 @@ __CSS_BASE__
     margin-top:12px; text-wrap:pretty; }
   /* altura reservada por CSS ANTES de que Lightweight Charts monte: la
      página no salta al renderizar (svh: estable frente a la barra móvil) */
-  #grafico { position:relative; height:clamp(300px,52vh,480px);
-    height:clamp(300px,52svh,480px); margin-top:22px; }
+  #grafico { position:relative; max-width:1600px; height:clamp(320px,66vh,820px);
+    height:clamp(320px,66svh,820px); margin-top:22px; }
   .fecha { font:500 12px var(--sans); color:var(--ash); margin-top:14px; }
-  .ref-velas { font:400 12px/1.5 var(--sans); color:var(--dim); margin:10px 0 0; }
+  .ref-velas { font:400 12px/1.5 var(--sans); color:var(--dim); margin-top:10px; }
   /* otros productos del grupo: interlinking sobrio al pie, misma paleta
      del sitio (panel/línea/hueso, hover con borde hueso como .links) */
   .otros { margin-top:26px; }
@@ -2705,10 +2707,10 @@ __PIE__
         timeScale: { borderColor: tok('line') },
         // fechas en castellano de Chile, como en la portada
         localization: { locale: 'es-CL', priceFormatter: fmt },
-        // misma política de gestos del sitio: la rueda y el swipe vertical
-        // quedan para la página; zoom en los ejes y pinch en táctil
-        handleScale: { mouseWheel: false, pinch: true, axisPressedMouseMove: true },
-        handleScroll: { mouseWheel: false, vertTouchDrag: false,
+        // misma política de gestos del sitio: la rueda acerca y mueve el
+        // gráfico; el swipe vertical en táctil queda para la página
+        handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: true },
+        handleScroll: { mouseWheel: true, vertTouchDrag: false,
           horzTouchDrag: true, pressedMouseMove: true },
         crosshair: { mode: 0,
           vertLine: { color: tok('cruz'), labelBackgroundColor: tok('line') },
@@ -3614,12 +3616,12 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
   const SOLO_ESCRITORIO = ['header_resolutions', 'header_symbol_search', 'header_settings',
     'header_undo_redo', 'header_quick_search', 'header_screenshot', 'header_saveload'];
   // páginas del sitio: el símbolo lo eligen las pestañas y los selectores de
-  // la página (sin buscador de la librería ni guardar y cargar gráficos), y
-  // los gestos son los de siempre: la rueda y el deslizamiento vertical
-  // mueven la página; arrastrar hacia los lados mueve el gráfico, dos dedos
-  // o arrastrar los ejes acercan
+  // la página (sin buscador de la librería ni guardar y cargar gráficos).
+  // Gestos: la rueda acerca y mueve el gráfico; en táctil el deslizamiento
+  // vertical mueve la página, hacia los lados mueve el gráfico y dos dedos
+  // acercan
   const FUERA_DEL_SITIO = ['header_symbol_search', 'symbol_search_hot_key', 'header_saveload',
-    'mouse_wheel_scale', 'mouse_wheel_scroll', 'vert_touch_drag_scroll'];
+    'vert_touch_drag_scroll'];
 
   // la configuración común de todas las páginas.
   // o: { contenedor, libreria, simbolo, datafeed, tok, css, movil, sitio,
