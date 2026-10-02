@@ -2569,10 +2569,12 @@ __CSS_BASE__
     left:0; top:0; pointer-events:none;
     color:var(--ember); clip-path:inset(0 0 86% 0); }
   .tagline { font:400 12px/14.3px var(--sans); color:var(--ash); }
+  /* el gráfico usa el ancho de la página, como en /graficos.html, y el texto
+     se alinea con él (y con la marca y el pie) a la izquierda, en un ancho
+     de lectura */
   main { margin:0 auto;
     padding:clamp(20px,4vw,36px) clamp(16px,3vw,32px) clamp(28px,4vw,44px); }
-  /* el texto en su columna de lectura; el gráfico usa el ancho de la página */
-  main > * { max-width:916px; margin-left:auto; margin-right:auto; }
+  main > * { max-width:916px; }
   .miga { font:500 10px var(--mono); letter-spacing:.16em;
     color:var(--ash); text-transform:uppercase; }
   h1 { font:600 clamp(26px,5vw,40px)/1.15 var(--sans);
@@ -2588,7 +2590,7 @@ __CSS_BASE__
     margin-top:12px; text-wrap:pretty; }
   /* altura reservada por CSS ANTES de que Lightweight Charts monte: la
      página no salta al renderizar (svh: estable frente a la barra móvil) */
-  #grafico { position:relative; max-width:1600px; height:clamp(320px,66vh,820px);
+  #grafico { position:relative; max-width:none; height:clamp(320px,66vh,820px);
     height:clamp(320px,66svh,820px); margin-top:22px; }
   .fecha { font:500 12px var(--sans); color:var(--ash); margin-top:14px; }
   .ref-velas { font:400 12px/1.5 var(--sans); color:var(--dim); margin-top:10px; }
