@@ -2589,6 +2589,7 @@ __CSS_BASE__
   #grafico { position:relative; height:clamp(300px,52vh,480px);
     height:clamp(300px,52svh,480px); margin-top:22px; }
   .fecha { font:500 12px var(--sans); color:var(--ash); margin-top:14px; }
+  .ref-velas { font:400 12px/1.5 var(--sans); color:var(--dim); margin:10px 0 0; }
   /* otros productos del grupo: interlinking sobrio al pie, misma paleta
      del sitio (panel/línea/hueso, hover con borde hueso como .links) */
   .otros { margin-top:26px; }
@@ -2637,6 +2638,7 @@ __CSS_SITIO__
     </div>
     <p class="pct">__PCT_LINEA__</p>
     <div id="grafico"><div class="nochart cargando">Cargando el gráfico...</div></div>
+    <p class="ref-velas" id="ref-velas" hidden>Velas semanales. La mecha va del precio más bajo al más alto que ODEPA encontró entre los locales encuestados.</p>
     <div class="fecha">Semana del __FECHA__. Serie desde __ANIO__. Se actualiza los viernes.</div>
     __OTROS__
     <p class="metodo">Cada punto es el promedio de los puntos que ODEPA encuesta
@@ -2655,12 +2657,15 @@ __PIE__
 
 <script>
   // serie compacta del producto: t0 + valores semanales consecutivos, null en
-  // semanas sin dato (estacionales). La cifra y el texto ya están en el HTML:
-  // el gráfico se arma después del primer pantallazo, en Advanced Charts
-  // (línea en hueso; el nominal, a mano en Comparar) o, si la librería no
-  // está o no inicia en 8 segundos, en Lightweight como siempre
+  // semanas sin dato (estacionales), y el rango de cada semana (la mecha de
+  // las velas). La cifra y el texto ya están en el HTML: el gráfico se arma
+  // después del primer pantallazo, en Advanced Charts (velas; la línea en
+  // hueso; el nominal, a mano en Comparar) o, si la librería no está o no
+  // inicia en 8 segundos, en Lightweight como siempre
   const T0 = '__T0__';
   const V = __V__;
+  const MIN = __MIN__;
+  const MAX = __MAX__;
   const SLUG = '__SLUG__';
   const NOMBRE = __NOMBRE__;
   const UNIDAD = '__UNIDAD__';
@@ -2726,13 +2731,21 @@ __PIE__
       // la serie ya viene en la página: el datafeed no la vuelve a pedir
       const feed = TV.crearDatafeed({ base: '/datos/', ver: '__VER__', indices: INDICES,
         productos: [{ slug: SLUG, nombre: NOMBRE, unidad: UNIDAD }],
-        precargados: { ['productos/' + SLUG + '.json']: { t0: T0, v: V } } });
+        precargados: { ['productos/' + SLUG + '.json']: { t0: T0, v: V, min: MIN, max: MAX } } });
       el.innerHTML = '';
       return TV.montar({ contenedor: el, libreria: '/charting_library/', simbolo: SLUG,
         datafeed: feed, tok, sitio: true, css: location.origin + '/__TV_CSS__?v=__VER_CSS__',
         // su nominal, listo para superponer desde Comparar
         comparar: [{ symbol: SLUG + '-nominal', title: NOMBRE + ', nominal' }] });
-    }).then(() => { el.dataset.motor = 'advanced'; }, lightweight);
+    }).then(w => {
+      el.dataset.motor = 'advanced';
+      // la referencia de las velas, mientras estén a la vista
+      const ref = document.getElementById('ref-velas');
+      const ver = t => { ref.hidden = t !== 1; };
+      const c = w.activeChart();
+      ver(c.chartType());
+      c.onChartTypeChanged().subscribe(null, ver);
+    }, lightweight);
   });
 </script>
 </body>
@@ -3084,6 +3097,9 @@ def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
         ("__CANASTA__", f"{key}:{QDEF.get(p['unidad'], '1')}"),
         ("__T0__", p["t0"]),
         ("__V__", json.dumps(p["v"])),
+        # el rango semanal (mecha de las velas); vacío si indices.json no lo trae
+        ("__MIN__", json.dumps(p.get("min") or [])),
+        ("__MAX__", json.dumps(p.get("max") or [])),
         # Advanced Charts: el datafeed, sus versiones y lo que la ficha ya sabe
         ("__NOMBRE__", json.dumps(p["label"], ensure_ascii=False).replace("</", "<\\/")),
         ("__UNIDAD__", p["unidad"]),
@@ -3238,19 +3254,26 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
     });
     return out;
   }
-  // producto: una línea (apertura, máximo y mínimo iguales al cierre)
+  // producto: velas como las de los índices: el cuerpo va del cierre de la semana
+  // anterior con dato al de esta; la mecha, del precio más bajo al más alto
+  // que ODEPA encontró entre los locales (min y max de indices.py). Sin
+  // rango esa semana, la vela va sin mecha
   function barrasProducto(p, factor) {
     const t = tiempos(p.t0), out = [];
+    const rango = (a, i, f) => a && a[i] != null ? Math.round(a[i] * f) : null;
     p.v.forEach((x, i) => {
       if (x == null) return;
       const ms = t(i);
-      let c = x;
+      let f = 1;
       if (factor) {
-        const f = factor.get(mesDe(ms));
+        f = factor.get(mesDe(ms));
         if (f == null) return;   // mes sin factor: esa semana no tiene nominal
-        c = Math.round(x * f);
       }
-      out.push({ time: ms, open: c, high: c, low: c, close: c });
+      const c = factor ? Math.round(x * f) : x;
+      const o = out.length ? out[out.length - 1].close : c;
+      const lo = rango(p.min, i, f), hi = rango(p.max, i, f);
+      out.push({ time: ms, open: o, high: Math.max(o, c, hi == null ? c : hi),
+        low: Math.min(o, c, lo == null ? c : lo), close: c });
     });
     return out;
   }
@@ -3366,8 +3389,9 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
         has_weekly_and_monthly: true,     // las semanas vienen hechas
         weekly_multipliers: ['1'],
         supported_resolutions: [RESOLUCION],
-        // los índices traen velas; los productos, solo el cierre
-        visible_plots_set: s.clase === 'indice' ? 'ohlc' : 'c',
+        // índices y productos traen velas (los productos, con el rango de
+        // ODEPA cuando indices.json lo trae)
+        visible_plots_set: 'ohlc',
         data_status: 'endofday',
         currency_code: 'CLP',
         volume_precision: 0,
@@ -3669,18 +3693,12 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
   }
   function estiloPorSimbolo(widget, feed, tok) {
     const chart = widget.activeChart();
-    let clase = null;
+    // el color de la línea por clase; el tipo de gráfico no se toca: índices
+    // y productos parten en las velas de 'overrides' (o lo guardado) y queda
+    // el que elija la persona
     const estilo = () => feed.simbolo(chart.symbol()).then(s => {
       if (!s) return;
-      const indice = s.clase === 'indice';
-      widget.applyOverrides(colorLinea(tok, indice));
-      // al cambiar de índice a producto o al revés; entre dos índices (o dos
-      // productos) queda el tipo de gráfico que eligió la persona. Al abrir,
-      // un índice parte con las velas de 'overrides' (o lo guardado)
-      if (clase ? clase !== s.clase : !indice) {
-        Promise.resolve(chart.setChartType(indice ? 1 : 2)).catch(() => {});
-      }
-      clase = s.clase;
+      widget.applyOverrides(colorLinea(tok, s.clase === 'indice'));
     });
     estilo();
     chart.onSymbolChanged().subscribe(null, estilo);

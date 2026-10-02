@@ -72,6 +72,12 @@ def indices_realista() -> dict:
         out["productos"][f"producto_{i:03d}"] = {
             "label": f"Producto {i:03d}", "unidad": ["kg", "un", "l"][i % 3],
             "grupo": grupos[i % 4], "t0": ini.isoformat(), "v": v}
+        if i % 2 == 0:
+            # la mecha de las velas; sin rango una semana de cada siete
+            def rango(d, v=v):
+                return [None if x is None or j % 7 == 3 else x + d * (1 + j % 5)
+                        for j, x in enumerate(v)]
+            out["productos"][f"producto_{i:03d}"].update(min=rango(-150), max=rango(240))
     return out
 
 

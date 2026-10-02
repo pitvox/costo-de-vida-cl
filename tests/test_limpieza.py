@@ -93,6 +93,32 @@ def test_series_productos_registra_descartes_nominales():
     assert indices.series_productos(df, ipc) == out
 
 
+def test_series_productos_emite_la_mecha_alineada_con_v():
+    """min y max (la mecha de las velas): promedio semanal del mínimo y del
+    máximo de ODEPA, deflactados igual que v, alineados con v. Sin rango en
+    la semana descartada ni en las que completa el ffill."""
+    fechas = list(pd.date_range("2026-01-05", periods=12, freq="W-MON"))
+    precios = [3000.0] * 12
+    precios[9] = 3.0                                  # semana descartada
+    fechas[5] = fechas[4]                             # semana 5 sin dato: ffill
+    df = pd.DataFrame({"ProductoBase": "Poroto manteca", "Precio promedio": precios,
+                       "Precio minimo": [p * 0.8 for p in precios],
+                       "Precio maximo": [p * 1.5 for p in precios],
+                       "Unidad": "$/kilo", "Grupo": "Legumbres", "fecha": fechas})
+    ipc = pd.Series([100.0, 110.0], index=pd.to_datetime(["2025-12-01", "2026-03-01"]))
+    p = indices.series_productos(df, ipc)["poroto_manteca"]
+    assert len(p["min"]) == len(p["max"]) == len(p["v"]) == 12
+    # semanas con dato: rango deflactado como v (enero y febrero x 1,1)
+    assert (p["min"][0], p["v"][0], p["max"][0]) == (2640, 3300, 4950)
+    assert (p["min"][10], p["v"][10], p["max"][10]) == (2400, 3000, 4500)
+    # semana sin dato (ffill) y semana descartada: v completado, sin rango
+    for i in (5, 9):
+        assert p["v"][i] is not None and p["min"][i] is None and p["max"][i] is None
+    # nunca una mecha que no contenga el promedio
+    for lo, v, hi in zip(p["min"], p["v"], p["max"]):
+        assert lo is None or lo <= v <= hi
+
+
 def _llamadas(fn_nombre):
     src = open(os.path.join(RAIZ, "indices.py"), encoding="utf-8").read()
     fn = next(n for n in ast.parse(src).body

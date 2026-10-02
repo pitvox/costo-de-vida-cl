@@ -481,9 +481,16 @@ def test_ficha_con_advanced_charts_despues_del_primer_pantallazo(sitio):
     assert "comparar: [{ symbol: SLUG + '-nominal', title: NOMBRE + ', nominal' }]" in js
     assert "const SLUG = 'producto-000';" in js and 'const NOMBRE = "Producto 000";' in js
     # la serie de la página alimenta el datafeed (no se vuelve a pedir)
-    assert "precargados: { ['productos/' + SLUG + '.json']: { t0: T0, v: V } }" in js
+    assert "precargados: { ['productos/' + SLUG + '.json']: { t0: T0, v: V, min: MIN, max: MAX } }" in js
+    # el rango semanal en la página y la referencia de las velas
+    assert re.search(r"const MIN = \[[0-9null, ]+\];", js) and re.search(r"const MAX = \[[0-9null, ]+\];", js)
+    assert ('<p class="ref-velas" id="ref-velas" hidden>Velas semanales. La mecha va del precio más bajo '
+            'al más alto que ODEPA encontró entre los locales encuestados.</p>') in h
     # respaldo: Lightweight como siempre, en hueso y con fechas es-CL
-    assert "}).then(() => { el.dataset.motor = 'advanced'; }, lightweight);" in js
+    assert "}).then(w => {\n      el.dataset.motor = 'advanced';" in js
+    assert "    }, lightweight);" in js
+    # la referencia de las velas se muestra mientras estén a la vista
+    assert "c.onChartTypeChanged().subscribe(null, ver);" in js
     assert "chart.addLineSeries({ color: tok('bone'), lineWidth: 2, priceLineVisible: false })" in js
     assert "localization: { locale: 'es-CL', priceFormatter: fmt }" in js
 
