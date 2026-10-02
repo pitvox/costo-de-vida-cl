@@ -445,7 +445,14 @@ def test_graficos_controles_y_captura(sitio):
     assert ('<button class="vbtn active" id="v-real" aria-label="Pesos de hoy">'
             '<span class="solo-ancho">PESOS DE </span>HOY</button>') in h
     assert '<button class="vbtn" id="v-nominal">NOMINAL</button>' in h
-    assert '<button class="vbtn active" id="v-linea">LÍNEA</button>' in h
+    # los índices parten en velas
+    assert '<button class="vbtn" id="v-linea">LÍNEA</button>' in h
+    assert '<button class="vbtn active" id="v-velas">VELAS</button>' in h
+    assert "let cur = CODES[0], vista = 'velas', serieNom = false;" in h
+    # los controles van juntos y nunca quedan fuera de la vista: las ayudas
+    # pasan a otra fila
+    assert '<div class="cbar-ctrl">' in h
+    assert ".cbar-right { margin-left:auto; display:flex; align-items:center; gap:8px 14px;\n    flex-wrap:wrap; justify-content:flex-end; }" in h
     assert "+ nominal" not in h
     assert '<div id="tvind" class="tvbox m-ind"></div>' in h
     assert '<div id="tvprod" class="tvbox m-prod"></div>' in h

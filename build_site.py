@@ -224,9 +224,15 @@ __CSS_CABECERA__
     overflow-x:auto; overflow-y:hidden; scrollbar-width:none;
     -webkit-overflow-scrolling:touch; }
   .cbar::-webkit-scrollbar { display:none; }
-  .cbar-right { margin-left:auto; display:flex; align-items:center; gap:14px; }
+  /* los controles van juntos y nunca quedan fuera de la vista: si las
+     ayudas (zoom, velas) no caben a su lado, pasan a una fila arriba de
+     ellos, y la leyenda se angosta antes que la barra se desborde */
+  .cbar-right { margin-left:auto; display:flex; align-items:center; gap:8px 14px;
+    flex-wrap:wrap; justify-content:flex-end; }
   .cbar-right > * { flex:none; }
+  .cbar-ctrl { display:flex; align-items:center; gap:14px; }
   .legend { display:none; flex-direction:column; align-items:flex-start; gap:4px;
+    flex-shrink:.2;
     font:400 11px/1.5 var(--sans); color:var(--ash);
     max-width:min(40vw,440px); text-wrap:pretty; }
   @media (min-width:900px) { .legend { display:flex; } }
@@ -245,12 +251,12 @@ __CSS_CABECERA__
   /* celular: PESOS DE HOY / NOMINAL, LÍNEA / VELAS y la captura caben en la
      fila (a 360px) con botones más justos y "HOY" en vez de "PESOS DE HOY" */
   @media (max-width:640px) {
-    .cbar, .cbar-right { gap:8px; }
+    .cbar, .cbar-right, .cbar-ctrl { gap:8px; }
     .cbar .vbtn { padding:8px 9px; letter-spacing:.06em; }
     .cbar .solo-ancho { display:none; }
   }
   @media (max-width:380px) { .cbar { padding-left:12px; padding-right:12px; }
-    .cbar, .cbar-right { gap:6px; } }
+    .cbar, .cbar-right, .cbar-ctrl { gap:6px; } }
   /* referencia de velas y pista de zoom: texto de ayuda dentro de la barra;
      bajo 760px se omiten para no alargar la fila de controles en móvil */
   .ref { display:none; max-width:300px; text-wrap:balance;
@@ -413,15 +419,17 @@ __CSS_SITIO__
     <div class="cbar-right">
       <span class="zoomhint">Para acercar, arrastra el eje de los años o el de los precios. En el celular, usa dos dedos.</span>
       <span class="ref m-ind" id="ref-velas"></span>
-      <div class="vtoggle m-ind" id="v-serie">
-        <button class="vbtn active" id="v-real" aria-label="Pesos de hoy"><span class="solo-ancho">PESOS DE </span>HOY</button>
-        <button class="vbtn" id="v-nominal">NOMINAL</button>
+      <div class="cbar-ctrl">
+        <div class="vtoggle m-ind" id="v-serie">
+          <button class="vbtn active" id="v-real" aria-label="Pesos de hoy"><span class="solo-ancho">PESOS DE </span>HOY</button>
+          <button class="vbtn" id="v-nominal">NOMINAL</button>
+        </div>
+        <div class="vtoggle m-ind">
+          <button class="vbtn" id="v-linea">LÍNEA</button>
+          <button class="vbtn active" id="v-velas">VELAS</button>
+        </div>
+        <button class="vbtn nomtoggle" id="shot">captura PNG</button>
       </div>
-      <div class="vtoggle m-ind">
-        <button class="vbtn active" id="v-linea">LÍNEA</button>
-        <button class="vbtn" id="v-velas">VELAS</button>
-      </div>
-      <button class="vbtn nomtoggle" id="shot">captura PNG</button>
     </div>
   </div>
 
@@ -712,7 +720,8 @@ __PIE__
     return Promise.resolve(c.setSymbol(sim)).catch(() => {});
   }
 
-  let cur = CODES[0], vista = 'linea', serieNom = false;
+  // los índices parten en velas (las de ODEPA, del más bajo al más alto)
+  let cur = CODES[0], vista = 'velas', serieNom = false;
   let chart, sNom, sReal, sCandle, pchart;
   let realMap = new Map(), nomMap = new Map();
 
@@ -1764,6 +1773,7 @@ __PIE__
     // sin carestia-tv.js, Lightweight desde el principio, como antes
     if (usaLW('indices')) initChart();
     render(indiceDelHash() || CODES[0], true);
+    aplicarVista();   // botones y referencia de velas antes de que llegue el gráfico
     if (usaLW('productos')) initPChart();
     buildProductos();
     syncProductos();
