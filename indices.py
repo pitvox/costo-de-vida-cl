@@ -597,6 +597,15 @@ def limpiar_semanal(s: pd.Series):
     return s.mask(malo), descartes
 
 
+def _precios(sub: pd.DataFrame) -> tuple:
+    """Promedio, mínimo y máximo por fecha (promedio entre filas, como
+    precio_semanal) de las filas de un producto. Sin columnas de mínimo o
+    máximo, el promedio (como _norm)."""
+    g = sub.groupby("fecha")
+    return tuple(g[c if c in sub.columns else "Precio promedio"].mean().sort_index()
+                 for c in ("Precio promedio", "Precio minimo", "Precio maximo"))
+
+
 def series_productos(df: pd.DataFrame, ipc: pd.Series, descartes: list = None) -> dict:
     """Catálogo COMPLETO de productos RM en formato compacto.
 
@@ -610,8 +619,16 @@ def series_productos(df: pd.DataFrame, ipc: pd.Series, descartes: list = None) -
     parsea con certeza (parse_envase_estricto) a kg/un/l; el resto se
     excluye y se reporta. Serie: precio por unidad base, W-MON +
     ffill(limit=4) como el pipeline, deflactada a pesos de hoy, y emitida
-    compacta: {label, unidad, grupo, t0, v} con v = enteros semanales
-    consecutivos desde t0 y null en las semanas sin dato (estacionales).
+    compacta: {label, unidad, grupo, t0, v, min, max} con v = enteros
+    semanales consecutivos desde t0 y null en las semanas sin dato
+    (estacionales).
+
+    min y max son la mecha de las velas, como en los índices: el promedio
+    semanal de los precios mínimo y máximo que ODEPA encontró entre los
+    locales encuestados, alineados con v y deflactados igual. Pasan por la
+    misma limpieza; una semana sin promedio (o con el promedio descartado)
+    no lleva rango, y el rango no se arrastra a las semanas que completa el
+    ffill: esas quedan null y la vela va sin mecha.
 
     LIMPIEZA (solo aquí, nunca en los índices): antes del ffill cada serie
     pasa por limpiar_semanal; si se entrega la lista 'descartes', se le
@@ -621,8 +638,13 @@ def series_productos(df: pd.DataFrame, ipc: pd.Series, descartes: list = None) -
     der = ipc.rename("ipc").rename_axis("fecha").reset_index().sort_values("fecha")
     out, excluidos = {}, []
 
-    def emitir(slug, label, uni, grupo, precios, contenido):
-        s, fuera = limpiar_semanal((precios / contenido).resample("W-MON").mean())
+    def emitir(slug, label, uni, grupo, precios, minimos, maximos, contenido):
+        def semanal(x):
+            return (x / contenido).resample("W-MON").mean()
+        s, fuera = limpiar_semanal(semanal(precios))
+        # rango de la semana: solo donde hay promedio limpio, sin ffill
+        rango = [limpiar_semanal(semanal(x))[0].reindex(s.index).mask(s.isna())
+                 for x in (minimos, maximos)]
         s = s.ffill(limit=4)
         validos = s.dropna()
         if validos.empty:
@@ -634,11 +656,21 @@ def series_productos(df: pd.DataFrame, ipc: pd.Series, descartes: list = None) -
         s = s.loc[validos.index[0]:validos.index[-1]]   # recorta colas sin dato
         izq = s.rename("nominal").rename_axis("fecha").reset_index().sort_values("fecha")
         m = pd.merge_asof(izq, der, on="fecha", direction="backward").set_index("fecha")
-        real = m["nominal"] * (ipc_hoy / m["ipc"])
+        factor = (ipc_hoy / m["ipc"]).to_numpy()
+        real = m["nominal"] * factor
+        bajo, alto = (r.reindex(s.index).to_numpy() * factor for r in rango)
+        # la mecha envuelve el promedio, como en velas_reales (en ODEPA hay
+        # filas con el mínimo sobre el promedio o el máximo bajo él)
+        bajo, alto = np.minimum(bajo, real.to_numpy()), np.maximum(alto, real.to_numpy())
+
+        def enteros(xs):
+            return [int(round(x)) if pd.notna(x) else None for x in xs]
         out[slug] = {
             "label": label, "unidad": uni, "grupo": grupo or "Otros",
             "t0": s.index[0].strftime("%Y-%m-%d"),
-            "v": [int(round(v)) if pd.notna(v) else None for v in real],
+            "v": enteros(real),
+            "min": enteros(bajo),
+            "max": enteros(alto),
         }
 
     # 1) canastas oficiales: slug y agregación históricos
@@ -659,8 +691,7 @@ def series_productos(df: pd.DataFrame, ipc: pd.Series, descartes: list = None) -
         if p is None or p[0] != uni:
             excluidos.append((lab, odu))
             continue
-        emitir(_slug(lab), lab, uni, _modal(sub.get("Grupo")),
-               sub.groupby("fecha")["Precio promedio"].mean().sort_index(), p[1])
+        emitir(_slug(lab), lab, uni, _modal(sub.get("Grupo")), *_precios(sub), p[1])
 
     # 2) resto del catálogo, deduplicado por espacios/mayúsculas
     resto = df[~consumidos]
@@ -677,8 +708,7 @@ def series_productos(df: pd.DataFrame, ipc: pd.Series, descartes: list = None) -
         slug = _slug(label)
         if slug in out:
             continue
-        emitir(slug, label, p[0], _modal(sub.get("Grupo")),
-               sub.groupby("fecha")["Precio promedio"].mean().sort_index(), p[1])
+        emitir(slug, label, p[0], _modal(sub.get("Grupo")), *_precios(sub), p[1])
 
     for lab, odu in sorted(excluidos):
         print(f"EXCLUIDOS (unidad no parseada): {lab}: {odu or '(sin unidad)'}")

@@ -101,7 +101,7 @@ function velas(bars, t) {
     ok(info.timezone === 'America/Santiago' && info.session === '24x7', t + ': zona');
     ok(JSON.stringify(info.supported_resolutions) === '["1W"]' && info.has_weekly_and_monthly === true
        && info.has_intraday === false, t + ': semanal');
-    ok(info.visible_plots_set === (s.clase === 'indice' ? 'ohlc' : 'c'), t + ': velas solo en índices');
+    ok(info.visible_plots_set === 'ohlc', t + ': velas en índices y productos');
     // nombre corto (leyenda del celular) y largo (pantallas anchas y búsqueda)
     ok(info.long_description === s.descripcion && /, (nominal|en pesos de hoy)$/.test(info.long_description),
        t + ': descripción larga en español');
@@ -162,11 +162,19 @@ function velas(bars, t) {
   for (const f of CAT.productos) {
     const p = leer(path.join('datos', 'productos', f.slug + '.json'));
     const esperado = [];
-    p.v.forEach((v, i) => { if (v != null) esperado.push({ time: ms(p.t0) + i * semana, v }); });
+    p.v.forEach((v, i) => { if (v != null) esperado.push({ time: ms(p.t0) + i * semana, v, i }); });
     const real = await historia(await feed.info(f.slug), 400);
     velas(real, f.slug);
-    ok(JSON.stringify(real) === JSON.stringify(esperado.map(e =>
-      ({ time: e.time, open: e.v, high: e.v, low: e.v, close: e.v }))), f.slug + ': la serie de datos/');
+    // la vela: cuerpo desde el cierre anterior, mecha con el rango de ODEPA
+    const rango = (a, i, v) => a && a[i] != null ? a[i] : v;
+    ok(JSON.stringify(real) === JSON.stringify(esperado.map((e, k) => {
+      const o = k ? esperado[k - 1].v : e.v;
+      return { time: e.time, open: o, high: Math.max(o, e.v, rango(p.max, e.i, e.v)),
+        low: Math.min(o, e.v, rango(p.min, e.i, e.v)), close: e.v };
+    })), f.slug + ': la serie de datos/, en velas');
+    // con rango de ODEPA (hay productos sin mínimo ni máximo), con mecha
+    if (p.min && p.min.some((x, i) => x != null && p.v[i] != null && x < p.v[i]))
+      ok(real.some(b => b.low < Math.min(b.open, b.close)), f.slug + ': con mecha');
     ok(real.length && real[real.length - 1].close === f.precio_pesos_hoy,
        f.slug + ': el último cierre es el precio de hoy del catálogo');
     const nom = await historia(await feed.info(f.slug + '-nominal'), 400);
@@ -312,7 +320,7 @@ function velas(bars, t) {
   const p0 = CAT.productos[0], j0 = leer(path.join('datos', 'productos', p0.slug + '.json'));
   const feed2 = TV.crearDatafeed({ indices: INDICES,
     productos: [{ slug: p0.slug, nombre: p0.nombre, unidad: p0.unidad }],
-    precargados: { ['productos/' + p0.slug + '.json']: { t0: j0.t0, v: j0.v } },
+    precargados: { ['productos/' + p0.slug + '.json']: { t0: j0.t0, v: j0.v, min: j0.min, max: j0.max } },
     // el catálogo nunca llega
     pedir: r => { pedidos2.push(r); return r === 'catalogo.json' ? new Promise(() => {}) :
       Promise.resolve(leer(path.join('datos', r))); } });
