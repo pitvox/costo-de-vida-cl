@@ -150,8 +150,8 @@ __CSS_CABECERA__
      (--utxt: 27px en una línea, 43px en dos en el celular; en Arma tu
      canasta no está) salen del calc para que hero+barra sigan encuadrando
      la pantalla sin scroll */
-  body { --utxt:27px; }
-  @media (max-width:759px) { body { --utxt:43px; } }
+  body { --utxt:var(--utxt-medido, 27px); }
+  @media (max-width:759px) { body { --utxt:var(--utxt-medido, 43px); } }
   body[data-modo="canasta"] { --utxt:0px; }
   /* altura reservada por CSS antes de que Lightweight Charts monte, y en
      svh donde exista: 100vh cambia con la barra del navegador móvil y ese
@@ -739,7 +739,8 @@ __JS_UNIDAD__
           // si la persona cambia el tipo desde la barra de la librería, los
           // botones LÍNEA / VELAS la siguen
           w.activeChart().onChartTypeChanged().subscribe(null, t => {
-            if (t === 1 || t === 2) { vista = t === 2 ? 'linea' : 'velas'; aplicarVista(); }
+            if (t === 1 || t === 2) vista = t === 2 ? 'linea' : 'velas';
+            aplicarVista();   // otro tipo (área, barras...): ningún botón activo
           });
           // la referencia de las velas cambia con la temporalidad
           w.activeChart().onIntervalChanged().subscribe(null, () => setTimeout(() => aplicarVista(), 0));
@@ -1016,6 +1017,15 @@ __JS_UNIDAD__
     syncProductos();
   }
   const selector = selectorUnidad(ponerUnidad);
+  // la línea de la unidad ocupa una, dos o tres líneas según el ancho y la
+  // unidad: su alto medido (--utxt-medido) sale del alto del lienzo, para
+  // que hero y barras sigan cerrando la pantalla; antes de medir, el CSS
+  if (typeof ResizeObserver === 'function') {
+    const urow = document.querySelector('.urow');
+    new ResizeObserver(() => {
+      if (urow.offsetHeight) document.body.style.setProperty('--utxt-medido', urow.offsetHeight + 'px');
+    }).observe(urow);
+  }
 
   /* ---------- count-up del precio (~600ms) ---------- */
   // cifraGen corta una animación en curso cuando otra cifra la reemplaza
@@ -1384,14 +1394,23 @@ __JS_UNIDAD__
               : LightweightCharts.LineStyle.Solid,
             priceLineVisible: false, lastValueVisible: false });
         }
-        const u = unidad;
-        pseries.set(k, { s, unidad: u });
+        // unidad: la pedida; dibujada: la de las semanas que ya tiene
+        const u = unidad, dibujada = x ? x.dibujada : null;
+        pseries.set(k, { s, unidad: u, dibujada });
         puntosProducto(k, u).then(datos => {
           const y = pseries.get(k);
           if (!y || y.s !== s || y.unidad !== u) return;
+          y.dibujada = u;
           s.setData(datos);   // con huecos donde no hubo precio
           pchart.timeScale().fitContent();
-        }, () => {});
+        }, () => {
+          // sin las semanas de esa unidad: la serie sigue en la que tenía y el
+          // selector vuelve a ella (pesos de hoy, si recién se agregó)
+          const y = pseries.get(k);
+          if (!y || y.s !== s || y.unidad !== u) return;
+          y.unidad = y.dibujada;
+          if (unidad === u) ponerUnidad(y.dibujada || 'real');
+        });
       } else if (!on && x) {
         pchart.removeSeries(x.s);
         pseries.delete(k);
@@ -3329,8 +3348,13 @@ def cargar_uf():
             uf = json.load(fh, parse_constant=_no_es_json)
         t0 = datetime.date.fromisoformat(uf["t0"])
         v = uf["v"]
-        if t0.weekday() != 0 or not isinstance(v, list) or not v:
+        # t0 aaaa-mm-dd, como lo lee el datafeed (Date.parse no lee otras
+        # formas ISO que Python sí acepta, como 20071231 o 2008-W01-1)
+        if (uf["t0"] != t0.isoformat() or t0.weekday() != 0 or not isinstance(v, list)
+                or not v):
             return aviso(f"{UF_JSON} no viene por semanas desde un lunes")
+        # se escribe como lo hará el build (la versión de datos/ lo incluye)
+        _json(uf).encode("utf-8")
         ini, fin = semanas_de_las_series()
         if ini is None:
             return aviso("no hay series")

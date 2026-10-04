@@ -121,6 +121,12 @@ def test_uf_con_un_lunes_sin_valor(tmp_path):
     ("anidado", lambda: "[" * 100000, "no se puede leer (RecursionError"),
     ("no es un objeto", lambda: "[1, 2]", "no se puede leer (TypeError"),
     ("texto", lambda: "esto no es json", "no se puede leer (JSONDecodeError"),
+    ("t0 sin guiones", lambda: _con(0, "19622.66").replace('"2007-12-31"', '"20071231"'),
+     "no viene por semanas desde un lunes"),
+    ("t0 en semanas ISO", lambda: _con(0, "19622.66").replace('"2007-12-31"', '"2008-W01-1"'),
+     "no viene por semanas desde un lunes"),
+    ("surrogate suelto", lambda: _con(0, "19622.66").replace('{"t0"', '{"fuente":"\\ud800","t0"'),
+     "no se puede leer (UnicodeEncodeError"),
 ])
 def test_uf_rota_no_corta_el_build(tmp_path, caso, contenido, motivo):
     """Un datos/uf.json roto o que el navegador no puede leer: el build sigue,
