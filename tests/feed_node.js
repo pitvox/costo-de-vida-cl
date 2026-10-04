@@ -166,7 +166,10 @@ async function temporalidades(info, semanales, t, completo) {
   for (const s of lista) {
     const info = await llamar((res, rej) => feed.resolveSymbol(s.ticker, res, rej));
     const t = s.ticker, uf = s.unidad === 'uf';
-    ok(info.name === t && info.ticker === t, t + ': name y ticker = slug');
+    ok(info.ticker === t, t + ': ticker = slug, con la unidad');
+    ok(info.name && !/-(epoca|uf)$/.test(info.name) && !/[:]/.test(info.name) &&
+       info.name === info.description.replace(/, (precio de la época|en UF)$/, ''),
+       t + ': name legible, sin la unidad (Comparar la dice)');
     ok(info.minmov === 1 && info.pricescale === (uf ? 10000 : 1) && info.currency_code === (uf ? 'UF' : 'CLP'),
        t + (uf ? ': UF con hasta 4 decimales' : ': CLP sin decimales'));
     ok(info.timezone === 'America/Santiago' && info.session === '24x7', t + ': zona');

@@ -3863,7 +3863,7 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
         const desc = s.nombre + EN_LARGO[unidad];
         const corto = s.corto + EN_CORTO[unidad];
         simbolos.set(ticker, Object.assign({}, s, { ticker, base: s.ticker, unidad, desc, corto,
-          buscar: sinTildes(ticker + ' ' + desc + ' ' + s.nombre) }));
+          etiqueta: s.corto, buscar: sinTildes(ticker + ' ' + desc + ' ' + s.nombre) }));
       });
     }
     const agregarProducto = p => agregar({ ticker: p.slug, clase: 'producto', corto: p.nombre,
@@ -3926,7 +3926,10 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
     function info(s) {
       const enUF = s.unidad === 'uf';
       return {
-        name: s.ticker,
+        // el nombre que la librería muestra en Comparar (leyenda y eje): el
+        // del producto o del índice, sin la unidad (Comparar ya la dice). Los
+        // pedidos y c.symbol() usan el ticker, con la unidad
+        name: s.etiqueta,
         ticker: s.ticker,
         description: s.corto,
         long_description: s.desc,
