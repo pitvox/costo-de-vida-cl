@@ -20,9 +20,11 @@ con texto hueso; la brasa #e8743b solo vive en la í del wordmark y en la
 línea de los índices oficiales; hueso es el color de las canastas de
 usuario. El verde/ámbar/rojo del semáforo queda reservado a los 4 índices
 (veredicto, zonas del percentil de sus tarjetas y velas); los productos van
-sin semáforo. IBM Plex Sans para la interfaz y el texto, IBM Plex Mono para
-etiquetas cortas en mayúsculas y Space Grotesk para el wordmark, los títulos
-de sección de la portada y las cifras grandes.
+sin semáforo. El número de cada variación de precio va en color con criterio
+de consumidor (rojo si subió, verde si bajó), con la flecha al lado en gris.
+IBM Plex Sans para la interfaz y el texto, IBM Plex Mono para etiquetas
+cortas en mayúsculas y Space Grotesk para el wordmark, los títulos de
+sección de la portada y las cifras grandes.
 
 /graficos.html trae inline solo el primer pantallazo; las series completas
 van a datos/ y se piden a demanda (ver generar_datos). La portada no lleva
@@ -33,9 +35,10 @@ También escribe una ficha por producto (productos/{slug}.html), el listado
 los textos literales de textos/), robots.txt, sitemap.xml y resumen.json.
 Todas las páginas comparten la navegación del encabezado y el pie.
 
-TradingView Advanced Charts (paso A): carestia-tv.js (el datafeed sobre
-datos/), carestia-tv.css (el tema para el iframe de la librería) y la página
-oculta /prueba-graficos.html. La librería no está en este repo: el workflow
+TradingView Advanced Charts: carestia-tv.js (el datafeed sobre datos/, con
+Tu canasta como un símbolo que calcula a partir de sus productos),
+carestia-tv.css (el tema para el iframe de la librería) y la página oculta
+/prueba-graficos.html. La librería no está en este repo: el workflow
 la descarga al publicar (ver generar_tradingview).
 
 Correr:
@@ -75,9 +78,9 @@ GRAFICOS_HTML = r"""<!DOCTYPE html>
 <meta name="twitter:card" content="summary_large_image">
 __ICONO__
 __FUENTES__
-<!-- índices y Comparar van en Advanced Charts (carestia-tv.js monta la
-     librería al cargar la página); Lightweight dibuja Arma tu canasta y el
-     respaldo -->
+<!-- índices, Comparar y Arma tu canasta van en Advanced Charts
+     (carestia-tv.js monta la librería al cargar la página); Lightweight
+     queda como respaldo -->
 <script defer src="/__TV_JS__?v=__VER_TV__"></script>
 <script defer src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
 <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "101b8fafc10e4ae4b412859b124cb5ea"}'></script>
@@ -143,53 +146,47 @@ __CSS_CABECERA__
   body:not([data-modo="productos"]) .m-prod { display:none !important; }
   body:not([data-modo="canasta"])   .m-can  { display:none !important; }
   #vista { opacity:1; transition:opacity .18s ease; }
-  /* la barra de controles (~52px) sale del calc para que hero+barra sigan
-     encuadrando la pantalla sin scroll */
-  /* altura reservada por CSS antes de que Lightweight Charts monte, y en
-     svh donde exista: 100vh cambia con la barra del navegador móvil y ese
-     reflow se atribuía a los contenedores de chart (CLS) */
-  .hero-wrap { position:relative; height:calc(100vh - 318px); min-height:320px;
-    background:var(--bg); }
-  @supports (height:100svh) {
-    .hero-wrap { height:calc(100svh - 318px); } }
-  /* sobre 640px la fila de navegación del sitio (33px, en el encabezado)
-     también sale del calc: 272+33 y 368+33 */
-  @media (min-width:760px) {
-    .hero-wrap { height:calc(100vh - 305px); min-height:420px; }
-    @supports (height:100svh) {
-      .hero-wrap { height:calc(100svh - 305px); } } }
-  /* móvil: la franja bajo el lienzo (50px, ver .mstrip) y, bajo 641px, la
-     segunda fila de tabs (+50px) salen del encuadre para que hero + barras
-     sigan cerrando la pantalla sin scroll donde el alto alcance */
+  /* alto del gráfico, reservado por CSS antes de que monte cualquiera de
+     los dos motores (CLS). Escritorio: 0,6 veces el ancho, entre 520 y
+     760px. Celular (bajo 760px): el ancho, sin pasar del 75% de la pantalla
+     (en svh donde exista: estable frente a la barra del navegador). Lo
+     lleva el lienzo de Lightweight (todo el hero) o la caja de Advanced
+     Charts del modo */
+  .hero-wrap, .tvbox { aspect-ratio:5 / 3; min-height:520px; max-height:760px; }
   @media (max-width:759px) {
-    .hero-wrap { height:calc(100vh - 401px); }
-    @supports (height:100svh) {
-      .hero-wrap { height:calc(100svh - 401px); } } }
-  @media (max-width:640px) {
-    .hero-wrap { height:calc(100vh - 419px); }
-    @supports (height:100svh) {
-      .hero-wrap { height:calc(100svh - 419px); } } }
+    .hero-wrap, .tvbox { aspect-ratio:1 / 1; min-height:0; max-height:75vh;
+      max-height:75svh; } }
+  .hero-wrap { position:relative; background:var(--bg); }
   @media (max-width:759px) { .overlay .oname, .overlay .cstats, .overlay .caviso,
     .overlay .can-reg { max-width:calc(100vw - 160px); }
-    body.tv-ind .overlay.m-ind .oname { max-width:none; } }
+    body.tv-ind .overlay.m-ind .oname, body.tv-can .overlay.m-can > * { max-width:none; } }
   #chart, #pchart, #cchart { position:absolute; inset:0; }
-  /* ---- Advanced Charts (índices y Comparar) ---- */
-  /* la librería trae su barra arriba y su leyenda: el texto del índice sale
+  /* ---- Advanced Charts (índices, Comparar y Arma tu canasta) ---- */
+  /* la librería trae su barra arriba y su leyenda: el texto del modo sale
      del lienzo a una franja propia sobre el gráfico, en una fila que se
-     envuelve, y el widget ocupa el resto del alto reservado */
+     envuelve, y el widget va debajo, con el alto del gráfico */
   .tvbox { display:none; }
-  body.tv-ind .hero-wrap, body.tv-prod .hero-wrap { display:flex; flex-direction:column; }
-  body.tv-ind #tvind, body.tv-prod #tvprod { display:block; position:relative;
-    flex:1 1 auto; min-height:0; }
-  body.tv-ind #chart, body.tv-prod #pchart { display:none; }
-  body.tv-ind .overlay.m-ind, body.tv-prod .overlay.m-prod { position:static;
-    max-width:none; display:flex; flex-wrap:wrap; align-items:baseline;
+  body[data-modo="indices"].tv-ind .hero-wrap, body[data-modo="productos"].tv-prod .hero-wrap,
+  body[data-modo="canasta"].tv-can .hero-wrap { aspect-ratio:auto; min-height:0;
+    max-height:none; }
+  body.tv-ind #tvind, body.tv-prod #tvprod, body.tv-can #tvcan { display:block;
+    position:relative; }
+  body.tv-ind #chart, body.tv-prod #pchart, body.tv-can #cchart { display:none; }
+  body.tv-ind .overlay.m-ind, body.tv-prod .overlay.m-prod, body.tv-can .overlay.m-can {
+    position:static; max-width:none; display:flex; flex-wrap:wrap; align-items:baseline;
     gap:4px 16px; padding:10px clamp(16px,3vw,32px) 9px;
     border-bottom:1px solid var(--line); }
   body.tv-ind .overlay.m-ind .orow, body.tv-ind .overlay.m-ind .overd,
-  body.tv-ind .overlay.m-ind .ovs, body.tv-prod .overlay.m-prod .onote { margin-top:0; }
-  body.tv-ind .overlay.m-ind .oprice { font-size:clamp(24px,3.4vw,38px); }
+  body.tv-ind .overlay.m-ind .ovs, body.tv-prod .overlay.m-prod .onote,
+  body.tv-can .overlay.m-can > * { margin-top:0; }
+  body.tv-ind .overlay.m-ind .oprice, body.tv-can .overlay.m-can .oprice {
+    font-size:clamp(24px,3.4vw,38px); }
   body.tv-ind .overlay.m-ind .oname #osub { display:inline; margin-left:6px; }
+  /* Arma tu canasta: el nombre y el costo en una fila; las cifras de la
+     canasta, el aviso y el registro, cada uno en la suya */
+  body.tv-can .overlay.m-can .cstats, body.tv-can .overlay.m-can .caviso,
+  body.tv-can .overlay.m-can .can-reg { flex-basis:100%; }
+  body.tv-can .overlay.m-can > :empty { display:none; }
   .overlay { position:absolute; left:clamp(12px,2.5vw,32px); top:clamp(12px,2.5vw,26px);
     pointer-events:none; z-index:5; max-width:88%; }
   .overlay .oname { font:500 clamp(10px,1.4vw,12px) var(--mono);
@@ -205,8 +202,10 @@ __CSS_CABECERA__
     margin-top:4px; flex-wrap:wrap; }
   .oprice { font:700 clamp(34px,6vw,68px)/1 var(--display);
     letter-spacing:-.01em; color:var(--bone); }
-  .odelta { font:600 clamp(13px,1.6vw,18px) var(--sans); color:var(--ash); }
-  .odelta small { font:400 12px var(--sans); color:var(--dim); }
+  /* la variación semanal: el número en color (ver .v-sube y .v-baja) y el
+     resto en hueso */
+  .odelta { font:600 clamp(13px,1.6vw,18px) var(--sans); color:var(--bone); }
+  .odelta small { font:400 12px var(--sans); color:var(--bone); }
   .overd { display:flex; align-items:center; gap:12px; margin-top:12px; flex-wrap:wrap; }
   .badge { font:600 clamp(11px,1.4vw,13px) var(--mono); letter-spacing:.14em;
     padding:5px 12px; background:var(--verdict); color:var(--bg);
@@ -383,6 +382,8 @@ __CSS_CABECERA__
     padding:20px; text-align:center; pointer-events:none;
     font:400 12px/1.5 var(--sans); color:var(--ash); }
   .carga[hidden] { display:none; }
+  /* mientras se prepara la captura PNG, un velo tapa el gráfico */
+  .carga.velo { background:var(--bg); pointer-events:auto; }
   .carga:not(.error) #carga-txt { animation:car-carga 1.2s ease-in-out infinite alternate; }
   .carga:not(.error) button { display:none; }
   .carga button { pointer-events:auto; }
@@ -464,6 +465,7 @@ __CSS_SITIO__
       </div>
       <div id="tvind" class="tvbox m-ind"></div>
       <div id="tvprod" class="tvbox m-prod"></div>
+      <div id="tvcan" class="tvbox m-can"></div>
       <div class="carga" id="carga" role="status" hidden>
         <span id="carga-txt"></span>
         <button class="vbtn nomtoggle" id="carga-reintentar">Reintentar</button>
@@ -643,15 +645,16 @@ __PIE__
   }
 
   /* ---------- motor: Advanced Charts, con respaldo en Lightweight ---------- */
-  // índices y Comparar van en Advanced Charts, un widget para cada uno que se
-  // monta la primera vez que su modo está a la vista; Arma tu canasta sigue
-  // en Lightweight. Si la librería no está o un widget no inicia en 8
-  // segundos, ese modo dibuja con Lightweight como siempre
+  // índices, Comparar y Arma tu canasta van en Advanced Charts, un widget
+  // para cada uno que se monta la primera vez que su modo está a la vista.
+  // Si la librería no está o un widget no inicia en 8 segundos, ese modo
+  // dibuja con Lightweight como siempre
   const LIBRERIA = '/charting_library/';
   const TV_CSS = '/__TV_CSS__?v=__VER_CSS__';
   let TV = null, feed = null;
   const tv = { indices: { estado: 'nada', caja: 'tvind', clase: 'tv-ind', dato: 'motorIndices' },
-               productos: { estado: 'nada', caja: 'tvprod', clase: 'tv-prod', dato: 'motorProductos' } };
+               productos: { estado: 'nada', caja: 'tvprod', clase: 'tv-prod', dato: 'motorProductos' },
+               canasta: { estado: 'nada', caja: 'tvcan', clase: 'tv-can', dato: 'motorCanasta' } };
   const tvListo = m => tv[m].estado === 'listo';
   const usaLW = m => tv[m].estado === 'falla';
   // la librería devuelve el símbolo en mayúsculas y a veces con la fuente
@@ -660,7 +663,7 @@ __PIE__
   function prepararTV() {
     TV = window.CarestiaTV || null;
     if (!TV) {
-      ['indices', 'productos'].forEach(m => { tv[m].estado = 'falla'; document.body.dataset[tv[m].dato] = 'lightweight'; });
+      Object.keys(tv).forEach(m => { tv[m].estado = 'falla'; document.body.dataset[tv[m].dato] = 'lightweight'; });
       return;
     }
     // el índice que viene inline y los productos de la página no se piden
@@ -668,7 +671,8 @@ __PIE__
     Object.keys(DATA.series || {}).forEach(c => {
       precargados['indices/' + c + '.json'] = { serie: DATA.series[c] };
     });
-    feed = TV.crearDatafeed({ base: '/datos/', ver: DATA.ver, precargados,
+    // los mismos pedidos a datos/ que la página: una sola descarga por archivo
+    feed = TV.crearDatafeed({ base: '/datos/', ver: DATA.ver, precargados, pedir: pedirJSON,
       indices: CODES.map(c => ({ codigo: c, nombre: INDICES[c].nombre })),
       productos: Object.keys(PRODS).map(k => ({ slug: PRODS[k].slug, nombre: PRODS[k].label,
         unidad: PRODS[k].unidad, grupo: PRODS[k].grupo })) });
@@ -687,9 +691,10 @@ __PIE__
     const primero = m === 'productos' ? elegidosEnOrden()[0] || Object.keys(PRODS)[0] : null;
     TV.montar({ contenedor: caja, libreria: LIBRERIA, datafeed: feed, tok, sitio: true,
       css: location.origin + TV_CSS,
-      simbolo: m === 'indices' ? simboloIndice(cur) : PRODS[primero].slug,
-      // Comparar pone sus propios colores
-      estilo: m === 'indices' })
+      simbolo: m === 'indices' ? simboloIndice(cur) : m === 'canasta' ? tickerCanasta() :
+        PRODS[primero].slug,
+      // Comparar pone sus propios colores; Tu canasta, una línea en hueso
+      estilo: m !== 'productos', linea: m === 'canasta' })
       .then(w => {
         e.w = w;
         e.estado = 'listo';
@@ -701,7 +706,8 @@ __PIE__
             if (t === 1 || t === 2) { vista = t === 2 ? 'linea' : 'velas'; aplicarVista(); }
           });
           pintarSerie(cur);
-        } else syncProductos();
+        } else if (m === 'productos') syncProductos();
+        else syncCanasta();
         pintarCarga();
       }, () => {
         e.estado = 'falla';
@@ -709,7 +715,8 @@ __PIE__
         document.body.classList.remove(e.clase);
         document.body.dataset[e.dato] = 'lightweight';
         if (m === 'indices') { initChart(); pintarSerie(cur); }
-        else { initPChart(); syncProductos(); }
+        else if (m === 'productos') { initPChart(); syncProductos(); }
+        else { initCChart(); syncCanasta(); }
         pintarCarga();
       });
   }
@@ -728,10 +735,15 @@ __PIE__
   // variación de las dos últimas semanas: viene calculada en el resumen,
   // así el ticker no necesita las series
   const deltaSemanal = d => d.delta;
-  // C1: flechas en ceniza, nunca verde/rojo
+  // la flecha al lado, en gris, y el número en color con criterio de
+  // consumidor: rojo si el precio subió, verde si bajó; si redondea a 0,0,
+  // en el color del texto. Devuelve HTML (solo cifras y flechas)
   function fmtDelta(x) {
     if (x == null) return '·';
-    return (x < 0 ? '▼' : '▲') + Math.abs(x).toFixed(1).replace('.', ',') + '%';
+    const n = Math.abs(x).toFixed(1);
+    const num = n.replace('.', ',') + '%';
+    return '<i class="f">' + (x < 0 ? '▼' : '▲') + '</i>' + (+n === 0 ? num :
+      '<span class="' + (x > 0 ? 'v-sube' : 'v-baja') + '">' + num + '</span>');
   }
   const tstr = t => typeof t === 'string' ? t :
     t.year + '-' + String(t.month).padStart(2, '0') + '-' + String(t.day).padStart(2, '0');
@@ -804,8 +816,7 @@ __PIE__
     return modo === 'productos' ? pchart : modo === 'canasta' ? cchart : chart;
   }
   // el widget de Advanced Charts del modo, si está listo
-  const widgetActivo = () => (modo === 'indices' || modo === 'productos') && tvListo(modo) ?
-    tv[modo].w : null;
+  const widgetActivo = () => tvListo(modo) ? tv[modo].w : null;
   // navegación del sitio: en /graficos.html, Índices / Comparar / Arma tu
   // canasta del encabezado cambian el modo EN EL LUGAR, igual que las tabs
   // (sin recargar y aunque el hash ya sea el mismo); sin JS, o sin
@@ -836,7 +847,7 @@ __PIE__
     pintarCarga();
     // el widget del modo se monta la primera vez que está a la vista; después
     // de los deep links del load (que pueden cambiar el modo de entrada)
-    if ((m === 'indices' || m === 'productos') && tv[m].estado === 'nada') {
+    if (tv[m].estado === 'nada') {
       setTimeout(() => { if (modo === m) montarTV(m); }, 0);
     }
     if (!cambio) return;
@@ -986,7 +997,7 @@ __PIE__
     document.getElementById('oname').textContent = d.nombre.replace(/^Índice /i, '');
     document.getElementById('osub').textContent = d.subtitulo;
     countUp(document.getElementById('oprice'), d.costo_real);
-    document.getElementById('odelta').textContent = fmtDelta(deltaSemanal(d));
+    document.getElementById('odelta').innerHTML = fmtDelta(deltaSemanal(d));
     document.getElementById('obadge').textContent = d.veredicto;
     document.getElementById('obadge').style.background = d.color;
     document.getElementById('opct').textContent =
@@ -1043,22 +1054,28 @@ __PIE__
   /* ---------- estado de carga del lienzo ---------- */
   // mientras falte alguna serie del modo activo, "Cargando datos..." sobre
   // el lienzo; si un pedido falló, el aviso con un botón para reintentar
+  // en Advanced Charts la librería pide sus series; la canasta igual espera
+  // las suyas, porque de ellas salen la cifra y las estadísticas de la franja
   const cargaEl = document.getElementById('carga');
+  let capturando = false;   // un velo tapa el gráfico mientras se prepara la captura
   function faltantes() {
-    if ((modo === 'indices' || modo === 'productos') && !usaLW(modo)) {
-      return tvListo(modo) ? [] : ['tv'];
+    if (modo === 'indices') {
+      if (!usaLW(modo)) return tvListo(modo) ? [] : ['tv'];
+      return INDICES[cur].real ? [] : ['i:' + cur];
     }
-    if (modo === 'indices') return INDICES[cur].real ? [] : ['i:' + cur];
+    if (!usaLW(modo) && !tvListo(modo)) return ['tv'];
+    if (modo === 'productos' && !usaLW(modo)) return [];
     const keys = modo === 'productos' ? [...psel] : [...canasta.keys()];
     return keys.filter(k => PRODS[k] && !PRODS[k].real).map(k => 'p:' + k);
   }
   function pintarCarga() {
     const faltan = faltantes();
-    const fallo = faltan.some(c => errores.has(c));
-    cargaEl.hidden = !faltan.length;
+    const fallo = !capturando && faltan.some(c => errores.has(c));
+    cargaEl.hidden = !faltan.length && !capturando;
     cargaEl.classList.toggle('error', fallo);
-    document.getElementById('carga-txt').textContent = fallo ?
-      'No se pudieron cargar los datos.' : 'Cargando datos...';
+    cargaEl.classList.toggle('velo', capturando);
+    document.getElementById('carga-txt').textContent = capturando ? 'Preparando la captura...' :
+      fallo ? 'No se pudieron cargar los datos.' : 'Cargando datos...';
   }
   document.getElementById('carga-reintentar').onclick = () => {
     if (modo === 'indices') pintarSerie(cur);
@@ -1294,7 +1311,10 @@ __PIE__
 
   /* ---------- vista Tu canasta ---------- */
   // constructor libre sobre las series de PRODS; el semáforo CARO/NORMAL/
-  // BARATO queda reservado a los índices oficiales y aquí no se usa
+  // BARATO queda reservado a los índices oficiales y aquí no se usa. En
+  // Advanced Charts la canasta es un símbolo que calcula el datafeed con la
+  // misma cuenta de calcularCanasta (ver carestia-tv.js); la cifra y las
+  // estadísticas de la franja salen siempre de calcularCanasta
   const QDEF  = { kg: 0.5, un: 1, l: 1 };
   const QSTEP = { kg: 0.1, un: 1, l: 0.1 };
   const QMIN  = { kg: 0.1, un: 1, l: 0.1 };
@@ -1357,6 +1377,11 @@ __PIE__
     });
     return { serie, truncada: tarde > temprano, limitante };
   }
+
+  // el ticker de la canasta en el datafeed: sus productos y cantidades, en
+  // el orden de la canasta
+  const tickerCanasta = () => feed.canasta([...canasta.entries()].filter(([k]) => PRODS[k])
+    .map(([k, q]) => ({ slug: PRODS[k].slug, cantidad: q })));
 
   function initCChart() {
     const el = document.getElementById('cchart');
@@ -1481,7 +1506,13 @@ __PIE__
         r.serie[0].time.slice(0, 4) + ' (limitada por ' +
         PRODS[r.limitante].label + ')' : '';
     }
-    if (cchart) {
+    if (tvListo('canasta')) {
+      // Advanced Charts: el mismo widget, con el símbolo de esta canasta;
+      // sin semanas que mostrar, la línea se oculta
+      const w = tv.canasta.w;
+      ponerSimbolo(w, tickerCanasta());
+      w.activeChart().getSeries().setVisible(r.serie.length > 0);
+    } else if (cchart) {
       // recuperar la autoescala si el usuario arrastró el eje de precios
       cchart.priceScale('right').applyOptions({ autoScale: true });
       cserie.setData(r.serie);
@@ -1522,7 +1553,8 @@ __PIE__
       return b;
     });
     cpaints.forEach(f => f());
-    initCChart();
+    // sin carestia-tv.js, Lightweight desde el principio
+    if (usaLW('canasta')) initCChart();
     renderCItems();
     syncCanasta();
     const btn = document.getElementById('ccopy');
@@ -1577,6 +1609,64 @@ __PIE__
     return Promise.resolve(n && n.length ? n[n.length - 1].value : null);
   }
 
+  // el gráfico fotografiado con la proporción de su recuadro en la captura
+  // (prop = ancho / alto). Solo cambia el alto, así el rango a la vista no
+  // se mueve. Lightweight se redimensiona, se fotografía y vuelve a su
+  // tamaño en el mismo cuadro, sin que se alcance a ver
+  function fotoLW(ch, prop) {
+    const caja = ch.chartElement().parentElement;
+    const ancho = caja.clientWidth, alto = caja.clientHeight;
+    const prueba = ch.takeScreenshot();
+    if (!prueba.width) return prueba;
+    const k = prueba.width / ancho;   // píxeles de la foto por píxel de pantalla
+    ch.applyOptions({ autoSize: false });
+    ch.resize(ancho, Math.max(160, Math.round(alto + (prueba.width / prop - prueba.height) / k)), true);
+    const shot = ch.takeScreenshot();
+    ch.resize(ancho, alto, true);
+    ch.applyOptions({ autoSize: true });
+    return shot;
+  }
+  // Advanced Charts: la librería se redibuja con el alto nuevo (hasta tres
+  // intentos, midiendo cada foto) y mientras tanto un velo tapa el gráfico;
+  // el hero conserva su alto para que la página no se mueva
+  const dosCuadros = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+  async function fotoTV(w, prop) {
+    const caja = document.getElementById(tv[modo].caja), hero = document.getElementById('hero');
+    let shot = await TV.capturaCliente(w, tok, caja);
+    if (!shot || !shot.width) return shot;
+    const meta = () => shot.width / prop;   // el alto de foto que se busca
+    if (Math.abs(shot.height - meta()) < 2) return shot;
+    capturando = true;
+    cargaEl.style.top = caja.offsetTop + 'px';
+    pintarCarga();
+    hero.style.height = hero.offsetHeight + 'px';
+    hero.style.overflow = 'hidden';
+    let alto = caja.clientHeight, k = shot.width / caja.clientWidth;
+    try {
+      for (let i = 0; i < 3 && Math.abs(shot.height - meta()) >= 2; i++) {
+        const nuevo = Math.max(160, Math.round(alto + (meta() - shot.height) / k));
+        Object.assign(caja.style, { aspectRatio: 'auto', minHeight: '0', maxHeight: 'none',
+          height: nuevo + 'px' });
+        await dosCuadros();
+        await new Promise(r => setTimeout(r, 250));
+        const s = await TV.capturaCliente(w, tok, caja);
+        if (!s || !s.width) break;
+        if (nuevo !== alto && s.height !== shot.height) k = (s.height - shot.height) / (nuevo - alto);
+        alto = nuevo;
+        shot = s;
+      }
+    } finally {
+      Object.assign(caja.style, { aspectRatio: '', minHeight: '', maxHeight: '', height: '' });
+      hero.style.height = hero.style.overflow = '';
+      await dosCuadros();
+      await new Promise(r => setTimeout(r, 250));
+      capturando = false;
+      cargaEl.style.top = '';
+      pintarCarga();
+    }
+    return shot;
+  }
+
   async function capturarPNG() {
     // Advanced Charts: su captura del lado del cliente (nunca la del servidor
     // de TradingView); Lightweight: la suya, como siempre
@@ -1585,7 +1675,7 @@ __PIE__
     if (!w) {
       try { await datosDelModo(); } catch (e) { pintarCarga(); return; }
       // dos cuadros: el lienzo alcanza a dibujar lo que acaba de llegar
-      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+      await dosCuadros();
     }
     // el canvas no dispara la carga perezosa de webfonts: si un peso aún
     // no se usó en el DOM, fillText caería a la fuente del sistema.
@@ -1599,15 +1689,11 @@ __PIE__
       ]);
       await document.fonts.ready;
     } catch (e) {}
-    const shot = w ? await TV.capturaCliente(w, tok).catch(() => null) : ch.takeScreenshot();
-    if (!shot || !shot.width) return;
-    // lienzo de salida legible para compartir: nunca menos de 1200px de
-    // ancho; takeScreenshot ya viene a devicePixelRatio y si aun así es
-    // chico (móvil a DPR bajo) se escala el canvas
-    const W = Math.max(1200, Math.round(shot.width));
+    // la captura es cuadrada, de 1080 × 1080: arriba qué es, cuánto vale y
+    // de qué semana; al medio el gráfico y abajo la marca
+    const W = 1080, H = 1080;
     const pad = Math.round(W * 0.04);
     const chartW = W - pad * 2;
-    const chartH = Math.round(shot.height * chartW / shot.width);
     // bajo el costo, la composición: en canasta "{label} {cantidad} {unidad}"
     // en una línea o dos si no cabe; en productos, los elegidos por orden de
     // puesto, cada uno con la muestra de su línea (color y trazo del
@@ -1651,7 +1737,10 @@ __PIE__
     }
     const compH = (compLineas.length + prodLineas.length) * compAlto;
     const headH = Math.round(W * 0.13) + compH, footH = Math.round(W * 0.07);
-    const H = headH + chartH + footH;
+    const chartH = H - headH - footH;
+    const shot = w ? await fotoTV(w, chartW / chartH).catch(() => null) :
+      fotoLW(ch, chartW / chartH);
+    if (!shot || !shot.width) return;
     const cv = document.createElement('canvas');
     cv.width = W; cv.height = H;
     const ctx = cv.getContext('2d');
@@ -1712,7 +1801,11 @@ __PIE__
     });
     ctx.font = '400 ' + Math.round(W * 0.012) + 'px "IBM Plex Sans", sans-serif';
     ctx.fillText('semana del ' + fecha, pad, Math.round(W * 0.098) + compH);
-    ctx.drawImage(shot, pad, headH, chartW, chartH);
+    // el gráfico entero en su recuadro, centrado si la proporción no quedó exacta
+    const esc = Math.min(chartW / shot.width, chartH / shot.height);
+    const dw = Math.round(shot.width * esc), dh = Math.round(shot.height * esc);
+    ctx.drawImage(shot, pad + Math.round((chartW - dw) / 2), headH + Math.round((chartH - dh) / 2),
+      dw, dh);
     marcaDeAgua(ctx, W - pad, H - Math.round(footH * 0.35), Math.round(W * 0.02));
     const nombre = 'carestia_' + (modo === 'indices' ? simboloIndice(cur) : modo) + '_' +
       new Date().toISOString().slice(0, 10) + '.png';
@@ -1841,8 +1934,6 @@ __CSS_CABECERA__
     text-underline-offset:3px; }
   .sec-link:hover, .sec-link:focus-visible { color:var(--bone);
     text-decoration-color:var(--bone); }
-  /* flechas siempre neutras: el color no dice si algo subió o bajó */
-  .f { font-style:normal; color:var(--dim); }
   /* la cinta queda quieta para quien pidió menos movimiento, como en
      /graficos.html */
   @media (prefers-reduced-motion: reduce) {
@@ -1880,7 +1971,7 @@ __CSS_CABECERA__
   .zonas .marca { position:absolute; top:-4px; width:3px; height:16px;
     margin-left:-1px; background:var(--bone); border-radius:2px; }
   .ic-pie { display:flex; flex-wrap:wrap; justify-content:space-between; gap:4px 8px;
-    font:400 12px/1.5 var(--sans); color:var(--ash);
+    font:400 12px/1.5 var(--sans); color:var(--bone);
     border-top:1px solid var(--line); padding-top:12px; }
   /* las 4 tarjetas miden lo mismo: si el pie no cabe en una línea, va en dos
      en todas, no solo en las de cifras más largas */
@@ -2047,7 +2138,7 @@ __CSS_CABECERA__
     .ic-precio { font-size:24px; line-height:1.1; }
     .zonas { height:6px; }
     .zonas .marca { top:-3px; height:12px; }
-    .ic-m { display:block; font:400 11px/1.4 var(--sans); color:var(--ash); }
+    .ic-m { display:block; font:400 11px/1.4 var(--sans); color:var(--bone); }
   }
 __CSS_SITIO__
 </style>
@@ -2312,6 +2403,10 @@ CSS_BASE = r"""
     --ember:#e8743b;
     /* semáforo: solo el veredicto y las velas de los 4 índices */
     --verde:#5bbf7a; --ambar:#e0a83c; --rojo:#e0552f; --verdict:var(--rojo);
+    /* variaciones de precio, con criterio de consumidor: el número va en
+       rojo si el precio subió y en verde si bajó (ver .v-sube y .v-baja).
+       Sobre --bg, rojo 5,0:1 y verde 8,4:1; sobre --panel, 4,7 y 7,8 (AA) */
+    --sube:var(--rojo); --baja:var(--verde);
     /* Comparar productos: cuatro tonos muy distintos, sin azules ni
        violetas azulados, sin verde, naranjo ni rojo (rosa, magenta, blanco
        cálido y amarillo); del 5º al 8º producto se repiten punteados. Los
@@ -2359,7 +2454,8 @@ CSS_CABECERA = r"""  /* ---- ticker ---- */
   .titem:hover { background:var(--hover); }
   .titem .tn { font:600 11px var(--mono); letter-spacing:.1em; color:var(--bone); }
   .titem .tp { font:500 13px var(--sans); color:var(--bone); }
-  .titem .td { font:500 12px var(--sans); color:var(--ash); } /* deltas SIEMPRE en secundario */
+  /* la variación semanal: el número en color (ver .v-sube y .v-baja) */
+  .titem .td { font:500 12px var(--sans); color:var(--bone); }
   @media (min-width:760px) {
     .ticker .tag { display:flex; }
     .ticker-scroll { overflow-x:hidden; }
@@ -2461,6 +2557,14 @@ CSS_SITIO = r"""
   .pie-links a[aria-current] { text-decoration-color:var(--bone); }
   /* RUT y fechas (78.521.796-9, 22-07-2026) no se cortan en el guion */
   .nw { white-space:nowrap; }
+
+  /* ---- variaciones de precio (todas las páginas) ---- */
+  /* el número va en color con criterio de consumidor: rojo si el precio
+     subió, verde si bajó y el color del texto si no cambió. La flecha va al
+     lado, en gris, y el resto del texto en hueso */
+  .f { font-style:normal; color:var(--dim); }
+  .v-sube { color:var(--sube); }
+  .v-baja { color:var(--baja); }
 """
 
 # menú móvil: se cierra al tocar fuera o con Escape (sin JS abre y cierra
@@ -2584,14 +2688,21 @@ __CSS_BASE__
   .oprice { font:700 clamp(38px,7vw,64px)/1 var(--display);
     letter-spacing:-.01em; color:var(--bone); }
   .ouni { font:400 13px var(--sans); color:var(--ash); }
-  .odelta { font:600 15px var(--sans); color:var(--ash); } /* deltas SIEMPRE en secundario */
-  .odelta small { font:400 12px var(--sans); color:var(--dim); }
+  /* la variación semanal: el número en color (ver .v-sube y .v-baja) y el
+     resto en hueso */
+  .odelta { font:600 15px var(--sans); color:var(--bone); }
+  .odelta small { font:400 12px var(--sans); color:var(--bone); }
   .pct { font:400 15px/1.6 var(--sans); color:var(--bone);
     margin-top:12px; text-wrap:pretty; }
-  /* altura reservada por CSS ANTES de que Lightweight Charts monte: la
-     página no salta al renderizar (svh: estable frente a la barra móvil) */
-  #grafico { position:relative; max-width:none; height:clamp(320px,66vh,820px);
-    height:clamp(320px,66svh,820px); margin-top:22px; }
+  /* alto reservado por CSS antes de que monte cualquiera de los dos
+     motores: la página no salta al renderizar. Escritorio: 0,6 veces el
+     ancho, entre 520 y 760px. Celular (bajo 760px): el ancho, sin pasar del
+     75% de la pantalla (svh: estable frente a la barra del navegador) */
+  #grafico { position:relative; max-width:none; aspect-ratio:5 / 3;
+    min-height:520px; max-height:760px; margin-top:22px; }
+  @media (max-width:759px) {
+    #grafico { aspect-ratio:1 / 1; min-height:0; max-height:75vh;
+      max-height:75svh; } }
   .fecha { font:500 12px var(--sans); color:var(--ash); margin-top:14px; }
   .ref-velas { font:400 12px/1.5 var(--sans); color:var(--dim); margin-top:10px; }
   /* otros productos del grupo: interlinking sobrio al pie, misma paleta
@@ -2787,10 +2898,23 @@ def fmt_clp(x: float) -> str:
 
 
 def fmt_delta(vals: list) -> str:
+    """Variación semanal de la ficha, en HTML: la flecha al lado y el número
+    con el color de numero_variacion."""
     if len(vals) < 2 or not vals[-2]:
         return "·"
     d = (vals[-1] / vals[-2] - 1) * 100
-    return ("▼" if d < 0 else "▲") + f"{abs(d):.1f}".replace(".", ",") + "%"
+    return (f'<i class="f">{"▼" if d < 0 else "▲"}</i>'
+            f'{numero_variacion(d, f"{abs(d):.1f}")}')
+
+
+def numero_variacion(x: float, txt: str) -> str:
+    """El número de una variación (txt, con punto decimal) en color con
+    criterio de consumidor: rojo (.v-sube) si el precio subió, verde
+    (.v-baja) si bajó y sin clase, en el color del texto, si redondea a 0,0."""
+    num = txt.replace(".", ",") + "%"
+    if float(txt) == 0:
+        return num
+    return f'<span class="{"v-sube" if x > 0 else "v-baja"}">{num}</span>'
 
 
 def es_femenino(label: str) -> bool:
@@ -3186,7 +3310,9 @@ def generar_productos(slugs: dict) -> None:
 #                          8 segundos, dibuja con Lightweight Charts
 # Símbolos: los 4 índices y los productos del catálogo, cada uno en pesos de
 # hoy y su versión nominal ("{slug}-nominal"); el ticker es el slug (el código
-# del índice o el de la ficha del producto). Semanales (1W), en CLP sin
+# del índice o el de la ficha del producto). Además, Tu canasta: un símbolo
+# por cada canasta que se arma en /graficos.html ("tu-canasta-{huella}"),
+# fuera de la búsqueda, con la cuenta de la página. Semanales (1W), en CLP sin
 # decimales y en America/Santiago.
 TV_JS = "carestia-tv.js"
 TV_CSS = "carestia-tv.css"
@@ -3201,7 +3327,8 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
   const FUENTE = 'Carestía';
   const SEMANA = 7 * 864e5;
   const UNIDAD = { kg: 'kilo', un: 'unidad', l: 'litro' };
-  const TIPO = { indice: 'index', producto: 'commodity' };
+  // Tu canasta no es un índice: va con el tipo de los productos
+  const TIPO = { indice: 'index', producto: 'commodity', canasta: 'commodity' };
   const SUFIJO_NOMINAL = '-nominal';
 
   const sinTildes = s => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -3302,6 +3429,54 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
     return out;
   }
 
+  // ---------- Tu canasta ----------
+  // la canasta que arma cada persona en /graficos.html es un símbolo más,
+  // calculado aquí desde sus productos con la cuenta de siempre de la página
+  // (Laspeyres): el costo de una semana es la suma de cantidad × precio en
+  // pesos de hoy, en el orden de la canasta, y existe SOLO en las semanas en
+  // que todos los productos tienen precio (intersección estricta: un
+  // producto de historia corta trunca la serie y una semana sin precio de
+  // alguno queda sin costo). Un producto sin ningún precio no cuenta. Se
+  // llama "Tu canasta": no es un índice de Carestía
+  const NOMBRE_CANASTA = 'Tu canasta';
+  const TICKER_CANASTA = 'tu-canasta';
+  // items: [{ cantidad, serie: { t0, v } }] -> [{ time (ms), value }]
+  function serieCanasta(items) {
+    const con = items.filter(x => x.serie && x.serie.v.some(v => v != null));
+    if (!con.length) return [];
+    const mapas = con.map(x => {
+      const t = tiempos(x.serie.t0), m = new Map();
+      x.serie.v.forEach((v, i) => { if (v != null) m.set(t(i), v); });
+      return m;
+    });
+    const out = [];
+    mapas[0].forEach((_v, time) => {
+      let suma = 0;
+      for (let i = 0; i < con.length; i++) {
+        const v = mapas[i].get(time);
+        if (v == null) return;
+        suma += con[i].cantidad * v;
+      }
+      out.push({ time, value: suma });
+    });
+    return out;
+  }
+  // una línea en barras (la API pide OHLC): cada una abre en el cierre
+  // anterior, sin mecha
+  const barrasLinea = serie => serie.map((p, i) => {
+    const o = i ? serie[i - 1].value : p.value;
+    return { time: p.time, open: o, high: Math.max(o, p.value), low: Math.min(o, p.value), close: p.value };
+  });
+  // huella corta de un texto (FNV-1a, en base 36) para el ticker de cada canasta
+  function huella(texto) {
+    let h = 0x811c9dc5;
+    for (let i = 0; i < texto.length; i++) {
+      h ^= texto.charCodeAt(i);
+      h = Math.imul(h, 0x01000193) >>> 0;
+    }
+    return h.toString(36);
+  }
+
   // opciones: { base: '/datos/', ver, indices: [{ codigo, nombre }], pedir,
   //   productos: [{ slug, nombre, unidad }], precargados: { ruta: json } }
   // 'pedir(ruta)' devuelve una promesa con el JSON de datos/{ruta}; por
@@ -3353,10 +3528,31 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
       (cat.productos || []).forEach(agregarProducto);
     }).catch(() => {});   // sin catálogo quedan los índices
 
+    // Tu canasta: un símbolo por composición, fuera de la búsqueda y de la
+    // lista. canasta([{ slug, cantidad }]) devuelve su ticker: la misma
+    // canasta, el mismo ticker; otra, uno nuevo (así la librería pide sus
+    // barras de nuevo)
+    const canastas = new Map();
+    function canasta(items) {
+      const lista = (items || []).filter(x => x && x.slug && x.cantidad > 0)
+        .map(x => ({ slug: String(x.slug), cantidad: +x.cantidad }));
+      const clave = lista.map(x => x.slug + ':' + x.cantidad).join(',');
+      let ticker = clave ? TICKER_CANASTA + '-' + huella(clave) : TICKER_CANASTA, n = 2;
+      while (canastas.has(ticker) && canastas.get(ticker).clave !== clave) {
+        ticker = TICKER_CANASTA + '-' + huella(clave) + '-' + n++;
+      }
+      if (!canastas.has(ticker)) {
+        canastas.set(ticker, { ticker, clave, clase: 'canasta', nominal: false, items: lista,
+          corto: NOMBRE_CANASTA, desc: NOMBRE_CANASTA + ', en pesos de hoy' });
+      }
+      return ticker;
+    }
+
     const simbolo = nombre => {
       // por si llega con prefijo de fuente ("Carestía:asado") o en mayúsculas
       const t = String(nombre || '').split(':').pop().trim().toLowerCase();
-      // los que la página ya conoce no esperan el catálogo
+      // los que la página ya conoce (y las canastas) no esperan el catálogo
+      if (canastas.has(t)) return Promise.resolve(canastas.get(t));
       return simbolos.has(t) ? Promise.resolve(simbolos.get(t)) :
         listo.then(() => simbolos.get(t) || null);
     };
@@ -3367,6 +3563,11 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
     function barras(nombre) {
       return simbolo(nombre).then(s => {
         if (!s) return null;
+        if (s.clase === 'canasta') {
+          return una('b:' + s.ticker, () => Promise.all(s.items.map(x =>
+            pedir('productos/' + x.slug + '.json'))).then(js => barrasLinea(serieCanasta(
+              s.items.map((x, i) => ({ cantidad: x.cantidad, serie: js[i] }))))));
+        }
         return una('b:' + s.ticker, () => pedir(s.ruta).then(j => {
           if (s.clase === 'indice') return s.nominal ? barrasIndiceNominal(j.serie) : barrasIndice(j.serie);
           return s.nominal ? factor().then(f => barrasProducto(j, f)) : barrasProducto(j, null);
@@ -3394,8 +3595,8 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
         weekly_multipliers: ['1'],
         supported_resolutions: [RESOLUCION],
         // índices y productos traen velas (los productos, con el rango de
-        // ODEPA cuando indices.json lo trae)
-        visible_plots_set: 'ohlc',
+        // ODEPA cuando indices.json lo trae); Tu canasta es solo una línea
+        visible_plots_set: s.clase === 'canasta' ? 'c' : 'ohlc',
         data_status: 'endofday',
         currency_code: 'CLP',
         volume_precision: 0,
@@ -3473,6 +3674,7 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
       // para el respaldo con Lightweight Charts y las pruebas
       barras,
       simbolo,
+      canasta,
       lista: () => listo.then(() => [...simbolos.values()].map(s =>
         ({ ticker: s.ticker, descripcion: s.desc, corto: s.corto, clase: s.clase,
           nominal: s.nominal }))),
@@ -3627,11 +3829,12 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
 
   // la configuración común de todas las páginas.
   // o: { contenedor, libreria, simbolo, datafeed, tok, css, movil, sitio,
-  //      comparar: [{ symbol, title }] }
+  //      comparar: [{ symbol, title }], linea (parte en línea, no en velas) }
   function opcionesWidget(o) {
     const movil = o.movil != null ? o.movil : esMovil();
     const fuera = new Set([...(movil ? SOLO_ESCRITORIO : []), ...(o.sitio ? FUERA_DEL_SITIO : [])]);
     const ov = overrides(o.tok);
+    if (o.linea) ov['mainSeriesProperties.style'] = 2;
     // la leyenda: en el celular el nombre corto, sin intervalo ni fuente, para
     // que no se corte; en pantallas anchas el nombre largo
     ov['mainSeriesProperties.statusViewStyle.symbolTextSource'] = movil ? 'description' : 'long-description';
@@ -3802,16 +4005,39 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
   }
 
   // captura del gráfico del lado del cliente (nunca la del servidor de
-  // TradingView): un canvas para componer la imagen compartible
-  function capturaCliente(widget, tok) {
-    return widget.takeClientScreenshot({ backgroundColor: tok('bg'), borderColor: tok('line'),
-      font: "'IBM Plex Sans', system-ui, sans-serif", fontSize: 12, legendMode: 'horizontal',
-      hideResolution: true });
+  // TradingView): un canvas para componer la imagen compartible. La
+  // librería arma la foto con el devicePixelRatio de su ventana; si sus
+  // lienzos quedaron dibujados a otra densidad (pasa en Chromium sin
+  // pantalla con densidad 2 o 3), la foto mezcla las dos escalas y sale
+  // una esquina ampliada. Con el contenedor a mano, mientras la librería
+  // arma la foto (lo hace al llamarla, antes de esperar nada) su ventana
+  // informa la densidad de los lienzos, y después vuelve a la de siempre
+  function capturaCliente(widget, tok, contenedor) {
+    const foto = () => widget.takeClientScreenshot({ backgroundColor: tok('bg'),
+      borderColor: tok('line'), font: "'IBM Plex Sans', system-ui, sans-serif", fontSize: 12,
+      legendMode: 'horizontal', hideResolution: true });
+    let ventana = null, densidad = 1;
+    try {
+      const marco = contenedor && contenedor.querySelector('iframe');
+      const lienzo = [...marco.contentDocument.querySelectorAll('canvas')].find(c => c.clientWidth > 50);
+      densidad = lienzo.width / lienzo.clientWidth;
+      if (densidad > 0 && Math.abs(densidad - marco.contentWindow.devicePixelRatio) > 0.05) {
+        ventana = marco.contentWindow;
+      }
+    } catch (e) {}
+    if (!ventana) return foto();
+    const original = Object.getOwnPropertyDescriptor(ventana, 'devicePixelRatio');
+    Object.defineProperty(ventana, 'devicePixelRatio', { configurable: true, get: () => densidad });
+    try { return foto(); }
+    finally {
+      if (original) Object.defineProperty(ventana, 'devicePixelRatio', original);
+      else delete ventana.devicePixelRatio;
+    }
   }
 
-  const api = { crearDatafeed, miles, fecha, almacenLocal, formateadores, overrides,
+  const api = { crearDatafeed, serieCanasta, miles, fecha, almacenLocal, formateadores, overrides,
     opcionesWidget, alistarWidget, listoWidget, montar, verTodo, cargarLibreria,
-    capturaCliente, colorLinea, MOVIL, RESOLUCION, ZONA };
+    capturaCliente, colorLinea, MOVIL, RESOLUCION, ZONA, NOMBRE_CANASTA };
   raiz.CarestiaTV = api;
   if (typeof module === 'object' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);
@@ -4204,22 +4430,22 @@ __CSS_BASE__
     left:0; top:0; pointer-events:none;
     color:var(--ember); clip-path:inset(0 0 86% 0); }
   .tagline { font:400 12px/14.3px var(--sans); color:var(--ash); }
-  main { max-width:980px; margin:0 auto;
-    padding:clamp(20px,4vw,36px) clamp(16px,3vw,32px) clamp(28px,4vw,44px); }
+  /* el texto usa el mismo ancho y el mismo margen izquierdo que el pie (y
+     que la marca): sin columna angosta centrada */
+  main { padding:clamp(20px,4vw,36px) clamp(16px,3vw,32px) clamp(28px,4vw,44px); }
   .miga { font:500 10px var(--mono); letter-spacing:.16em;
     color:var(--ash); text-transform:uppercase; }
   h1 { font:600 clamp(26px,5vw,40px)/1.15 var(--sans);
     letter-spacing:-.005em; margin-top:6px; text-wrap:balance; }
 
   /* ---- textos: metodología, institucionales y legales ---- */
-  .doc { max-width:760px; }
   .doc > h1:first-child { margin-top:0; }
   .doc h2 { font:600 11px var(--mono); letter-spacing:.16em;
     color:var(--ash); text-transform:uppercase; margin-top:40px; }
   .doc h3 { font:600 16px var(--sans); color:var(--bone); }
   .doc h3 span { font-weight:400; color:var(--ash); }
   .doc p, .doc li { font:400 15px/1.7 var(--sans);
-    color:var(--bone); max-width:70ch; text-wrap:pretty; }
+    color:var(--bone); text-wrap:pretty; }
   .doc p { margin-top:14px; }
   .doc ul { margin-top:12px; padding-left:18px; }
   .doc li + li { margin-top:8px; }
@@ -4247,7 +4473,7 @@ __CSS_BASE__
 
   /* ---- /productos/: listado estático de fichas ---- */
   .intro { font:400 15px/1.7 var(--sans); color:var(--bone);
-    margin-top:14px; max-width:70ch; text-wrap:pretty; }
+    margin-top:14px; text-wrap:pretty; }
   .grupos { display:flex; flex-wrap:wrap; gap:8px; margin-top:20px; list-style:none; }
   .grupos a { display:inline-flex; align-items:center; gap:8px; min-height:34px;
     padding:7px 12px; font:500 13px var(--sans);
@@ -4421,14 +4647,13 @@ SEMAFORO = {"BARATO": "var(--verde)", "NORMAL": "var(--ambar)", "CARO": "var(--r
 
 
 def cambio(x, sep: str = " ") -> str:
-    """Variación con flecha neutra: ▲ sube, ▼ baja, = si redondea a 0,0.
-    Sin dato, el marcador "·"."""
+    """Variación con su flecha al lado (▲ sube, ▼ baja, = si redondea a 0,0)
+    y el número en color (numero_variacion). Sin dato, el marcador "·"."""
     if x is None:
         return "·"
     r = round(x, 1)
     f = "=" if r == 0 else ("▲" if r > 0 else "▼")
-    num = f"{abs(r):.1f}".replace(".", ",")
-    return f'<i class="f">{f}</i>{sep}{num}%'
+    return f'<i class="f">{f}</i>{sep}{numero_variacion(r, f"{abs(r):.1f}")}'
 
 
 def sparkline(vals: list) -> str:
