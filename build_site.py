@@ -49,6 +49,7 @@ import datetime
 import hashlib
 import html
 import json
+import math
 import os
 import re
 import unicodedata
@@ -3311,37 +3312,44 @@ def semanas_de_las_series() -> tuple:
             datetime.date.fromisoformat(max(fechas)))
 
 
+def _no_es_json(constante):
+    raise ValueError(f"{constante} no es JSON")
+
+
 def cargar_uf():
-    """datos/uf.json si existe y trae la UF (positiva) de cada lunes desde la
-    primera hasta la última semana de las series; si no, None y un aviso."""
+    """datos/uf.json si existe, el navegador lo puede leer y trae la UF
+    (positiva) de cada uno de sus lunes, desde la primera hasta la última
+    semana de las series; si no, None y un aviso. Nunca corta el build."""
     def aviso(motivo):
         print(f"AVISO UF: {motivo}. El sitio sale sin la opción UF.")
         return None
     try:
         with open(UF_JSON, encoding="utf-8") as fh:
-            uf = json.load(fh)
+            # estricto: NaN e Infinity no son JSON y el navegador no los lee
+            uf = json.load(fh, parse_constant=_no_es_json)
         t0 = datetime.date.fromisoformat(uf["t0"])
         v = uf["v"]
+        if t0.weekday() != 0 or not isinstance(v, list) or not v:
+            return aviso(f"{UF_JSON} no viene por semanas desde un lunes")
+        ini, fin = semanas_de_las_series()
+        if ini is None:
+            return aviso("no hay series")
+        i, j = (ini - t0).days // 7, (fin - t0).days // 7
+        if i < 0 or j >= len(v):
+            ult = t0 + datetime.timedelta(weeks=len(v) - 1)
+            return aviso(f"{UF_JSON} va de {t0} a {ult} y las series, de {ini} a {fin}")
+        malas = [t0 + datetime.timedelta(weeks=k) for k, x in enumerate(v)
+                 if isinstance(x, bool) or not isinstance(x, (int, float))
+                 or not math.isfinite(x) or not x > 0]
+        if malas:
+            return aviso(f"{UF_JSON} no trae la UF de {len(malas)} lunes (el primero, {malas[0]})")
+        print(f"UF: {UF_JSON}, {uf.get('fuente', 'sin fuente')}, de {t0} a "
+              f"{t0 + datetime.timedelta(weeks=len(v) - 1)}; la del lunes {fin}: {v[j]}")
+        return uf
     except FileNotFoundError:
         return aviso(f"no está {UF_JSON} (uf.py no corrió o no obtuvo la UF)")
-    except (ValueError, KeyError, TypeError) as e:
-        return aviso(f"{UF_JSON} no se puede leer ({type(e).__name__}: {e})")
-    if t0.weekday() != 0 or not isinstance(v, list):
-        return aviso(f"{UF_JSON} no viene por semanas desde un lunes")
-    ini, fin = semanas_de_las_series()
-    if ini is None:
-        return aviso("no hay series")
-    i, j = (ini - t0).days // 7, (fin - t0).days // 7
-    if i < 0 or j >= len(v):
-        ult = t0 + datetime.timedelta(weeks=len(v) - 1)
-        return aviso(f"{UF_JSON} va de {t0} a {ult} y las series, de {ini} a {fin}")
-    malas = [t0 + datetime.timedelta(weeks=k) for k in range(i, j + 1)
-             if not isinstance(v[k], (int, float)) or isinstance(v[k], bool) or not v[k] > 0]
-    if malas:
-        return aviso(f"{UF_JSON} no trae la UF de {len(malas)} lunes (el primero, {malas[0]})")
-    print(f"UF: {UF_JSON}, {uf.get('fuente', 'sin fuente')}, de {t0} a "
-          f"{t0 + datetime.timedelta(weeks=len(v) - 1)}; la del lunes {fin}: {v[j]}")
-    return uf
+    except Exception as e:  # noqa: un uf.json roto nunca corta el build
+        return aviso(f"{UF_JSON} no se puede leer ({type(e).__name__}: {str(e)[:120]})")
 
 
 def selector_unidad(con_uf: bool) -> str:

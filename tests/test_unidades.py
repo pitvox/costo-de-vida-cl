@@ -113,6 +113,40 @@ def test_uf_con_un_lunes_sin_valor(tmp_path):
     assert _app(d)["uf"] is False
 
 
+@pytest.mark.parametrize("caso, contenido, motivo", [
+    ("infinito", lambda: _con(100, "Infinity"), "no se puede leer (ValueError: Infinity no es JSON)"),
+    ("nan al final", lambda: _con(-1, "NaN"), "no se puede leer (ValueError: NaN no es JSON)"),
+    ("cero al final", lambda: _con(-1, "0"), "no trae la UF de 1 lunes"),
+    ("fecha absurda", lambda: '{"t0":"9999-12-27","v":[1]}', "va de 9999-12-27"),
+    ("anidado", lambda: "[" * 100000, "no se puede leer (RecursionError"),
+    ("no es un objeto", lambda: "[1, 2]", "no se puede leer (TypeError"),
+    ("texto", lambda: "esto no es json", "no se puede leer (JSONDecodeError"),
+])
+def test_uf_rota_no_corta_el_build(tmp_path, caso, contenido, motivo):
+    """Un datos/uf.json roto o que el navegador no puede leer: el build sigue,
+    sin la opción UF y con el aviso."""
+    shutil.copytree(os.path.join(RAIZ, "textos"), tmp_path / "textos")
+    (tmp_path / "indices.json").write_text(json.dumps(indices_realista(), ensure_ascii=False),
+                                           encoding="utf-8")
+    (tmp_path / "datos").mkdir()
+    (tmp_path / "datos" / "uf.json").write_text(contenido(), encoding="utf-8")
+    env = dict(os.environ, PYTHONPATH=RAIZ, PYTHONIOENCODING="utf-8")
+    env.pop("CARESTIA_BORRADOR", None)
+    r = subprocess.run([sys.executable, os.path.join(RAIZ, "build_site.py")],
+                       cwd=tmp_path, env=env, capture_output=True, text=True)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "AVISO UF: " in r.stdout and motivo in r.stdout, (caso, r.stdout[:400])
+    assert 'data-unidad="uf"' not in (tmp_path / "graficos.html").read_text(encoding="utf-8")
+
+
+def _con(i, valor):
+    """La UF sintética con el lunes i reemplazado por un literal."""
+    uf = uf_sintetica()
+    v = [json.dumps(x) for x in uf["v"]]
+    v[i] = valor
+    return '{"t0":"%s","v":[%s]}' % (uf["t0"], ",".join(v))
+
+
 def test_la_version_de_datos_cambia_con_la_uf(sin_uf, con_uf):
     """Los pedidos a datos/ llevan la versión en la URL: si cambia la UF, el
     navegador no mezcla un uf.json viejo con datos nuevos."""
