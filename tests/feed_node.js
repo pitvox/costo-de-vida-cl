@@ -440,6 +440,10 @@ async function temporalidades(info, semanales, t, completo) {
      'celular: sin lo que no cabe');
   ok(!mov.disabled_features.includes('header_resolutions') && !sit.disabled_features.includes('header_resolutions'),
      'celular y sitio: el selector de temporalidades se ve');
+  ok(JSON.stringify(mov.favorites.intervals) === '["1W","1M","12M"]' &&
+     JSON.stringify(esc.favorites.intervals) === JSON.stringify(RES) &&
+     JSON.stringify(mov.favorites.chartTypes) === '["Line","Candles"]',
+     'celular: 1S, 1M y 12M a la vista (el resto en la lista) para que quepan la línea y las velas');
   ok(!['header_compare', 'header_indicators', 'header_chart_type', 'header_fullscreen_button',
        'left_toolbar', 'header_widget'].some(f => mov.disabled_features.includes(f) ||
        sit.disabled_features.includes(f)),

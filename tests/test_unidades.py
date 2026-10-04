@@ -127,7 +127,12 @@ def test_unidad_y_tipo_por_defecto(con_uf):
     assert "'mainSeriesProperties.style': 2," in tv
     assert "const RESOLUCION = '1W';" in tv
     assert "const RESOLUCIONES = ['1W', '2W', '1M', '3M', '6M', '12M'];" in tv
-    assert "favorites: { intervals: RESOLUCIONES, chartTypes: ['Line', 'Candles'] }," in tv
+    assert ("favorites: { intervals: movil ? FAVORITAS_MOVIL : RESOLUCIONES, "
+            "chartTypes: ['Line', 'Candles'] },") in tv
+    assert "const FAVORITAS_MOVIL = ['1W', '1M', '12M'];" in tv
+    # los botones no parten su texto: si no caben, va el desplegable
+    for p in PAGINAS:
+        assert re.search(r"\.vbtn \{[^}]*white-space:nowrap;", _leer(d, p)), p
     # el selector de temporalidades también en el celular
     solo = re.search(r"const SOLO_ESCRITORIO = \[(.*?)\];", tv, re.S).group(1)
     assert "header_resolutions" not in solo

@@ -255,6 +255,7 @@ __CSS_CABECERA__
   .unidad.compacta .ubtns { display:none; }
   .unidad.compacta .usel { display:block; }
   .midiendo { flex-wrap:nowrap !important; }
+  .midiendo .cbar-right { justify-content:flex-start; }
   .utxt { padding:0 clamp(16px,3vw,32px) 9px; border-bottom:1px solid var(--line);
     font:400 11px/1.5 var(--sans); color:var(--ash); text-wrap:pretty; }
   /* con la unidad a la vista, su línea va pegada a la barra */
@@ -264,7 +265,8 @@ __CSS_CABECERA__
      de texto normal (captura PNG) van en la tipografía de la
      interfaz */
   .vbtn { font:600 11px var(--mono); letter-spacing:.1em; padding:8px 14px;
-    border:none; cursor:pointer; background:transparent; color:var(--ash); min-height:34px; }
+    border:none; cursor:pointer; background:transparent; color:var(--ash); min-height:34px;
+    white-space:nowrap; }
   .vbtn + .vbtn { border-left:1px solid var(--line); }
   .vbtn.active { background:var(--bone); color:var(--bg); }
   .nomtoggle { border:1px solid var(--line); background:var(--bg);
@@ -720,8 +722,10 @@ __JS_UNIDAD__
             if (t === 1 || t === 2) { vista = t === 2 ? 'linea' : 'velas'; aplicarVista(); }
           });
           // la referencia de las velas cambia con la temporalidad
-          w.activeChart().onIntervalChanged().subscribe(null, () => setTimeout(aplicarVista, 0));
+          w.activeChart().onIntervalChanged().subscribe(null, () => setTimeout(() => aplicarVista(), 0));
           pintarSerie(cur);
+          // lo que se haya elegido con los botones mientras la librería cargaba
+          aplicarVista(true);
         } else syncProductos();
         pintarCarga();
       }, () => {
@@ -746,6 +750,9 @@ __JS_UNIDAD__
   let cur = CODES[0], vista = 'linea', unidad = 'real';
   let chart, sLinea, sCandle, pchart;
   let mapaUnidad = new Map(), mapaReal = new Map(), mapaEpoca = new Map();
+  // en Lightweight, la unidad de lo que está dibujado (cambia al llegar sus
+  // semanas, no al elegirla)
+  let unidadLW = 'real';
   const dia = ms => new Date(ms).toISOString().slice(0, 10);
   const SEMANA_MS = 7 * DIA;
   // en Comparar, el cambio del precio en la unidad elegida
@@ -892,9 +899,9 @@ __JS_UNIDAD__
       el.innerHTML = '<div class="nochart">No se pudo cargar el motor de gráficos (revisa la conexión).</div>';
       return;
     }
-    // el eje en pesos o, en UF, con sus decimales
+    // el eje en pesos o, en UF, con sus decimales (los de la unidad dibujada)
     chart = LightweightCharts.createChart(el, opcionesChart({ localization: {
-      priceFormatter: v => unidad === 'uf' && TV ? TV.numUF(v) : fmt(v) } }));
+      priceFormatter: v => unidadLW === 'uf' && TV ? TV.numUF(v) : fmt(v) } }));
     // la línea de los índices oficiales: el único lugar de la brasa en los gráficos
     sLinea = chart.addLineSeries({ color: COL.ember, lineWidth: 2, priceLineVisible: false });
     // C2: convención estándar de trading, verde sube y rojo baja
@@ -917,12 +924,12 @@ __JS_UNIDAD__
     const t = tstr(param.time);
     const uv = mapaUnidad.get(t);
     if (uv == null) { tooltip.style.display = 'none'; return; }
-    const otra = unidad === 'real' ? mapaEpoca.get(t) : mapaReal.get(t);
+    const u = unidadLW, otra = u === 'real' ? mapaEpoca.get(t) : mapaReal.get(t);
     document.getElementById('tt-d').textContent = ddmmyyyy(t);
-    document.getElementById('tt-r').textContent = unidad === 'uf' ? TV.textoUF(uv) : fmt(uv);
-    document.getElementById('tt-u').textContent = UNIDAD_TT[unidad];
+    document.getElementById('tt-r').textContent = u === 'uf' ? TV.textoUF(uv) : fmt(uv);
+    document.getElementById('tt-u').textContent = UNIDAD_TT[u];
     document.getElementById('tt-n').textContent = (otra != null ? fmt(otra) : '·') +
-      (unidad === 'real' ? ' precio de la época' : ' pesos de hoy');
+      (u === 'real' ? ' precio de la época' : ' pesos de hoy');
     tooltip.style.display = 'block';
     const w = tooltip.offsetWidth, cw = el.clientWidth;
     let x = param.point.x + 14;
@@ -938,25 +945,31 @@ __JS_UNIDAD__
     const p = w && TV ? TV.temporalidad(w.activeChart().resolution()) : null;
     return !p || p.nombre === TV.RESOLUCION ? REF_VELAS : REF_VELAS.replace('Velas semanales. ', '');
   }
-  // LÍNEA / VELAS. En Advanced Charts cambia el tipo de gráfico; en
-  // Lightweight muestra la línea o las velas de la unidad elegida
-  function aplicarVista() {
+  // LÍNEA / VELAS. En Advanced Charts los botones del sitio ('forzar')
+  // cambian el tipo de gráfico; si no, se respeta el que tenga, también uno
+  // elegido en la barra de la librería (área, barras...), y los botones solo
+  // lo reflejan. En Lightweight muestra la línea o las velas de la unidad
+  function aplicarVista(forzar) {
     const linea = vista === 'linea', w = tvListo('indices') ? tv.indices.w : null;
+    if (w) {
+      const c = w.activeChart(), pedido = linea ? 2 : 1;
+      if (forzar && c.chartType() !== pedido) Promise.resolve(c.setChartType(pedido)).catch(() => {});
+      const tipo = forzar ? pedido : c.chartType();
+      document.getElementById('v-linea').classList.toggle('active', tipo === 2);
+      document.getElementById('v-velas').classList.toggle('active', tipo === 1);
+      document.getElementById('ref-velas').textContent = tipo === 1 ? refVelas(w) : '';
+      return;
+    }
     document.getElementById('v-linea').classList.toggle('active', linea);
     document.getElementById('v-velas').classList.toggle('active', !linea);
     document.getElementById('ref-velas').textContent = linea ? '' : refVelas(w);
-    if (w) {
-      const c = w.activeChart(), tipo = linea ? 2 : 1;
-      if (c.chartType() !== tipo) Promise.resolve(c.setChartType(tipo)).catch(() => {});
-      return;
-    }
     if (!chart) return;
     sLinea.applyOptions({ visible: linea });
     sCandle.applyOptions({ visible: !linea });
     chart.timeScale().fitContent();
   }
-  document.getElementById('v-linea').onclick = () => { vista = 'linea'; aplicarVista(); };
-  document.getElementById('v-velas').onclick = () => { vista = 'velas'; aplicarVista(); };
+  document.getElementById('v-linea').onclick = () => { vista = 'linea'; aplicarVista(true); };
+  document.getElementById('v-velas').onclick = () => { vista = 'velas'; aplicarVista(true); };
 
   /* ---------- unidad: pesos de hoy, precio de la época o UF ---------- */
   // vale para los índices y para Comparar. En Advanced Charts cada unidad
@@ -1033,11 +1046,11 @@ __JS_UNIDAD__
   function pintarCifra() {
     const code = cur, d = INDICES[code];
     const oprice = document.getElementById('oprice'), opesos = document.getElementById('opesos');
-    if (unidad !== 'uf') {
-      opesos.hidden = true;
-      countUp(oprice, d.costo_real);
-      return;
-    }
+    // primero la de pesos de hoy del índice elegido (la que queda si la UF
+    // no llega); en UF se reemplaza al llegar
+    opesos.hidden = true;
+    countUp(oprice, d.costo_real);
+    if (unidad !== 'uf') return;
     ultimoCierre(code, 'uf').then(x => {
       if (cur !== code || unidad !== 'uf' || x == null) return;
       cifraGen++;   // la cifra en pesos que venía animándose ya no va
@@ -1100,6 +1113,7 @@ __JS_UNIDAD__
     const u = unidad;
     semanasLW(code, u).then(([linea, velas]) => {
       if (cur !== code || unidad !== u || !chart) return;
+      unidadLW = u;
       mapaUnidad = new Map(linea.map(p => [p.time, p.value]));
       // si el usuario arrastró el eje de precios, autoScale quedó apagado
       // y la serie nueva caería fuera del encuadre
@@ -1111,7 +1125,10 @@ __JS_UNIDAD__
       sLinea.setData(linea);
       sCandle.setData(velas);
       aplicarVista();
-    }, () => {});
+    }, () => {
+      // sin las semanas de esa unidad, el selector vuelve a la dibujada
+      if (cur === code && unidad === u && u !== unidadLW) ponerUnidad(unidadLW);
+    });
     pintarCarga();
   }
   // la línea y las velas del índice en una unidad, con la fecha como texto:
@@ -2708,7 +2725,7 @@ __CSS_BASE__
   .unidad { margin-top:18px; }
   .vtoggle { display:inline-flex; border:1px solid var(--line); background:var(--bg); }
   .vbtn { font:500 13px var(--sans); padding:8px 14px; border:none; cursor:pointer;
-    background:transparent; color:var(--ash); min-height:34px; }
+    background:transparent; color:var(--ash); min-height:34px; white-space:nowrap; }
   .vbtn + .vbtn { border-left:1px solid var(--line); }
   .vbtn.active { background:var(--bone); color:var(--bg); }
   .usel { display:none; font:500 13px var(--sans); color:var(--bone);
@@ -2830,7 +2847,8 @@ __PIE__
 __JS_UNIDAD__
   // la unidad: en Advanced Charts es otro símbolo; en Lightweight, otra
   // serie. Sin carestia-tv.js (que calcula la época y la UF), pesos de hoy
-  let TV = null, feed = null, widget = null, lw = null, unidad = 'real';
+  // (unidadLW: la que está dibujada en Lightweight, que cambia al llegar)
+  let TV = null, feed = null, widget = null, lw = null, unidad = 'real', unidadLW = 'real';
   const unidadesHay = () => !feed ? ['real'] : UF ? ['real', 'epoca', 'uf'] : ['real', 'epoca'];
   const oprice = document.getElementById('oprice'), opesos = document.getElementById('opesos');
   const ouni = document.getElementById('ouni');
@@ -2886,7 +2904,7 @@ __JS_UNIDAD__
         rightPriceScale: { borderColor: tok('line') },
         timeScale: { borderColor: tok('line') },
         // fechas en castellano de Chile, como en la portada; la UF con decimales
-        localization: { locale: 'es-CL', priceFormatter: v => unidad === 'uf' && TV ? TV.numUF(v) : fmt(v) },
+        localization: { locale: 'es-CL', priceFormatter: v => unidadLW === 'uf' && TV ? TV.numUF(v) : fmt(v) },
         // misma política de gestos del sitio: la rueda acerca y mueve el
         // gráfico; el swipe vertical en táctil queda para la página
         handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: true },
@@ -2914,11 +2932,12 @@ __JS_UNIDAD__
           });
         datos.then(d => {
           if (unidad !== u) return;
+          unidadLW = u;
           linea.applyOptions({ priceFormat: u === 'uf' ? { type: 'price', precision: 4, minMove: 0.0001 } :
             { type: 'price', precision: 0, minMove: 1 } });
           linea.setData(d);
           chart.timeScale().fitContent();
-        }, () => {});
+        }, () => { if (unidad === u && u !== unidadLW) ponerUnidad(unidadLW); });
       };
       if (unidad !== 'real') lw(unidad);
     }).catch(() => {
@@ -2936,12 +2955,12 @@ __JS_UNIDAD__
         precargados: { ['productos/' + SLUG + '.json']: { t0: T0, v: V, min: MIN, max: MAX } } });
       selector.limitar(unidadesHay());
       el.innerHTML = '';
-      const EN = { epoca: ', precio de la época', uf: ', en UF' };
+      const EN = { real: ', en pesos de hoy', epoca: ', precio de la época', uf: ', en UF' };
       return TV.montar({ contenedor: el, libreria: '/charting_library/', simbolo: SLUG + SUF[unidad],
         datafeed: feed, tok, sitio: true, css: location.origin + '/__TV_CSS__?v=__VER_CSS__',
-        // sus otras unidades, listas para superponer desde Comparar
-        comparar: unidadesHay().filter(u => u !== 'real')
-          .map(u => ({ symbol: SLUG + SUF[u], title: NOMBRE + EN[u] })) });
+        // sus unidades, listas para superponer desde Comparar (la lista no
+        // cambia después: van todas, sea cual sea la del selector)
+        comparar: unidadesHay().map(u => ({ symbol: SLUG + SUF[u], title: NOMBRE + EN[u] })) });
     }).then(w => {
       widget = w;
       el.dataset.motor = 'advanced';
@@ -3583,8 +3602,9 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
     const r = Math.round(x);
     return (r < 0 ? '-' : '') + conPuntos(String(Math.abs(r)));
   }
-  // UF con coma decimal: 2 decimales desde 1 UF y 4 bajo 1 UF (1,32 y
-  // 0,0089). Los decimales salen de la cifra ya redondeada: 0,99996 es 1,00
+  // UF con coma decimal: 2 decimales desde 1 UF y 4 bajo 1 UF ("2 sobre 1
+  // UF y 4 bajo 1 UF"). Los decimales salen de la cifra ya redondeada:
+  // 0,99996 es 1,00
   function numUF(x) {
     const a = Math.abs(x);
     let t = a.toFixed(a >= 1 ? 2 : 4);
@@ -4102,6 +4122,7 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
   // en el celular la barra de arriba deja solo las temporalidades, comparar,
   // indicadores, tipo de gráfico y pantalla completa (más el dibujo, en su
   // propia barra): sin lo que no cabe
+  const FAVORITAS_MOVIL = ['1W', '1M', '12M'];
   const SOLO_ESCRITORIO = ['header_symbol_search', 'header_settings',
     'header_undo_redo', 'header_quick_search', 'header_screenshot', 'header_saveload'];
   // páginas del sitio: el símbolo lo eligen las pestañas y los selectores de
@@ -4143,8 +4164,9 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
       numeric_formatting: { decimal_sign: ',', grouping_separator: '.' },
       // guardar y cargar gráficos, plantillas y dibujos: en el navegador
       save_load_adapter: almacenLocal('carestia-tv:'),
-      // a un clic en la barra: las temporalidades, la línea y las velas
-      favorites: { intervals: RESOLUCIONES, chartTypes: ['Line', 'Candles'] },
+      // a un clic en la barra: las temporalidades (en el celular 1S, 1M y 12M;
+      // las seis no dejan lugar a la línea y las velas), la línea y las velas
+      favorites: { intervals: movil ? FAVORITAS_MOVIL : RESOLUCIONES, chartTypes: ['Line', 'Candles'] },
       // toda la historia cabe aun a 390px de ancho
       time_scale: { min_bar_spacing: 0.1 },
       // plazos de la barra inferior, todos semanales (los de fábrica piden

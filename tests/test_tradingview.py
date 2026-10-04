@@ -442,8 +442,17 @@ def test_graficos_indices_y_comparar_en_advanced_charts(sitio):
     assert "const simboloIndice = code => code + SUF[unidad];" in js
     assert "const SUF = { real: '', epoca: '-epoca', uf: '-uf' };" in js
     assert "ponerSimbolo(tv.indices.w, simboloIndice(code))" in js
-    # LÍNEA / VELAS cambia el tipo de gráfico
-    assert "const c = w.activeChart(), tipo = linea ? 2 : 1;" in js
+    # LÍNEA / VELAS cambia el tipo de gráfico; el resto de los cambios (de
+    # índice, de unidad, de temporalidad) respeta el que haya, también uno
+    # elegido en la barra de la librería
+    assert "const c = w.activeChart(), pedido = linea ? 2 : 1;" in js
+    assert "if (forzar && c.chartType() !== pedido) Promise.resolve(c.setChartType(pedido))" in js
+    assert "document.getElementById('v-velas').onclick = () => { vista = 'velas'; aplicarVista(true); };" in js
+    assert "w.activeChart().onIntervalChanged().subscribe(null, () => setTimeout(() => aplicarVista(), 0));" in js
+    # la cifra en UF nunca muestra la del índice anterior: primero la de pesos
+    assert "opesos.hidden = true;\n    countUp(oprice, d.costo_real);\n    if (unidad !== 'uf') return;" in js
+    # en Lightweight el eje y la ayuda siguen a la unidad ya dibujada
+    assert "priceFormatter: v => unidadLW === 'uf' && TV ? TV.numUF(v) : fmt(v) } }));" in js
     # Comparar: comparación de la librería en escala porcentual, colores por
     # puesto, en la unidad elegida (al cambiarla, se rehacen las comparaciones)
     assert "const sim = k => PRODS[k].slug + SUF[unidad];" in js
@@ -530,9 +539,8 @@ def test_ficha_con_advanced_charts_despues_del_primer_pantallazo(sitio):
             in js)
     assert "sitio: true" in js
     # sus otras unidades, para superponer desde Comparar
-    assert "comparar: unidadesHay().filter(u => u !== 'real')" in js
-    assert ".map(u => ({ symbol: SLUG + SUF[u], title: NOMBRE + EN[u] })) });" in js
-    assert "const EN = { epoca: ', precio de la época', uf: ', en UF' };" in js
+    assert "comparar: unidadesHay().map(u => ({ symbol: SLUG + SUF[u], title: NOMBRE + EN[u] })) });" in js
+    assert "const EN = { real: ', en pesos de hoy', epoca: ', precio de la época', uf: ', en UF' };" in js
     # el selector de unidad cambia el símbolo; en UF la cifra va en UF y
     # debajo, en pesos de hoy
     assert "Promise.resolve(c.setSymbol(SLUG + SUF[u])).catch(() => {});" in js
@@ -553,7 +561,7 @@ def test_ficha_con_advanced_charts_despues_del_primer_pantallazo(sitio):
     # la referencia de las velas se muestra mientras estén a la vista
     assert "c.onChartTypeChanged().subscribe(null, ver);" in js
     assert "chart.addLineSeries({ color: tok('bone'), lineWidth: 2, priceLineVisible: false })" in js
-    assert ("localization: { locale: 'es-CL', priceFormatter: v => unidad === 'uf' && TV ? "
+    assert ("localization: { locale: 'es-CL', priceFormatter: v => unidadLW === 'uf' && TV ? "
             "TV.numUF(v) : fmt(v) }") in js
 
 
