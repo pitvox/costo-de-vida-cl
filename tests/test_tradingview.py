@@ -567,9 +567,13 @@ def test_configuracion_comun_en_una_funcion(sitio):
     assert "if (caja && !caja.clientWidth && typeof ResizeObserver === 'function') {" in tvjs
     # al cambiar de símbolo, el rango espera a que lleguen las barras
     assert "return datos.then(() => feed.barras(chart.symbol(), temp())).then(b => {" in tvjs
-    # y en cada cambio de temporalidad, en la nueva
-    assert "c.onIntervalChanged().subscribe(null, res => verTodo(widget, o.datafeed, caja, res));" in tvjs
-    assert "const op = { applyDefaultRightMargin: true, rejectByTimeout: 3000 };" in tvjs
+    # y en cada cambio de temporalidad, con el rango completo en el mismo
+    # aviso (timeframe), salvo que el cambio traiga el suyo
+    assert "c.onIntervalChanged().subscribe(null, (res, cambio) => {" in tvjs
+    assert "const r = o.datafeed.rango && o.datafeed.rango(c.symbol(), res);" in tvjs
+    assert "if (r && cambio && !cambio.timeframe) {" in tvjs
+    assert "cambio.timeframe = { type: 'time-range', from: r.from, to: r.to };" in tvjs
+    assert "const op = { applyDefaultRightMargin: !p || p.nombre === RESOLUCION, rejectByTimeout: 3000 };" in tvjs
     assert "if (v && v.from > rango.from + 86400) return chart.setVisibleRange(rango, op);" in tvjs
     # v32 dibuja la línea con degradé si no se pide sólida: el color del sitio
     assert tvjs.count("'mainSeriesProperties.lineStyle.colorType': 'solid'") == 2

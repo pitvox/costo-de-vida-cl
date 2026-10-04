@@ -134,6 +134,10 @@ async function temporalidades(info, semanales, t, completo) {
        t + ' ' + res + ': mínimo y máximo envuelven el cuerpo');
     const inicios = new Set(b.map(x => x.time));
     ok(semanales.every(s => inicios.has(claveDe(s.time, res))), t + ' ' + res + ': cada semana en un período');
+    // el rango de toda la historia, de inmediato (al cambiar de temporalidad)
+    const r = feed.rango(info.ticker.toUpperCase(), res);
+    ok(r && r.from === b[0].time / 1000 && r.to === b[b.length - 1].time / 1000,
+       t + ' ' + res + ': rango de toda la historia');
   }
 }
 

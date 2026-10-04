@@ -3824,15 +3824,27 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
       });
     }
     // las barras de un símbolo en una temporalidad (1W si no se dice),
-    // completas y en orden; null si el símbolo o la temporalidad no existen
+    // completas y en orden; null si el símbolo o la temporalidad no existen.
+    // Las semanas ya llegadas quedan también a mano, sin promesa (ver rango)
+    const llegadas = new Map();
     function barras(nombre, res) {
       const p = temporalidad(res || RESOLUCION);
       return simbolo(nombre).then(s => {
         if (!s || !p) return null;
-        const sem = una('b:' + s.ticker, () => semanas(s));
+        const sem = una('b:' + s.ticker, () => semanas(s).then(b => { llegadas.set(s.ticker, b); return b; }));
         if (p.nombre === RESOLUCION) return sem;
         return una('b:' + s.ticker + ':' + p.nombre, () => sem.then(b => agrupar(b, p)));
       });
+    }
+    // toda la historia de un símbolo en una temporalidad, en segundos, de
+    // inmediato: del período de la primera semana al de la última. null si
+    // sus semanas aún no llegan
+    function rango(nombre, res) {
+      const t = String(nombre || '').split(':').pop().trim().toLowerCase()
+        .replace(/-nominal$/, SUFIJO.epoca);
+      const b = llegadas.get(t), p = temporalidad(res || RESOLUCION);
+      if (!b || !b.length || !p) return null;
+      return { from: inicioPeriodo(b[0].time, p) / 1000, to: inicioPeriodo(b[b.length - 1].time, p) / 1000 };
     }
 
     function info(s) {
@@ -3936,8 +3948,10 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
       // datos semanales publicados los viernes: sin tiempo real
       subscribeBars() {},
       unsubscribeBars() {},
-      // para el respaldo con Lightweight Charts y las pruebas
+      // para el respaldo con Lightweight Charts, el rango al cambiar de
+      // temporalidad y las pruebas
       barras,
+      rango,
       simbolo,
       lista: () => listo.then(() => [...simbolos.values()].map(s =>
         ({ ticker: s.ticker, descripcion: s.desc, corto: s.corto, clase: s.clase,
@@ -4208,8 +4222,11 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
     return datos.then(() => feed.barras(chart.symbol(), temp())).then(b => {
       if (!b || !b.length) return;
       const rango = { from: b[0].time / 1000, to: b[b.length - 1].time / 1000 };
-      // la librería no garantiza que setVisibleRange termine: con plazo
-      const op = { applyDefaultRightMargin: true, rejectByTimeout: 3000 };
+      // la librería no garantiza que setVisibleRange termine: con plazo. El
+      // margen de la derecha (unas diez barras) solo en semanas: en 12M
+      // serían diez años vacíos
+      const p = temporalidad(temp());
+      const op = { applyDefaultRightMargin: !p || p.nombre === RESOLUCION, rejectByTimeout: 3000 };
       return Promise.resolve(chart.setVisibleRange(rango, op)).then(() => {
         // la historia más antigua llega mientras se aplica el rango y, con
         // semanas sin dato, puede quedar corto por la izquierda: una vez
@@ -4267,8 +4284,17 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
           const caja = typeof o.contenedor === 'string' ? document.getElementById(o.contenedor) : o.contenedor;
           const c = widget.activeChart();
           c.onSymbolChanged().subscribe(null, () => verTodo(widget, o.datafeed, caja));
+          // al cambiar de temporalidad la librería deja el ancho de las barras
+          // y la historia quedaba apretada a un lado: el rango completo va en
+          // el mismo aviso, como pide su documentación (timeframe). Si el
+          // cambio ya trae su rango (los plazos de la barra de abajo), queda
           if (typeof c.onIntervalChanged === 'function') {
-            c.onIntervalChanged().subscribe(null, res => verTodo(widget, o.datafeed, caja, res));
+            c.onIntervalChanged().subscribe(null, (res, cambio) => {
+              const r = o.datafeed.rango && o.datafeed.rango(c.symbol(), res);
+              if (r && cambio && !cambio.timeframe) {
+                cambio.timeframe = { type: 'time-range', from: r.from, to: r.to };
+              }
+            });
           }
           // el rango no frena el arranque: el widget ya inició
           verTodo(widget, o.datafeed, caja);
