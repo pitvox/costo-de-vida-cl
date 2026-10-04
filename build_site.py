@@ -1087,17 +1087,19 @@ __JS_UNIDAD__
     const code = cur, d = INDICES[code];
     const oprice = document.getElementById('oprice'), opesos = document.getElementById('opesos');
     // primero la de pesos de hoy del índice elegido (la que queda si la UF
-    // no llega); en UF se reemplaza al llegar
-    opesos.hidden = true;
+    // no llega); en UF se reemplaza al llegar. La línea de pesos de hoy de
+    // debajo queda a la vista mientras tanto: el bloque no cambia de alto
     countUp(oprice, d.costo_real);
-    if (unidad !== 'uf') return;
+    if (unidad !== 'uf') { opesos.hidden = true; return; }
+    opesos.textContent = fmt(d.costo_real) + ' en pesos de hoy';
+    opesos.hidden = false;
+    const enPesos = () => { if (cur === code && unidad === 'uf') opesos.hidden = true; };
     ultimoCierre(code, 'uf').then(x => {
-      if (cur !== code || unidad !== 'uf' || x == null) return;
+      if (cur !== code || unidad !== 'uf') return;
+      if (x == null) { enPesos(); return; }
       cifraGen++;   // la cifra en pesos que venía animándose ya no va
       oprice.textContent = TV.textoUF(x);
-      opesos.textContent = fmt(d.costo_real) + ' en pesos de hoy';
-      opesos.hidden = false;
-    }, () => {});
+    }, enPesos);
   }
   const fmtQty = q => String(q).replace('.', ',');
   function aplicar(code) {
@@ -3004,6 +3006,8 @@ __JS_UNIDAD__
       if (!TV) throw new Error('sin carestia-tv.js');
       // la serie ya viene en la página: el datafeed no la vuelve a pedir
       feed = TV.crearDatafeed({ base: '/datos/', ver: '__VER__', indices: INDICES, uf: UF,
+        // su Comparar superpone el producto en otras unidades: el nombre la dice
+        nombreConUnidad: true,
         productos: [{ slug: SLUG, nombre: NOMBRE, unidad: UNIDAD }],
         precargados: { ['productos/' + SLUG + '.json']: { t0: T0, v: V, min: MIN, max: MAX } } });
       selector.limitar(unidadesHay());
@@ -3852,7 +3856,10 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
   // defecto, fetch con la versión del build en la URL. 'productos' son los
   // que la página ya conoce (la ficha, el suyo): se resuelven sin esperar el
   // catálogo. 'precargados' son archivos de datos/ que la página trae inline.
-  // 'uf': el build trae datos/uf.json; sin él no hay símbolos en UF
+  // 'uf': el build trae datos/uf.json; sin él no hay símbolos en UF.
+  // 'nombreConUnidad': el nombre que la librería muestra en Comparar lleva la
+  // unidad (la ficha superpone su producto en otras unidades); sin él, solo
+  // el producto (en /graficos.html todas las series van en una unidad)
   function crearDatafeed(opciones) {
     const base = opciones.base || '/datos/';
     const ver = opciones.ver ? '?v=' + encodeURIComponent(opciones.ver) : '';
@@ -3887,7 +3894,8 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
         const desc = s.nombre + EN_LARGO[unidad];
         const corto = s.corto + EN_CORTO[unidad];
         simbolos.set(ticker, Object.assign({}, s, { ticker, base: s.ticker, unidad, desc, corto,
-          etiqueta: s.corto, buscar: sinTildes(ticker + ' ' + desc + ' ' + s.nombre) }));
+          etiqueta: opciones.nombreConUnidad ? corto : s.corto,
+          buscar: sinTildes(ticker + ' ' + desc + ' ' + s.nombre) }));
       });
     }
     const agregarProducto = p => agregar({ ticker: p.slug, clase: 'producto', corto: p.nombre,
@@ -3951,8 +3959,8 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
       const enUF = s.unidad === 'uf';
       return {
         // el nombre que la librería muestra en Comparar (leyenda y eje): el
-        // del producto o del índice, sin la unidad (Comparar ya la dice). Los
-        // pedidos y c.symbol() usan el ticker, con la unidad
+        // del producto o del índice, con la unidad solo si la página mezcla
+        // unidades. Los pedidos y c.symbol() usan el ticker, con la unidad
         name: s.etiqueta,
         ticker: s.ticker,
         description: s.corto,

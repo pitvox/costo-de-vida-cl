@@ -480,7 +480,7 @@ async function temporalidades(info, semanales, t, completo) {
   ok(JSON.stringify(pedidos2) === '["catalogo.json"]', 'ficha: la serie precargada no se pide');
   // la ficha en UF: pide la UF y los índices (el factor de la época), nunca su serie
   if (UFJ) {
-    const feed3 = TV.crearDatafeed({ indices: INDICES, uf: true,
+    const feed3 = TV.crearDatafeed({ indices: INDICES, uf: true, nombreConUnidad: true,
       productos: [{ slug: p0.slug, nombre: p0.nombre, unidad: p0.unidad }],
       precargados: { ['productos/' + p0.slug + '.json']: { t0: j0.t0, v: j0.v, min: j0.min, max: j0.max } },
       pedir: r => { pedidos2.push(r); return r === 'catalogo.json' ? new Promise(() => {}) :
@@ -490,6 +490,10 @@ async function temporalidades(info, semanales, t, completo) {
        'ficha: su producto en UF sin esperar el catálogo');
     ok(!pedidos2.includes('productos/' + p0.slug + '.json') && pedidos2.includes('uf.json'),
        'ficha: en UF pide datos/uf.json y no su serie');
+    // la ficha superpone su producto en otras unidades: el nombre la dice
+    const nombres = await Promise.all(['', '-epoca', '-uf'].map(x => feed3.info(p0.slug + x).then(i => i.name)));
+    ok(new Set(nombres).size === 3 && nombres[0] === p0.nombre && nombres[2] === p0.nombre + ', en UF',
+       'ficha: un nombre por unidad (' + nombres.join(' / ') + ')');
   }
 
   ok(pedidos.every(r => /^(catalogo\.json|uf\.json|indices\/[a-z0-9_-]+\.json|productos\/[a-z0-9-]+\.json)$/.test(r)),

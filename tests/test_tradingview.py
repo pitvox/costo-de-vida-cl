@@ -450,7 +450,8 @@ def test_graficos_indices_y_comparar_en_advanced_charts(sitio):
     assert "document.getElementById('v-velas').onclick = () => { vista = 'velas'; aplicarVista(true); };" in js
     assert "w.activeChart().onIntervalChanged().subscribe(null, () => setTimeout(() => aplicarVista(), 0));" in js
     # la cifra en UF nunca muestra la del índice anterior: primero la de pesos
-    assert "opesos.hidden = true;\n    countUp(oprice, d.costo_real);\n    if (unidad !== 'uf') return;" in js
+    assert "countUp(oprice, d.costo_real);\n    if (unidad !== 'uf') { opesos.hidden = true; return; }" in js
+    assert "opesos.textContent = fmt(d.costo_real) + ' en pesos de hoy';\n    opesos.hidden = false;" in js
     # en Lightweight el eje y la ayuda siguen a la unidad ya dibujada
     assert "priceFormatter: v => unidadLW === 'uf' && TV ? TV.numUF(v) : fmt(v) } }));" in js
     # Comparar: comparación de la librería en escala porcentual, colores por
@@ -541,6 +542,9 @@ def test_ficha_con_advanced_charts_despues_del_primer_pantallazo(sitio):
     # sus otras unidades, para superponer desde Comparar
     assert "comparar: unidadesHay().map(u => ({ symbol: SLUG + SUF[u], title: NOMBRE + EN[u] })) });" in js
     assert "const EN = { real: ', en pesos de hoy', epoca: ', precio de la época', uf: ', en UF' };" in js
+    # su Comparar superpone el producto en otras unidades: el nombre la dice
+    assert "nombreConUnidad: true," in js
+    assert "nombreConUnidad" not in _script(_leer(sitio, "graficos.html"))
     # el selector de unidad cambia el símbolo; en UF la cifra va en UF y
     # debajo, en pesos de hoy
     assert "Promise.resolve(c.setSymbol(SLUG + SUF[u])).catch(() => {});" in js
