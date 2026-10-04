@@ -7,8 +7,9 @@ La idea: que mirar cuánto cuesta lo de todos los días sea tan fácil como mira
 ## Cómo funciona
 
 - **`indices.py`** — descarga los precios al consumidor de ODEPA (2008–2026), arma cada canasta, la deflacta a pesos de hoy con el IPC y calcula la estadística. Escribe `indices.json`.
+- **`uf.py`** — aparte de `indices.py`: pide la UF diaria al Banco Central (secretos `BCCH_USER` y `BCCH_PASS`, con `mindicador.cl` de respaldo) y escribe `datos/uf.json` con la UF de cada lunes desde 2007-12-31. Nunca corta el build: si no obtiene la UF deja un aviso y el sitio sale sin la opción UF.
 - **`build_site.py`** — genera la portada `index.html` en formato tabla (los 4 índices con su veredicto, lo que más se movió esta semana y la tabla de productos, en HTML estático: cada fila lleva a su ficha) y `graficos.html`, la app con las cuatro pestañas, línea/velas, estacionalidad, desglose de componentes, Comparar y Arma tu canasta. Los links viejos de la app que entraban por la portada (`/#comparar`, `/#canasta=...`) se redirigen a `graficos.html` con el mismo hash. `graficos.html` trae inline solo el primer pantallazo (el resumen de los 4 índices, la serie del primero y la lista de productos); el resto va a `datos/` y se pide a demanda: `datos/indices/{codigo}.json` (cada índice con su serie completa), `datos/productos/{slug}.json` (la serie de cada producto, para Comparar y Arma tu canasta) y `datos/catalogo.json` (una fila liviana por producto, de donde sale también la portada). `indices.json` se sigue publicando igual.
-- **Gráficos de TradingView (Advanced Charts)** — la librería está en un repo privado de TradingView y su licencia prohíbe que esté en un repo público: `actualizar.yml` la descarga al publicar (secreto `TV_LIBRARY_TOKEN`, tag fijo `v32.2.0` en el workflow o el que fije la variable `TV_LIBRARY_TAG`; con los dos vacíos, el último tag estable) y la deja solo en el sitio, en `/charting_library/`. Si la descarga falla, el sitio se publica igual con Lightweight Charts y el run termina en rojo para que llegue el correo. `build_site.py` genera `carestia-tv.js` (el datafeed, que lee `datos/`), `carestia-tv.css` (el tema) y `/prueba-graficos.html`, una página oculta de prueba. La guardia `guardia-tradingview.yml` falla si la librería llega a entrar al repo.
+- **Gráficos de TradingView (Advanced Charts)** — la librería está en un repo privado de TradingView y su licencia prohíbe que esté en un repo público: `actualizar.yml` la descarga al publicar (secreto `TV_LIBRARY_TOKEN`, tag fijo `v32.2.0` en el workflow o el que fije la variable `TV_LIBRARY_TAG`; con los dos vacíos, el último tag estable) y la deja solo en el sitio, en `/charting_library/`. Si la descarga falla, el sitio se publica igual con Lightweight Charts y el run termina en rojo para que llegue el correo. `build_site.py` genera `carestia-tv.js` (el datafeed, que lee `datos/`), `carestia-tv.css` (el tema) y `/prueba-graficos.html`, una página oculta de prueba. Los gráficos parten en línea y en 1S; el datafeed arma 2S, 1M, 3M, 6M y 12M juntando semanas, y cada serie existe en pesos de hoy, a precio de la época (`{slug}-epoca`) y en UF (`{slug}-uf`, solo si el build trae `datos/uf.json`). La guardia `guardia-tradingview.yml` falla si la librería llega a entrar al repo.
 - **`textos/`** — textos institucionales y legales (términos, privacidad, acerca, contacto, metodología, notas metodológicas, 404), literales: `build_site.py` solo les da formato HTML. `/metodologia.html` sale de `textos/metodologia.md` (Cómo se calcula, Fuentes y Deslinde), con las canastas generadas desde `BASKETS` y las notas metodológicas al final.
 - **`.github/workflows/actualizar.yml`** — recalcula y republica el sitio **todos los viernes** de forma automática, después de que ODEPA publica.
 
@@ -17,6 +18,7 @@ Correr localmente:
 ```bash
 pip install pandas numpy requests
 python indices.py
+python uf.py            # opcional: sin la UF, el sitio sale sin esa opción
 python build_site.py
 python -m http.server   # y abrir http://localhost:8000 (graficos.html pide datos/ por fetch: no funciona abriendo el archivo directo)
 ```
@@ -25,7 +27,7 @@ python -m http.server   # y abrir http://localhost:8000 (graficos.html pide dato
 
 Cada índice es una **canasta fija** de cantidades (tipo Laspeyres): lo que cambia en el tiempo es el precio, no qué se compra. El costo semanal es la suma de `cantidad × precio` de cada producto.
 
-- **Nominal vs. pesos de hoy** — se muestran ambos. El "real" reexpresa cada semana en pesos actuales usando el IPC, para comparar a través del tiempo sin que la inflación general distorsione.
+- **Pesos de hoy, precio de la época y UF** — se muestran los tres. El precio de la época es el que se pagó esa semana; pesos de hoy reexpresa cada semana en pesos actuales usando el IPC, para comparar a través del tiempo sin que la inflación general distorsione; en UF, el precio de la época de cada semana se divide por la UF del lunes en que empieza. El veredicto y el percentil se calculan siempre en pesos de hoy.
 - **Deflactación** — por IPC empalmado del BCCh (base 2023=100, serie `G073.IPC.IND.2023.M`). Las variaciones del empalme BCCh pueden diferir marginalmente de las variaciones oficiales INE mes a mes; para series reales de largo plazo el empalme es el instrumento apropiado.
 - **Caro / barato** — por **percentil histórico**: dónde cae el costo de esta semana en la distribución de toda su historia (en pesos de hoy). Verde <33, amarillo 33–66, rojo >66. El umbral es una convención de presentación, no una verdad física.
 - **Estacionalidad** — patrón típico por mes, quitando la tendencia; indica en qué meses la canasta suele estar más barata o más cara.
@@ -38,6 +40,7 @@ Cada índice es una **canasta fija** de cantidades (tipo Laspeyres): lo que camb
 
 - **Precios:** [ODEPA](https://datos.odepa.gob.cl) — Oficina de Estudios y Políticas Agrarias, precios al consumidor. Datos abiertos bajo licencia **Creative Commons Attribution (CC-BY)**.
 - **Inflación:** IPC del Banco Central de Chile (con `mindicador.cl` como respaldo).
+- **UF:** valor diario del Banco Central de Chile (con `mindicador.cl` como respaldo).
 
 ## Deslinde
 

@@ -142,33 +142,37 @@ __CSS_CABECERA__
   body:not([data-modo="indices"])   .m-ind  { display:none !important; }
   body:not([data-modo="productos"]) .m-prod { display:none !important; }
   body:not([data-modo="canasta"])   .m-can  { display:none !important; }
+  /* la unidad vale para los índices y Comparar: fuera solo en la canasta */
+  body[data-modo="canasta"] .m-uni { display:none !important; }
   #vista { opacity:1; transition:opacity .18s ease; }
-  /* la barra de controles (~52px) sale del calc para que hero+barra sigan
+  /* la barra de controles (~52px) y la línea de la unidad bajo ella (27px
+     en una línea, 43px en dos) salen del calc para que hero+barra sigan
      encuadrando la pantalla sin scroll */
   /* altura reservada por CSS antes de que Lightweight Charts monte, y en
      svh donde exista: 100vh cambia con la barra del navegador móvil y ese
      reflow se atribuía a los contenedores de chart (CLS) */
-  .hero-wrap { position:relative; height:calc(100vh - 318px); min-height:320px;
+  .hero-wrap { position:relative; height:calc(100vh - 345px); min-height:320px;
     background:var(--bg); }
   @supports (height:100svh) {
-    .hero-wrap { height:calc(100svh - 318px); } }
+    .hero-wrap { height:calc(100svh - 345px); } }
   /* sobre 640px la fila de navegación del sitio (33px, en el encabezado)
-     también sale del calc: 272+33 y 368+33 */
+     también sale del calc: 299+33 y 391+33 */
   @media (min-width:760px) {
-    .hero-wrap { height:calc(100vh - 305px); min-height:420px; }
+    .hero-wrap { height:calc(100vh - 332px); min-height:420px; }
     @supports (height:100svh) {
-      .hero-wrap { height:calc(100svh - 305px); } } }
-  /* móvil: la franja bajo el lienzo (50px, ver .mstrip) y, bajo 641px, la
-     segunda fila de tabs (+50px) salen del encuadre para que hero + barras
-     sigan cerrando la pantalla sin scroll donde el alto alcance */
+      .hero-wrap { height:calc(100svh - 332px); } } }
+  /* móvil: la franja bajo el lienzo (46px, ver .mstrip), la línea de la
+     unidad en dos líneas y, bajo 641px, la segunda fila de tabs (+50px)
+     salen del encuadre para que hero + barras sigan cerrando la pantalla
+     sin scroll donde el alto alcance */
   @media (max-width:759px) {
-    .hero-wrap { height:calc(100vh - 401px); }
+    .hero-wrap { height:calc(100vh - 424px); }
     @supports (height:100svh) {
-      .hero-wrap { height:calc(100svh - 401px); } } }
+      .hero-wrap { height:calc(100svh - 424px); } } }
   @media (max-width:640px) {
-    .hero-wrap { height:calc(100vh - 419px); }
+    .hero-wrap { height:calc(100vh - 442px); }
     @supports (height:100svh) {
-      .hero-wrap { height:calc(100svh - 419px); } } }
+      .hero-wrap { height:calc(100svh - 442px); } } }
   @media (max-width:759px) { .overlay .oname, .overlay .cstats, .overlay .caviso,
     .overlay .can-reg { max-width:calc(100vw - 160px); }
     body.tv-ind .overlay.m-ind .oname { max-width:none; } }
@@ -205,6 +209,10 @@ __CSS_CABECERA__
     margin-top:4px; flex-wrap:wrap; }
   .oprice { font:700 clamp(34px,6vw,68px)/1 var(--display);
     letter-spacing:-.01em; color:var(--bone); }
+  /* en UF, la cifra grande va en UF y debajo, más chica, en pesos de hoy */
+  .ocifra { display:flex; flex-direction:column; }
+  .opesos { font:400 clamp(11px,1.3vw,13px) var(--sans); color:var(--ash);
+    margin-top:6px; }
   .odelta { font:600 clamp(13px,1.6vw,18px) var(--sans); color:var(--ash); }
   .odelta small { font:400 12px var(--sans); color:var(--dim); }
   .overd { display:flex; align-items:center; gap:12px; margin-top:12px; flex-wrap:wrap; }
@@ -219,25 +227,35 @@ __CSS_CABECERA__
   /* ---- barra de controles: fuera del lienzo, sobre el gráfico ---- */
   /* los controles ya no flotan sobre el chart; viven en una fila propia,
      alineados a la derecha, con scroll horizontal si no caben (móvil) */
-  .cbar { display:flex; align-items:center; gap:14px; min-height:50px;
-    padding:7px clamp(16px,3vw,32px); border-bottom:1px solid var(--line);
+  .cbar { display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px;
+    min-height:50px; padding:7px clamp(16px,3vw,32px);
+    border-bottom:1px solid var(--line);
     overflow-x:auto; overflow-y:hidden; scrollbar-width:none;
     -webkit-overflow-scrolling:touch; }
   .cbar::-webkit-scrollbar { display:none; }
   /* los controles van juntos y nunca quedan fuera de la vista: si las
      ayudas (zoom, velas) no caben a su lado, pasan a una fila arriba de
-     ellos, y la leyenda se angosta antes que la barra se desborde */
+     ellos, y si ni así caben junto a la unidad, bajan a otra fila */
   .cbar-right { margin-left:auto; display:flex; align-items:center; gap:8px 14px;
     flex-wrap:wrap; justify-content:flex-end; }
   .cbar-right > * { flex:none; }
   .cbar-ctrl { display:flex; align-items:center; gap:14px; }
-  .legend { display:none; flex-direction:column; align-items:flex-start; gap:4px;
-    flex-shrink:.2;
-    font:400 11px/1.5 var(--sans); color:var(--ash);
-    max-width:min(40vw,440px); text-wrap:pretty; }
-  @media (min-width:900px) { .legend { display:flex; } }
-  .legend .sw { display:inline-block; width:16px; height:0; margin-right:6px;
-    vertical-align:middle; }
+  /* ---- unidad: pesos de hoy, precio de la época o UF ---- */
+  /* tres botones o, si no caben en la fila de controles, el desplegable
+     (JS_UNIDAD prueba la fila sin envolver: .midiendo). Bajo la barra, la
+     línea de la unidad elegida, que reemplaza a la leyenda de las series */
+  .unidad { flex:none; }
+  .vtoggle .ubtn { font:500 13px var(--sans); letter-spacing:0; }
+  .usel { display:none; font:500 13px var(--sans); color:var(--bone);
+    background:var(--bg); border:1px solid var(--line); border-radius:0;
+    min-height:34px; padding:0 6px; color-scheme:dark; cursor:pointer; }
+  .unidad.compacta .ubtns { display:none; }
+  .unidad.compacta .usel { display:block; }
+  .midiendo { flex-wrap:nowrap !important; }
+  .utxt { padding:0 clamp(16px,3vw,32px) 9px; border-bottom:1px solid var(--line);
+    font:400 11px/1.5 var(--sans); color:var(--ash); text-wrap:pretty; }
+  /* con la unidad a la vista, su línea va pegada a la barra */
+  body:not([data-modo="canasta"]) .cbar { border-bottom:none; padding-bottom:6px; }
   .vtoggle { display:flex; border:1px solid var(--line); background:var(--bg); }
   /* LÍNEA / VELAS son etiquetas cortas en mayúsculas (mono); los botones
      de texto normal (captura PNG) van en la tipografía de la
@@ -248,39 +266,37 @@ __CSS_CABECERA__
   .vbtn.active { background:var(--bone); color:var(--bg); }
   .nomtoggle { border:1px solid var(--line); background:var(--bg);
     font:500 13px var(--sans); letter-spacing:0; }
-  /* celular: PESOS DE HOY / NOMINAL, LÍNEA / VELAS y la captura caben en la
-     fila (a 360px) con botones más justos y "HOY" en vez de "PESOS DE HOY" */
+  /* celular: la unidad (en el desplegable si los botones no caben),
+     LÍNEA / VELAS y la captura van en la fila con botones más justos */
   @media (max-width:640px) {
-    .cbar, .cbar-right, .cbar-ctrl { gap:8px; }
-    .cbar .vbtn { padding:8px 9px; letter-spacing:.06em; }
-    .cbar .solo-ancho { display:none; }
+    .cbar, .cbar-right, .cbar-ctrl { gap:8px 6px; }
+    .cbar .vbtn { padding:8px 7px; letter-spacing:.06em; }
+    .cbar .nomtoggle { font-size:12px; }
+    .cbar .vtoggle .ubtn { letter-spacing:0; padding:8px 10px; }
+    .usel { font-size:11px; padding:0 2px; }
   }
-  @media (max-width:380px) { .cbar { padding-left:12px; padding-right:12px; }
-    .cbar, .cbar-right, .cbar-ctrl { gap:6px; } }
+  @media (max-width:380px) { .cbar, .utxt { padding-left:10px; padding-right:10px; }
+    .cbar, .cbar-right, .cbar-ctrl { gap:6px; }
+    .cbar .vbtn { padding:8px 6px; } }
   /* referencia de velas y pista de zoom: texto de ayuda dentro de la barra;
-     bajo 760px se omiten para no alargar la fila de controles en móvil */
+     bajo 760px se omiten para no alargar la fila de controles en móvil, y la
+     pista de zoom espera a 960px para que en tablets la fila siga siendo una */
   .ref { display:none; max-width:300px; text-wrap:balance;
     font:400 11px/1.5 var(--sans); color:var(--dim); }
   .zoomhint { display:none; max-width:280px; text-wrap:balance;
     font:400 11px/1.5 var(--sans); color:var(--ash); }
-  @media (min-width:760px) { .ref, .zoomhint { display:block; } }
-  /* ---- franja móvil bajo el lienzo: leyenda compacta + pista táctil ---- */
-  /* bajo 760px ni la leyenda completa (≥900px) ni la pista de zoom de la
-     barra (≥760px) existen: esta franja trae ambas en versión corta, fuera
-     del lienzo para no taparlo. Primera línea: solo swatch + etiqueta corta
-     (la frase explicativa completa queda en desktop); segunda línea: la
-     pista de gestos. En productos/canasta la leyenda (m-ind) se apaga y el
-     min-height mantiene la franja estable; altura fija reservada desde el
-     primer paint (CLS) */
+  @media (min-width:760px) { .ref { display:block; } }
+  @media (min-width:960px) { .zoomhint { display:block; } }
+  /* ---- franja móvil bajo el lienzo: pista táctil ---- */
+  /* bajo 760px la pista de zoom de la barra (≥760px) no existe: esta franja
+     trae la de los gestos, fuera del lienzo para no taparlo, con su alto
+     reservado desde el primer paint (CLS) */
   .mstrip { display:none; }
   @media (max-width:759px) {
     .mstrip { display:flex; flex-wrap:wrap; align-content:flex-start;
-      align-items:center; gap:4px 14px; min-height:66px;
+      align-items:center; gap:4px 14px; min-height:46px;
       padding:7px clamp(16px,3vw,32px);
       font:400 11px/16px var(--sans); color:var(--ash); }
-    .mstrip .sw { display:inline-block; width:16px; height:0; margin-right:6px;
-      vertical-align:middle; }
-    .mstrip .mleg { white-space:nowrap; }
     .mstrip .mhint { flex-basis:100%; color:var(--dim); text-wrap:balance; }
   }
   .tooltip { position:absolute; display:none; z-index:7; pointer-events:none;
@@ -412,26 +428,22 @@ __CSS_SITIO__
   <nav class="tabs" id="tabs" aria-label="Índices y herramientas"></nav>
 
   <div class="cbar" id="cbar">
-    <div class="legend m-ind">
-      <span id="leg-real"><span class="sw" style="border-top:2px solid var(--ember)"></span>En pesos de hoy: lo que costaría hoy ese precio, sumando la inflación acumulada. Es parecido a medirlo en UF.</span>
-      <span id="leg-nom"><span class="sw" style="border-top:2px solid var(--ember)"></span>Nominal: el precio de la boleta de ese día</span>
+    <div class="unidad m-uni" id="unidad" data-fila="cbar">
+      __SELECTOR_UNIDAD__
     </div>
     <div class="cbar-right">
       <span class="zoomhint">Para acercar, arrastra el eje de los años o el de los precios. En el celular, usa dos dedos.</span>
       <span class="ref m-ind" id="ref-velas"></span>
       <div class="cbar-ctrl">
-        <div class="vtoggle m-ind" id="v-serie">
-          <button class="vbtn active" id="v-real" aria-label="Pesos de hoy"><span class="solo-ancho">PESOS DE </span>HOY</button>
-          <button class="vbtn" id="v-nominal">NOMINAL</button>
-        </div>
         <div class="vtoggle m-ind">
-          <button class="vbtn" id="v-linea">LÍNEA</button>
-          <button class="vbtn active" id="v-velas">VELAS</button>
+          <button class="vbtn active" id="v-linea">LÍNEA</button>
+          <button class="vbtn" id="v-velas">VELAS</button>
         </div>
         <button class="vbtn nomtoggle" id="shot">captura PNG</button>
       </div>
     </div>
   </div>
+  <p class="utxt m-uni" id="utxt">__UNIDAD_REAL__</p>
 
   <div id="vista">
     <section class="hero-wrap" id="hero">
@@ -441,7 +453,10 @@ __CSS_SITIO__
       <div class="overlay m-ind">
         <div class="oname"><span id="oname"></span> <span id="osub"></span></div>
         <div class="orow">
-          <div class="oprice" id="oprice"></div>
+          <div class="ocifra">
+            <div class="oprice" id="oprice"></div>
+            <div class="opesos" id="opesos" hidden></div>
+          </div>
           <div class="odelta"><span id="odelta"></span> <small>sem.</small></div>
         </div>
         <div class="overd">
@@ -452,7 +467,7 @@ __CSS_SITIO__
       </div>
       <div class="overlay m-prod">
         <div class="oname">COMPARAR PRODUCTOS <span id="prod-rango"></span></div>
-        <div class="onote">Cambio del precio real, en porcentaje</div>
+        <div class="onote" id="onote">Cambio del precio real, en porcentaje</div>
       </div>
       <div class="overlay m-can">
         <div class="oname">ARMA TU CANASTA <span>Y COMPÁRTELA</span></div>
@@ -470,16 +485,14 @@ __CSS_SITIO__
       </div>
       <div class="tooltip" id="tooltip">
         <div class="tt-d" id="tt-d"></div>
-        <div class="tt-r"><span id="tt-r"></span> <small>pesos de hoy</small></div>
+        <div class="tt-r"><span id="tt-r"></span> <small id="tt-u">pesos de hoy</small></div>
         <div class="tt-n" id="tt-n"></div>
       </div>
     </section>
 
-    <!-- franja móvil (<760px): leyenda compacta del modo índices y pista de
-         gestos táctiles del lienzo; en desktop no existe -->
+    <!-- franja móvil (<760px): pista de gestos táctiles del lienzo; en
+         desktop no existe -->
     <div class="mstrip">
-      <span class="mleg m-ind" id="mleg-real"><span class="sw" style="border-top:2px solid var(--ember)"></span>En pesos de hoy</span>
-      <span class="mleg m-ind" id="mleg-nom"><span class="sw" style="border-top:2px solid var(--ember)"></span>Nominal</span>
       <span class="mhint">Desliza hacia los lados para moverte. Usa dos dedos para acercar.</span>
     </div>
 
@@ -601,6 +614,7 @@ __PIE__
     pintarCarga();
   }
   const fmt = v => '$' + Math.round(v).toLocaleString('es-CL');
+__JS_UNIDAD__
   const MESES = ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   // dentro de una frase, el mes con su nombre completo; las abreviaturas
   // quedan solo como etiquetas de las barras
@@ -668,7 +682,9 @@ __PIE__
     Object.keys(DATA.series || {}).forEach(c => {
       precargados['indices/' + c + '.json'] = { serie: DATA.series[c] };
     });
-    feed = TV.crearDatafeed({ base: '/datos/', ver: DATA.ver, precargados,
+    feed = TV.crearDatafeed({ base: '/datos/', ver: DATA.ver, precargados, uf: DATA.uf,
+      // los mismos pedidos de la página: un archivo de datos/ se baja una vez
+      pedir: pedirJSON,
       indices: CODES.map(c => ({ codigo: c, nombre: INDICES[c].nombre })),
       productos: Object.keys(PRODS).map(k => ({ slug: PRODS[k].slug, nombre: PRODS[k].label,
         unidad: PRODS[k].unidad, grupo: PRODS[k].grupo })) });
@@ -687,7 +703,7 @@ __PIE__
     const primero = m === 'productos' ? elegidosEnOrden()[0] || Object.keys(PRODS)[0] : null;
     TV.montar({ contenedor: caja, libreria: LIBRERIA, datafeed: feed, tok, sitio: true,
       css: location.origin + TV_CSS,
-      simbolo: m === 'indices' ? simboloIndice(cur) : PRODS[primero].slug,
+      simbolo: m === 'indices' ? simboloIndice(cur) : PRODS[primero].slug + SUF[unidad],
       // Comparar pone sus propios colores
       estilo: m === 'indices' })
       .then(w => {
@@ -700,6 +716,8 @@ __PIE__
           w.activeChart().onChartTypeChanged().subscribe(null, t => {
             if (t === 1 || t === 2) { vista = t === 2 ? 'linea' : 'velas'; aplicarVista(); }
           });
+          // la referencia de las velas cambia con la temporalidad
+          w.activeChart().onIntervalChanged().subscribe(null, () => setTimeout(aplicarVista, 0));
           pintarSerie(cur);
         } else syncProductos();
         pintarCarga();
@@ -713,17 +731,24 @@ __PIE__
         pintarCarga();
       });
   }
-  const simboloIndice = code => code + (serieNom ? '-nominal' : '');
+  const simboloIndice = code => code + SUF[unidad];
   function ponerSimbolo(w, sim) {
     const c = w.activeChart();
     if (sinFuente(c.symbol()) === sim) return Promise.resolve();
     return Promise.resolve(c.setSymbol(sim)).catch(() => {});
   }
 
-  // los índices parten en velas (las de ODEPA, del más bajo al más alto)
-  let cur = CODES[0], vista = 'velas', serieNom = false;
-  let chart, sNom, sReal, sCandle, pchart;
-  let realMap = new Map(), nomMap = new Map();
+  // todos los gráficos parten en línea y en pesos de hoy; las velas (las de
+  // ODEPA, del más bajo al más alto) quedan a un clic
+  let cur = CODES[0], vista = 'linea', unidad = 'real';
+  let chart, sLinea, sCandle, pchart;
+  let mapaUnidad = new Map(), mapaReal = new Map(), mapaEpoca = new Map();
+  const dia = ms => new Date(ms).toISOString().slice(0, 10);
+  const SEMANA_MS = 7 * DIA;
+  // en Comparar, el cambio del precio en la unidad elegida
+  const ONOTE = { real: 'Cambio del precio real, en porcentaje',
+    epoca: 'Cambio del precio de la época, en porcentaje',
+    uf: 'Cambio del precio en UF, en porcentaje' };
 
   // variación de las dos últimas semanas: viene calculada en el resumen,
   // así el ticker no necesita las series
@@ -834,6 +859,8 @@ __PIE__
     syncTabs();
     syncNav();
     pintarCarga();
+    // la fila de controles cambia con el modo: ¿caben los tres botones?
+    selector.medir();
     // el widget del modo se monta la primera vez que está a la vista; después
     // de los deep links del load (que pueden cambiar el modo de entrada)
     if ((m === 'indices' || m === 'productos') && tv[m].estado === 'nada') {
@@ -854,20 +881,19 @@ __PIE__
     }));
   }
 
-  /* ---------- hero chart ---------- */
+  /* ---------- hero chart (respaldo con Lightweight) ---------- */
+  // una línea y unas velas con las semanas de la unidad elegida
   function initChart() {
     const el = document.getElementById('chart');
     if (!window.LightweightCharts) {
       el.innerHTML = '<div class="nochart">No se pudo cargar el motor de gráficos (revisa la conexión).</div>';
       return;
     }
-    chart = LightweightCharts.createChart(el,
-      opcionesChart({ localization: { priceFormatter: fmt } }));
-    // nominal: la misma línea del índice, en otra unidad (se ve una u otra)
-    sNom = chart.addLineSeries({ color: COL.ember, lineWidth: 2,
-      priceLineVisible: false, visible: false });
+    // el eje en pesos o, en UF, con sus decimales
+    chart = LightweightCharts.createChart(el, opcionesChart({ localization: {
+      priceFormatter: v => unidad === 'uf' && TV ? TV.numUF(v) : fmt(v) } }));
     // la línea de los índices oficiales: el único lugar de la brasa en los gráficos
-    sReal = chart.addLineSeries({ color: COL.ember, lineWidth: 2, priceLineVisible: false });
+    sLinea = chart.addLineSeries({ color: COL.ember, lineWidth: 2, priceLineVisible: false });
     // C2: convención estándar de trading, verde sube y rojo baja
     sCandle = chart.addCandlestickSeries({
       upColor: COL.verde, downColor: COL.rojo, borderVisible: false,
@@ -875,6 +901,9 @@ __PIE__
     chart.subscribeCrosshairMove(onCrosshair);
   }
 
+  // la semana bajo el cursor: su valor en la unidad elegida y, abajo, en
+  // pesos de hoy (o a precio de la época, si la unidad es pesos de hoy)
+  const UNIDAD_TT = { real: 'pesos de hoy', epoca: 'precio de la época', uf: '' };
   const tooltip = document.getElementById('tooltip');
   function onCrosshair(param) {
     const el = document.getElementById('chart');
@@ -883,11 +912,14 @@ __PIE__
       return;
     }
     const t = tstr(param.time);
-    const rv = realMap.get(t), nv = nomMap.get(t);
-    if (rv == null) { tooltip.style.display = 'none'; return; }
+    const uv = mapaUnidad.get(t);
+    if (uv == null) { tooltip.style.display = 'none'; return; }
+    const otra = unidad === 'real' ? mapaEpoca.get(t) : mapaReal.get(t);
     document.getElementById('tt-d').textContent = ddmmyyyy(t);
-    document.getElementById('tt-r').textContent = fmt(rv);
-    document.getElementById('tt-n').textContent = (nv != null ? fmt(nv) : '·') + ' nominal';
+    document.getElementById('tt-r').textContent = unidad === 'uf' ? TV.textoUF(uv) : fmt(uv);
+    document.getElementById('tt-u').textContent = UNIDAD_TT[unidad];
+    document.getElementById('tt-n').textContent = (otra != null ? fmt(otra) : '·') +
+      (unidad === 'real' ? ' precio de la época' : ' pesos de hoy');
     tooltip.style.display = 'block';
     const w = tooltip.offsetWidth, cw = el.clientWidth;
     let x = param.point.x + 14;
@@ -896,50 +928,58 @@ __PIE__
     tooltip.style.top = Math.min(param.point.y + 14, el.clientHeight - 80) + 'px';
   }
 
-  // LÍNEA / VELAS y PESOS DE HOY / NOMINAL. En Advanced Charts el nominal es
-  // otro símbolo (con sus velas) y LÍNEA / VELAS cambia el tipo de gráfico;
-  // en Lightweight las velas son en pesos de hoy y el par se oculta con ellas
+  // la referencia de las velas: en semanas, la frase completa; en las
+  // temporalidades largas cada vela junta varias semanas y queda la mecha
+  const REF_VELAS = 'Velas semanales. La mecha va del precio más bajo al más alto que ODEPA encontró entre los locales encuestados.';
+  function refVelas(w) {
+    const p = w && TV ? TV.temporalidad(w.activeChart().resolution()) : null;
+    return !p || p.nombre === TV.RESOLUCION ? REF_VELAS : REF_VELAS.replace('Velas semanales. ', '');
+  }
+  // LÍNEA / VELAS. En Advanced Charts cambia el tipo de gráfico; en
+  // Lightweight muestra la línea o las velas de la unidad elegida
   function aplicarVista() {
     const linea = vista === 'linea', w = tvListo('indices') ? tv.indices.w : null;
     document.getElementById('v-linea').classList.toggle('active', linea);
     document.getElementById('v-velas').classList.toggle('active', !linea);
-    document.getElementById('v-real').classList.toggle('active', !serieNom);
-    document.getElementById('v-nominal').classList.toggle('active', serieNom);
-    document.getElementById('v-serie').style.visibility = linea || w ? 'visible' : 'hidden';
-    // la leyenda (y la compacta del celular) atenúa la serie que no está a la vista
-    ['leg-real', 'mleg-real'].forEach(id => {
-      document.getElementById(id).style.opacity = serieNom ? '.35' : ''; });
-    ['leg-nom', 'mleg-nom'].forEach(id => {
-      document.getElementById(id).style.opacity = serieNom ? '' : '.35'; });
-    document.getElementById('ref-velas').textContent =
-      linea ? '' : 'Velas semanales. La mecha va del precio más bajo al más alto que ODEPA encontró entre los locales encuestados.';
+    document.getElementById('ref-velas').textContent = linea ? '' : refVelas(w);
     if (w) {
       const c = w.activeChart(), tipo = linea ? 2 : 1;
       if (c.chartType() !== tipo) Promise.resolve(c.setChartType(tipo)).catch(() => {});
       return;
     }
     if (!chart) return;
-    sNom.applyOptions({ visible: linea && serieNom });
-    sReal.applyOptions({ visible: linea && !serieNom });
+    sLinea.applyOptions({ visible: linea });
     sCandle.applyOptions({ visible: !linea });
     chart.timeScale().fitContent();
   }
   document.getElementById('v-linea').onclick = () => { vista = 'linea'; aplicarVista(); };
   document.getElementById('v-velas').onclick = () => { vista = 'velas'; aplicarVista(); };
-  function ponerSerie(nominal) {
-    serieNom = nominal;
-    if (tvListo('indices')) ponerSimbolo(tv.indices.w, simboloIndice(cur));
-    aplicarVista();
+
+  /* ---------- unidad: pesos de hoy, precio de la época o UF ---------- */
+  // vale para los índices y para Comparar. En Advanced Charts cada unidad
+  // es otro símbolo; en Lightweight, otras semanas para la línea y las velas.
+  // Sin carestia-tv.js (que calcula la época y la UF) solo hay pesos de hoy
+  const unidadesHay = () => !feed ? ['real'] : DATA.uf ? ['real', 'epoca', 'uf'] : ['real', 'epoca'];
+  function ponerUnidad(u) {
+    if (unidadesHay().indexOf(u) === -1) u = 'real';
+    unidad = u;
+    selector.poner(u);
+    document.getElementById('onote').textContent = ONOTE[u];
+    pintarCifra();
+    pintarSerie(cur);
+    syncProductos();
   }
-  document.getElementById('v-real').onclick = () => ponerSerie(false);
-  document.getElementById('v-nominal').onclick = () => ponerSerie(true);
+  const selector = selectorUnidad(ponerUnidad);
 
   /* ---------- count-up del precio (~600ms) ---------- */
-  let lastPrice = 0;
+  // cifraGen corta una animación en curso cuando otra cifra la reemplaza
+  let lastPrice = 0, cifraGen = 0;
   function countUp(el, to) {
+    const gen = ++cifraGen;
     if (reduced) { el.textContent = fmt(to); lastPrice = to; return; }
     const from = lastPrice, t0 = performance.now();
     (function step(t) {
+      if (gen !== cifraGen) return;
       const p = Math.min(1, (t - t0) / 600);
       const e = 1 - Math.pow(1 - p, 3);
       el.textContent = fmt(from + (to - from) * e);
@@ -978,6 +1018,31 @@ __PIE__
   }
 
   /* ---------- render de un índice ---------- */
+  // el último cierre de un índice en una unidad: la cifra en UF y el
+  // encabezado de la captura
+  function ultimoCierre(code, u) {
+    if (feed) return feed.barras(code + SUF[u]).then(b => b && b.length ? b[b.length - 1].close : null);
+    return Promise.resolve(u === 'real' ? INDICES[code].costo_real : null);
+  }
+  // la cifra grande: en pesos de hoy (también con el precio de la época, que
+  // en la última semana es el mismo) o, en UF, la del índice en UF y debajo,
+  // más chica, la de pesos de hoy
+  function pintarCifra() {
+    const code = cur, d = INDICES[code];
+    const oprice = document.getElementById('oprice'), opesos = document.getElementById('opesos');
+    if (unidad !== 'uf') {
+      opesos.hidden = true;
+      countUp(oprice, d.costo_real);
+      return;
+    }
+    ultimoCierre(code, 'uf').then(x => {
+      if (cur !== code || unidad !== 'uf' || x == null) return;
+      cifraGen++;   // la cifra en pesos que venía animándose ya no va
+      oprice.textContent = TV.textoUF(x);
+      opesos.textContent = fmt(d.costo_real) + ' en pesos de hoy';
+      opesos.hidden = false;
+    }, () => {});
+  }
   const fmtQty = q => String(q).replace('.', ',');
   function aplicar(code) {
     const d = INDICES[code];
@@ -985,7 +1050,7 @@ __PIE__
     document.getElementById('fecha').textContent = d.fecha;
     document.getElementById('oname').textContent = d.nombre.replace(/^Índice /i, '');
     document.getElementById('osub').textContent = d.subtitulo;
-    countUp(document.getElementById('oprice'), d.costo_real);
+    pintarCifra();
     document.getElementById('odelta').textContent = fmtDelta(deltaSemanal(d));
     document.getElementById('obadge').textContent = d.veredicto;
     document.getElementById('obadge').style.background = d.color;
@@ -1019,25 +1084,42 @@ __PIE__
     }
     const d = INDICES[code];
     if (!d.real) {
-      realMap = new Map(); nomMap = new Map();
+      mapaUnidad = new Map(); mapaReal = new Map(); mapaEpoca = new Map();
       tooltip.style.display = 'none';
-      if (chart) { sNom.setData([]); sReal.setData([]); sCandle.setData([]); }
+      if (chart) { sLinea.setData([]); sCandle.setData([]); }
       cargarIndice(code).then(() => { if (cur === code) pintarSerie(code); }, () => {})
         .finally(pintarCarga);
       pintarCarga();
       return;
     }
-    realMap = new Map(d.real.map(p => [p.time, p.value]));
-    nomMap = new Map(d.nominal.map(p => [p.time, p.value]));
-    if (chart) {
+    mapaReal = new Map(d.real.map(p => [p.time, p.value]));
+    mapaEpoca = new Map(d.nominal.map(p => [p.time, p.value]));
+    const u = unidad;
+    semanasLW(code, u).then(([linea, velas]) => {
+      if (cur !== code || unidad !== u || !chart) return;
+      mapaUnidad = new Map(linea.map(p => [p.time, p.value]));
       // si el usuario arrastró el eje de precios, autoScale quedó apagado
       // y la serie nueva caería fuera del encuadre
       chart.priceScale('right').applyOptions({ autoScale: true });
-      sNom.setData(d.nominal); sReal.setData(d.real);
-      sCandle.setData(d.velas || []);
+      const formato = u === 'uf' ? { type: 'price', precision: 4, minMove: 0.0001 } :
+        { type: 'price', precision: 0, minMove: 1 };
+      sLinea.applyOptions({ priceFormat: formato });
+      sCandle.applyOptions({ priceFormat: formato });
+      sLinea.setData(linea);
+      sCandle.setData(velas);
       aplicarVista();
-    }
+    }, () => {});
     pintarCarga();
+  }
+  // la línea y las velas del índice en una unidad, con la fecha como texto:
+  // pesos de hoy desde su serie; precio de la época y UF, del datafeed
+  function semanasLW(code, u) {
+    const d = INDICES[code];
+    if (u === 'real' || !feed) return Promise.resolve([d.real, d.velas || []]);
+    return feed.barras(code + SUF[u]).then(b => {
+      const velas = (b || []).map(x => Object.assign({}, x, { time: dia(x.time) }));
+      return [velas.map(x => ({ time: x.time, value: x.close })), velas];
+    });
   }
 
   /* ---------- estado de carga del lienzo ---------- */
@@ -1181,9 +1263,9 @@ __PIE__
 
   // Comparar en Advanced Charts: el primer elegido es la serie principal y el
   // resto va con la comparación de la librería, en escala porcentual, con los
-  // colores de cada puesto (del 5º al 8º, punteados). Los cambios van en fila
-  // para que dos clics rápidos no se crucen
-  const comparados = new Map();       // clave -> id del estudio Compare
+  // colores de cada puesto (del 5º al 8º, punteados), todos en la unidad
+  // elegida. Los cambios van en fila para que dos clics rápidos no se crucen
+  const comparados = new Map();       // clave -> { id del estudio Compare, símbolo }
   let filaComparar = Promise.resolve();
   function compararTV() {
     filaComparar = filaComparar.then(compararAhora, compararAhora);
@@ -1192,16 +1274,19 @@ __PIE__
   async function compararAhora() {
     const w = tv.productos.w, c = w.activeChart(), serie = c.getSeries();
     const elegidos = elegidosEnOrden();
-    const quitar = keep => [...comparados].forEach(([k, id]) => {
-      if (keep.includes(k)) return;
-      try { c.removeEntity(id); } catch (e) {}
+    // el símbolo de un producto en la unidad elegida
+    const sim = k => PRODS[k].slug + SUF[unidad];
+    // fuera los que ya no están y los que quedaron en otra unidad
+    const quitar = keep => [...comparados].forEach(([k, x]) => {
+      if (keep.includes(k) && x.sim === sim(k)) return;
+      try { c.removeEntity(x.id); } catch (e) {}
       comparados.delete(k);
     });
     if (!elegidos.length) { quitar([]); serie.setVisible(false); return; }
     const [primero, ...resto] = elegidos;
     quitar(resto);
-    if (sinFuente(c.symbol()) !== PRODS[primero].slug) {
-      await Promise.resolve(c.setSymbol(PRODS[primero].slug)).catch(() => {});
+    if (sinFuente(c.symbol()) !== sim(primero)) {
+      await Promise.resolve(c.setSymbol(sim(primero))).catch(() => {});
     }
     serie.setVisible(true);
     const e0 = estiloDe(primero);
@@ -1214,10 +1299,11 @@ __PIE__
       if (comparados.has(k)) continue;
       const e = estiloDe(k);
       try {
+        const s = sim(k);
         const id = await c.createStudy('Compare', false, false,
-          { source: 'close', symbol: PRODS[k].slug },
+          { source: 'close', symbol: s },
           { 'plot.color': e.color, 'plot.linestyle': e.punteada ? 1 : 0, 'plot.linewidth': 2 });
-        if (id) comparados.set(k, id);
+        if (id) comparados.set(k, { id, sim: s });
       } catch (err) {}
     }
     // cambio del precio en porcentaje, como siempre en Comparar
@@ -1238,22 +1324,46 @@ __PIE__
     PKEYS.forEach(k => {
       const on = psel.has(k);
       if (on && !PRODS[k].real) return;   // aún no llega: se agrega al llegar
-      if (on && !pseries.has(k)) {
-        const e = estiloDe(k);
-        const s = pchart.addLineSeries({ color: e.color, lineWidth: 2,
-          lineStyle: e.punteada ? LightweightCharts.LineStyle.Dotted
-            : LightweightCharts.LineStyle.Solid,
-          priceLineVisible: false, lastValueVisible: false });
-        s.setData(PRODS[k].gaps);   // con huecos donde no hubo precio
-        pseries.set(k, s);
-      } else if (!on && pseries.has(k)) {
-        pchart.removeSeries(pseries.get(k));
+      const x = pseries.get(k);
+      if (on && (!x || x.unidad !== unidad)) {
+        let s = x && x.s;
+        if (!s) {
+          const e = estiloDe(k);
+          s = pchart.addLineSeries({ color: e.color, lineWidth: 2,
+            lineStyle: e.punteada ? LightweightCharts.LineStyle.Dotted
+              : LightweightCharts.LineStyle.Solid,
+            priceLineVisible: false, lastValueVisible: false });
+        }
+        const u = unidad;
+        pseries.set(k, { s, unidad: u });
+        puntosProducto(k, u).then(datos => {
+          const y = pseries.get(k);
+          if (!y || y.s !== s || y.unidad !== u) return;
+          s.setData(datos);   // con huecos donde no hubo precio
+          pchart.timeScale().fitContent();
+        }, () => {});
+      } else if (!on && x) {
+        pchart.removeSeries(x.s);
         pseries.delete(k);
       }
     });
     pchart.priceScale('right').applyOptions({ autoScale: true });
     pchart.timeScale().fitContent();
     pintarCarga();
+  }
+
+  // un producto en Lightweight, en la unidad elegida y con huecos donde no
+  // hubo precio: pesos de hoy desde la página; época y UF, del datafeed
+  function puntosProducto(k, u) {
+    if (u === 'real' || !feed) return Promise.resolve(PRODS[k].gaps);
+    return feed.barras(PRODS[k].slug + SUF[u]).then(b => {
+      const out = [];
+      (b || []).forEach((x, i) => {
+        if (i) for (let t = b[i - 1].time + SEMANA_MS; t < x.time; t += SEMANA_MS) out.push({ time: dia(t) });
+        out.push({ time: dia(x.time), value: x.close });
+      });
+      return out;
+    });
   }
 
   function buildProductos() {
@@ -1547,6 +1657,7 @@ __PIE__
   }
 
   /* ---------- captura PNG compartible (estilo TradingView) ---------- */
+  const TITULO_UNIDAD = { epoca: ', PRECIO DE LA ÉPOCA', uf: ', EN UF' };
   // la marca va en tres segmentos medidos para pintar SOLO la í en brasa,
   // en la tipografía del wordmark
   function marcaDeAgua(ctx, xDer, yBase, size) {
@@ -1567,14 +1678,6 @@ __PIE__
     if (modo === 'indices') return cargarIndice(cur);
     const keys = modo === 'productos' ? [...psel] : [...canasta.keys()];
     return Promise.all(keys.filter(k => PRODS[k]).map(cargarProducto));
-  }
-
-  // el costo nominal de la última semana del índice (para el encabezado de
-  // la captura con NOMINAL a la vista)
-  function ultimoNominal(code) {
-    if (feed) return feed.barras(code + '-nominal').then(b => b && b.length ? b[b.length - 1].close : null);
-    const n = INDICES[code].nominal;
-    return Promise.resolve(n && n.length ? n[n.length - 1].value : null);
   }
 
   async function capturarPNG() {
@@ -1649,6 +1752,30 @@ __PIE__
         compLineas.push(l2 + ' …');
       }
     }
+    // contexto arriba a la izquierda: qué es, cuánto vale, de cuándo;
+    // productos no tiene un costo único y lleva su etiqueta en vez del monto.
+    // Un índice fuera de pesos de hoy dice su unidad y, en UF, debajo va la
+    // cifra en pesos de hoy
+    let titulo, precio,
+      precioFont = '700 ' + Math.round(W * 0.037) + 'px "Space Grotesk", sans-serif';
+    if (modo === 'canasta') {
+      titulo = 'TU CANASTA';
+      precio = document.getElementById('ccosto').textContent || '·';
+    } else if (modo === 'productos') {
+      titulo = 'PRODUCTOS';
+      precio = ONOTE[unidad];
+      precioFont = '400 ' + Math.round(W * 0.02) + 'px "IBM Plex Sans", sans-serif';
+    } else {
+      const d = INDICES[cur];
+      titulo = d.nombre.replace(/^Índice /i, '').toUpperCase();
+      precio = fmt(d.costo_real);
+      if (unidad !== 'real') {
+        titulo += TITULO_UNIDAD[unidad];
+        const x = await ultimoCierre(cur, unidad).catch(() => null);
+        if (x != null) precio = unidad === 'uf' ? TV.textoUF(x) : fmt(x);
+        if (x != null && unidad === 'uf') compLineas.unshift(fmt(d.costo_real) + ' en pesos de hoy');
+      }
+    }
     const compH = (compLineas.length + prodLineas.length) * compAlto;
     const headH = Math.round(W * 0.13) + compH, footH = Math.round(W * 0.07);
     const H = headH + chartH + footH;
@@ -1659,27 +1786,6 @@ __PIE__
     ctx.imageSmoothingQuality = 'high';
     ctx.fillStyle = COL.bg;
     ctx.fillRect(0, 0, W, H);
-    // contexto arriba a la izquierda: qué es, cuánto vale, de cuándo;
-    // productos no tiene un costo único y lleva su etiqueta en vez del monto
-    let titulo, precio,
-      precioFont = '700 ' + Math.round(W * 0.037) + 'px "Space Grotesk", sans-serif';
-    if (modo === 'canasta') {
-      titulo = 'TU CANASTA';
-      precio = document.getElementById('ccosto').textContent || '·';
-    } else if (modo === 'productos') {
-      titulo = 'PRODUCTOS';
-      precio = 'Cambio del precio real, en porcentaje';
-      precioFont = '400 ' + Math.round(W * 0.02) + 'px "IBM Plex Sans", sans-serif';
-    } else {
-      const d = INDICES[cur];
-      titulo = d.nombre.replace(/^Índice /i, '').toUpperCase();
-      precio = fmt(d.costo_real);
-      if (serieNom) {
-        titulo += ' NOMINAL';
-        const n = await ultimoNominal(cur).catch(() => null);
-        if (n != null) precio = fmt(n);
-      }
-    }
     const fecha = document.getElementById('fecha').textContent;
     ctx.textBaseline = 'top';
     ctx.fillStyle = COL.ash;
@@ -1768,6 +1874,7 @@ __PIE__
 
   window.addEventListener('load', () => {
     prepararTV();
+    selector.limitar(unidadesHay());
     buildTicker();
     buildTabs();
     // sin carestia-tv.js, Lightweight desde el principio, como antes
@@ -2583,6 +2690,9 @@ __CSS_BASE__
     flex-wrap:wrap; margin-top:14px; min-height:52px; }
   .oprice { font:700 clamp(38px,7vw,64px)/1 var(--display);
     letter-spacing:-.01em; color:var(--bone); }
+  /* en UF, la cifra grande va en UF y debajo, más chica, en pesos de hoy */
+  .ocifra { display:flex; flex-direction:column; }
+  .opesos { font:400 13px var(--sans); color:var(--ash); margin-top:6px; }
   .ouni { font:400 13px var(--sans); color:var(--ash); }
   .odelta { font:600 15px var(--sans); color:var(--ash); } /* deltas SIEMPRE en secundario */
   .odelta small { font:400 12px var(--sans); color:var(--dim); }
@@ -2590,8 +2700,23 @@ __CSS_BASE__
     margin-top:12px; text-wrap:pretty; }
   /* altura reservada por CSS ANTES de que Lightweight Charts monte: la
      página no salta al renderizar (svh: estable frente a la barra móvil) */
+  /* la unidad del gráfico: pesos de hoy, precio de la época o UF, en tres
+     botones o, si no caben, en un desplegable (JS_UNIDAD), y su línea */
+  .unidad { margin-top:18px; }
+  .vtoggle { display:inline-flex; border:1px solid var(--line); background:var(--bg); }
+  .vbtn { font:500 13px var(--sans); padding:8px 14px; border:none; cursor:pointer;
+    background:transparent; color:var(--ash); min-height:34px; }
+  .vbtn + .vbtn { border-left:1px solid var(--line); }
+  .vbtn.active { background:var(--bone); color:var(--bg); }
+  .usel { display:none; font:500 13px var(--sans); color:var(--bone);
+    background:var(--bg); border:1px solid var(--line); border-radius:0;
+    min-height:34px; padding:0 6px; color-scheme:dark; cursor:pointer; }
+  .unidad.compacta .ubtns { display:none; }
+  .unidad.compacta .usel { display:block; }
+  .utxt { font:400 12px/1.5 var(--sans); color:var(--ash); margin-top:8px;
+    text-wrap:pretty; }
   #grafico { position:relative; max-width:none; height:clamp(320px,66vh,820px);
-    height:clamp(320px,66svh,820px); margin-top:22px; }
+    height:clamp(320px,66svh,820px); margin-top:16px; }
   .fecha { font:500 12px var(--sans); color:var(--ash); margin-top:14px; }
   .ref-velas { font:400 12px/1.5 var(--sans); color:var(--dim); margin-top:10px; }
   /* otros productos del grupo: interlinking sobrio al pie, misma paleta
@@ -2636,11 +2761,18 @@ __CSS_SITIO__
     <div class="miga">Precio real en Chile, en pesos de hoy</div>
     <h1>__LABEL__</h1>
     <div class="orow">
-      <div class="oprice">__PRECIO__</div>
-      <div class="ouni">por __UNI_TXT__, en pesos de hoy</div>
+      <div class="ocifra">
+        <div class="oprice" id="oprice">__PRECIO__</div>
+        <div class="opesos" id="opesos" hidden></div>
+      </div>
+      <div class="ouni" id="ouni">por __UNI_TXT__, en pesos de hoy</div>
       <div class="odelta">__DELTA__ <small>sem.</small></div>
     </div>
     <p class="pct">__PCT_LINEA__</p>
+    <div class="unidad" id="unidad">
+      __SELECTOR_UNIDAD__
+      <p class="utxt" id="utxt">__UNIDAD_REAL__</p>
+    </div>
     <div id="grafico"><div class="nochart cargando">Cargando el gráfico...</div></div>
     <p class="ref-velas" id="ref-velas" hidden>Velas semanales. La mecha va del precio más bajo al más alto que ODEPA encontró entre los locales encuestados.</p>
     <div class="fecha">Semana del __FECHA__. Serie desde __ANIO__. Se actualiza los viernes.</div>
@@ -2663,9 +2795,9 @@ __PIE__
   // serie compacta del producto: t0 + valores semanales consecutivos, null en
   // semanas sin dato (estacionales), y el rango de cada semana (la mecha de
   // las velas). La cifra y el texto ya están en el HTML: el gráfico se arma
-  // después del primer pantallazo, en Advanced Charts (velas; la línea en
-  // hueso; el nominal, a mano en Comparar) o, si la librería no está o no
-  // inicia en 8 segundos, en Lightweight como siempre
+  // después del primer pantallazo, en Advanced Charts (en línea, en hueso;
+  // las velas a un clic) o, si la librería no está o no inicia en 8
+  // segundos, en Lightweight como siempre. En los dos, la unidad del selector
   const T0 = '__T0__';
   const V = __V__;
   const MIN = __MIN__;
@@ -2673,7 +2805,10 @@ __PIE__
   const SLUG = '__SLUG__';
   const NOMBRE = __NOMBRE__;
   const UNIDAD = '__UNIDAD__';
+  const UNI_TXT = '__UNI_TXT__';
   const INDICES = __INDICES__;
+  // el build trae datos/uf.json: hay opción UF
+  const UF = __UF__;
   const LIGHTWEIGHT = 'https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js';
   const fmt = v => '$' + Math.round(v).toLocaleString('es-CL');
   // colores desde los tokens de :root
@@ -2689,6 +2824,45 @@ __PIE__
       document.head.appendChild(s);
     });
   }
+__JS_UNIDAD__
+  // la unidad: en Advanced Charts es otro símbolo; en Lightweight, otra
+  // serie. Sin carestia-tv.js (que calcula la época y la UF), pesos de hoy
+  let TV = null, feed = null, widget = null, lw = null, unidad = 'real';
+  const unidadesHay = () => !feed ? ['real'] : UF ? ['real', 'epoca', 'uf'] : ['real', 'epoca'];
+  const oprice = document.getElementById('oprice'), opesos = document.getElementById('opesos');
+  const ouni = document.getElementById('ouni');
+  const PRECIO = oprice.textContent, OUNI = ouni.textContent;
+  function ponerUnidad(u) {
+    if (unidadesHay().indexOf(u) === -1) u = 'real';
+    unidad = u;
+    selector.poner(u);
+    pintarCifra();
+    if (widget) {
+      const c = widget.activeChart();
+      if (c.symbol().split(':').pop().toLowerCase() !== SLUG + SUF[u]) {
+        Promise.resolve(c.setSymbol(SLUG + SUF[u])).catch(() => {});
+      }
+    } else if (lw) lw(u);
+  }
+  const selector = selectorUnidad(ponerUnidad);
+  // la cifra grande: en UF, la del producto en UF (el último cierre de su
+  // serie) y debajo, más chica, en pesos de hoy. Con el precio de la época
+  // queda la de pesos de hoy: en la última semana es la misma
+  function pintarCifra() {
+    if (unidad !== 'uf' || !feed) {
+      oprice.textContent = PRECIO;
+      ouni.textContent = OUNI;
+      opesos.hidden = true;
+      return;
+    }
+    feed.barras(SLUG + SUF.uf).then(b => {
+      if (unidad !== 'uf' || !b || !b.length) return;
+      oprice.textContent = TV.textoUF(b[b.length - 1].close);
+      ouni.textContent = 'por ' + UNI_TXT;
+      opesos.textContent = PRECIO + ' en pesos de hoy';
+      opesos.hidden = false;
+    }, () => {});
+  }
 
   function lightweight() {
     el.dataset.motor = 'lightweight';
@@ -2696,8 +2870,9 @@ __PIE__
       if (!window.LightweightCharts) throw new Error('sin motor');
       el.innerHTML = '';
       const DIA = 864e5, base = Date.parse(T0 + 'T00:00:00Z');
+      const dia = ms => new Date(ms).toISOString().slice(0, 10);
       const serie = V.map((v, i) => {
-        const time = new Date(base + i * 7 * DIA).toISOString().slice(0, 10);
+        const time = dia(base + i * 7 * DIA);
         return v == null ? { time } : { time, value: v };
       });
       const chart = LightweightCharts.createChart(el, {
@@ -2707,8 +2882,8 @@ __PIE__
         grid: { vertLines: { color: tok('grid') }, horzLines: { color: tok('grid') } },
         rightPriceScale: { borderColor: tok('line') },
         timeScale: { borderColor: tok('line') },
-        // fechas en castellano de Chile, como en la portada
-        localization: { locale: 'es-CL', priceFormatter: fmt },
+        // fechas en castellano de Chile, como en la portada; la UF con decimales
+        localization: { locale: 'es-CL', priceFormatter: v => unidad === 'uf' && TV ? TV.numUF(v) : fmt(v) },
         // misma política de gestos del sitio: la rueda acerca y mueve el
         // gráfico; el swipe vertical en táctil queda para la página
         handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: true },
@@ -2720,9 +2895,29 @@ __PIE__
       });
       // un producto no es un índice oficial: su línea va en hueso (la brasa
       // queda para los índices)
-      chart.addLineSeries({ color: tok('bone'), lineWidth: 2, priceLineVisible: false })
-        .setData(serie);
+      const linea = chart.addLineSeries({ color: tok('bone'), lineWidth: 2, priceLineVisible: false });
+      linea.setData(serie);
       chart.timeScale().fitContent();
+      // otra unidad: las semanas del datafeed, con huecos donde no hubo precio
+      lw = u => {
+        const datos = u === 'real' || !feed ? Promise.resolve(serie) :
+          feed.barras(SLUG + SUF[u]).then(b => {
+            const out = [];
+            (b || []).forEach((x, i) => {
+              if (i) for (let t = b[i - 1].time + 7 * DIA; t < x.time; t += 7 * DIA) out.push({ time: dia(t) });
+              out.push({ time: dia(x.time), value: x.close });
+            });
+            return out;
+          });
+        datos.then(d => {
+          if (unidad !== u) return;
+          linea.applyOptions({ priceFormat: u === 'uf' ? { type: 'price', precision: 4, minMove: 0.0001 } :
+            { type: 'price', precision: 0, minMove: 1 } });
+          linea.setData(d);
+          chart.timeScale().fitContent();
+        }, () => {});
+      };
+      if (unidad !== 'real') lw(unidad);
     }).catch(() => {
       el.innerHTML = '<div class="nochart">No se pudo cargar el motor de gráficos (revisa la conexión).</div>';
     });
@@ -2730,26 +2925,38 @@ __PIE__
 
   window.addEventListener('load', () => {
     cargarScript('/__TV_JS__?v=__VER_TV__').then(() => {
-      const TV = window.CarestiaTV;
+      TV = window.CarestiaTV;
       if (!TV) throw new Error('sin carestia-tv.js');
       // la serie ya viene en la página: el datafeed no la vuelve a pedir
-      const feed = TV.crearDatafeed({ base: '/datos/', ver: '__VER__', indices: INDICES,
+      feed = TV.crearDatafeed({ base: '/datos/', ver: '__VER__', indices: INDICES, uf: UF,
         productos: [{ slug: SLUG, nombre: NOMBRE, unidad: UNIDAD }],
         precargados: { ['productos/' + SLUG + '.json']: { t0: T0, v: V, min: MIN, max: MAX } } });
+      selector.limitar(unidadesHay());
       el.innerHTML = '';
-      return TV.montar({ contenedor: el, libreria: '/charting_library/', simbolo: SLUG,
+      const EN = { epoca: ', precio de la época', uf: ', en UF' };
+      return TV.montar({ contenedor: el, libreria: '/charting_library/', simbolo: SLUG + SUF[unidad],
         datafeed: feed, tok, sitio: true, css: location.origin + '/__TV_CSS__?v=__VER_CSS__',
-        // su nominal, listo para superponer desde Comparar
-        comparar: [{ symbol: SLUG + '-nominal', title: NOMBRE + ', nominal' }] });
+        // sus otras unidades, listas para superponer desde Comparar
+        comparar: unidadesHay().filter(u => u !== 'real')
+          .map(u => ({ symbol: SLUG + SUF[u], title: NOMBRE + EN[u] })) });
     }).then(w => {
+      widget = w;
       el.dataset.motor = 'advanced';
-      // la referencia de las velas, mientras estén a la vista
-      const ref = document.getElementById('ref-velas');
-      const ver = t => { ref.hidden = t !== 1; };
+      // la referencia de las velas, mientras estén a la vista: en semanas, la
+      // frase completa; en temporalidades largas cada vela junta semanas
+      const ref = document.getElementById('ref-velas'), REF = ref.textContent;
       const c = w.activeChart();
+      const ver = t => {
+        ref.hidden = t !== 1;
+        const p = TV.temporalidad(c.resolution());
+        ref.textContent = p && p.nombre !== TV.RESOLUCION ? REF.replace('Velas semanales. ', '') : REF;
+      };
       ver(c.chartType());
       c.onChartTypeChanged().subscribe(null, ver);
-    }, lightweight);
+      c.onIntervalChanged().subscribe(null, () => setTimeout(() => ver(c.chartType()), 0));
+      // la unidad elegida mientras el gráfico cargaba
+      ponerUnidad(unidad);
+    }, () => { selector.limitar(unidadesHay()); lightweight(); });
   });
 </script>
 </body>
@@ -3011,8 +3218,146 @@ def escribir_json(ruta: str, obj) -> None:
         fh.write(_json(obj))
 
 
-def generar_datos(slugs: dict, catalogo: dict) -> dict:
-    """Escribe datos/ y devuelve lo que va inline en /graficos.html."""
+# ---------------- UF y unidades de los gráficos ----------------
+# Los gráficos se ven en pesos de hoy (por defecto), a precio de la época o en
+# UF. La UF de cada semana es su precio de la época dividido por la UF del
+# lunes en que empieza: el datafeed la calcula con datos/uf.json, que escribe
+# uf.py (aparte de indices.py) con la UF de cada lunes. Si falta o no cubre
+# todas las semanas de las series, el sitio sale sin la opción UF y el build
+# lo avisa.
+UF_JSON = os.path.join(DATOS, "uf.json")
+UNIDADES = ("real", "epoca", "uf")
+UNIDAD_NOMBRE = {"real": "Pesos de hoy", "epoca": "Precio de la época", "uf": "UF"}
+# la línea bajo el selector: textos del dueño, literales
+UNIDAD_TXT = {
+    "real": "Cada precio pasado, llevado a pesos de hoy con la inflación. "
+            "Sirve para comparar años distintos.",
+    "epoca": "Lo que costaba en su momento, tal como salía en la boleta.",
+    "uf": "Cada precio dividido por el valor de la UF de esa semana. Como la UF "
+          "sube con la inflación, también sirve para comparar años distintos.",
+}
+
+
+def semanas_de_las_series() -> tuple:
+    """(primer lunes, último lunes) con dato entre índices y productos."""
+    fechas = []
+    for d in DATA["indices"].values():
+        for k in SERIES_INDICE:
+            fechas += [p["time"] for p in d.get(k) or []]
+    for p in DATA.get("productos", {}).values():
+        con_dato = [i for i, x in enumerate(p["v"]) if x is not None]
+        if con_dato:
+            t0 = datetime.date.fromisoformat(p["t0"])
+            fechas += [(t0 + datetime.timedelta(weeks=i)).isoformat()
+                       for i in (con_dato[0], con_dato[-1])]
+    if not fechas:
+        return None, None
+    return (datetime.date.fromisoformat(min(fechas)),
+            datetime.date.fromisoformat(max(fechas)))
+
+
+def cargar_uf():
+    """datos/uf.json si existe y trae la UF (positiva) de cada lunes desde la
+    primera hasta la última semana de las series; si no, None y un aviso."""
+    def aviso(motivo):
+        print(f"AVISO UF: {motivo}. El sitio sale sin la opción UF.")
+        return None
+    try:
+        with open(UF_JSON, encoding="utf-8") as fh:
+            uf = json.load(fh)
+        t0 = datetime.date.fromisoformat(uf["t0"])
+        v = uf["v"]
+    except FileNotFoundError:
+        return aviso(f"no está {UF_JSON} (uf.py no corrió o no obtuvo la UF)")
+    except (ValueError, KeyError, TypeError) as e:
+        return aviso(f"{UF_JSON} no se puede leer ({type(e).__name__}: {e})")
+    if t0.weekday() != 0 or not isinstance(v, list):
+        return aviso(f"{UF_JSON} no viene por semanas desde un lunes")
+    ini, fin = semanas_de_las_series()
+    if ini is None:
+        return aviso("no hay series")
+    i, j = (ini - t0).days // 7, (fin - t0).days // 7
+    if i < 0 or j >= len(v):
+        ult = t0 + datetime.timedelta(weeks=len(v) - 1)
+        return aviso(f"{UF_JSON} va de {t0} a {ult} y las series, de {ini} a {fin}")
+    malas = [t0 + datetime.timedelta(weeks=k) for k in range(i, j + 1)
+             if not isinstance(v[k], (int, float)) or isinstance(v[k], bool) or not v[k] > 0]
+    if malas:
+        return aviso(f"{UF_JSON} no trae la UF de {len(malas)} lunes (el primero, {malas[0]})")
+    print(f"UF: {UF_JSON}, {uf.get('fuente', 'sin fuente')}, de {t0} a "
+          f"{t0 + datetime.timedelta(weeks=len(v) - 1)}; la del lunes {fin}: {v[j]}")
+    return uf
+
+
+def selector_unidad(con_uf: bool) -> str:
+    """Pesos de hoy, Precio de la época y UF: tres botones o, si no caben en
+    su fila, un desplegable (lo decide JS_UNIDAD). Sin datos/uf.json, sin UF."""
+    unidades = [u for u in UNIDADES if con_uf or u != "uf"]
+    botones = "\n        ".join(
+        f'<button class="vbtn ubtn{" active" if u == "real" else ""}" type="button" '
+        f'data-unidad="{u}" aria-pressed="{"true" if u == "real" else "false"}">'
+        f'{UNIDAD_NOMBRE[u]}</button>' for u in unidades)
+    opciones = "\n        ".join(
+        f'<option value="{u}">{UNIDAD_NOMBRE[u]}</option>' for u in unidades)
+    return (f'<div class="vtoggle ubtns" role="group" aria-label="Unidad">\n'
+            f'        {botones}\n      </div>\n'
+            f'      <select class="usel" aria-label="Unidad">\n'
+            f'        {opciones}\n      </select>')
+
+
+# el selector de unidad en el navegador, igual en /graficos.html y las fichas.
+# Prueba con los botones y, si la fila se desborda, pasa al desplegable
+JS_UNIDAD = r"""  /* ---------- selector de unidad ---------- */
+  // Pesos de hoy, Precio de la época o UF: tres botones o, si no caben en su
+  // fila, un desplegable; bajo el selector, la línea de la unidad elegida
+  const UNIDAD_TXT = __UNIDAD_TXT__;
+  const SUF = { real: '', epoca: '-epoca', uf: '-uf' };
+  function selectorUnidad(alElegir) {
+    const caja = document.getElementById('unidad');
+    const fila = document.getElementById(caja.dataset.fila) || caja;
+    const botones = [...caja.querySelectorAll('.ubtn')];
+    const lista = caja.querySelector('.usel');
+    const linea = document.getElementById('utxt');
+    // se mide la fila sin envolver (.midiendo): si los botones no caben en
+    // ella junto a lo demás, va el desplegable
+    function medir() {
+      caja.classList.remove('compacta');
+      fila.classList.add('midiendo');
+      const desborda = fila.scrollWidth > fila.clientWidth + 1;
+      fila.classList.remove('midiendo');
+      if (desborda) caja.classList.add('compacta');
+    }
+    function poner(u) {
+      botones.forEach(b => {
+        const on = b.dataset.unidad === u;
+        b.classList.toggle('active', on);
+        b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
+      lista.value = u;
+      linea.textContent = UNIDAD_TXT[u];
+    }
+    botones.forEach(b => { b.onclick = () => alElegir(b.dataset.unidad); });
+    lista.onchange = () => alElegir(lista.value);
+    medir();
+    addEventListener('resize', medir);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(medir);
+    return {
+      poner, medir,
+      // solo las unidades que hay; con una sola no hay selector
+      limitar(unidades) {
+        botones.forEach(b => { b.hidden = unidades.indexOf(b.dataset.unidad) === -1; });
+        [...lista.options].forEach(o => { o.disabled = o.hidden = unidades.indexOf(o.value) === -1; });
+        caja.hidden = unidades.length < 2;
+        medir();
+      },
+    };
+  }
+"""
+
+
+def generar_datos(slugs: dict, catalogo: dict, uf: dict = None) -> dict:
+    """Escribe datos/ y devuelve lo que va inline en /graficos.html. 'uf' es
+    datos/uf.json ya validado (cargar_uf), o None si el sitio sale sin UF."""
     indices = DATA["indices"]
     prods = DATA.get("productos", {})
     series = {code: compactar_indice(code, d) for code, d in indices.items()}
@@ -3032,8 +3377,12 @@ def generar_datos(slugs: dict, catalogo: dict) -> dict:
                       for clave, p in prods.items()},
         "rango": rango_productos(prods),
         # versión de los datos: los pedidos a datos/ la llevan en la URL para
-        # que el navegador no mezcle archivos de dos builds distintos
-        "ver": hashlib.sha1(_json(DATA).encode("utf-8")).hexdigest()[:10],
+        # que el navegador no mezcle archivos de dos builds distintos (con la
+        # UF, también la de datos/uf.json)
+        "ver": hashlib.sha1((_json(DATA) + (_json(uf) if uf else "")).encode("utf-8"))
+                      .hexdigest()[:10],
+        # datos/uf.json cubre todas las semanas: la opción UF existe
+        "uf": bool(uf),
     }
 
 
@@ -3113,6 +3462,12 @@ def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
         ("__TV_CSS__", TV_CSS),
         ("__VER_CSS__", _ver(tv_css())),
         ("__VER__", APP["ver"]),
+        # la unidad: el selector, su línea y su JS; UF solo con datos/uf.json
+        ("__UF__", "true" if APP["uf"] else "false"),
+        ("__SELECTOR_UNIDAD__", selector_unidad(APP["uf"])),
+        ("__UNIDAD_REAL__", UNIDAD_TXT["real"]),
+        ("__JS_UNIDAD__", JS_UNIDAD),
+        ("__UNIDAD_TXT__", _json(UNIDAD_TXT)),
         # HTML ya renderizado (seccion_otros escapa labels y grupo), no
         # se vuelve a escapar aquí
         ("__OTROS__", otros_html),
@@ -3185,9 +3540,11 @@ def generar_productos(slugs: dict) -> None:
 #                          del sitemap); si la librería no está o no inicia en
 #                          8 segundos, dibuja con Lightweight Charts
 # Símbolos: los 4 índices y los productos del catálogo, cada uno en pesos de
-# hoy y su versión nominal ("{slug}-nominal"); el ticker es el slug (el código
-# del índice o el de la ficha del producto). Semanales (1W), en CLP sin
-# decimales y en America/Santiago.
+# hoy, a precio de la época ("{slug}-epoca") y en UF ("{slug}-uf", solo si el
+# build tiene datos/uf.json); el ticker es el slug (el código del índice o el
+# de la ficha del producto). Semanales (1W) y las temporalidades que el
+# datafeed arma juntando semanas (2W, 1M, 3M, 6M y 12M); en CLP sin decimales
+# (la UF con decimales) y en America/Santiago.
 TV_JS = "carestia-tv.js"
 TV_CSS = "carestia-tv.css"
 TV_PRUEBA = "prueba-graficos.html"
@@ -3196,21 +3553,43 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
 (function (raiz) {
   'use strict';
 
+  // la temporalidad por defecto: las semanas, como vienen en datos/
   const RESOLUCION = '1W';
+  // las que se pueden elegir: el datafeed arma las de más de una semana
+  // juntando semanas (ver agrupar)
+  const RESOLUCIONES = ['1W', '2W', '1M', '3M', '6M', '12M'];
   const ZONA = 'America/Santiago';
   const FUENTE = 'Carestía';
-  const SEMANA = 7 * 864e5;
+  const DIA = 864e5;
+  const SEMANA = 7 * DIA;
   const UNIDAD = { kg: 'kilo', un: 'unidad', l: 'litro' };
   const TIPO = { indice: 'index', producto: 'commodity' };
-  const SUFIJO_NOMINAL = '-nominal';
+  // cada serie en tres unidades: pesos de hoy (el ticker solo), precio de la
+  // época y UF. Los nombres llevan la unidad: el largo (pantallas anchas y
+  // búsqueda) y el corto (la leyenda en el celular)
+  const UNIDADES = ['real', 'epoca', 'uf'];
+  const SUFIJO = { real: '', epoca: '-epoca', uf: '-uf' };
+  const EN_LARGO = { real: ', en pesos de hoy', epoca: ', precio de la época', uf: ', en UF' };
+  const EN_CORTO = { real: '', epoca: ', precio de la época', uf: ', en UF' };
 
   const sinTildes = s => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
+  const conPuntos = s => s.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   // precios en pesos, sin decimales y con punto de miles: 26467 -> "26.467"
   function miles(x) {
     const r = Math.round(x);
-    return (r < 0 ? '-' : '') + String(Math.abs(r)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    return (r < 0 ? '-' : '') + conPuntos(String(Math.abs(r)));
   }
+  // UF con coma decimal: 2 decimales desde 1 UF y 4 bajo 1 UF (1,32 y
+  // 0,0089). Los decimales salen de la cifra ya redondeada: 0,99996 es 1,00
+  function numUF(x) {
+    const a = Math.abs(x);
+    let t = a.toFixed(a >= 1 ? 2 : 4);
+    if (a < 1 && Number(t) >= 1) t = a.toFixed(2);
+    const [e, d] = t.split('.');
+    return (x < 0 && Number(t) ? '-' : '') + conPuntos(e) + ',' + d;
+  }
+  const textoUF = x => numUF(x) + ' UF';
   // fechas dd-mm-aaaa; las barras semanales llegan a las 00:00 UTC del lunes
   function fecha(d) {
     const dos = n => String(n).padStart(2, '0');
@@ -3241,11 +3620,11 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
     });
     return out;
   }
-  // índice nominal: la misma vela en pesos de cada semana. El cierre es el
-  // nominal publicado y la apertura el cierre nominal anterior; la mecha se
-  // lleva a pesos de esa semana con el mismo factor del IPC que usó
+  // índice a precio de la época: la misma vela en pesos de cada semana. El
+  // cierre es el nominal publicado y la apertura el cierre anterior; la mecha
+  // se lleva a pesos de esa semana con el mismo factor del IPC que usó
   // indices.py (nominal / real de la semana)
-  function barrasIndiceNominal(s) {
+  function barrasIndiceEpoca(s) {
     const t = tiempos(s.t0), out = [];
     s.nominal.forEach((c, i) => {
       if (c == null) return;
@@ -3271,7 +3650,7 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
       let f = 1;
       if (factor) {
         f = factor.get(mesDe(ms));
-        if (f == null) return;   // mes sin factor: esa semana no tiene nominal
+        if (f == null) return;   // mes sin factor: esa semana no tiene precio de la época
       }
       const c = factor ? Math.round(x * f) : x;
       const o = out.length ? out[out.length - 1].close : c;
@@ -3301,13 +3680,79 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
     real.forEach((r, m) => { if (r) out.set(m, nom.get(m) / r); });
     return out;
   }
+  // la UF de cada lunes, de datos/uf.json (t0 y un valor por semana)
+  function ufSemanal(j) {
+    const t = tiempos(j.t0), out = new Map();
+    (j.v || []).forEach((x, i) => { if (x > 0) out.set(t(i), x); });
+    return out;
+  }
+  // en UF: cada vela a precio de la época dividida por la UF del lunes de su
+  // semana, el día en que empieza. La apertura es el cierre anterior en UF,
+  // como en pesos; sin UF ese lunes, la semana queda sin barra
+  function enUF(barras, uf) {
+    const out = [];
+    barras.forEach(b => {
+      const u = uf.get(b.time);
+      if (!u) return;
+      const c = b.close / u;
+      const o = out.length ? out[out.length - 1].close : c;
+      out.push({ time: b.time, open: o, high: Math.max(o, c, b.high / u),
+        low: Math.min(o, c, b.low / u), close: c });
+    });
+    return out;
+  }
+
+  // ---------- temporalidades ----------
+  // 1S son las semanas de datos/. 2S, 1M, 3M, 6M y 12M juntan semanas: la
+  // apertura es la de la primera semana del período, el cierre el de la
+  // última y el máximo y el mínimo, los extremos del período. Cada semana va
+  // al período del lunes en que empieza. Los períodos se anclan como los
+  // cuenta la librería (Resolution, "Bar alignment"): la cuenta parte de
+  // nuevo cada año; los meses, desde enero (3M en enero, abril, julio y
+  // octubre; 6M en enero y julio; 12M el 1 de enero) y las semanas, desde el
+  // primer lunes del año (la primera semana completa), así que el último
+  // período de 2S de un año de 53 lunes trae una sola semana. La barra lleva
+  // la fecha en que empieza su período, a las 00:00 UTC
+  function temporalidad(res) {
+    const m = /^(\d*)([WM])$/.exec(String(res || ''));
+    if (!m) return null;
+    const n = Number(m[1] || 1), nombre = n + m[2];
+    return RESOLUCIONES.indexOf(nombre) === -1 ? null : { n, mes: m[2] === 'M', nombre };
+  }
+  const primerLunes = y => {
+    const e = Date.UTC(y, 0, 1);
+    return e + ((8 - new Date(e).getUTCDay()) % 7) * DIA;
+  };
+  function inicioPeriodo(ms, p) {
+    const d = new Date(ms), y = d.getUTCFullYear();
+    if (p.mes) {
+      const m = d.getUTCMonth();
+      return Date.UTC(y, m - m % p.n, 1);
+    }
+    // los días antes del primer lunes van al último período del año anterior
+    const a = ms >= primerLunes(y) ? primerLunes(y) : primerLunes(y - 1);
+    return a + Math.floor((ms - a) / (p.n * SEMANA)) * p.n * SEMANA;
+  }
+  function agrupar(semanas, p) {
+    const out = [];
+    semanas.forEach(b => {
+      const t = inicioPeriodo(b.time, p), u = out[out.length - 1];
+      if (u && u.time === t) {
+        u.high = Math.max(u.high, b.high);
+        u.low = Math.min(u.low, b.low);
+        u.close = b.close;
+      } else out.push({ time: t, open: b.open, high: b.high, low: b.low, close: b.close });
+    });
+    return out;
+  }
 
   // opciones: { base: '/datos/', ver, indices: [{ codigo, nombre }], pedir,
-  //   productos: [{ slug, nombre, unidad }], precargados: { ruta: json } }
+  //   productos: [{ slug, nombre, unidad }], precargados: { ruta: json }, uf }
   // 'pedir(ruta)' devuelve una promesa con el JSON de datos/{ruta}; por
   // defecto, fetch con la versión del build en la URL. 'productos' son los
   // que la página ya conoce (la ficha, el suyo): se resuelven sin esperar el
-  // catálogo. 'precargados' son archivos de datos/ que la página trae inline
+  // catálogo. 'precargados' son archivos de datos/ que la página trae inline.
+  // 'uf': el build trae datos/uf.json; sin él no hay símbolos en UF
   function crearDatafeed(opciones) {
     const base = opciones.base || '/datos/';
     const ver = opciones.ver ? '?v=' + encodeURIComponent(opciones.ver) : '';
@@ -3327,19 +3772,21 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
       return memo.get(clave);
     };
     const indices = opciones.indices || [];
+    const unidades = opciones.uf ? UNIDADES : UNIDADES.filter(u => u !== 'uf');
 
-    // símbolos: cada serie en pesos de hoy y su versión nominal. El ticker es
-    // el slug (el código del índice o el de la ficha del producto), sin
-    // paréntesis ni dos puntos. Cada uno con un nombre corto (la leyenda en
-    // el celular) y uno largo (la leyenda en pantallas anchas y la búsqueda)
+    // símbolos: cada serie en pesos de hoy, a precio de la época y en UF. El
+    // ticker es el slug (el código del índice o el de la ficha del producto)
+    // más el sufijo de la unidad, sin paréntesis ni dos puntos. Cada uno con
+    // un nombre corto (la leyenda en el celular) y uno largo (la leyenda en
+    // pantallas anchas y la búsqueda)
     const simbolos = new Map();
     function agregar(s) {
-      [false, true].forEach(nominal => {
-        const ticker = s.ticker + (nominal ? SUFIJO_NOMINAL : '');
+      unidades.forEach(unidad => {
+        const ticker = s.ticker + SUFIJO[unidad];
         if (simbolos.has(ticker)) return;   // nunca dos símbolos con un ticker
-        const desc = s.nombre + (nominal ? ', nominal' : ', en pesos de hoy');
-        const corto = s.corto + (nominal ? ' nominal' : '');
-        simbolos.set(ticker, Object.assign({}, s, { ticker, nominal, desc, corto,
+        const desc = s.nombre + EN_LARGO[unidad];
+        const corto = s.corto + EN_CORTO[unidad];
+        simbolos.set(ticker, Object.assign({}, s, { ticker, base: s.ticker, unidad, desc, corto,
           buscar: sinTildes(ticker + ' ' + desc + ' ' + s.nombre) }));
       });
     }
@@ -3354,8 +3801,10 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
     }).catch(() => {});   // sin catálogo quedan los índices
 
     const simbolo = nombre => {
-      // por si llega con prefijo de fuente ("Carestía:asado") o en mayúsculas
-      const t = String(nombre || '').split(':').pop().trim().toLowerCase();
+      // por si llega con prefijo de fuente ("Carestía:asado") o en mayúsculas;
+      // "-nominal" era el sufijo del precio de la época
+      const t = String(nombre || '').split(':').pop().trim().toLowerCase()
+        .replace(/-nominal$/, SUFIJO.epoca);
       // los que la página ya conoce no esperan el catálogo
       return simbolos.has(t) ? Promise.resolve(simbolos.get(t)) :
         listo.then(() => simbolos.get(t) || null);
@@ -3363,18 +3812,31 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
     const factor = () => una('factor', () =>
       Promise.all(indices.map(d => pedir('indices/' + d.codigo + '.json')))
         .then(js => factorMensual(js.map(j => j.serie))));
-    // las barras de un símbolo, completas y en orden; null si no existe
-    function barras(nombre) {
+    const uf = () => una('uf', () => pedir('uf.json').then(ufSemanal));
+    // las semanas de un símbolo, completas y en orden
+    function semanas(s) {
+      if (s.unidad === 'uf') {
+        return Promise.all([barras(s.base + SUFIJO.epoca), uf()]).then(([b, u]) => enUF(b || [], u));
+      }
+      return pedir(s.ruta).then(j => {
+        if (s.clase === 'indice') return s.unidad === 'epoca' ? barrasIndiceEpoca(j.serie) : barrasIndice(j.serie);
+        return s.unidad === 'epoca' ? factor().then(f => barrasProducto(j, f)) : barrasProducto(j, null);
+      });
+    }
+    // las barras de un símbolo en una temporalidad (1W si no se dice),
+    // completas y en orden; null si el símbolo o la temporalidad no existen
+    function barras(nombre, res) {
+      const p = temporalidad(res || RESOLUCION);
       return simbolo(nombre).then(s => {
-        if (!s) return null;
-        return una('b:' + s.ticker, () => pedir(s.ruta).then(j => {
-          if (s.clase === 'indice') return s.nominal ? barrasIndiceNominal(j.serie) : barrasIndice(j.serie);
-          return s.nominal ? factor().then(f => barrasProducto(j, f)) : barrasProducto(j, null);
-        }));
+        if (!s || !p) return null;
+        const sem = una('b:' + s.ticker, () => semanas(s));
+        if (p.nombre === RESOLUCION) return sem;
+        return una('b:' + s.ticker + ':' + p.nombre, () => sem.then(b => agrupar(b, p)));
       });
     }
 
     function info(s) {
+      const enUF = s.unidad === 'uf';
       return {
         name: s.ticker,
         ticker: s.ticker,
@@ -3387,17 +3849,20 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
         listed_exchange: FUENTE,
         format: 'price',
         minmov: 1,
-        pricescale: 1,                    // pesos sin decimales
+        // pesos sin decimales; la UF con hasta 4 (ver numUF)
+        pricescale: enUF ? 10000 : 1,
         has_intraday: false,
         has_daily: false,
-        has_weekly_and_monthly: true,     // las semanas vienen hechas
-        weekly_multipliers: ['1'],
-        supported_resolutions: [RESOLUCION],
+        // las semanas vienen hechas y el resto lo arma el datafeed
+        has_weekly_and_monthly: true,
+        weekly_multipliers: ['1', '2'],
+        monthly_multipliers: ['1', '3', '6', '12'],
+        supported_resolutions: RESOLUCIONES,
         // índices y productos traen velas (los productos, con el rango de
         // ODEPA cuando indices.json lo trae)
         visible_plots_set: 'ohlc',
         data_status: 'endofday',
-        currency_code: 'CLP',
+        currency_code: enUF ? 'UF' : 'CLP',
         volume_precision: 0,
       };
     }
@@ -3408,7 +3873,7 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
       // la configuración no depende del catálogo: no lo espera
       onReady(cb) {
         despues(() => cb({
-          supported_resolutions: [RESOLUCION],
+          supported_resolutions: RESOLUCIONES,
           exchanges: [],
           symbols_types: [
             { name: 'Todos', value: '' },
@@ -3441,14 +3906,15 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
           else alFallar('unknown_symbol');
         }));
       },
-      // historia semanal; countBack manda sobre from (la API lo pide así):
-      // si en [from, to) hay menos barras, se devuelven las anteriores a to
+      // historia en la temporalidad pedida; countBack manda sobre from (la
+      // API lo pide así): si en [from, to) hay menos barras, se devuelven las
+      // anteriores a to
       getBars(symbolInfo, resolucion, periodo, alResultado, alFallar) {
-        if (!/^1?W$/.test(resolucion)) {
+        if (!temporalidad(resolucion)) {
           despues(() => alResultado([], { noData: true }));
           return;
         }
-        barras(symbolInfo.ticker || symbolInfo.name).then(todas => {
+        barras(symbolInfo.ticker || symbolInfo.name, resolucion).then(todas => {
           if (!todas) { despues(() => alFallar('unknown_symbol')); return; }
           const desde = periodo.from * 1000, hasta = periodo.to * 1000;
           let fin = 0;
@@ -3475,7 +3941,7 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
       simbolo,
       lista: () => listo.then(() => [...simbolos.values()].map(s =>
         ({ ticker: s.ticker, descripcion: s.desc, corto: s.corto, clase: s.clase,
-          nominal: s.nominal }))),
+          unidad: s.unidad }))),
       info: nombre => simbolo(nombre).then(s => s && info(s)),
     };
   }
@@ -3553,14 +4019,17 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
   }
 
   // ---------- el widget ----------
-  // formatos: precios en pesos con punto de miles y fechas dd-mm-aaaa
+  // formatos: precios en pesos con punto de miles, en UF con coma decimal
+  // (sin la sigla: la escala ya dice UF) y fechas dd-mm-aaaa
+  const esUF = info => !!info && (info.currency_code === 'UF' || /-uf$/.test(info.ticker || info.name || ''));
   function formateadores() {
-    const precio = { format: (x, o) => {
+    const formato = f => ({ format: (x, o) => {
       const signo = (o === true || (o && o.signPositive)) && x > 0 ? '+' : '';
-      return signo + miles(x);
-    } };
+      return signo + f(x);
+    } });
+    const pesos = formato(miles), enUF = formato(numUF);
     return {
-      priceFormatterFactory: () => precio,
+      priceFormatterFactory: info => esUF(info) ? enUF : pesos,
       dateFormatter: {
         format: fecha,
         formatLocal: d => fecha(new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()))),
@@ -3574,7 +4043,8 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
   }
 
   // colores de la librería con los tokens del sitio: velas verde y rojo; la
-  // línea en brasa para los índices oficiales y en hueso para los productos
+  // línea en brasa para los índices oficiales y en hueso para los productos.
+  // Todos los gráficos parten en línea; las velas quedan a un clic
   function overrides(tok) {
     const verde = tok('verde'), rojo = tok('rojo');
     const o = {
@@ -3586,7 +4056,7 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
       'paneProperties.separatorColor': tok('line'),
       'scalesProperties.textColor': tok('ash'),
       'scalesProperties.lineColor': tok('line'),
-      'mainSeriesProperties.style': 1,
+      'mainSeriesProperties.style': 2,
       // v32 dibuja la línea con degradé si no se pide un color sólido
       'mainSeriesProperties.lineStyle.colorType': 'solid',
       'mainSeriesProperties.lineStyle.color': tok('ember'),
@@ -3612,10 +4082,10 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
   // pantallas de celular: hasta 640px, como el menú del sitio
   const MOVIL = '(max-width: 640px)';
   const esMovil = () => typeof matchMedia === 'function' && matchMedia(MOVIL).matches;
-  // en el celular la barra de arriba deja solo comparar, indicadores, tipo de
-  // gráfico y pantalla completa (más el dibujo, en su propia barra): sin el
-  // selector de intervalo (solo existe 1S) ni lo que no cabe
-  const SOLO_ESCRITORIO = ['header_resolutions', 'header_symbol_search', 'header_settings',
+  // en el celular la barra de arriba deja solo las temporalidades, comparar,
+  // indicadores, tipo de gráfico y pantalla completa (más el dibujo, en su
+  // propia barra): sin lo que no cabe
+  const SOLO_ESCRITORIO = ['header_symbol_search', 'header_settings',
     'header_undo_redo', 'header_quick_search', 'header_screenshot', 'header_saveload'];
   // páginas del sitio: el símbolo lo eligen las pestañas y los selectores de
   // la página (sin buscador de la librería ni guardar y cargar gráficos).
@@ -3656,7 +4126,8 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
       numeric_formatting: { decimal_sign: ',', grouping_separator: '.' },
       // guardar y cargar gráficos, plantillas y dibujos: en el navegador
       save_load_adapter: almacenLocal('carestia-tv:'),
-      favorites: { intervals: [RESOLUCION], chartTypes: ['Candles', 'Line'] },
+      // a un clic en la barra: las temporalidades, la línea y las velas
+      favorites: { intervals: RESOLUCIONES, chartTypes: ['Line', 'Candles'] },
       // toda la historia cabe aun a 390px de ancho
       time_scale: { min_bar_spacing: 0.1 },
       // plazos de la barra inferior, todos semanales (los de fábrica piden
@@ -3680,13 +4151,13 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
     };
     // la página de prueba guarda sola en el navegador y abre lo último guardado
     if (!o.sitio) Object.assign(opciones, { auto_save_delay: 5, load_last_chart: true });
-    // símbolos a mano en Comparar de la librería (la ficha: su nominal)
+    // símbolos a mano en Comparar de la librería (la ficha: sus otras unidades)
     if (o.comparar) opciones.compare_symbols = o.comparar;
     return opciones;
   }
 
-  // con el gráfico listo: estilo según el símbolo (índices con velas en el
-  // semáforo, productos como línea en hueso) y guardado automático en el
+  // con el gráfico listo: estilo según el símbolo (la línea en brasa para los
+  // índices y en hueso para los productos) y guardado automático en el
   // navegador
   function alistarWidget(widget, feed, tok) {
     estiloPorSimbolo(widget, feed, tok);
@@ -3698,7 +4169,7 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
   function estiloPorSimbolo(widget, feed, tok) {
     const chart = widget.activeChart();
     // el color de la línea por clase; el tipo de gráfico no se toca: índices
-    // y productos parten en las velas de 'overrides' (o lo guardado) y queda
+    // y productos parten en la línea de 'overrides' (o lo guardado) y queda
     // el que elija la persona
     const estilo = () => feed.simbolo(chart.symbol()).then(s => {
       if (!s) return;
@@ -3710,11 +4181,11 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
   // la librería quedó lista (chartReady desde v32; onChartReady antes)
   const listoWidget = w => w.chartReady ? w.chartReady() : new Promise(r => w.onChartReady(r));
 
-  // toda la historia de la serie a la vista
-  // con la caja oculta (display:none, otro modo a la vista) la librería mide
+  // toda la historia de la serie a la vista, en la temporalidad del gráfico.
+  // Con la caja oculta (display:none, otro modo a la vista) la librería mide
   // cero y el rango no queda: se aplica cuando la caja vuelve a tener ancho
   const esperandoAncho = new WeakSet();
-  function verTodo(widget, feed, caja) {
+  function verTodo(widget, feed, caja, res) {
     if (caja && !caja.clientWidth && typeof ResizeObserver === 'function') {
       if (esperandoAncho.has(widget)) return Promise.resolve();
       esperandoAncho.add(widget);
@@ -3723,7 +4194,7 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
         ro.disconnect();
         esperandoAncho.delete(widget);
         // la librería toma el ancho nuevo en su propio cuadro
-        setTimeout(() => verTodo(widget, feed, caja), 100);
+        setTimeout(() => verTodo(widget, feed, caja, res), 100);
       });
       ro.observe(caja);
       return Promise.resolve();
@@ -3732,7 +4203,9 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
     // al cambiar de símbolo el aviso llega antes que las barras (sin datos,
     // setVisibleRange falla): primero se espera a que el gráfico los tenga
     const datos = typeof chart.dataReady === 'function' ? Promise.resolve(chart.dataReady()) : Promise.resolve();
-    return datos.then(() => feed.barras(chart.symbol())).then(b => {
+    // la temporalidad: la que llega con el aviso de cambio o la del gráfico
+    const temp = () => res || (typeof chart.resolution === 'function' ? chart.resolution() : RESOLUCION);
+    return datos.then(() => feed.barras(chart.symbol(), temp())).then(b => {
       if (!b || !b.length) return;
       const rango = { from: b[0].time / 1000, to: b[b.length - 1].time / 1000 };
       // la librería no garantiza que setVisibleRange termine: con plazo
@@ -3767,7 +4240,7 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
 
   // monta Advanced Charts con la configuración común. Resuelve con el widget
   // listo, con toda la historia a la vista (también en cada cambio de
-  // símbolo); rechaza con 'falta' (la librería no está), 'tarde' (no inició
+  // símbolo o de temporalidad); rechaza con 'falta' (la librería no está), 'tarde' (no inició
   // en 'espera' ms) o 'error', y entonces la página dibuja con Lightweight.
   // o: lo de opcionesWidget, más { espera = 8000, estilo = true (velas o
   // línea y color según el símbolo; Comparar maneja los suyos) }
@@ -3792,7 +4265,11 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
           if (hecho) return;
           if (o.estilo !== false) estiloPorSimbolo(widget, o.datafeed, o.tok);
           const caja = typeof o.contenedor === 'string' ? document.getElementById(o.contenedor) : o.contenedor;
-          widget.activeChart().onSymbolChanged().subscribe(null, () => verTodo(widget, o.datafeed, caja));
+          const c = widget.activeChart();
+          c.onSymbolChanged().subscribe(null, () => verTodo(widget, o.datafeed, caja));
+          if (typeof c.onIntervalChanged === 'function') {
+            c.onIntervalChanged().subscribe(null, res => verTodo(widget, o.datafeed, caja, res));
+          }
           // el rango no frena el arranque: el widget ya inició
           verTodo(widget, o.datafeed, caja);
           fin();
@@ -3809,9 +4286,9 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
       hideResolution: true });
   }
 
-  const api = { crearDatafeed, miles, fecha, almacenLocal, formateadores, overrides,
-    opcionesWidget, alistarWidget, listoWidget, montar, verTodo, cargarLibreria,
-    capturaCliente, colorLinea, MOVIL, RESOLUCION, ZONA };
+  const api = { crearDatafeed, miles, numUF, textoUF, fecha, almacenLocal, formateadores,
+    overrides, opcionesWidget, alistarWidget, listoWidget, montar, verTodo, cargarLibreria,
+    capturaCliente, colorLinea, temporalidad, MOVIL, RESOLUCION, RESOLUCIONES, SUFIJO, ZONA };
   raiz.CarestiaTV = api;
   if (typeof module === 'object' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);
@@ -3902,13 +4379,13 @@ __CSS_SITIO__
   <main>
     <div class="miga">Página de prueba</div>
     <h1>Gráficos de prueba</h1>
-    <p class="intro">El Índice Asado en la librería Advanced Charts de TradingView. Con el buscador de símbolos abres los otros índices y los __N_PRODUCTOS__ productos, en pesos de hoy o nominales (por ejemplo, asado-nominal), y con Comparar los superpones.</p>
+    <p class="intro">El Índice Asado en la librería Advanced Charts de TradingView. Con el buscador de símbolos abres los otros índices y los __N_PRODUCTOS__ productos, __UNIDADES_PRUEBA__, y con Comparar los superpones.</p>
     <div class="lw-barra" aria-label="Vista del gráfico de respaldo">
       <div class="vtoggle">
         <button class="vbtn active" id="lw-linea">LÍNEA</button>
         <button class="vbtn" id="lw-velas">VELAS</button>
       </div>
-      <button class="vbtn nomtoggle" id="lw-nominal">+ nominal</button>
+      <button class="vbtn nomtoggle" id="lw-nominal">+ precio de la época</button>
       <span class="lw-ref" id="lw-ref"></span>
     </div>
     <div class="marco" id="marco">
@@ -3968,7 +4445,7 @@ __PIE__
     });
   }
   if (!TV) { usar('ninguno', TEXTO.sin); return; }
-  const feed = TV.crearDatafeed({ base: '/datos/', ver: VER, indices: INDICES });
+  const feed = TV.crearDatafeed({ base: '/datos/', ver: VER, indices: INDICES, uf: __UF__ });
 
   /* ---------- Advanced Charts ---------- */
   cargarScript(LIBRERIA + 'charting_library.standalone.js').then(iniciar, () => respaldo('falta'));
@@ -4000,8 +4477,8 @@ __PIE__
     $('tv').remove();
     usar('lightweight', TEXTO[motivo], TEXTO.gestosLw);
     const dia = ms => new Date(ms).toISOString().slice(0, 10);
-    Promise.all([cargarScript(LIGHTWEIGHT), feed.barras(SIMBOLO), feed.barras(SIMBOLO + '-nominal')])
-      .then(([, real, nominal]) => {
+    Promise.all([cargarScript(LIGHTWEIGHT), feed.barras(SIMBOLO), feed.barras(SIMBOLO + '-epoca')])
+      .then(([, real, epoca]) => {
         if (!window.LightweightCharts || !real) throw new Error('sin motor');
         const lw = $('lw');
         lw.hidden = false;
@@ -4031,7 +4508,7 @@ __PIE__
         const sVelas = chart.addCandlestickSeries({ upColor: tok('verde'),
           downColor: tok('rojo'), borderVisible: false, wickUpColor: tok('verde'),
           wickDownColor: tok('rojo'), visible: false });
-        sNom.setData((nominal || []).map(b => ({ time: dia(b.time), value: b.close })));
+        sNom.setData((epoca || []).map(b => ({ time: dia(b.time), value: b.close })));
         sReal.setData(real.map(b => ({ time: dia(b.time), value: b.close })));
         sVelas.setData(real.map(b => ({ time: dia(b.time), open: b.open, high: b.high,
           low: b.low, close: b.close })));
@@ -4163,6 +4640,11 @@ def generar_tradingview(app: dict, catalogo: dict) -> None:
         ("__VER__", app["ver"]),
         # "</" escapado: un nombre nunca puede cerrar el <script>
         ("__INDICES__", indices_tv()),
+        ("__UF__", "true" if app["uf"] else "false"),
+        ("__UNIDADES_PRUEBA__",
+         "en pesos de hoy, a precio de la época o en UF (por ejemplo, asado-epoca o asado-uf)"
+         if app["uf"] else
+         "en pesos de hoy o a precio de la época (por ejemplo, asado-epoca)"),
     ]:
         out = out.replace(token, valor)
     with open(TV_PRUEBA, "w", encoding="utf-8") as fh:
@@ -4900,7 +5382,8 @@ if PENDIENTES:
 FICHAS = asignar_fichas(DATA.get("productos", {}))
 SLUGS = slugs_de_datos(DATA.get("productos", {}), FICHAS)
 CATALOGO = generar_catalogo(DATA.get("productos", {}), SLUGS)
-APP = generar_datos(SLUGS, CATALOGO)
+UF = cargar_uf()
+APP = generar_datos(SLUGS, CATALOGO, UF)
 
 with open("graficos.html", "w", encoding="utf-8") as fh:
     fh.write(GRAFICOS_HTML.replace("__ICONO__", ICONO)
@@ -4915,6 +5398,11 @@ with open("graficos.html", "w", encoding="utf-8") as fh:
                           .replace("__VER_TV__", _ver(FEED_JS))
                           .replace("__TV_CSS__", TV_CSS)
                           .replace("__VER_CSS__", _ver(tv_css()))
+                          # la unidad: el selector, su línea y su JS
+                          .replace("__SELECTOR_UNIDAD__", selector_unidad(APP["uf"]))
+                          .replace("__UNIDAD_REAL__", UNIDAD_TXT["real"])
+                          .replace("__JS_UNIDAD__", JS_UNIDAD)
+                          .replace("__UNIDAD_TXT__", _json(UNIDAD_TXT))
                           # "</" escapado: un label nunca puede cerrar el <script>
                           .replace("__DATA__", _json(APP).replace("</", "<\\/")))
 

@@ -116,6 +116,16 @@ jobs:
       - name: Validar contra sitio desplegado
         run: python validar.py
 
+      # La UF de cada lunes desde 2008 (datos/uf.json) para la opción UF de
+      # los gráficos: Banco Central con mindicador de respaldo. uf.py nunca
+      # corta el build: si no obtiene la UF deja un aviso y el sitio se
+      # publica sin esa opción
+      - name: UF
+        env:
+          BCCH_USER: ${{ secrets.BCCH_USER }}
+          BCCH_PASS: ${{ secrets.BCCH_PASS }}
+        run: python uf.py
+
       - name: Generar sitio
         run: |
           python build_site.py
