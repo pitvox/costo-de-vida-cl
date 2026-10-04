@@ -352,13 +352,16 @@ async function temporalidades(info, semanales, t, completo) {
   ok(f.dateFormatter.format(new Date(Date.UTC(2026, 8, 21))) === '21-09-2026', 'fecha dd-mm-aaaa');
   ok(f.dateFormatter.formatLocal(new Date(2026, 0, 5)) === '05-01-2026', 'fecha local dd-mm-aaaa');
   ok(f.dateFormatter.parse('5-1-2026') === '2026-01-05', 'fecha escrita a aaaa-mm-dd');
-  // la UF: coma decimal, 2 decimales desde 1 UF y 4 bajo 1 UF
-  const casosUF = [[1.234, '1,23'], [12.3456, '12,35'], [0.66923, '0,6692'], [0.0089123, '0,0089'],
-    [0.99996, '1,00'], [0.99994, '0,9999'], [1234.5, '1.234,50'], [-0.5, '-0,5000'], [-0.00001, '0,0000']];
+  // la UF: coma decimal, 2 decimales desde 0,1 UF y 4 bajo 0,1 UF (los
+  // ejemplos del dueño: 0,67 UF y 0,0089 UF)
+  const casosUF = [[1.234, '1,23'], [12.3456, '12,35'], [0.66923, '0,67'], [0.0089123, '0,0089'],
+    [0.1038, '0,10'], [0.0456, '0,0456'], [0.09996, '0,10'], [0.09994, '0,0999'], [0.99996, '1,00'],
+    [1234.5, '1.234,50'], [-0.5, '-0,50'], [-0.00001, '0,0000']];
   ok(casosUF.every(([x, t]) => TV.numUF(x) === t), 'UF: ' + casosUF.map(([x]) => TV.numUF(x)).join(' '));
-  ok(TV.textoUF(0.0089123) === '0,0089 UF' && TV.textoUF(1.5) === '1,50 UF', 'UF con la sigla');
+  ok(TV.textoUF(0.0089123) === '0,0089 UF' && TV.textoUF(0.66923) === '0,67 UF' &&
+     TV.textoUF(1.5) === '1,50 UF', 'UF con la sigla');
   const fUF = f.priceFormatterFactory({ ticker: 'asado-uf', currency_code: 'UF' }, '1');
-  ok(fUF.format(0.66923) === '0,6692' && fUF.format(0.01, { signPositive: true }) === '+0,0100',
+  ok(fUF.format(0.66923) === '0,67' && fUF.format(0.01, { signPositive: true }) === '+0,0100',
      'el eje de un símbolo en UF, con decimales');
   ok(f.priceFormatterFactory({ ticker: 'asado-epoca', currency_code: 'CLP' }, '1').format(26467.4) === '26.467',
      'el eje en pesos, sin decimales');

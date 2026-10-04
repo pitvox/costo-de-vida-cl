@@ -3683,13 +3683,14 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
     const r = Math.round(x);
     return (r < 0 ? '-' : '') + conPuntos(String(Math.abs(r)));
   }
-  // UF con coma decimal: 2 decimales desde 1 UF y 4 bajo 1 UF ("2 sobre 1
-  // UF y 4 bajo 1 UF"). Los decimales salen de la cifra ya redondeada:
-  // 0,99996 es 1,00
+  // UF con coma decimal: 2 decimales desde 0,1 UF y 4 bajo 0,1 UF, como en
+  // los ejemplos del dueño (0,67 UF para el Asado y 0,0089 UF para un
+  // producto barato). Los decimales salen de la cifra ya redondeada:
+  // 0,09996 es 0,10
   function numUF(x) {
     const a = Math.abs(x);
-    let t = a.toFixed(a >= 1 ? 2 : 4);
-    if (a < 1 && Number(t) >= 1) t = a.toFixed(2);
+    let t = a.toFixed(a >= 0.1 ? 2 : 4);
+    if (a < 0.1 && Number(t) >= 0.1) t = a.toFixed(2);
     const [e, d] = t.split('.');
     return (x < 0 && Number(t) ? '-' : '') + conPuntos(e) + ',' + d;
   }
