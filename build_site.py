@@ -145,34 +145,37 @@ __CSS_CABECERA__
   /* la unidad vale para los índices y Comparar: fuera solo en la canasta */
   body[data-modo="canasta"] .m-uni { display:none !important; }
   #vista { opacity:1; transition:opacity .18s ease; }
-  /* la barra de controles (~52px) y la línea de la unidad bajo ella (27px
-     en una línea, 43px en dos) salen del calc para que hero+barra sigan
-     encuadrando la pantalla sin scroll */
+  /* la barra de controles (~52px) y la línea de la unidad bajo ella
+     (--utxt: 27px en una línea, 43px en dos en el celular; en Arma tu
+     canasta no está) salen del calc para que hero+barra sigan encuadrando
+     la pantalla sin scroll */
+  body { --utxt:27px; }
+  @media (max-width:759px) { body { --utxt:43px; } }
+  body[data-modo="canasta"] { --utxt:0px; }
   /* altura reservada por CSS antes de que Lightweight Charts monte, y en
      svh donde exista: 100vh cambia con la barra del navegador móvil y ese
      reflow se atribuía a los contenedores de chart (CLS) */
-  .hero-wrap { position:relative; height:calc(100vh - 345px); min-height:320px;
+  .hero-wrap { position:relative; height:calc(100vh - 318px - var(--utxt)); min-height:320px;
     background:var(--bg); }
   @supports (height:100svh) {
-    .hero-wrap { height:calc(100svh - 345px); } }
+    .hero-wrap { height:calc(100svh - 318px - var(--utxt)); } }
   /* sobre 640px la fila de navegación del sitio (33px, en el encabezado)
-     también sale del calc: 299+33 y 391+33 */
+     también sale del calc: 272+33 y 348+33 */
   @media (min-width:760px) {
-    .hero-wrap { height:calc(100vh - 332px); min-height:420px; }
+    .hero-wrap { height:calc(100vh - 305px - var(--utxt)); min-height:420px; }
     @supports (height:100svh) {
-      .hero-wrap { height:calc(100svh - 332px); } } }
-  /* móvil: la franja bajo el lienzo (46px, ver .mstrip), la línea de la
-     unidad en dos líneas y, bajo 641px, la segunda fila de tabs (+50px)
-     salen del encuadre para que hero + barras sigan cerrando la pantalla
-     sin scroll donde el alto alcance */
+      .hero-wrap { height:calc(100svh - 305px - var(--utxt)); } } }
+  /* móvil: la franja bajo el lienzo (46px, ver .mstrip) y, bajo 641px, la
+     segunda fila de tabs (+50px) salen del encuadre para que hero + barras
+     sigan cerrando la pantalla sin scroll donde el alto alcance */
   @media (max-width:759px) {
-    .hero-wrap { height:calc(100vh - 424px); }
+    .hero-wrap { height:calc(100vh - 381px - var(--utxt)); }
     @supports (height:100svh) {
-      .hero-wrap { height:calc(100svh - 424px); } } }
+      .hero-wrap { height:calc(100svh - 381px - var(--utxt)); } } }
   @media (max-width:640px) {
-    .hero-wrap { height:calc(100vh - 442px); }
+    .hero-wrap { height:calc(100vh - 399px - var(--utxt)); }
     @supports (height:100svh) {
-      .hero-wrap { height:calc(100svh - 442px); } } }
+      .hero-wrap { height:calc(100svh - 399px - var(--utxt)); } } }
   @media (max-width:759px) { .overlay .oname, .overlay .cstats, .overlay .caviso,
     .overlay .can-reg { max-width:calc(100vw - 160px); }
     body.tv-ind .overlay.m-ind .oname { max-width:none; } }
