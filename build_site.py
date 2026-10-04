@@ -922,7 +922,7 @@ __JS_UNIDAD__
     }
     // el eje en pesos o, en UF, con sus decimales (los de la unidad dibujada)
     chart = LightweightCharts.createChart(el, opcionesChart({ localization: {
-      priceFormatter: v => unidadLW === 'uf' && TV ? TV.numUF(v) : fmt(v) } }));
+      priceFormatter: v => unidadLW === 'uf' && TV ? TV.numUFEje(v) : fmt(v) } }));
     // la línea de los índices oficiales: el único lugar de la brasa en los gráficos
     sLinea = chart.addLineSeries({ color: COL.ember, lineWidth: 2, priceLineVisible: false });
     // C2: convención estándar de trading, verde sube y rojo baja
@@ -2959,7 +2959,7 @@ __JS_UNIDAD__
         rightPriceScale: { borderColor: tok('line') },
         timeScale: { borderColor: tok('line') },
         // fechas en castellano de Chile, como en la portada; la UF con decimales
-        localization: { locale: 'es-CL', priceFormatter: v => unidadLW === 'uf' && TV ? TV.numUF(v) : fmt(v) },
+        localization: { locale: 'es-CL', priceFormatter: v => unidadLW === 'uf' && TV ? TV.numUFEje(v) : fmt(v) },
         // misma política de gestos del sitio: la rueda acerca y mueve el
         // gráfico; el swipe vertical en táctil queda para la página
         handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: true },
@@ -3695,6 +3695,9 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
     return (x < 0 && Number(t) ? '-' : '') + conPuntos(e) + ',' + d;
   }
   const textoUF = x => numUF(x) + ' UF';
+  // en el eje y la leyenda del gráfico, bajo 0,1 UF sin ceros de más (0,08
+  // y no 0,0800), para que la escala no mezcle 0,10 con 0,0800
+  const numUFEje = x => numUF(x).replace(/^(-?\d+,\d\d\d*?)0+$/, '$1');
   // fechas dd-mm-aaaa; las barras semanales llegan a las 00:00 UTC del lunes
   function fecha(d) {
     const dos = n => String(n).padStart(2, '0');
@@ -4153,7 +4156,7 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
       const signo = (o === true || (o && o.signPositive)) && x > 0 ? '+' : '';
       return signo + f(x);
     } });
-    const pesos = formato(miles), enUF = formato(numUF);
+    const pesos = formato(miles), enUF = formato(numUFEje);
     return {
       priceFormatterFactory: info => esUF(info) ? enUF : pesos,
       dateFormatter: {
@@ -4426,7 +4429,7 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
       hideResolution: true });
   }
 
-  const api = { crearDatafeed, miles, numUF, textoUF, fecha, almacenLocal, formateadores,
+  const api = { crearDatafeed, miles, numUF, numUFEje, textoUF, fecha, almacenLocal, formateadores,
     overrides, opcionesWidget, alistarWidget, listoWidget, montar, verTodo, cargarLibreria,
     capturaCliente, colorLinea, temporalidad, MOVIL, RESOLUCION, RESOLUCIONES, SUFIJO, ZONA };
   raiz.CarestiaTV = api;

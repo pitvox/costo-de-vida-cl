@@ -361,8 +361,13 @@ async function temporalidades(info, semanales, t, completo) {
   ok(TV.textoUF(0.0089123) === '0,0089 UF' && TV.textoUF(0.66923) === '0,67 UF' &&
      TV.textoUF(1.5) === '1,50 UF', 'UF con la sigla');
   const fUF = f.priceFormatterFactory({ ticker: 'asado-uf', currency_code: 'UF' }, '1');
-  ok(fUF.format(0.66923) === '0,67' && fUF.format(0.01, { signPositive: true }) === '+0,0100',
+  ok(fUF.format(0.66923) === '0,67' && fUF.format(0.01, { signPositive: true }) === '+0,01',
      'el eje de un símbolo en UF, con decimales');
+  // en el eje, bajo 0,1 UF sin ceros de más: la escala no mezcla 0,10 con 0,0800
+  const casosEje = [[0.08, '0,08'], [0.089, '0,089'], [0.0089123, '0,0089'], [-0.0014, '-0,0014'],
+    [0.1, '0,10'], [0.2, '0,20'], [12.3, '12,30'], [1234.5, '1.234,50'], [-0.00001, '0,00']];
+  ok(casosEje.every(([x, t]) => fUF.format(x) === t && TV.numUFEje(x) === t),
+     'UF en el eje: ' + casosEje.map(([x]) => fUF.format(x)).join(' '));
   ok(f.priceFormatterFactory({ ticker: 'asado-epoca', currency_code: 'CLP' }, '1').format(26467.4) === '26.467',
      'el eje en pesos, sin decimales');
 

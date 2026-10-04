@@ -453,7 +453,7 @@ def test_graficos_indices_y_comparar_en_advanced_charts(sitio):
     assert "countUp(oprice, d.costo_real);\n    if (unidad !== 'uf') { opesos.hidden = true; return; }" in js
     assert "opesos.textContent = fmt(d.costo_real) + ' en pesos de hoy';\n    opesos.hidden = false;" in js
     # en Lightweight el eje y la ayuda siguen a la unidad ya dibujada
-    assert "priceFormatter: v => unidadLW === 'uf' && TV ? TV.numUF(v) : fmt(v) } }));" in js
+    assert "priceFormatter: v => unidadLW === 'uf' && TV ? TV.numUFEje(v) : fmt(v) } }));" in js
     # Comparar: comparación de la librería en escala porcentual, colores por
     # puesto, en la unidad elegida (al cambiarla, se rehacen las comparaciones)
     assert "const sim = k => PRODS[k].slug + SUF[unidad];" in js
@@ -566,7 +566,7 @@ def test_ficha_con_advanced_charts_despues_del_primer_pantallazo(sitio):
     assert "c.onChartTypeChanged().subscribe(null, ver);" in js
     assert "chart.addLineSeries({ color: tok('bone'), lineWidth: 2, priceLineVisible: false })" in js
     assert ("localization: { locale: 'es-CL', priceFormatter: v => unidadLW === 'uf' && TV ? "
-            "TV.numUF(v) : fmt(v) }") in js
+            "TV.numUFEje(v) : fmt(v) }") in js
 
 
 def test_configuracion_comun_en_una_funcion(sitio):
