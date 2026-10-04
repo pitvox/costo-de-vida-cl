@@ -9,6 +9,7 @@ marcador de dato faltante."""
 import ast
 import datetime
 import glob
+import html
 import json
 import os
 import re
@@ -201,8 +202,19 @@ def test_graficos_textos(sitio):
         "<title>Gráficos de los índices del costo de vida en Chile | Carestía</title>",
         "Índices del costo de vida en Chile</div>",
         "Se actualiza los viernes.",
-        "lo que costaría hoy ese precio, sumando la inflación acumulada. "
-        "Es parecido a medirlo en UF.",
+        # bajo el selector de unidad, la línea de la unidad elegida (la de
+        # pesos de hoy ya en el HTML; las tres en el JS)
+        '<p class="utxt" id="utxt">Cada precio pasado, llevado a pesos de hoy con la '
+        'inflación. Sirve para comparar años distintos.</p>',
+        # la leyenda de la línea del índice, con las tres opciones (en el
+        # escritorio y en la franja del celular)
+        '<span data-leyenda="real"><span class="sw"></span>Pesos de hoy</span>',
+        '<span class="mleg m-ind" data-leyenda="epoca" style="opacity:.35"><span class="sw">'
+        '</span>Precio de la época</span>',
+        "Lo que costaba en su momento, tal como salía en la boleta.",
+        "Cada precio dividido por el valor de la UF de esa semana. Como la UF sube con la "
+        "inflación, también sirve para comparar años distintos.",
+        ">Pesos de hoy</button>", ">Precio de la época</button>",
         "Para acercar, arrastra el eje de los años o el de los precios. "
         "En el celular, usa dos dedos.",
         "Desliza hacia los lados para moverte. Usa dos dedos para acercar.",
@@ -228,6 +240,23 @@ def test_graficos_textos(sitio):
             "ni recomendación de inversión.") in h
 
 
+def _visible(h: str) -> str:
+    """El texto que se ve: sin <script>, <style> ni etiquetas."""
+    h = re.sub(r"<(script|style)\b.*?</\1>", " ", h, flags=re.S)
+    return html.unescape(re.sub(r"<[^>]+>", " ", h))
+
+
+def test_precio_de_la_epoca_reemplaza_a_nominal(sitio):
+    """"Precio de la época" reemplaza a "Nominal" en todo el sitio: ni en el
+    texto de las páginas ni en los textos que arma el JS."""
+    for p in _paginas(sitio):
+        assert not re.search(r"nominal", _visible(_leer(sitio, p)), re.I), p
+    for p in ["graficos.html", "productos/producto-0.html", "prueba-graficos.html", "carestia-tv.js"]:
+        h = _leer(sitio, p)
+        for viejo in ["' nominal'", "', nominal'", "+ nominal", "NOMINAL", "'-nominal'"]:
+            assert viejo not in h, (p, viejo)
+
+
 def test_ficha_textos_nuevos(sitio):
     h = _leer(sitio, "productos/producto-0.html")
     for esperado in [
@@ -237,6 +266,11 @@ def test_ficha_textos_nuevos(sitio):
         "Serie desde ",
         "Se actualiza los viernes.",
         "Carne de cerdo, ave y cordero",
+        # el selector de unidad y su línea
+        ">Pesos de hoy</button>", ">Precio de la época</button>",
+        '<p class="utxt" id="utxt">Cada precio pasado, llevado a pesos de hoy con la '
+        'inflación. Sirve para comparar años distintos.</p>',
+        "opesos.textContent = PRECIO + ' en pesos de hoy';",
     ]:
         assert esperado in h, esperado
     assert re.search(r"Semana del \d\d-\d\d-\d{4}\. Serie desde \d{4}\. "
@@ -275,6 +309,11 @@ def test_metodologia_usa_el_texto_del_dueno_y_las_canastas(sitio):
     assert h.count('<div class="canasta"') == len(BASKETS)
     # ya no se copia el README
     assert "Metodología (resumen)" not in h
+    # pesos de hoy, precio de la época y UF, con el párrafo del dueño
+    assert ("<strong>Pesos de hoy, precio de la época y UF.</strong> El sitio muestra cada serie "
+            "de tres formas.") in h
+    assert "El veredicto y el percentil se calculan siempre en pesos de hoy." in h
+    assert "Nominal y en pesos de hoy" not in md
 
 
 def test_paginas_del_dueno(sitio):

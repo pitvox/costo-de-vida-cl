@@ -8,9 +8,12 @@ que la librería nunca entre al repo, robots.txt, la página oculta
 /prueba-graficos.html (noindex, fuera del menú y del sitemap, respaldo con
 Lightweight Charts), la atribución a TradingView en el pie de las páginas con
 gráficos, los textos del dueño y el datafeed (tests/feed_node.js, si hay
-Node). Con CARESTIA_INDICES_REAL=ruta/a/indices.json, el datafeed se prueba
-además con los datos reales (curl -O https://carestia.cl/indices.json)."""
+Node, con y sin datos/uf.json). Con CARESTIA_INDICES_REAL=ruta/a/indices.json,
+el datafeed se prueba además con los datos reales (curl -O
+https://carestia.cl/indices.json), y con CARESTIA_UF_REAL=ruta/a/uf.json (el
+que escribe uf.py), también en UF."""
 import base64
+import datetime
 import http.server
 import json
 import os
@@ -34,9 +37,21 @@ TV = "https://www.tradingview.com/"
 NODE = shutil.which("node")
 
 
-def _build(d, data):
+def uf_sintetica(fin="2026-11-02") -> dict:
+    """datos/uf.json como lo escribe uf.py: la UF de cada lunes desde
+    2007-12-31, con una UF inventada que sube de a poco."""
+    t0 = datetime.date(2007, 12, 31)
+    n = (datetime.date.fromisoformat(fin) - t0).days // 7 + 1
+    return {"fuente": "prueba", "serie": "F073.UFF.PRE.Z.D", "generado": "2026-10-04",
+            "t0": t0.isoformat(), "v": [round(19622.66 * 1.0007 ** i, 2) for i in range(n)]}
+
+
+def _build(d, data, uf=None):
     shutil.copytree(os.path.join(RAIZ, "textos"), d / "textos")
     (d / "indices.json").write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+    if uf is not None:
+        (d / "datos").mkdir(exist_ok=True)
+        (d / "datos" / "uf.json").write_text(json.dumps(uf), encoding="utf-8")
     env = dict(os.environ, PYTHONPATH=RAIZ, PYTHONIOENCODING="utf-8")
     env.pop("CARESTIA_BORRADOR", None)
     r = subprocess.run([sys.executable, os.path.join(RAIZ, "build_site.py")],
@@ -48,6 +63,11 @@ def _build(d, data):
 @pytest.fixture(scope="module")
 def sitio(tmp_path_factory):
     return _build(tmp_path_factory.mktemp("build_tv"), indices_realista())
+
+
+@pytest.fixture(scope="module")
+def sitio_uf(tmp_path_factory):
+    return _build(tmp_path_factory.mktemp("build_tv_uf"), indices_realista(), uf_sintetica())
 
 
 def _leer(d, ruta):
@@ -418,12 +438,27 @@ def test_graficos_indices_y_comparar_en_advanced_charts(sitio):
     assert js.count("TV.montar(") == 1
     assert "sitio: true" in js and "estilo: m === 'indices'" in js
     assert "if (modo === m) montarTV(m);" in js
-    # las tabs cambian el símbolo del mismo widget; nominal es otro símbolo
-    assert "const simboloIndice = code => code + (serieNom ? '-nominal' : '');" in js
+    # las tabs cambian el símbolo del mismo widget; cada unidad es otro símbolo
+    assert "const simboloIndice = code => code + SUF[unidad];" in js
+    assert "const SUF = { real: '', epoca: '-epoca', uf: '-uf' };" in js
     assert "ponerSimbolo(tv.indices.w, simboloIndice(code))" in js
-    # LÍNEA / VELAS cambia el tipo de gráfico
-    assert "const c = w.activeChart(), tipo = linea ? 2 : 1;" in js
-    # Comparar: comparación de la librería en escala porcentual, colores por puesto
+    # LÍNEA / VELAS cambia el tipo de gráfico; el resto de los cambios (de
+    # índice, de unidad, de temporalidad) respeta el que haya, también uno
+    # elegido en la barra de la librería
+    assert "const c = w.activeChart(), pedido = linea ? 2 : 1;" in js
+    assert "if (forzar && c.chartType() !== pedido) Promise.resolve(c.setChartType(pedido))" in js
+    assert "document.getElementById('v-velas').onclick = () => { vista = 'velas'; aplicarVista(true); };" in js
+    assert "w.activeChart().onIntervalChanged().subscribe(null, () => setTimeout(() => aplicarVista(), 0));" in js
+    # la cifra en UF nunca muestra la del índice anterior: primero la de pesos
+    assert "countUp(oprice, d.costo_real);\n    if (unidad !== 'uf') { opesos.hidden = true; return; }" in js
+    assert "opesos.textContent = fmt(d.costo_real) + ' en pesos de hoy';\n    opesos.hidden = false;" in js
+    # en Lightweight el eje y la ayuda siguen a la unidad ya dibujada
+    assert "priceFormatter: v => unidadLW === 'uf' && TV ? TV.numUFEje(v) : fmt(v) } }));" in js
+    # Comparar: comparación de la librería en escala porcentual, colores por
+    # puesto, en la unidad elegida (al cambiarla, se rehacen las comparaciones)
+    assert "const sim = k => PRODS[k].slug + SUF[unidad];" in js
+    assert "if (keep.includes(k) && x.sim === sim(k)) return;" in js
+    assert "{ source: 'close', symbol: s }," in js
     assert "c.createStudy('Compare', false, false," in js
     assert "{ 'plot.color': e.color, 'plot.linestyle': e.punteada ? 1 : 0, 'plot.linewidth': 2 }" in js
     assert "escala.setMode(2)" in js
@@ -442,28 +477,54 @@ def test_graficos_indices_y_comparar_en_advanced_charts(sitio):
 
 def test_graficos_controles_y_captura(sitio):
     h = _leer(sitio, "graficos.html")
-    assert ('<button class="vbtn active" id="v-real" aria-label="Pesos de hoy">'
-            '<span class="solo-ancho">PESOS DE </span>HOY</button>') in h
-    assert '<button class="vbtn" id="v-nominal">NOMINAL</button>' in h
-    # los índices parten en velas
-    assert '<button class="vbtn" id="v-linea">LÍNEA</button>' in h
-    assert '<button class="vbtn active" id="v-velas">VELAS</button>' in h
-    assert "let cur = CODES[0], vista = 'velas', serieNom = false;" in h
+    # la unidad: Pesos de hoy (por defecto) y Precio de la época; sin
+    # datos/uf.json, sin UF
+    assert ('<button class="vbtn ubtn active" type="button" data-unidad="real" '
+            'aria-pressed="true">Pesos de hoy</button>') in h
+    assert ('<button class="vbtn ubtn" type="button" data-unidad="epoca" '
+            'aria-pressed="false">Precio de la época</button>') in h
+    assert '<option value="epoca">Precio de la época</option>' in h
+    assert 'data-unidad="uf"' not in h and '<option value="uf">' not in h
+    # todos los gráficos parten en línea; las velas a un clic
+    assert '<button class="vbtn active" id="v-linea">LÍNEA</button>' in h
+    assert '<button class="vbtn" id="v-velas">VELAS</button>' in h
+    assert "let cur = CODES[0], vista = 'linea', unidad = 'real';" in h
     # los controles van juntos y nunca quedan fuera de la vista: las ayudas
     # pasan a otra fila
     assert '<div class="cbar-ctrl">' in h
     assert ".cbar-right { margin-left:auto; display:flex; align-items:center; gap:8px 14px;\n    flex-wrap:wrap; justify-content:flex-end; }" in h
-    assert "+ nominal" not in h
+    for viejo in ["+ nominal", "NOMINAL", 'id="v-nominal"', 'id="leg-nom"', 'id="mleg-nom"']:
+        assert viejo not in h, viejo
     assert '<div id="tvind" class="tvbox m-ind"></div>' in h
     assert '<div id="tvprod" class="tvbox m-prod"></div>' in h
     js = _script(h)
     # la captura de Advanced Charts es la del cliente; nunca la del servidor
     assert "TV.capturaCliente(w, tok)" in js
     assert not re.search(r"\bw\.takeScreenshot\(", js)
-    assert "titulo += ' NOMINAL';" in js
+    # la captura dice la unidad y, en UF, la cifra en pesos de hoy debajo
+    assert "const TITULO_UNIDAD = { epoca: ', PRECIO DE LA ÉPOCA', uf: ', EN UF' };" in js
+    assert "titulo += TITULO_UNIDAD[unidad];" in js
+    assert "compLineas.unshift(fmt(d.costo_real) + ' en pesos de hoy');" in js
     tvjs = _leer(sitio, "carestia-tv.js")
     assert "widget.takeClientScreenshot({" in tvjs
     assert "takeScreenshot()" not in tvjs and "snapshot_url:" not in tvjs
+
+
+def test_graficos_y_ficha_con_uf(sitio_uf):
+    """Con datos/uf.json, la opción UF aparece en /graficos.html, en las
+    fichas y en el datafeed de la página de prueba."""
+    for pagina in ["graficos.html", "productos/producto-000.html"]:
+        h = _leer(sitio_uf, pagina)
+        assert ('<button class="vbtn ubtn" type="button" data-unidad="uf" '
+                'aria-pressed="false">UF</button>') in h, pagina
+        assert '<option value="uf">UF</option>' in h, pagina
+    app = json.loads(re.search(r"const DATA = (\{.*?\});\n", _leer(sitio_uf, "graficos.html"))
+                     .group(1).replace("<\\/", "</"))
+    assert app["uf"] is True
+    assert "const UF = true;" in _leer(sitio_uf, "productos/producto-000.html")
+    prueba = _leer(sitio_uf, "prueba-graficos.html")
+    assert "uf: true });" in prueba
+    assert "a precio de la época o en UF (por ejemplo, asado-epoca o asado-uf)" in prueba
 
 
 def test_ficha_con_advanced_charts_despues_del_primer_pantallazo(sitio):
@@ -475,10 +536,22 @@ def test_ficha_con_advanced_charts_despues_del_primer_pantallazo(sitio):
     js = _script(h)
     assert "window.addEventListener('load', () => {" in js
     assert re.search(r"cargarScript\('/carestia-tv\.js\?v=[0-9a-f]{10}'\)", js)
-    assert "TV.montar({ contenedor: el, libreria: '/charting_library/', simbolo: SLUG," in js
+    assert ("TV.montar({ contenedor: el, libreria: '/charting_library/', simbolo: SLUG + SUF[unidad],"
+            in js)
     assert "sitio: true" in js
-    # su nominal, para superponer desde Comparar
-    assert "comparar: [{ symbol: SLUG + '-nominal', title: NOMBRE + ', nominal' }]" in js
+    # sus otras unidades, para superponer desde Comparar
+    assert "comparar: unidadesHay().map(u => ({ symbol: SLUG + SUF[u], title: NOMBRE + EN[u] })) });" in js
+    assert "const EN = { real: ', en pesos de hoy', epoca: ', precio de la época', uf: ', en UF' };" in js
+    # su Comparar superpone el producto en otras unidades: el nombre la dice
+    assert "nombreConUnidad: true," in js
+    assert "nombreConUnidad" not in _script(_leer(sitio, "graficos.html"))
+    # el selector de unidad cambia el símbolo; en UF la cifra va en UF y
+    # debajo, en pesos de hoy
+    assert "Promise.resolve(c.setSymbol(SLUG + SUF[u])).catch(() => {});" in js
+    assert "oprice.textContent = TV.textoUF(b[b.length - 1].close);" in js
+    assert "opesos.textContent = PRECIO + ' en pesos de hoy';" in js
+    assert '<div class="opesos" id="opesos" hidden></div>' in h
+    assert "const UF = false;" in js
     assert "const SLUG = 'producto-000';" in js and 'const NOMBRE = "Producto 000";' in js
     # la serie de la página alimenta el datafeed (no se vuelve a pedir)
     assert "precargados: { ['productos/' + SLUG + '.json']: { t0: T0, v: V, min: MIN, max: MAX } }" in js
@@ -487,12 +560,13 @@ def test_ficha_con_advanced_charts_despues_del_primer_pantallazo(sitio):
     assert ('<p class="ref-velas" id="ref-velas" hidden>Velas semanales. La mecha va del precio más bajo '
             'al más alto que ODEPA encontró entre los locales encuestados.</p>') in h
     # respaldo: Lightweight como siempre, en hueso y con fechas es-CL
-    assert "}).then(w => {\n      el.dataset.motor = 'advanced';" in js
-    assert "    }, lightweight);" in js
+    assert "}).then(w => {\n      widget = w;\n      el.dataset.motor = 'advanced';" in js
+    assert "    }, () => { selector.limitar(unidadesHay()); lightweight(); });" in js
     # la referencia de las velas se muestra mientras estén a la vista
     assert "c.onChartTypeChanged().subscribe(null, ver);" in js
     assert "chart.addLineSeries({ color: tok('bone'), lineWidth: 2, priceLineVisible: false })" in js
-    assert "localization: { locale: 'es-CL', priceFormatter: fmt }" in js
+    assert ("localization: { locale: 'es-CL', priceFormatter: v => unidadLW === 'uf' && TV ? "
+            "TV.numUFEje(v) : fmt(v) }") in js
 
 
 def test_configuracion_comun_en_una_funcion(sitio):
@@ -504,8 +578,14 @@ def test_configuracion_comun_en_una_funcion(sitio):
     # con la caja oculta el rango espera a que vuelva a tener ancho
     assert "if (caja && !caja.clientWidth && typeof ResizeObserver === 'function') {" in tvjs
     # al cambiar de símbolo, el rango espera a que lleguen las barras
-    assert "return datos.then(() => feed.barras(chart.symbol())).then(b => {" in tvjs
-    assert "const op = { applyDefaultRightMargin: true, rejectByTimeout: 3000 };" in tvjs
+    assert "return datos.then(() => feed.barras(chart.symbol(), temp())).then(b => {" in tvjs
+    # y en cada cambio de temporalidad, con el rango completo en el mismo
+    # aviso (timeframe), salvo que el cambio traiga el suyo
+    assert "c.onIntervalChanged().subscribe(null, (res, cambio) => {" in tvjs
+    assert "const r = o.datafeed.rango && o.datafeed.rango(c.symbol(), res);" in tvjs
+    assert "if (r && cambio && !cambio.timeframe) {" in tvjs
+    assert "cambio.timeframe = { type: 'time-range', from: r.from, to: r.to };" in tvjs
+    assert "const op = { applyDefaultRightMargin: !p || p.nombre === RESOLUCION, rejectByTimeout: 3000 };" in tvjs
     assert "if (v && v.from > rango.from + 86400) return chart.setVisibleRange(rango, op);" in tvjs
     # v32 dibuja la línea con degradé si no se pide sólida: el color del sitio
     assert tvjs.count("'mainSeriesProperties.lineStyle.colorType': 'solid'") == 2
@@ -591,7 +671,13 @@ def _feed_node(d):
 
 
 def test_datafeed_con_datos_sinteticos(sitio):
-    assert "chequeos OK" in _feed_node(sitio)
+    salida = _feed_node(sitio)
+    assert "chequeos OK" in salida and "; sin UF" in salida
+
+
+def test_datafeed_con_datos_sinteticos_en_uf(sitio_uf):
+    salida = _feed_node(sitio_uf)
+    assert "chequeos OK" in salida and "semanas de producto en UF (prueba" in salida
 
 
 @pytest.mark.skipif(not os.environ.get("CARESTIA_INDICES_REAL"),
@@ -599,6 +685,10 @@ def test_datafeed_con_datos_sinteticos(sitio):
 def test_datafeed_con_datos_reales(tmp_path):
     with open(os.environ["CARESTIA_INDICES_REAL"], encoding="utf-8") as fh:
         data = json.load(fh)
-    salida = _feed_node(_build(tmp_path, data))
+    uf = None
+    if os.environ.get("CARESTIA_UF_REAL"):
+        with open(os.environ["CARESTIA_UF_REAL"], encoding="utf-8") as fh:
+            uf = json.load(fh)
+    salida = _feed_node(_build(tmp_path, data, uf))
     print(salida)
     assert "chequeos OK" in salida
