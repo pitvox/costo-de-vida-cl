@@ -160,22 +160,22 @@ __CSS_CABECERA__
   @supports (height:100svh) {
     .hero-wrap { height:calc(100svh - 318px - var(--utxt)); } }
   /* sobre 640px la fila de navegación del sitio (33px, en el encabezado)
-     también sale del calc: 272+33 y 348+33 */
+     también sale del calc: 272+33 y 368+33 */
   @media (min-width:760px) {
     .hero-wrap { height:calc(100vh - 305px - var(--utxt)); min-height:420px; }
     @supports (height:100svh) {
       .hero-wrap { height:calc(100svh - 305px - var(--utxt)); } } }
-  /* móvil: la franja bajo el lienzo (46px, ver .mstrip) y, bajo 641px, la
+  /* móvil: la franja bajo el lienzo (66px, ver .mstrip) y, bajo 641px, la
      segunda fila de tabs (+50px) salen del encuadre para que hero + barras
      sigan cerrando la pantalla sin scroll donde el alto alcance */
   @media (max-width:759px) {
-    .hero-wrap { height:calc(100vh - 381px - var(--utxt)); }
+    .hero-wrap { height:calc(100vh - 401px - var(--utxt)); }
     @supports (height:100svh) {
-      .hero-wrap { height:calc(100svh - 381px - var(--utxt)); } } }
+      .hero-wrap { height:calc(100svh - 401px - var(--utxt)); } } }
   @media (max-width:640px) {
-    .hero-wrap { height:calc(100vh - 399px - var(--utxt)); }
+    .hero-wrap { height:calc(100vh - 419px - var(--utxt)); }
     @supports (height:100svh) {
-      .hero-wrap { height:calc(100svh - 399px - var(--utxt)); } } }
+      .hero-wrap { height:calc(100svh - 419px - var(--utxt)); } } }
   @media (max-width:759px) { .overlay .oname, .overlay .cstats, .overlay .caviso,
     .overlay .can-reg { max-width:calc(100vw - 160px); }
     body.tv-ind .overlay.m-ind .oname { max-width:none; } }
@@ -256,8 +256,17 @@ __CSS_CABECERA__
   .unidad.compacta .usel { display:block; }
   .midiendo { flex-wrap:nowrap !important; }
   .midiendo .cbar-right { justify-content:flex-start; }
-  .utxt { padding:0 clamp(16px,3vw,32px) 9px; border-bottom:1px solid var(--line);
-    font:400 11px/1.5 var(--sans); color:var(--ash); text-wrap:pretty; }
+  .urow { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between;
+    gap:4px 24px; padding:0 clamp(16px,3vw,32px) 9px; border-bottom:1px solid var(--line); }
+  .utxt { flex:1 1 320px; font:400 11px/1.5 var(--sans); color:var(--ash); text-wrap:pretty; }
+  /* la leyenda de la línea del índice: las tres unidades, la elegida a la
+     vista y las otras atenuadas; en escritorio junto a la línea de la
+     unidad, en el celular en la franja bajo el lienzo */
+  .legend { display:none; gap:14px; font:400 11px/1.5 var(--sans); color:var(--ash);
+    white-space:nowrap; }
+  @media (min-width:900px) { .legend { display:flex; } }
+  .legend .sw, .mstrip .sw { display:inline-block; width:16px; height:0; margin-right:6px;
+    vertical-align:middle; border-top:2px solid var(--ember); }
   /* con la unidad a la vista, su línea va pegada a la barra */
   body:not([data-modo="canasta"]) .cbar { border-bottom:none; padding-bottom:6px; }
   .vtoggle { display:flex; border:1px solid var(--line); background:var(--bg); }
@@ -280,7 +289,7 @@ __CSS_CABECERA__
     .cbar .vtoggle .ubtn { letter-spacing:0; padding:8px 10px; }
     .usel { font-size:11px; padding:0 2px; }
   }
-  @media (max-width:380px) { .cbar, .utxt { padding-left:10px; padding-right:10px; }
+  @media (max-width:380px) { .cbar, .urow { padding-left:10px; padding-right:10px; }
     .cbar, .cbar-right, .cbar-ctrl { gap:6px; }
     .cbar .vbtn { padding:8px 6px; } }
   /* referencia de velas y pista de zoom: texto de ayuda dentro de la barra;
@@ -292,16 +301,20 @@ __CSS_CABECERA__
     font:400 11px/1.5 var(--sans); color:var(--ash); }
   @media (min-width:760px) { .ref { display:block; } }
   @media (min-width:960px) { .zoomhint { display:block; } }
-  /* ---- franja móvil bajo el lienzo: pista táctil ---- */
-  /* bajo 760px la pista de zoom de la barra (≥760px) no existe: esta franja
-     trae la de los gestos, fuera del lienzo para no taparlo, con su alto
-     reservado desde el primer paint (CLS) */
+  /* ---- franja móvil bajo el lienzo: leyenda compacta + pista táctil ---- */
+  /* bajo 760px ni la leyenda de escritorio (≥900px) ni la pista de zoom de
+     la barra existen: esta franja trae ambas en versión corta, fuera del
+     lienzo para no taparlo. Primera línea: las tres unidades (la elegida a
+     la vista); segunda línea: la pista de gestos. En productos/canasta la
+     leyenda (m-ind) se apaga y el min-height mantiene la franja estable;
+     altura fija reservada desde el primer paint (CLS) */
   .mstrip { display:none; }
   @media (max-width:759px) {
     .mstrip { display:flex; flex-wrap:wrap; align-content:flex-start;
-      align-items:center; gap:4px 14px; min-height:46px;
+      align-items:center; gap:4px 14px; min-height:66px;
       padding:7px clamp(16px,3vw,32px);
       font:400 11px/16px var(--sans); color:var(--ash); }
+    .mstrip .mleg { white-space:nowrap; }
     .mstrip .mhint { flex-basis:100%; color:var(--dim); text-wrap:balance; }
   }
   .tooltip { position:absolute; display:none; z-index:7; pointer-events:none;
@@ -448,7 +461,12 @@ __CSS_SITIO__
       </div>
     </div>
   </div>
-  <p class="utxt m-uni" id="utxt">__UNIDAD_REAL__</p>
+  <div class="urow m-uni">
+    <p class="utxt" id="utxt">__UNIDAD_REAL__</p>
+    <div class="legend m-ind" id="leyenda">
+      __LEYENDA__
+    </div>
+  </div>
 
   <div id="vista">
     <section class="hero-wrap" id="hero">
@@ -495,9 +513,10 @@ __CSS_SITIO__
       </div>
     </section>
 
-    <!-- franja móvil (<760px): pista de gestos táctiles del lienzo; en
-         desktop no existe -->
+    <!-- franja móvil (<760px): leyenda compacta del modo índices y pista de
+         gestos táctiles del lienzo; en desktop no existe -->
     <div class="mstrip">
+      __LEYENDA_MOVIL__
       <span class="mhint">Desliza hacia los lados para moverte. Usa dos dedos para acercar.</span>
     </div>
 
@@ -976,10 +995,20 @@ __JS_UNIDAD__
   // es otro símbolo; en Lightweight, otras semanas para la línea y las velas.
   // Sin carestia-tv.js (que calcula la época y la UF) solo hay pesos de hoy
   const unidadesHay = () => !feed ? ['real'] : DATA.uf ? ['real', 'epoca', 'uf'] : ['real', 'epoca'];
+  // la leyenda de la línea del índice (escritorio y franja del celular): las
+  // unidades que hay, la elegida a la vista y las otras atenuadas
+  function pintarLeyenda() {
+    const hay = unidadesHay();
+    document.querySelectorAll('[data-leyenda]').forEach(e => {
+      e.hidden = hay.indexOf(e.dataset.leyenda) === -1;
+      e.style.opacity = e.dataset.leyenda === unidad ? '' : '.35';
+    });
+  }
   function ponerUnidad(u) {
     if (unidadesHay().indexOf(u) === -1) u = 'real';
     unidad = u;
     selector.poner(u);
+    pintarLeyenda();
     document.getElementById('onote').textContent = ONOTE[u];
     pintarCifra();
     pintarSerie(cur);
@@ -1895,6 +1924,7 @@ __JS_UNIDAD__
   window.addEventListener('load', () => {
     prepararTV();
     selector.limitar(unidadesHay());
+    pintarLeyenda();
     buildTicker();
     buildTabs();
     // sin carestia-tv.js, Lightweight desde el principio, como antes
@@ -2778,7 +2808,7 @@ __CSS_SITIO__
   </header>
 
   <main>
-    <div class="miga">Precio real en Chile, en pesos de hoy</div>
+    <div class="miga" id="miga">Precio real en Chile, en pesos de hoy</div>
     <h1>__LABEL__</h1>
     <div class="orow">
       <div class="ocifra">
@@ -2851,8 +2881,8 @@ __JS_UNIDAD__
   let TV = null, feed = null, widget = null, lw = null, unidad = 'real', unidadLW = 'real';
   const unidadesHay = () => !feed ? ['real'] : UF ? ['real', 'epoca', 'uf'] : ['real', 'epoca'];
   const oprice = document.getElementById('oprice'), opesos = document.getElementById('opesos');
-  const ouni = document.getElementById('ouni');
-  const PRECIO = oprice.textContent, OUNI = ouni.textContent;
+  const ouni = document.getElementById('ouni'), miga = document.getElementById('miga');
+  const PRECIO = oprice.textContent, OUNI = ouni.textContent, MIGA = miga.textContent;
   function ponerUnidad(u) {
     if (unidadesHay().indexOf(u) === -1) u = 'real';
     unidad = u;
@@ -2873,6 +2903,7 @@ __JS_UNIDAD__
     if (unidad !== 'uf' || !feed) {
       oprice.textContent = PRECIO;
       ouni.textContent = OUNI;
+      miga.textContent = MIGA;
       opesos.hidden = true;
       return;
     }
@@ -2880,6 +2911,8 @@ __JS_UNIDAD__
       if (unidad !== 'uf' || !b || !b.length) return;
       oprice.textContent = TV.textoUF(b[b.length - 1].close);
       ouni.textContent = 'por ' + UNI_TXT;
+      // el antetítulo deja de decir "en pesos de hoy": la cifra va en UF
+      miga.textContent = MIGA.replace(/, en pesos de hoy$/, '');
       opesos.textContent = PRECIO + ' en pesos de hoy';
       opesos.hidden = false;
     }, () => {});
@@ -3325,6 +3358,18 @@ def selector_unidad(con_uf: bool) -> str:
             f'        {botones}\n      </div>\n'
             f'      <select class="usel" aria-label="Unidad">\n'
             f'        {opciones}\n      </select>')
+
+
+def leyenda_unidad(con_uf: bool, clase: str) -> str:
+    """La leyenda de la línea del índice en /graficos.html: las unidades, con
+    la de pesos de hoy a la vista y las otras atenuadas (pintarLeyenda las
+    sigue al elegir)."""
+    clase = f' class="{clase}"' if clase else ""
+    tenue = ' style="opacity:.35"'
+    return "\n      ".join(
+        f'<span{clase} data-leyenda="{u}"{"" if u == "real" else tenue}>'
+        f'<span class="sw"></span>{UNIDAD_NOMBRE[u]}</span>'
+        for u in UNIDADES if con_uf or u != "uf")
 
 
 # el selector de unidad en el navegador, igual en /graficos.html y las fichas.
@@ -5451,6 +5496,8 @@ with open("graficos.html", "w", encoding="utf-8") as fh:
                           .replace("__VER_CSS__", _ver(tv_css()))
                           # la unidad: el selector, su línea y su JS
                           .replace("__SELECTOR_UNIDAD__", selector_unidad(APP["uf"]))
+                          .replace("__LEYENDA__", leyenda_unidad(APP["uf"], ""))
+                          .replace("__LEYENDA_MOVIL__", leyenda_unidad(APP["uf"], "mleg m-ind"))
                           .replace("__UNIDAD_REAL__", UNIDAD_TXT["real"])
                           .replace("__JS_UNIDAD__", JS_UNIDAD)
                           .replace("__UNIDAD_TXT__", _json(UNIDAD_TXT))

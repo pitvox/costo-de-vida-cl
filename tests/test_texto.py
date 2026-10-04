@@ -204,8 +204,13 @@ def test_graficos_textos(sitio):
         "Se actualiza los viernes.",
         # bajo el selector de unidad, la línea de la unidad elegida (la de
         # pesos de hoy ya en el HTML; las tres en el JS)
-        '<p class="utxt m-uni" id="utxt">Cada precio pasado, llevado a pesos de hoy con la '
+        '<p class="utxt" id="utxt">Cada precio pasado, llevado a pesos de hoy con la '
         'inflación. Sirve para comparar años distintos.</p>',
+        # la leyenda de la línea del índice, con las tres opciones (en el
+        # escritorio y en la franja del celular)
+        '<span data-leyenda="real"><span class="sw"></span>Pesos de hoy</span>',
+        '<span class="mleg m-ind" data-leyenda="epoca" style="opacity:.35"><span class="sw">'
+        '</span>Precio de la época</span>',
         "Lo que costaba en su momento, tal como salía en la boleta.",
         "Cada precio dividido por el valor de la UF de esa semana. Como la UF sube con la "
         "inflación, también sirve para comparar años distintos.",

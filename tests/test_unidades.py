@@ -145,6 +145,14 @@ def test_unidad_y_tipo_por_defecto(con_uf):
         assert "if (desborda) caja.classList.add('compacta');" in h, p
     g = _leer(d, "graficos.html")
     assert "let cur = CODES[0], vista = 'linea', unidad = 'real';" in g
+    # la leyenda de la línea: las tres unidades en el escritorio y en el
+    # celular, la elegida a la vista (pintarLeyenda la sigue)
+    assert re.findall(r'<span data-leyenda="(\w+)"', g) == ["real", "epoca", "uf"]
+    assert re.findall(r'<span class="mleg m-ind" data-leyenda="(\w+)"', g) == ["real", "epoca", "uf"]
+    assert "e.style.opacity = e.dataset.leyenda === unidad ? '' : '.35';" in g
+    # la ficha en UF: el antetítulo deja de decir "en pesos de hoy"
+    assert "miga.textContent = MIGA.replace(/, en pesos de hoy$/, '');" in \
+        _leer(d, "productos/producto-000.html")
     # la unidad vale para los índices y Comparar, no para la canasta
     assert 'body[data-modo="canasta"] .m-uni { display:none !important; }' in g
     assert '<div class="unidad m-uni" id="unidad" data-fila="cbar">' in g
