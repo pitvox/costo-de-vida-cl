@@ -1,0 +1,158 @@
+base,codigo,producto_ipc,ponderacion,odepa
+2018,1.1.1.1.1,ARROZ,0.18033,Arroz grano ancho grado 1 | Arroz grano ancho grado 2 | Arroz grano largo delgado grado 2
+2018,1.1.1.2.1,HARINA,0.09428,Harina con polvos de hornear | Harina sin polvos de hornear
+2018,1.1.1.2.2,CEREAL,0.22167,
+2018,1.1.1.3.1,PAN,2.08381,Marraqueta | Hallulla corriente | Hallulla especial | Hallulla integral | Pan amasado
+2018,1.1.1.3.2,GALLETA,0.42102,
+2018,1.1.1.3.3,PRODUCTOS DE REPOSTERÍA,0.56276,
+2018,1.1.1.3.4,MASAS SALADAS PREPARADAS,0.10138,
+2018,1.1.1.3.5,SNACK,0.10349,
+2018,1.1.1.4.1,PASTAS,0.26583,Spaghetti N°5
+2018,1.1.2.1.1,CARNE DE VACUNO,1.83118,Abastero | Asado Carnicero | Asado de tira | Asiento | Choclillo | Estomaguillo (Tapabarriga) | Filete | Ganso | Huachalomo | Lomo Liso | Lomo Vetado | Malaya | Osobuco | Palanca | Plateada | Pollo Ganso | Posta Negra | Posta Paleta | Posta Rosada | Punta de Ganso | Punta paleta | Punta picana | Sobrecostilla | Tapapecho
+2018,1.1.2.2.1,CARNE DE CERDO,0.45693,Cerdo Costillar | Cerdo Lomo | Cerdo Pulpa c/hueso | Cerdo Pulpa s/hueso | Chuleta (Parrillera) | Chuleta (centro)
+2018,1.1.2.3.1,CARNE DE PAVO,0.07385,Pavo Osobuco | Pavo Pechuga s/hueso | Pavo Trutro Ala | Pavo Trutro Corto
+2018,1.1.2.3.2,CARNE DE POLLO,0.91573,Pollo Entero | Pollo Pechuga | Pollo Pechuga Deshuesada | Pollo Trutro Entero
+2018,1.1.2.4.1,CECINAS,0.98478,
+2018,1.1.2.4.2,HAMBURGUESA,0.12905,
+2018,1.1.3.1.1,PESCADOS,0.26577,
+2018,1.1.3.2.1,MARISCOS,0.08082,
+2018,1.1.3.3.1,PESCADOS EN CONSERVA,0.20353,
+2018,1.1.3.3.2,MARISCOS EN CONSERVA,0.0223,
+2018,1.1.4.1.1,LECHE EN POLVO,0.18644,Leche en Polvo Entera | Leche en Polvo Descremada
+2018,1.1.4.1.2,LECHE LÍQUIDA,0.45256,Leche Fluida Entera | Leche Fluida Descremada
+2018,1.1.4.1.3,LECHE CONSERVADA,0.08348,
+2018,1.1.4.2.1,YOGHURT,0.37669,Yoghurt (vainilla ó frutilla)
+2018,1.1.4.2.2,POSTRES LÁCTEOS,0.07293,
+2018,1.1.4.3.1,QUESO,0.84248,Queso Chanco | Queso Gauda | Queso Mantecoso
+2018,1.1.4.4.1,HUEVOS,0.40773,Huevo blanco grande (primera) | Huevo color grande (primera)
+2018,1.1.5.1.1,MANTEQUILLA,0.16426,Mantequilla con sal
+2018,1.1.5.1.2,MARGARINA,0.07462,Margarina
+2018,1.1.5.2.1,ACEITE VEGETAL,0.29183,Aceite vegetal | Aceite maravilla | Aceite de oliva
+2018,1.1.6.1.1,MANZANA,0.11296,Manzana
+2018,1.1.6.1.2,NARANJA,0.1119,Naranja
+2018,1.1.6.1.3,PERA,0.03486,Pera
+2018,1.1.6.1.4,PLÁTANO,0.14182,Plátano
+2018,1.1.6.1.5,FRUTAS DE ESTACIÓN,0.3918,Ciruela | Durazno | Frutilla | Kiwi | Melón | Nectarín | Sandia | Tuna | Uva
+2018,1.1.6.2.1,FRUTOS SECOS,0.13142,
+2018,1.1.6.2.2,FRUTAS EN CONSERVA,0.0484,
+2018,1.1.7.1.1,ACELGA Y ESPINACA,0.04289,Espinaca
+2018,1.1.7.1.10,ZAPALLO ITALIANO,0.03675,Zapallo italiano
+2018,1.1.7.1.11,VERDURAS DE ESTACIÓN,0.30569,Alcachofa | Brócoli | Choclo | Coliflor | Pepino ensalada | Poroto verde | Repollo
+2018,1.1.7.1.12,VERDURAS CONGELADAS,0.11295,
+2018,1.1.7.1.13,VERDURAS EN CONSERVA,0.04367,
+2018,1.1.7.1.14,VERDURAS ENCURTIDAS,0.0731,
+2018,1.1.7.1.2,CEBOLLA Y CEBOLLÍN,0.13303,Cebolla
+2018,1.1.7.1.3,LECHUGA,0.17469,Lechuga
+2018,1.1.7.1.4,LIMÓN,0.13543,Limón
+2018,1.1.7.1.5,PALTA,0.33389,Palta
+2018,1.1.7.1.6,PIMENTÓN Y PIMIENTO,0.0516,Pimiento
+2018,1.1.7.1.7,TOMATE,0.32495,Tomate
+2018,1.1.7.1.8,ZANAHORIA,0.06898,Zanahoria
+2018,1.1.7.1.9,ZAPALLO,0.0856,Zapallo
+2018,1.1.7.2.1,LEGUMBRES,0.14401,Arvejas verdes partidas | Garbanzos sin piel | Lentejas 6 mm | Poroto Hallado | Poroto Negro | Poroto Tórtola
+2018,1.1.7.3.1,PAPA,0.3362,Papa
+2018,1.1.7.3.2,PAPAS CONGELADAS Y DESHIDRATADAS,0.05833,
+2018,1.1.7.3.3,PAPAS FRITAS,0.12454,
+2018,1.1.8.1.1,AZÚCAR,0.13136,Azúcar
+2018,1.1.8.1.2,ENDULZANTE,0.04307,
+2018,1.1.8.2.1,MERMELADA,0.07621,
+2018,1.1.8.2.2,MANJAR Y DULCES UNTABLES,0.07214,
+2018,1.1.8.3.1,CARAMELOS Y GOMA DE MASCAR,0.09733,
+2018,1.1.8.3.2,CHOCOLATE,0.25488,
+2018,1.1.8.4.1,HELADO,0.25363,
+2018,1.1.9.1.1,SAL,0.02511,
+2018,1.1.9.1.2,"HIERBAS, ESPECIAS Y CONDIMENTOS",0.09706,
+2018,1.1.9.2.1,SALSAS,0.10893,
+2018,1.1.9.2.2,ADEREZOS,0.19046,
+2018,1.1.9.3.1,SOPAS Y CREMAS,0.087,
+2018,1.1.9.3.2,ALIMENTOS PARA BEBÉ,0.1037,
+2018,1.1.9.3.3,POSTRES NO LÁCTEOS,0.08544,
+2018,1.2.1.1.1,CAFÉ Y SUCEDÁNEOS,0.15522,
+2018,1.2.1.2.1,TÉ,0.17671,
+2018,1.2.1.3.1,SABORIZANTE PARA LECHE,0.05023,
+2018,1.2.2.1.1,AGUA EMBOTELLADA,0.21102,
+2018,1.2.2.2.1,BEBIDA GASEOSA,1.08369,
+2018,1.2.2.2.2,BEBIDA ISOTÓNICA Y ENERGIZANTE,0.06007,
+2018,1.2.2.3.1,JUGO LÍQUIDO,0.32951,
+2018,1.2.2.3.2,JUGO EN POLVO,0.09755,
+2023,1.1.1.1.1,ARROZ,0.22304,Arroz grano ancho grado 1 | Arroz grano ancho grado 2 | Arroz grano largo delgado grado 2
+2023,1.1.1.2.1,HARINA DE TRIGO,0.10111,Harina con polvos de hornear | Harina sin polvos de hornear
+2023,1.1.1.2.2,HARINA DE OTROS CEREALES,0.0369,
+2023,1.1.1.3.1,PAN,2.21583,Marraqueta | Hallulla corriente | Hallulla especial | Hallulla integral | Pan amasado
+2023,1.1.1.3.2,PRODUCTOS DE REPOSTERÍA,0.62508,
+2023,1.1.1.3.3,GALLETAS,0.44886,
+2023,1.1.1.3.4,MASAS SALADAS PREPARADAS,0.07196,
+2023,1.1.1.4.1,CEREALES PARA EL DESAYUNO,0.1617,
+2023,1.1.1.5.1,PASTAS,0.25987,Spaghetti N°5
+2023,1.1.1.6.1,SNACKS,0.14982,
+2023,1.1.2.1.1,CARNE DE VACUNO,2.13465,Abastero | Asado Carnicero | Asado de tira | Asiento | Choclillo | Estomaguillo (Tapabarriga) | Filete | Ganso | Huachalomo | Lomo Liso | Lomo Vetado | Malaya | Osobuco | Palanca | Plateada | Pollo Ganso | Posta Negra | Posta Paleta | Posta Rosada | Punta de Ganso | Punta paleta | Punta picana | Sobrecostilla | Tapapecho
+2023,1.1.2.1.2,CARNE DE POLLO,1.0303,Pollo Entero | Pollo Pechuga | Pollo Pechuga Deshuesada | Pollo Trutro Entero
+2023,1.1.2.1.3,CARNE DE CERDO,0.50492,Cerdo Costillar | Cerdo Lomo | Cerdo Pulpa c/hueso | Cerdo Pulpa s/hueso | Chuleta (Parrillera) | Chuleta (centro)
+2023,1.1.2.1.4,CARNE DE PAVO,0.06113,Pavo Osobuco | Pavo Pechuga s/hueso | Pavo Trutro Ala | Pavo Trutro Corto
+2023,1.1.2.2.1,CECINAS,1.07909,
+2023,1.1.2.2.2,HAMBURGUESAS,0.10511,
+2023,1.1.2.2.3,CARNES APANADAS,0.03914,
+2023,1.1.3.1.1,PESCADOS FRESCOS O REFRIGERADOS,0.36037,
+2023,1.1.3.2.1,PESCADOS EN CONSERVA,0.25749,
+2023,1.1.3.3.1,MARISCOS FRESCOS O REFRIGERADOS,0.10311,
+2023,1.1.3.4.1,MARISCOS EN CONSERVA,0.02904,
+2023,1.1.4.1.1,LECHE LÍQUIDA,0.36921,Leche Fluida Entera | Leche Fluida Descremada
+2023,1.1.4.2.1,LECHE EN POLVO,0.13892,Leche en Polvo Entera | Leche en Polvo Descremada
+2023,1.1.4.2.2,CREMAS Y LECHES CONSERVADAS,0.1023,
+2023,1.1.4.3.1,BEBIDAS VEGETALES,0.02403,
+2023,1.1.4.4.1,QUESOS,0.99125,Queso Chanco | Queso Gauda | Queso Mantecoso
+2023,1.1.4.5.1,YOGURES Y PRODUCTOS SIMILARES,0.33643,Yoghurt (vainilla ó frutilla)
+2023,1.1.4.6.1,POSTRES LÁCTEOS,0.22855,
+2023,1.1.4.7.1,HUEVOS,0.47199,Huevo blanco grande (primera) | Huevo color grande (primera)
+2023,1.1.5.1.1,ACEITE VEGETAL Y DE MARAVILLA,0.31637,Aceite vegetal | Aceite maravilla
+2023,1.1.5.1.2,ACEITE DE OLIVA,0.06744,Aceite de oliva
+2023,1.1.5.2.1,MANTEQUILLA,0.20964,Mantequilla con sal
+2023,1.1.5.3.1,MARGARINA,0.07009,Margarina
+2023,1.1.6.1.1,PALTAS,0.44206,Palta
+2023,1.1.6.1.2,FRUTAS DE ESTACIÓN,0.39019,Ciruela | Durazno | Frutilla | Kiwi | Melón | Nectarín | Sandia | Tuna | Uva
+2023,1.1.6.1.3,PLÁTANOS,0.20535,Plátano
+2023,1.1.6.1.4,LIMONES,0.15015,Limón
+2023,1.1.6.1.5,NARANJAS,0.12263,Naranja
+2023,1.1.6.1.6,MANZANAS,0.11352,Manzana
+2023,1.1.6.1.7,PERAS,0.02868,Pera
+2023,1.1.6.2.1,FRUTOS SECOS,0.14506,
+2023,1.1.6.3.1,FRUTAS PRESERVADAS,0.02926,
+2023,1.1.7.1.1,VERDURAS DE ESTACIÓN,0.41119,Alcachofa | Brócoli | Choclo | Coliflor | Pepino ensalada | Poroto verde | Repollo | Espinaca
+2023,1.1.7.1.2,TOMATES,0.33514,Tomate
+2023,1.1.7.1.3,LECHUGAS,0.18525,Lechuga
+2023,1.1.7.1.4,CEBOLLAS Y CEBOLLINES,0.14496,Cebolla
+2023,1.1.7.1.5,ZAPALLOS,0.09399,Zapallo
+2023,1.1.7.1.6,ZANAHORIAS,0.08344,Zanahoria
+2023,1.1.7.1.7,PIMIENTOS MORRONES,0.07618,Pimiento
+2023,1.1.7.1.8,ZAPALLOS ITALIANOS,0.03757,Zapallo italiano
+2023,1.1.7.2.1,PAPAS,0.38981,Papa
+2023,1.1.7.3.1,LEGUMBRES SECAS,0.12616,Arvejas verdes partidas | Garbanzos sin piel | Lentejas 6 mm | Poroto Hallado | Poroto Negro | Poroto Tórtola
+2023,1.1.7.4.1,VERDURAS CONGELADAS,0.12297,
+2023,1.1.7.5.1,PAPAS FRITAS,0.15577,
+2023,1.1.7.5.2,VERDURAS ENCURTIDAS,0.07432,
+2023,1.1.7.5.3,PAPAS CONGELADAS Y DESHIDRATADAS,0.07302,
+2023,1.1.7.5.4,HORTALIZAS EN CONSERVA,0.05416,
+2023,1.1.7.5.5,SUSTITUTOS VEGETALES DE CARNE,0.03214,
+2023,1.1.8.1.1,AZÚCAR,0.12692,Azúcar
+2023,1.1.8.2.1,ENDULZANTES,0.05791,
+2023,1.1.8.3.1,MERMELADAS,0.09165,
+2023,1.1.8.3.2,POSTRES NO LÁCTEOS,0.0611,
+2023,1.1.8.4.1,CHOCOLATES,0.35149,
+2023,1.1.8.5.1,HELADOS,0.25666,
+2023,1.1.8.6.1,CARAMELOS Y GOMAS DE MASCAR,0.14437,
+2023,1.1.9.1.1,PLATOS PREPARADOS ADQUIRIDOS EN TIENDAS Y SUPERMERCADOS,0.66987,
+2023,1.1.9.2.1,ALIMENTOS PARA BEBÉ,0.07593,
+2023,1.1.9.3.1,ADEREZOS,0.24924,
+2023,1.1.9.3.2,SALSAS DE TOMATE,0.1046,
+2023,1.1.9.3.3,SAL,0.02449,
+2023,1.1.9.4.1,ALIÑOS,0.10145,
+2023,1.1.9.5.1,SUPLEMENTOS ALIMENTICIOS Y NUTRICIONALES,0.12902,
+2023,1.1.9.5.2,SOPAS Y CREMAS,0.07266,
+2023,1.1.9.5.3,MANJAR Y DULCES UNTABLES,0.04763,
+2023,1.2.1.1.1,JUGOS LÍQUIDOS,0.31511,
+2023,1.2.1.1.2,JUGOS EN POLVO,0.06448,
+2023,1.2.2.1.1,CAFÉ Y SUCEDÁNEOS,0.21962,
+2023,1.2.3.1.1,TÉ,0.18816,
+2023,1.2.4.1.1,AGUA EMBOTELLADA,0.29368,
+2023,1.2.5.1.1,BEBIDAS GASEOSAS,0.96972,
+2023,1.2.6.1.2,OTRAS BEBIDAS NO ALCOHÓLICAS,0.19001,

@@ -1,0 +1,97 @@
+mes_referencia,fecha_publicacion,estado,fuente,verificacion
+2018-12,2019-01-08,publicado,"Boletín estadístico IPC ed. 242, fecha de portada",calendario=OK
+2019-01,2019-02-08,publicado,"Boletín estadístico IPC ed. 243, fecha de portada",calendario=OK
+2019-02,2019-03-08,publicado,"Boletín estadístico IPC ed. 244, fecha de portada",calendario=OK
+2019-03,2019-04-08,publicado,"Boletín estadístico IPC ed. 245, fecha de portada",calendario=OK
+2019-04,2019-05-08,publicado,"Boletín estadístico IPC ed. 246, fecha de portada",calendario=OK
+2019-05,2019-06-07,publicado,"Boletín estadístico IPC ed. 247, fecha de portada",calendario=OK
+2019-06,2019-07-08,publicado,"Boletín estadístico IPC ed. 248, fecha de portada",calendario=OK
+2019-07,2019-08-08,publicado,"Boletín estadístico IPC ed. 249, fecha de portada",calendario=OK
+2019-08,2019-09-06,publicado,"Boletín estadístico IPC ed. 250, fecha de portada",calendario=OK
+2019-09,2019-10-08,publicado,"Boletín estadístico IPC ed. 251, fecha de portada",calendario=OK
+2019-10,2019-11-08,publicado,"Boletín estadístico IPC ed. 252, fecha de portada",comunicado=OK; calendario=OK
+2019-11,2019-12-06,publicado,"Boletín estadístico IPC ed. 253, fecha de portada",calendario=OK
+2019-12,2020-01-08,publicado,"Boletín estadístico IPC ed. 254, fecha de portada",solo boletin
+2020-01,2020-02-07,publicado,"Boletín estadístico IPC ed. 255, fecha de portada",solo boletin
+2020-02,2020-03-06,publicado,"Boletín estadístico IPC ed. 256, fecha de portada",solo boletin
+2020-03,2020-04-08,publicado,"Boletín estadístico IPC ed. 257, fecha de portada",solo boletin
+2020-04,2020-05-08,publicado,"Boletín estadístico IPC ed. 258, fecha de portada",solo boletin
+2020-05,2020-06-05,publicado,"Boletín estadístico IPC ed. 259, fecha de portada",solo boletin
+2020-06,2020-07-08,publicado,"Boletín estadístico IPC ed. 260, fecha de portada",solo boletin
+2020-07,2020-08-07,publicado,"Boletín estadístico IPC ed. 261, fecha de portada",solo boletin
+2020-08,2020-09-08,publicado,"Boletín estadístico IPC ed. 262, fecha de portada",solo boletin
+2020-09,2020-10-08,publicado,"Boletín estadístico IPC ed. 263, fecha de portada",solo boletin
+2020-10,2020-11-06,publicado,"Boletín estadístico IPC ed. 264, fecha de portada",comunicado=OK
+2020-11,2020-12-07,publicado,"Boletín estadístico IPC ed. 265, fecha de portada",solo boletin
+2020-12,2021-01-08,publicado,"Boletín estadístico IPC ed. 266, fecha de portada",solo boletin
+2021-01,2021-02-08,publicado,"Boletín estadístico IPC ed. 267, fecha de portada",solo boletin
+2021-02,2021-03-08,publicado,"Boletín estadístico IPC ed. 268, fecha de portada",solo boletin
+2021-03,2021-04-08,publicado,"Boletín estadístico IPC ed. 269, fecha de portada",comunicado=OK
+2021-04,2021-05-07,publicado,"Boletín estadístico IPC ed. 270, fecha de portada",comunicado=OK
+2021-05,2021-06-08,publicado,"Boletín estadístico IPC ed. 271, fecha de portada",comunicado=OK
+2021-06,2021-07-08,publicado,"Boletín estadístico IPC ed. 272, fecha de portada",comunicado=OK
+2021-07,2021-08-06,publicado,"Boletín estadístico IPC ed. 273, fecha de portada",comunicado=OK
+2021-08,2021-09-08,publicado,"Boletín estadístico IPC ed. 274, fecha de portada",comunicado=OK
+2021-09,2021-10-08,publicado,"Boletín estadístico IPC ed. 275, fecha de portada",comunicado=OK
+2021-10,2021-11-08,publicado,"Boletín estadístico IPC ed. 276, fecha de portada",comunicado=OK
+2021-11,2021-12-07,publicado,"Boletín estadístico IPC ed. 277, fecha de portada",comunicado=OK
+2021-12,2022-01-07,publicado,"Boletín estadístico IPC ed. 278, fecha de portada",comunicado=OK; calendario=OK
+2022-01,2022-02-08,publicado,"Boletín estadístico IPC ed. 279, fecha de portada",comunicado=OK; calendario=OK
+2022-02,2022-03-08,publicado,"Boletín estadístico IPC ed. 280, fecha de portada",comunicado=OK; calendario=OK
+2022-03,2022-04-08,publicado,"Boletín estadístico IPC ed. 281, fecha de portada",comunicado=OK; calendario=OK
+2022-04,2022-05-06,publicado,"Boletín estadístico IPC ed. 282, fecha de portada",comunicado=OK; calendario=OK
+2022-05,2022-06-08,publicado,"Boletín estadístico IPC ed. 283, fecha de portada",comunicado=OK; calendario=OK
+2022-06,2022-07-08,publicado,"Boletín estadístico IPC ed. 284, fecha de portada",comunicado=OK; calendario=OK
+2022-07,2022-08-08,publicado,"Boletín estadístico IPC ed. 285, fecha de portada",comunicado=OK; calendario=OK
+2022-08,2022-09-08,publicado,"Boletín estadístico IPC ed. 286, fecha de portada",comunicado=OK; calendario=OK
+2022-09,2022-10-07,publicado,"Boletín estadístico IPC ed. 287, fecha de portada",comunicado=OK; calendario=OK
+2022-10,2022-11-08,publicado,"Boletín estadístico IPC ed. 288, fecha de portada",comunicado=OK; calendario=OK
+2022-11,2022-12-07,publicado,"Boletín estadístico IPC ed. 289, fecha de portada",comunicado=OK; calendario=OK
+2022-12,2023-01-06,publicado,"Boletín estadístico IPC ed. 290, fecha de portada",comunicado=OK
+2023-01,2023-02-08,publicado,"Boletín estadístico IPC ed. 291, fecha de portada",comunicado=OK
+2023-02,2023-03-08,publicado,"Boletín estadístico IPC ed. 292, fecha de portada",comunicado=OK
+2023-03,2023-04-06,publicado,"Boletín estadístico IPC ed. 293, fecha de portada",comunicado=OK
+2023-04,2023-05-08,publicado,"Boletín estadístico IPC ed. 294, fecha de portada",comunicado=OK
+2023-05,2023-06-08,publicado,"Boletín estadístico IPC ed. 295, fecha de portada",comunicado=OK
+2023-06,2023-07-07,publicado,"Boletín estadístico IPC ed. 296, fecha de portada",comunicado=OK
+2023-07,2023-08-08,publicado,"Boletín estadístico IPC ed. 297, fecha de portada",comunicado=OK
+2023-08,2023-09-08,publicado,"Boletín estadístico IPC ed. 298, fecha de portada",comunicado=OK
+2023-09,2023-10-06,publicado,"Boletín estadístico IPC ed. 299, fecha de portada",comunicado=OK
+2023-10,2023-11-08,publicado,"Boletín estadístico IPC ed. 300, fecha de portada",comunicado=OK
+2023-11,2023-12-07,publicado,"Boletín estadístico IPC ed. 301, fecha de portada",comunicado=OK
+2023-12,2024-01-08,publicado,"Boletín estadístico IPC ed. 302, fecha de portada",comunicado=OK
+2024-01,2024-02-08,publicado,"Boletín estadístico IPC ed. 303, fecha de portada",comunicado=OK
+2024-02,2024-03-08,publicado,"Boletín estadístico IPC ed. 304, fecha de portada",comunicado=OK
+2024-03,2024-04-08,publicado,"Boletín estadístico IPC ed. 305, fecha de portada",comunicado=OK
+2024-04,2024-05-08,publicado,"Boletín estadístico IPC ed. 306, fecha de portada",comunicado=OK
+2024-05,2024-06-07,publicado,"Boletín estadístico IPC ed. 307, fecha de portada",comunicado=OK
+2024-06,2024-07-08,publicado,"Boletín estadístico IPC ed. 308, fecha de portada",comunicado=OK
+2024-07,2024-08-08,publicado,"Boletín estadístico IPC ed. 309, fecha de portada",comunicado=OK
+2024-08,2024-09-06,publicado,"Boletín estadístico IPC ed. 310, fecha de portada",comunicado=OK
+2024-09,2024-10-08,publicado,"Boletín estadístico IPC ed. 311, fecha de portada",comunicado=OK
+2024-10,2024-11-08,publicado,"Boletín estadístico IPC ed. 312, fecha de portada",comunicado=OK
+2024-11,2024-12-06,publicado,"Boletín estadístico IPC ed. 313, fecha de portada",comunicado=OK
+2024-12,2025-01-08,publicado,"Boletín estadístico IPC ed. 314, fecha de portada",comunicado=OK
+2025-01,2025-02-07,publicado,"Boletín estadístico IPC ed. 315, fecha de portada",comunicado=OK
+2025-02,2025-03-07,publicado,"Boletín estadístico IPC ed. 316, fecha de portada",comunicado=OK
+2025-03,2025-04-08,publicado,"Boletín estadístico IPC ed. 317, fecha de portada",comunicado=OK
+2025-04,2025-05-08,publicado,"Boletín estadístico IPC ed. 318, fecha de portada",comunicado=OK
+2025-05,2025-06-06,publicado,"Boletín estadístico IPC ed. 319, fecha de portada",comunicado=OK
+2025-06,2025-07-08,publicado,"Boletín estadístico IPC ed. 320, fecha de portada",comunicado=OK
+2025-07,2025-08-08,publicado,"Boletín estadístico IPC ed. 321, fecha de portada",comunicado=OK
+2025-08,2025-09-08,publicado,"Boletín estadístico IPC ed. 322, fecha de portada",comunicado=OK
+2025-09,2025-10-08,publicado,"Boletín estadístico IPC ed. 323, fecha de portada",comunicado=OK
+2025-10,2025-11-07,publicado,"Boletín estadístico IPC ed. 324, fecha de portada",comunicado=OK
+2025-11,2025-12-05,publicado,"Boletín estadístico IPC ed. 325, fecha de portada",comunicado=OK
+2025-12,2026-01-08,publicado,"Boletín estadístico IPC ed. 326, fecha de portada",comunicado=OK; calendario=OK
+2026-01,2026-02-06,publicado,"Boletín estadístico IPC ed. 327, fecha de portada",comunicado=OK; calendario=OK
+2026-02,2026-03-06,publicado,"Boletín estadístico IPC ed. 328, fecha de portada",comunicado=OK; calendario=OK
+2026-03,2026-04-08,publicado,"Boletín estadístico IPC ed. 329, fecha de portada",comunicado=OK; calendario=OK
+2026-04,2026-05-08,publicado,"Boletín estadístico IPC ed. 330, fecha de portada",comunicado=OK; calendario=OK
+2026-05,2026-06-08,publicado,"Boletín estadístico IPC ed. 331, fecha de portada",comunicado=OK; calendario=OK
+2026-06,2026-07-08,publicado,"Boletín estadístico IPC ed. 332, fecha de portada",comunicado=OK; calendario=OK
+2026-07,2026-08-07,publicado,"Boletín estadístico IPC ed. 333, fecha de portada",comunicado=OK; calendario=OK
+2026-08,2026-09-08,publicado,"Boletín estadístico IPC ed. 334, fecha de portada",comunicado=OK; calendario=OK
+2026-09,2026-10-08,programado,Calendario de publicaciones INE 2026 (actualizado el 10-04-2026),agenda web del INE al 05-10-2026
+2026-10,2026-11-06,programado,Calendario de publicaciones INE 2026 (actualizado el 10-04-2026),agenda web del INE al 05-10-2026
+2026-11,2026-12-07,programado,Calendario de publicaciones INE 2026 (actualizado el 10-04-2026),agenda web del INE al 05-10-2026
