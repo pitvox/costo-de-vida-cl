@@ -239,6 +239,20 @@ def test_graficos_textos(sitio):
     assert "No constituye asesoría" not in h
 
 
+def test_pie_con_la_fuente_en_una_linea(sitio):
+    """Pedido del dueño: el pie solo cita la fuente (la licencia CC-BY lo
+    pide); cómo se arma cada precio está en metodología."""
+    fuente = ('<p class="pie-attr">Fuente: precios al consumidor de ODEPA '
+              '(<a href="https://datos.odepa.gob.cl">datos.odepa.gob.cl</a>, licencia '
+              'CC-BY), deflactados con el IPC.</p>')
+    for pagina in _paginas(sitio):
+        assert fuente in _leer(sitio, pagina), pagina
+    met = " ".join(_visible(_leer(sitio, "metodologia.html")).split())
+    for detalle in ["suele ser menor que el precio de supermercado", "Canastas fijas.",
+                    "ferias libres, supermercados y carnicerías"]:
+        assert detalle in met, detalle
+
+
 def test_deslinde_solo_en_metodologia(sitio):
     """Pedido del dueño: el deslinde (no es asesoría de inversión) va una
     sola vez en el sitio, en la sección Deslinde de metodología, con su

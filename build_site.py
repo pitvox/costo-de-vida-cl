@@ -2518,16 +2518,13 @@ PIE_LINKS = [
     ("privacidad", "Privacidad", f"{SITIO}/privacidad.html"),
     ("datos", "Datos abiertos (resumen.json)", f"{SITIO}/resumen.json"),
 ]
-# atribución ODEPA CC-BY: el mismo texto que ya tenía el pie de la portada,
-# ahora en el pie de todas las páginas. El deslinde (no es asesoría de
-# inversión) va una sola vez en el sitio: en la sección Deslinde de
-# metodología, el texto del dueño
+# atribución ODEPA CC-BY en el pie de todas las páginas, en una línea: cómo
+# se arma cada precio (promedio de los puntos encuestados, canastas fijas,
+# unidades) está en metodología. El deslinde (no es asesoría de inversión)
+# va una sola vez en el sitio: en la sección Deslinde de metodología, el
+# texto del dueño
 PIE_ATTR = ('Fuente: precios al consumidor de ODEPA (<a href="https://datos.odepa.gob.cl">'
-            'datos.odepa.gob.cl</a>, licencia CC-BY), deflactados con el IPC. Cada precio es el '
-            'promedio de los puntos que ODEPA encuesta cada semana en la Región '
-            'Metropolitana: ferias libres, supermercados y carnicerías. Por eso suele '
-            'ser menor que el precio de supermercado. Canastas fijas; precios '
-            'normalizados a kilo, unidad o litro según el envase que cotiza ODEPA.')
+            'datos.odepa.gob.cl</a>, licencia CC-BY), deflactados con el IPC.')
 
 # ---------------- Identidad común: fuentes, tokens y base ----------------
 # Una sola llamada a Google Fonts, igual en todas las páginas, con los pesos
