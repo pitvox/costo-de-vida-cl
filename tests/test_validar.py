@@ -11,6 +11,7 @@ import pytest
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RAIZ)
+import indices  # noqa: E402
 import validar  # noqa: E402
 
 SEMANA_ANT = "2026-09-14"
@@ -40,7 +41,13 @@ def indices_nuevo(n_extra=1, productos=120):
             "nombre": f"Índice {code.title()}", "subtitulo": "x",
             "fecha": "21-09-2026", "costo_nominal": costo, "costo_real": costo,
             "percentil": 50, "zscore": 0.1, "vs_promedio": 2, "veredicto": "NORMAL",
-            "color": "#e0a83c", "n": n, "componentes": comp,
+            "color": "#e0a83c",
+            # el veredicto por temporada, como lo escribe indices.py
+            "base_veredicto": "mismo mes, ultimos 10 anios",
+            "percentil_temporada": 60, "anios_temporada": 10,
+            "temporada": {"mes": 9, "anios": 10, "debajo": 6, "encima": 4,
+                          "percentil": 60, "zona": "NORMAL"},
+            "n": n, "componentes": comp,
             "estacionalidad": {}, "velas": [], "nominal": real, "real": real,
         }
     for i in range(productos):
@@ -110,11 +117,14 @@ def test_conteo_mas_uno_y_variacion_chica_pasa(entorno, capsys):
     assert code == 0, summary
     assert "PASA" in summary and validar.KO not in summary
     out = capsys.readouterr().out
-    assert "OK asado: $52.000 | p50 | NORMAL | 800→801" in out
+    assert "OK asado: $52.000 | p50 | temporada 60 (10 años) | NORMAL | 800→801" in out
     assert out.count("OK ") == 4
-    # la tabla trae los 4 índices
+    # la tabla trae los 4 índices, con la columna de la temporada
     for c in validar.INDICES:
         assert f"| {c} |" in summary
+    assert "| Percentil | Temporada | Veredicto |" in summary
+    assert "| asado | $52.000 | 50 | 60 (10 años) | NORMAL |" in summary
+    assert "asado: base del veredicto" in summary
 
 
 def test_conteo_mas_cinco_en_una_semana_falla(entorno):
@@ -222,6 +232,61 @@ def test_resumen_igual_al_de_build_site():
     propio = validar.resumen_desde_indices(data)
     assert propio["semana"] == esperado["semana"]
     assert propio["indices"] == esperado["indices"]
+    # los campos nuevos están en los dos, y los de antes siguen
+    for r in esperado["indices"].values():
+        assert list(r)[:8] == ["nombre", "subtitulo", "costo_pesos_hoy", "veredicto",
+                               "percentil", "vs_promedio_pct", "variacion_semanal_pct",
+                               "semanas_historia"]
+        assert {"percentil_temporada", "anios_temporada", "base_veredicto"} <= set(r)
+    # también sin temporada (menos de 5 años del mes): los dos null
+    data["indices"]["fruta"].update(indices.resumen_temporada([], "CARO"))
+    g["DATA"] = copy.deepcopy(data)
+    g["generar_resumen"]()
+    assert validar.resumen_desde_indices(data)["indices"] == escrito["json"]["indices"]
+    assert escrito["json"]["indices"]["fruta"]["base_veredicto"] == "toda la historia"
+    assert escrito["json"]["indices"]["fruta"]["anios_temporada"] is None
+
+
+def test_bases_del_veredicto_iguales_a_las_de_indices():
+    """validar.py no importa indices.py (solo stdlib): sus constantes deben
+    ser las mismas."""
+    assert validar.BASE_TEMPORADA == indices.BASE_TEMPORADA == "mismo mes, ultimos 10 anios"
+    assert validar.BASE_HISTORIA == indices.BASE_HISTORIA
+    assert validar.ANIOS_TEMPORADA == (indices.TEMPORADA_MIN, indices.TEMPORADA_ANIOS)
+
+
+@pytest.mark.parametrize("campos, ok", [
+    ({"base_veredicto": "mismo mes, ultimos 10 anios", "anios_temporada": 10,
+      "percentil_temporada": 70}, True),
+    ({"base_veredicto": "mismo mes, ultimos 10 anios", "anios_temporada": 5,
+      "percentil_temporada": 0}, True),
+    ({"base_veredicto": "toda la historia", "anios_temporada": None,
+      "percentil_temporada": None}, True),
+    ({"base_veredicto": "mismo mes, ultimos 10 anios", "anios_temporada": 4,
+      "percentil_temporada": 50}, False),
+    ({"base_veredicto": "mismo mes, ultimos 10 anios", "anios_temporada": 11,
+      "percentil_temporada": 50}, False),
+    ({"base_veredicto": "mismo mes, ultimos 10 anios", "anios_temporada": 10,
+      "percentil_temporada": 101}, False),
+    ({"base_veredicto": "mismo mes, ultimos 10 anios", "anios_temporada": None,
+      "percentil_temporada": None}, False),
+    ({"base_veredicto": "toda la historia", "anios_temporada": 10,
+      "percentil_temporada": 70}, False),
+    ({"base_veredicto": None, "anios_temporada": None, "percentil_temporada": None}, False),
+])
+def test_chequeo_de_la_base_del_veredicto(campos, ok):
+    assert validar.chequear_base("asado", campos)[1] is ok
+
+
+def test_indices_json_sin_la_base_del_veredicto_falla(entorno):
+    """Un indices.json sin el veredicto por temporada (de un indices.py
+    anterior) no se publica."""
+    for d in entorno["indices"]["indices"].values():
+        for k in ("base_veredicto", "percentil_temporada", "anios_temporada", "temporada"):
+            del d[k]
+    code, summary = entorno["correr"]()
+    assert code == 1
+    assert "asado: base del veredicto" in summary and "None; percentil_temporada None" in summary
 
 
 # ---------------- Limpieza de productos (clave "descartes") ----------------

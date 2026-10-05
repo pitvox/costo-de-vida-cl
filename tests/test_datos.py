@@ -20,7 +20,7 @@ import pytest
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RAIZ)
-from indices import BASKETS  # noqa: E402
+from indices import BASKETS, COLORES, resumen_temporada  # noqa: E402
 
 FIN = datetime.date(2026, 9, 21)   # lunes
 LIMITE_PORTADA = 200_000           # bytes, sin comprimir
@@ -32,7 +32,10 @@ def _semanas(ini: datetime.date) -> list:
 
 
 def indices_realista() -> dict:
-    out = {"generado": "2026-09-26", "indices": {}, "productos": {}, "descartes": []}
+    """Con la forma que escribe indices.py: el veredicto por temporada de cada
+    índice (resumen_temporada) y el mes del último IPC."""
+    out = {"generado": "2026-09-26", "ipc_mes": "2026-08", "indices": {}, "productos": {},
+           "descartes": []}
     inicios = [datetime.date(2008, 1, 7), datetime.date(2008, 1, 7),
                datetime.date(2009, 3, 2), datetime.date(2012, 6, 4)]
     for k, (code, meta) in enumerate(BASKETS.items()):
@@ -62,6 +65,9 @@ def indices_realista() -> dict:
                                "mes_barato": 3, "mes_caro": 9, "amplitud": 4},
             "velas": velas, "nominal": nominal, "real": real,
         }
+        d = out["indices"][code]
+        d.update(resumen_temporada(real, d["veredicto"]))
+        d["color"] = COLORES[d["veredicto"]]
     grupos = ["Carne de Vacuno", "Frutas", "Hortalizas", "Lácteos - Huevos - Margarinas"]
     for i in range(125):
         ini = datetime.date(2008, 1, 7) + datetime.timedelta(weeks=(i % 5) * 40)

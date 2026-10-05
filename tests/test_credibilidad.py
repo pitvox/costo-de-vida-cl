@@ -40,7 +40,8 @@ def _producto(label, grupo, v, unidad="kg", propio=None, fin=FIN):
 
 
 def sintetico() -> dict:
-    out = {"generado": "2026-09-26", "indices": {}, "productos": {}, "descartes": []}
+    out = {"generado": "2026-09-26", "ipc_mes": "2026-08", "indices": {}, "productos": {},
+           "descartes": []}
     colores = {"BARATO": "#5bbf7a", "NORMAL": "#e0a83c", "CARO": "#e0552f"}
     for k, (code, meta) in enumerate(BASKETS.items()):
         fechas = [(FIN - datetime.timedelta(weeks=99 - i)).isoformat() for i in range(100)]
@@ -52,7 +53,12 @@ def sintetico() -> dict:
             "nombre": meta["nombre"], "subtitulo": meta["subtitulo"],
             "fecha": "21-09-2026", "costo_nominal": 10815, "costo_real": 10815,
             "percentil": 82, "zscore": 0.1, "vs_promedio": [14, 0, -5, 6][k],
-            "veredicto": ver, "color": colores[ver], "n": len(real),
+            "veredicto": ver, "color": colores[ver],
+            # la forma de indices.json desde el veredicto por temporada: con
+            # 100 semanas no hay temporada y vale el veredicto de la historia
+            "base_veredicto": "toda la historia", "percentil_temporada": None,
+            "anios_temporada": None, "temporada": None,
+            "n": len(real),
             "componentes": [{"label": lab, "qty": qty, "unidad": uni,
                              "odepa_unit": "$/kg", "factor": 1.0, "mismatch": False,
                              "precio_ult": 1000, "aporte": 1000}
@@ -171,19 +177,22 @@ def test_santiago_en_titulos_y_region_metropolitana_en_descripciones(sitio):
     tomate = _leer(sitio, "productos/tomate.html")
     assert "<title>Precio del tomate en Santiago: histórico desde" in tomate
     assert "por kilo en la Región Metropolitana (promedio de ferias" in tomate
-    assert '<div class="miga" id="miga">Precio real en Santiago, en pesos de hoy</div>' in tomate
+    assert '<div class="miga">Precio de esta semana en Santiago</div>' in tomate
 
 
 def test_numero_de_productos_calculado_en_el_build(sitio):
     # 6 con datos recientes; el maracuyá es de 2014
     listado = _leer(sitio, "productos/index.html")
-    assert "<title>Precios de 6 alimentos en Santiago, en pesos de hoy | Carestía</title>" in listado
+    assert ("<title>Precios de 6 alimentos en Santiago, en pesos de agosto 2026 | "
+            "Carestía</title>") in listado
     assert "Precios de 6 productos en la Región Metropolitana" in listado
     assert "ver los 6 productos</a>" in _leer(sitio, "404.html")
     for md in ("acerca.md", "404.md"):
         with open(os.path.join(RAIZ, "textos", md), encoding="utf-8") as fh:
             texto = fh.read()
-        assert "125" not in texto and "{productos}" in texto, md
+        assert "125" not in texto, md
+        # acerca dice "más de cien productos" (texto del dueño); el 404, la cifra
+        assert ("más de cien productos" if md == "acerca.md" else "{productos}") in texto, md
 
 
 def test_api_publica_en_el_pie(sitio):
@@ -271,10 +280,11 @@ def test_cada_ficha_indice_y_portada_tiene_su_tarjeta(sitio):
 
 def test_la_frase_y_el_alt_de_las_tarjetas(sitio):
     asado = _leer(sitio, "indices/asado.html")
-    assert ('content="Índice Asado: $10.815 en pesos de hoy, CARO, semana del 21-09-2026. '
+    # menos de 5 años de cada mes: la frase contra toda la historia
+    assert ('content="Índice Asado: $10.815, CARO, semana del 21-09-2026. '
             'Más caro que en 8 de cada 10 semanas desde 2024, descontada la inflación."') in asado
     tomate = _leer(sitio, "productos/tomate.html")
-    assert ('content="Tomate: $1.200 por kilo, en pesos de hoy, semana del 21-09-2026. '
+    assert ('content="Tomate: $1.200 por kilo, semana del 21-09-2026. '
             'Más caro que en 10 de cada 10 semanas desde 2025, descontada la inflación."') in tomate
     papa = _leer(sitio, "productos/papa.html")
     assert "Más barata que en 10 de cada 10 semanas desde 2025, descontada la inflación." in papa

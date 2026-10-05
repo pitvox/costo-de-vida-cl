@@ -161,7 +161,9 @@ async function temporalidades(info, semanales, t, completo) {
   ok(UFJ || !tickers.some(t => /-uf$/.test(t)), 'sin datos/uf.json no hay símbolos en UF');
 
   // ---- resolveSymbol ----
-  const LARGO = { real: ', en pesos de hoy', epoca: ', precio de la época', uf: ', en UF' };
+  // el nombre largo de la serie ajustada dice el mes del último IPC
+  ok(/^pesos de [a-z]+ \d{4}$/.test(TV.PESOS), 'PESOS: el mes del último IPC (' + TV.PESOS + ')');
+  const LARGO = { real: ', en ' + TV.PESOS, epoca: ', precio de la época', uf: ', en UF' };
   const CORTO = { real: '', epoca: ', precio de la época', uf: ', en UF' };
   for (const s of lista) {
     const info = await llamar((res, rej) => feed.resolveSymbol(s.ticker, res, rej));
@@ -364,7 +366,7 @@ async function temporalidades(info, semanales, t, completo) {
     vistos.add(t);
     const info = await llamar((res, rej) => feed.resolveSymbol(t.toUpperCase(), res, rej));
     ok(info.ticker === t && info.description === 'Tu canasta' &&
-       info.long_description === 'Tu canasta, en pesos de hoy', nombre + ': se llama Tu canasta');
+       info.long_description === 'Tu canasta, en ' + TV.PESOS, nombre + ': se llama Tu canasta');
     ok(info.type !== 'index' && !/[íi]ndice/i.test(info.description + info.long_description),
        nombre + ': nunca índice');
     ok(info.visible_plots_set === 'c' && info.pricescale === 1 && info.currency_code === 'CLP',

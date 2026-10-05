@@ -1,5 +1,9 @@
 """
-uf.py: valor de la UF de cada semana, para la opción "UF" de los gráficos.
+uf.py: valor de la UF de cada semana, en datos/uf.json.
+
+La UF salió de la interfaz del sitio (decisión del dueño): build_site.py ya no
+lee este archivo y ninguna página la ofrece, pero se sigue escribiendo y se
+publica con datos/.
 
 Corre aparte de indices.py (no lo importa ni lo toca). Pide la serie diaria de
 la UF al Banco Central de Chile (F073.UFF.PRE.Z.D) con los secretos BCCH_USER
@@ -19,8 +23,8 @@ siguiente), y la serie corta en el primero que falte.
 
 Nunca hace fallar el build. Si no hay UF (ninguna fuente respondió, o la serie
 no pasó la validación), deja un ::warning:: en el log, borra un datos/uf.json
-viejo si lo hubiera y termina con código 0: el sitio se publica sin la opción
-UF. Las credenciales nunca se imprimen: todo mensaje de error pasa por limpiar().
+viejo si lo hubiera y termina con código 0: el sitio se publica sin
+datos/uf.json. Las credenciales nunca se imprimen: todo mensaje de error pasa por limpiar().
 
 Solo usa requests (+ stdlib).
 
@@ -378,7 +382,7 @@ def falla_suave(motivo: str, ruta: str = ARCHIVO) -> int:
                     borrado = f" Se borró el {ruta} anterior."
         except OSError as e:
             borrado += f" No se pudo borrar {archivo}: {limpiar(e)}."
-    aviso = (f"No se pudo obtener la UF; el sitio se publica sin la opción UF. "
+    aviso = (f"No se pudo obtener la UF; el sitio se publica sin datos/uf.json. "
              f"Motivo: {motivo}.{borrado}")
     print(f"::warning::{aviso}")
     escribir_summary([aviso])
@@ -436,7 +440,7 @@ def _correr(hoy: datetime.date) -> int:
 
 
 def main(hoy: datetime.date = None) -> int:
-    """Siempre devuelve 0: sin UF el sitio se publica igual, sin esa opción."""
+    """Siempre devuelve 0: sin UF el sitio se publica igual, sin datos/uf.json."""
     try:
         return _correr(hoy or hoy_chile())
     except Exception as e:  # noqa
