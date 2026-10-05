@@ -87,7 +87,8 @@ def sitio(tmp_path_factory):
     shutil.copytree(os.path.join(RAIZ, "textos"), d / "textos")
     data = indices_realista()
     (d / "indices.json").write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
-    env = dict(os.environ, PYTHONPATH=RAIZ, PYTHONIOENCODING="utf-8")
+    env = dict(os.environ, PYTHONPATH=RAIZ, PYTHONIOENCODING="utf-8",
+               CARESTIA_TARJETAS="0")
     env.pop("CARESTIA_BORRADOR", None)
     r = subprocess.run([sys.executable, os.path.join(RAIZ, "build_site.py")],
                        cwd=d, env=env, capture_output=True, text=True)
@@ -193,7 +194,7 @@ def test_catalogo(sitio):
     assert len(cat["productos"]) == len(data["productos"])
     campos = {"slug", "clave", "nombre", "grupo", "unidad", "semana", "precio_pesos_hoy",
               "variacion_1s_pct", "variacion_13s_pct", "variacion_52s_pct",
-              "percentil", "ultimas_52"}
+              "variacion_prom4s_pct", "percentil", "ultimas_52"}
     for f in cat["productos"]:
         assert set(f) == campos
         assert len(f["ultimas_52"]) <= 52 and f["ultimas_52"][-1] == f["precio_pesos_hoy"]
@@ -204,6 +205,15 @@ def test_catalogo(sitio):
     assert f["variacion_1s_pct"] == round((v[-1] / v[-2] - 1) * 100, 1)
     assert f["variacion_13s_pct"] == round((v[-1] / v[-14] - 1) * 100, 1)
     assert f["variacion_52s_pct"] == round((v[-1] / v[-53] - 1) * 100, 1)
+    # contra el promedio de las 4 semanas anteriores, solo si esas 4 y la
+    # actual tienen precio propio (con rango: una de cada siete no lo trae)
+    propias = [x is not None for x in data["productos"]["producto_000"]["min"][-5:]]
+    assert f["variacion_prom4s_pct"] == (
+        round((v[-1] / (sum(v[-5:-1]) / 4) - 1) * 100, 1) if all(propias) else None)
+    # sin rango en indices.json, toda semana con precio cuenta como propia
+    f3 = next(x for x in cat["productos"] if x["clave"] == "producto_003")
+    v3 = data["productos"]["producto_003"]["v"]
+    assert f3["variacion_prom4s_pct"] == round((v3[-1] / (sum(v3[-5:-1]) / 4) - 1) * 100, 1)
     assert f["percentil"] == 100                         # serie creciente
     # grupo con el nombre para mostrar; estacional: null donde no hubo precio
     lac = next(x for x in cat["productos"] if x["clave"] == "producto_003")

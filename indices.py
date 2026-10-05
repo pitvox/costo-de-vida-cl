@@ -169,6 +169,17 @@ def _norm(df: pd.DataFrame, year: int) -> pd.DataFrame:
     else:
         out["region_rm"] = True
 
+    # punto de monitoreo de la fila: sector y tipo de punto ("Oriente |
+    # Supermercado"). Solo lo usa el mínimo de puntos de series_productos;
+    # sin esas columnas queda vacío y ese control no se aplica
+    c_sec = pick("sector")
+    c_tipo = pick("tipo de punto monitoreo", "tipo_punto_monitoreo", "tipo de punto")
+    if c_sec and c_tipo:
+        out["Punto"] = (df[c_sec].astype(str).str.strip() + " | "
+                        + df[c_tipo].astype(str).str.strip())
+    else:
+        out["Punto"] = ""
+
     return out.dropna(subset=["fecha", "Precio promedio"])
 
 
@@ -575,26 +586,56 @@ def _modal(serie) -> str:
 LIMPIEZA_VENTANA = 8      # semanas calendario anteriores
 LIMPIEZA_MIN_OBS = 3      # valores crudos mínimos en la ventana para juzgar
 LIMPIEZA_FACTOR = 5.0     # fuera de [mediana/5, mediana*5] = error de captura
+LIMPIEZA_ANUAL = 52       # semanas CON DATO anteriores (segundo control)
+LIMPIEZA_MIN_PUNTOS = 3   # puntos de monitoreo RM mínimos para publicar una semana
+
+
+def _fuera_de_banda(s: pd.Series, med: pd.Series) -> pd.Series:
+    return s.notna() & med.notna() & ((s < med / LIMPIEZA_FACTOR) |
+                                      (s > med * LIMPIEZA_FACTOR))
 
 
 def limpiar_semanal(s: pd.Series):
     """Limpieza de UNA serie de producto (solo series_productos; los índices
     no pasan por aquí). Recibe la serie semanal W-MON ya promediada, ANTES del
-    ffill, y devuelve (serie_limpia, descartes) con descartes = lista de
-    (semana, precio, mediana).
+    ffill, y devuelve (serie_limpia, descartes, descartes_anuales), los dos
+    últimos como listas de (semana, precio, mediana).
 
     Para cada semana con dato toma los valores CRUDOS de las 8 semanas
     calendario anteriores; con al menos 3, si el valor queda bajo mediana/5 o
     sobre 5*mediana se descarta (NaN, y el ffill posterior la completa como
     cualquier semana sin dato). La ventana usa los crudos, no los limpios: un
     cambio de nivel persistente (ODEPA cambia la unidad) entra en la mediana y
-    se acepta tras unas semanas en vez de congelar la serie para siempre."""
+    se acepta tras unas semanas en vez de congelar la serie para siempre.
+
+    Segundo control, solo donde esa ventana trae menos de 3 valores (una
+    serie con huecos, un producto que vuelve de temporada): la misma banda
+    de un quinto a cinco veces, contra la mediana de las últimas 52 semanas
+    CON DATO (crudas, sin contar las semanas vacías), si hay al menos 3."""
     med = (s.shift(1).rolling(LIMPIEZA_VENTANA, min_periods=LIMPIEZA_MIN_OBS)
            .median())
-    malo = s.notna() & med.notna() & ((s < med / LIMPIEZA_FACTOR) |
-                                      (s > med * LIMPIEZA_FACTOR))
+    malo = _fuera_de_banda(s, med)
+    con_dato = s.dropna()
+    anual = (con_dato.shift(1).rolling(LIMPIEZA_ANUAL, min_periods=LIMPIEZA_MIN_OBS)
+             .median().reindex(s.index).where(med.isna()))
+    malo_anual = _fuera_de_banda(s, anual)
     descartes = [(f, float(s[f]), float(med[f])) for f in s.index[malo]]
-    return s.mask(malo), descartes
+    descartes_anuales = [(f, float(s[f]), float(anual[f])) for f in s.index[malo_anual]]
+    return s.mask(malo | malo_anual), descartes, descartes_anuales
+
+
+def pocos_puntos(s: pd.Series, puntos: pd.Series):
+    """Mínimo de puntos de venta: una semana con dato se publica solo si
+    ODEPA encuestó el producto en al menos LIMPIEZA_MIN_PUNTOS puntos de
+    monitoreo de la RM (sector y tipo de punto distintos: "Oriente |
+    Supermercado", "Mercado Lo Valledor | Mercado Mayorista"). 'puntos' es el
+    conteo por semana W-MON; sin conteo (None) el control no se aplica.
+    Devuelve (máscara de semanas a descartar, [(semana, precio, puntos)])."""
+    if puntos is None:
+        return pd.Series(False, index=s.index), []
+    n = puntos.reindex(s.index).fillna(0)
+    malo = s.notna() & (n < LIMPIEZA_MIN_PUNTOS)
+    return malo, [(f, float(s[f]), int(n[f])) for f in s.index[malo]]
 
 
 def _precios(sub: pd.DataFrame) -> tuple:
@@ -606,7 +647,21 @@ def _precios(sub: pd.DataFrame) -> tuple:
                  for c in ("Precio promedio", "Precio minimo", "Precio maximo"))
 
 
-def series_productos(df: pd.DataFrame, ipc: pd.Series, descartes: list = None) -> dict:
+def _puntos(sub: pd.DataFrame):
+    """Puntos de monitoreo distintos por semana W-MON de las filas de un
+    producto (ver pocos_puntos). None si ninguna fila trae el punto; una
+    semana con alguna fila sin punto queda sin juzgar (infinito)."""
+    if "Punto" not in sub.columns:
+        return None
+    p = sub.set_index("fecha")["Punto"].fillna("").astype(str).sort_index()
+    if not (p != "").any():
+        return None
+    n = p.mask(p == "").resample("W-MON").nunique().astype(float)
+    return n.mask((p == "").astype(int).resample("W-MON").max() > 0, np.inf)
+
+
+def series_productos(df: pd.DataFrame, ipc: pd.Series, descartes: list = None,
+                     anuales: list = None, puntos: list = None) -> dict:
     """Catálogo COMPLETO de productos RM en formato compacto.
 
     Dos pasadas: (1) los productos de las canastas oficiales conservan su
@@ -631,28 +686,41 @@ def series_productos(df: pd.DataFrame, ipc: pd.Series, descartes: list = None) -
     ffill: esas quedan null y la vela va sin mecha.
 
     LIMPIEZA (solo aquí, nunca en los índices): antes del ffill cada serie
-    pasa por limpiar_semanal; si se entrega la lista 'descartes', se le
-    agregan {slug, semana, precio, mediana} en pesos nominales por unidad
-    base."""
+    pasa por limpiar_semanal (mediana de 8 semanas y, con ventana escasa, la
+    de las últimas 52 semanas con dato) y por pocos_puntos (al menos 3 puntos
+    de monitoreo en la RM). Si se entregan las listas, se les agregan los
+    descartes en pesos nominales por unidad base: 'descartes' y 'anuales'
+    {slug, semana, precio, mediana}; 'puntos' {slug, semana, precio,
+    puntos}. Una semana puede caer en más de una. Se informan también los de
+    un producto que se queda sin ninguna semana publicable (no entra al
+    JSON)."""
     ipc_hoy = float(ipc.iloc[-1])
     der = ipc.rename("ipc").rename_axis("fecha").reset_index().sort_values("fecha")
     out, excluidos = {}, []
 
-    def emitir(slug, label, uni, grupo, precios, minimos, maximos, contenido):
+    def emitir(slug, label, uni, grupo, precios, minimos, maximos, contenido, n_puntos):
         def semanal(x):
             return (x / contenido).resample("W-MON").mean()
-        s, fuera = limpiar_semanal(semanal(precios))
+        crudo = semanal(precios)
+        s, fuera, fuera_anual = limpiar_semanal(crudo)
+        malo_puntos, fuera_puntos = pocos_puntos(crudo, n_puntos)
+        s = s.mask(malo_puntos)
         # rango de la semana: solo donde hay promedio limpio, sin ffill
         rango = [limpiar_semanal(semanal(x))[0].reindex(s.index).mask(s.isna())
                  for x in (minimos, maximos)]
+        for lista, filas, clave in ((descartes, fuera, "mediana"),
+                                    (anuales, fuera_anual, "mediana"),
+                                    (puntos, fuera_puntos, "puntos")):
+            if lista is not None:
+                lista.extend({"slug": slug, "semana": f.strftime("%Y-%m-%d"),
+                              "precio": round(p, 2),
+                              clave: x if clave == "puntos" else round(x, 2)}
+                             for f, p, x in filas)
         s = s.ffill(limit=4)
         validos = s.dropna()
         if validos.empty:
+            print(f"SIN SEMANAS PUBLICABLES (queda fuera del catálogo): {slug}")
             return
-        if descartes is not None:
-            descartes.extend({"slug": slug, "semana": f.strftime("%Y-%m-%d"),
-                              "precio": round(p, 2), "mediana": round(m, 2)}
-                             for f, p, m in fuera)
         s = s.loc[validos.index[0]:validos.index[-1]]   # recorta colas sin dato
         izq = s.rename("nominal").rename_axis("fecha").reset_index().sort_values("fecha")
         m = pd.merge_asof(izq, der, on="fecha", direction="backward").set_index("fecha")
@@ -691,7 +759,8 @@ def series_productos(df: pd.DataFrame, ipc: pd.Series, descartes: list = None) -
         if p is None or p[0] != uni:
             excluidos.append((lab, odu))
             continue
-        emitir(_slug(lab), lab, uni, _modal(sub.get("Grupo")), *_precios(sub), p[1])
+        emitir(_slug(lab), lab, uni, _modal(sub.get("Grupo")), *_precios(sub), p[1],
+               _puntos(sub))
 
     # 2) resto del catálogo, deduplicado por espacios/mayúsculas
     resto = df[~consumidos]
@@ -708,7 +777,8 @@ def series_productos(df: pd.DataFrame, ipc: pd.Series, descartes: list = None) -
         slug = _slug(label)
         if slug in out:
             continue
-        emitir(slug, label, p[0], _modal(sub.get("Grupo")), *_precios(sub), p[1])
+        emitir(slug, label, p[0], _modal(sub.get("Grupo")), *_precios(sub), p[1],
+               _puntos(sub))
 
     for lab, odu in sorted(excluidos):
         print(f"EXCLUIDOS (unidad no parseada): {lab}: {odu or '(sin unidad)'}")
@@ -781,13 +851,23 @@ def main() -> None:
                   f" → {c['qty']}{c['unidad']} = {ap}")
     print("=" * 64)
 
-    descartes = []
-    salida["productos"] = series_productos(df, ipc, descartes)   # imprime su propio reporte
+    descartes, anuales, puntos = [], [], []
+    # imprime su propio reporte
+    salida["productos"] = series_productos(df, ipc, descartes, anuales, puntos)
     salida["descartes"] = descartes
-    print(f"Limpieza de productos: {len(descartes)} semanas descartadas")
+    salida["descartes_anuales"] = anuales
+    salida["descartes_puntos"] = puntos
+    print(f"Limpieza de productos: {len(descartes)} semanas descartadas por la "
+          f"mediana de 8 semanas, {len(anuales)} por la de 52 semanas con dato y "
+          f"{len(puntos)} por tener menos de {LIMPIEZA_MIN_PUNTOS} puntos de venta")
     for d in descartes:
         print(f"  DESCARTE {d['slug']} {d['semana']}: {d['precio']} "
               f"(mediana 8 sem. {d['mediana']})")
+    for d in anuales:
+        print(f"  DESCARTE ANUAL {d['slug']} {d['semana']}: {d['precio']} "
+              f"(mediana 52 sem. con dato {d['mediana']})")
+    print(f"  (las {len(puntos)} semanas con pocos puntos van en "
+          f"indices.json[\"descartes_puntos\"] y en el resumen de validar.py)")
 
     with open("indices.json", "w", encoding="utf-8") as fh:
         json.dump(salida, fh, ensure_ascii=False)

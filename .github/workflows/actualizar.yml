@@ -99,8 +99,9 @@ jobs:
         with:
           python-version: "3.12"
 
+      # pillow: las tarjetas og:image que dibuja build_site.py (tarjetas.py)
       - name: Instalar dependencias
-        run: pip install pandas numpy requests
+        run: pip install pandas numpy requests pillow
 
       - name: Tests
         run: |
@@ -145,8 +146,11 @@ jobs:
           cp contacto.html public/contacto.html
           cp terminos.html public/terminos.html
           cp privacidad.html public/privacidad.html
+          cp prensa.html public/prensa.html
           cp 404.html public/404.html
           cp -r productos public/productos
+          cp -r indices public/indices
+          cp -r og public/og
           cp -r datos public/datos
 
       - name: Preparar artefacto de Pages

@@ -31,7 +31,8 @@ def _build(d, uf=None):
     if uf is not None:
         (d / "datos").mkdir()
         (d / "datos" / "uf.json").write_text(json.dumps(uf), encoding="utf-8")
-    env = dict(os.environ, PYTHONPATH=RAIZ, PYTHONIOENCODING="utf-8")
+    env = dict(os.environ, PYTHONPATH=RAIZ, PYTHONIOENCODING="utf-8",
+               CARESTIA_TARJETAS="0")
     env.pop("CARESTIA_BORRADOR", None)
     r = subprocess.run([sys.executable, os.path.join(RAIZ, "build_site.py")],
                        cwd=d, env=env, capture_output=True, text=True)
@@ -136,7 +137,8 @@ def test_uf_rota_no_corta_el_build(tmp_path, caso, contenido, motivo):
                                            encoding="utf-8")
     (tmp_path / "datos").mkdir()
     (tmp_path / "datos" / "uf.json").write_text(contenido(), encoding="utf-8")
-    env = dict(os.environ, PYTHONPATH=RAIZ, PYTHONIOENCODING="utf-8")
+    env = dict(os.environ, PYTHONPATH=RAIZ, PYTHONIOENCODING="utf-8",
+               CARESTIA_TARJETAS="0")
     env.pop("CARESTIA_BORRADOR", None)
     r = subprocess.run([sys.executable, os.path.join(RAIZ, "build_site.py")],
                        cwd=tmp_path, env=env, capture_output=True, text=True)

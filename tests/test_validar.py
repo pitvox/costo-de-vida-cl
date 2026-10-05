@@ -24,7 +24,7 @@ def _semanas(fin: str, n: int) -> list:
     return [(f - datetime.timedelta(weeks=n - 1 - i)).isoformat() for i in range(n)]
 
 
-def indices_nuevo(n_extra=1, productos=125):
+def indices_nuevo(n_extra=1, productos=120):
     """indices.json sintético con la forma que escribe indices.py."""
     out = {"generado": "2026-09-26", "indices": {}, "productos": {}}
     for code in validar.INDICES:
@@ -83,7 +83,7 @@ def entorno(tmp_path, monkeypatch):
     monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
     monkeypatch.delenv("PRODUCTOS_ESPERADOS", raising=False)
     estado = {"indices": indices_nuevo(), "resumen": resumen_desplegado(),
-              "indices_remoto": indices_nuevo(productos=125), "urls": []}
+              "indices_remoto": indices_nuevo(productos=120), "urls": []}
 
     def fake_get(url, **_kw):
         estado["urls"].append(url)
@@ -153,17 +153,17 @@ def test_mismatch_de_unidad_falla(entorno):
     assert entorno["correr"]()[0] == 1
 
 
-def test_124_productos_falla_y_lista_slugs(entorno):
-    entorno["indices"] = indices_nuevo(productos=124)
+def test_119_productos_falla_y_lista_slugs(entorno):
+    entorno["indices"] = indices_nuevo(productos=119)
     code, summary = entorno["correr"]()
     assert code == 1
-    assert "124 series, esperadas 125" in summary
-    assert "desaparecieron [prod_124]" in summary
+    assert "119 series, esperadas 120" in summary
+    assert "desaparecieron [prod_119]" in summary
 
 
 def test_productos_esperados_por_env(entorno, monkeypatch):
-    monkeypatch.setenv("PRODUCTOS_ESPERADOS", "124")
-    entorno["indices"] = indices_nuevo(productos=124)
+    monkeypatch.setenv("PRODUCTOS_ESPERADOS", "119")
+    entorno["indices"] = indices_nuevo(productos=119)
     assert entorno["correr"]()[0] == 0
 
 
@@ -238,7 +238,7 @@ def test_sin_clave_descartes_pasa(entorno):
 
 
 def test_pocos_descartes_no_fallan_y_se_informan(entorno):
-    # 125 productos x 200 semanas = 25.000 semanas-producto con dato
+    # 120 productos x 200 semanas = 24.000 semanas-producto con dato
     for p in entorno["indices"]["productos"].values():
         p["t0"] = _semanas(SEMANA_NUEVA, 200)[0]
         p["v"] = [1000] * 200
@@ -251,7 +251,7 @@ def test_pocos_descartes_no_fallan_y_se_informan(entorno):
                 - datetime.timedelta(weeks=k)).isoformat(), "prod_002")])
     code, summary = entorno["correr"]()
     assert code == 0, summary
-    assert "5 semanas descartadas" in summary and "de 25000 semanas-producto" in summary
+    assert "5 semanas descartadas" in summary and "de 24000 semanas-producto" in summary
     assert f"Última semana ({SEMANA_NUEVA}):** 2 descarte(s)" in summary
     assert "posible cambio de unidad o de producto en ODEPA: revisar" in summary
     assert "- prod_002" in summary and "- prod_001" not in summary
@@ -262,10 +262,51 @@ def test_descartes_sobre_el_medio_por_ciento_fallan(entorno):
     for p in entorno["indices"]["productos"].values():
         p["t0"] = _semanas(SEMANA_NUEVA, 200)[0]
         p["v"] = [1000] * 200
-    entorno["indices"]["descartes"] = _descartes(126)     # 126/25.000 = 0,504%
+    entorno["indices"]["descartes"] = _descartes(121)     # 121/24.000 = 0,504%
     code, summary = entorno["correr"]()
     assert code == 1
     assert "limpieza de productos: descartes ≤ 0,5%" in summary
     assert "borrando de más" in summary
-    entorno["indices"]["descartes"] = _descartes(125)     # justo 0,5%: pasa
+    entorno["indices"]["descartes"] = _descartes(120)     # justo 0,5%: pasa
     assert entorno["correr"]()[0] == 0
+
+
+# ---------------- Controles nuevos: mediana anual y puntos de venta ----------------
+def _con_200_semanas(entorno):
+    for p in entorno["indices"]["productos"].values():
+        p["t0"] = _semanas(SEMANA_NUEVA, 200)[0]
+        p["v"] = [1000] * 200
+
+
+def test_controles_nuevos_se_informan_y_nunca_fallan(entorno):
+    _con_200_semanas(entorno)
+    entorno["indices"]["descartes"] = []
+    entorno["indices"]["descartes_anuales"] = [
+        {"slug": "poroto_manteca", "semana": "2026-06-29", "precio": 3.0, "mediana": 2225.0}]
+    # muchos más que el 0,5% de las semanas-producto: igual no falla
+    entorno["indices"]["descartes_puntos"] = (
+        [{"slug": "prod_001", "semana": SEMANA_NUEVA, "precio": 900.0, "puntos": 2}]
+        + [{"slug": "poroto_coscorron", "semana": s, "precio": 2500.0, "puntos": 2}
+           for s in _semanas(SEMANA_NUEVA, 600)])
+    code, summary = entorno["correr"]()
+    assert code == 0, summary
+    assert "### Mediana de las últimas 52 semanas con dato" in summary
+    assert "| poroto_manteca | 2026-06-29 | 3.0 | 2225.0 |" in summary
+    assert "### Menos de 3 puntos de venta" in summary
+    assert "**601 semanas descartadas**" in summary
+    assert "Solo se informa: no hace fallar el build." in summary
+    assert f"Última semana ({SEMANA_NUEVA}):** 2 descarte(s)" in summary
+    assert "| prod_001 | " + SEMANA_NUEVA + " | 900.0 | 2 |" in summary
+    # los que se quedan sin ninguna semana se nombran
+    assert "**Sin ninguna semana publicable** (no están en el catálogo):" in summary
+    assert "- poroto_coscorron" in summary and "- poroto_manteca" in summary
+    assert "- prod_001" not in summary
+    assert "| poroto_coscorron | 600 |" in summary
+
+
+def test_sin_claves_de_los_controles_nuevos_lo_dice(entorno):
+    entorno["indices"]["descartes"] = []
+    code, summary = entorno["correr"]()
+    assert code == 0, summary
+    assert "no trae la clave `descartes_anuales`" in summary
+    assert "no trae la clave `descartes_puntos`" in summary

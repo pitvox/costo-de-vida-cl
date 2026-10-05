@@ -60,6 +60,8 @@ import unicodedata
 # las cantidades de /metodologia.html salen del mismo diccionario que usa el
 # cálculo (nunca escritas a mano)
 from indices import BASKETS
+# las og:image de 1200 x 630 (Pillow): fichas, índices y portada
+import tarjetas
 
 with open("indices.json", encoding="utf-8") as fh:
     DATA = json.load(fh)
@@ -69,10 +71,10 @@ GRAFICOS_HTML = r"""<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Gráficos de los índices del costo de vida en Chile | Carestía</title>
+<title>Gráficos de los índices del costo de vida en Santiago | Carestía</title>
 <meta name="description" content="Gráficos semanales de los índices Carestía en pesos de hoy, con velas y estacionalidad. Compara productos y arma tu propia canasta con datos públicos de ODEPA.">
 <link rel="canonical" href="https://carestia.cl/graficos.html">
-<meta property="og:title" content="Gráficos de los índices del costo de vida en Chile | Carestía">
+<meta property="og:title" content="Gráficos de los índices del costo de vida en Santiago | Carestía">
 <meta property="og:description" content="Los índices Carestía en pesos de hoy desde 2008, para comparar productos y armar tu propia canasta. Datos públicos de ODEPA, actualizados cada viernes.">
 <meta property="og:image" content="https://carestia.cl/og.png">
 <meta property="og:type" content="website">
@@ -2067,12 +2069,12 @@ PORTADA_HTML = r"""<!DOCTYPE html>
     document.documentElement.className = 'js';
   })();
 </script>
-<title>Carestía: índices del costo de vida en Chile</title>
-<meta name="description" content="Índices del costo de vida en Chile: asado, desayuno, ensalada y fruta en pesos de hoy, con datos públicos de ODEPA desde 2008. Actualizado cada viernes.">
+<title>Carestía: índices del costo de vida en Santiago</title>
+<meta name="description" content="Índices del costo de vida en la Región Metropolitana: asado, desayuno, ensalada y fruta en pesos de hoy, con datos públicos de ODEPA desde 2008. Actualizado cada viernes.">
 <link rel="canonical" href="https://carestia.cl/">
-<meta property="og:title" content="Carestía: índices del costo de vida en Chile">
-<meta property="og:description" content="Cuánto cuesta la vida cotidiana en Chile, en pesos de hoy. Índices propios sobre datos públicos de ODEPA, actualizados cada viernes.">
-<meta property="og:image" content="https://carestia.cl/og.png">
+<meta property="og:title" content="Carestía: índices del costo de vida en Santiago">
+<meta property="og:description" content="Cuánto cuesta la vida cotidiana en la Región Metropolitana, en pesos de hoy. Índices propios sobre datos públicos de ODEPA, actualizados cada viernes.">
+__OG__
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
 __ICONO__
@@ -2323,12 +2325,12 @@ __CINTA__
       <div class="wordmark"><span>CAREST<span class="i">Í</span>A</span></div>
       <div class="tagline">Índices del costo de vida en Chile</div>
     </div>
-    <div class="semana">Semana del <span class="nw">__FECHA__</span>. <span>Se actualiza los viernes.</span></div>
+    <div class="semana">Semana del <span class="nw">__FECHA__</span>. __AVISO_SEMANA__</div>
     __NAV__
   </header>
 
   <main>
-    <h1 class="vh">Carestía: el costo de vida en Chile, en pesos de hoy</h1>
+    <h1 class="vh">Carestía: el costo de vida en Santiago, en pesos de hoy</h1>
 
     <section class="bloque" aria-labelledby="h-indices">
       <div class="sec-head ind-head">
@@ -2513,10 +2515,11 @@ NAV = [   # (clave, texto, href, modo de /graficos.html que abre en el lugar)
 PIE_LINKS = [
     ("metodologia", "Metodología", f"{SITIO}/metodologia.html"),
     ("acerca", "Acerca de", f"{SITIO}/acerca.html"),
+    ("prensa", "Prensa", f"{SITIO}/prensa.html"),
     ("contacto", "Contacto", f"{SITIO}/contacto.html"),
     ("terminos", "Términos de uso", f"{SITIO}/terminos.html"),
     ("privacidad", "Privacidad", f"{SITIO}/privacidad.html"),
-    ("datos", "Datos abiertos (resumen.json)", f"{SITIO}/resumen.json"),
+    ("datos", "API pública (uso no comercial)", f"{SITIO}/resumen.json"),
 ]
 # atribución ODEPA CC-BY en el pie de todas las páginas, en una línea: cómo
 # se arma cada precio (promedio de los puntos encuestados, canastas fijas,
@@ -2652,6 +2655,7 @@ CSS_CABECERA = r"""  /* ---- ticker ---- */
   .tagline { font:400 13px/15.6px var(--sans); color:var(--ash); }
   .semana { font:500 12px/14.3px var(--sans); color:var(--ash); }
   .semana span { color:var(--dim); }
+  .semana .sin-nuevos { color:var(--bone); }
   a.wordmark, a.titem { text-decoration:none; }
 """
 
@@ -2812,7 +2816,7 @@ PRODUCT_HTML = r"""<!DOCTYPE html>
 <link rel="canonical" href="https://carestia.cl/productos/__SLUG__.html">
 <meta property="og:title" content="__TITLE__">
 <meta property="og:description" content="__DESC__">
-<meta property="og:image" content="https://carestia.cl/og.png">
+__OG__
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
 __ICONO__
@@ -2918,7 +2922,7 @@ __CSS_SITIO__
   </header>
 
   <main>
-    <div class="miga" id="miga">Precio real en Chile, en pesos de hoy</div>
+    <div class="miga" id="miga">Precio real en Santiago, en pesos de hoy</div>
     <h1>__LABEL__</h1>
     <div class="orow">
       <div class="ocifra">
@@ -3136,6 +3140,92 @@ GRUPO_TXT = {
 
 def grupo_txt(g: str) -> str:
     return GRUPO_TXT.get(g, g)
+
+
+# Nombre con que se muestra cada producto: mayúscula solo al inicio, tildes
+# correctas y sin grafías de planilla ("c/hueso", "ó", "N°"). Solo el texto
+# visible: indices.json, datos/productos/, las claves de los links de canasta
+# y los slugs de las URLs salen del nombre de ODEPA y no cambian.
+NOMBRES = {
+    # abarrotes
+    "Poroto Blanco (Inia)": "Poroto blanco (INIA)",
+    "Poroto Coscorrón": "Poroto coscorrón",
+    "Poroto Hallado": "Poroto hallado",
+    "Poroto Manteca": "Poroto manteca",
+    "Poroto Negro": "Poroto negro",
+    "Poroto Tórtola": "Poroto tórtola",
+    "Spaghetti N°5": "Espagueti n.º 5",
+    # carne bovina
+    "Estomaguillo (Tapabarriga)": "Estomaguillo (tapabarriga)",
+    "Lomo Liso": "Lomo liso",
+    "Lomo Vetado": "Lomo vetado",
+    "Pollo Ganso": "Pollo ganso",
+    "Posta Negra": "Posta negra",
+    "Posta Paleta": "Posta paleta",
+    "Posta Rosada": "Posta rosada",
+    "Punta de Ganso": "Punta de ganso",
+    # cerdo, ave y cordero
+    "Cerdo Costillar": "Costillar de cerdo",
+    "Cerdo Lomo": "Lomo de cerdo",
+    "Cerdo Pulpa c/hueso": "Pulpa de cerdo con hueso",
+    "Cerdo Pulpa s/hueso": "Pulpa de cerdo sin hueso",
+    "Chuleta (Parrillera)": "Chuleta parrillera",
+    "Chuleta (centro)": "Chuleta de centro",
+    "Pavo Osobuco": "Osobuco de pavo",
+    "Pavo Pechuga s/hueso": "Pechuga de pavo sin hueso",
+    "Pavo Trutro Ala": "Trutro ala de pavo",
+    "Pavo Trutro Corto": "Trutro corto de pavo",
+    "Pollo Entero": "Pollo entero",
+    "Pollo Pechuga": "Pechuga de pollo",
+    "Pollo Pechuga Deshuesada": "Pechuga de pollo deshuesada",
+    "Pollo Trutro Entero": "Trutro entero de pollo",
+    # frutas y hortalizas
+    "Arándano (blue)": "Arándano",
+    "Arveja Verde": "Arveja verde",
+    "Sandia": "Sandía",
+    # lácteos y huevos
+    "Huevo blanco grande (primera)": "Huevo blanco grande de primera",
+    "Leche Fluida Descremada": "Leche fluida descremada",
+    "Leche en Polvo Descremada": "Leche en polvo descremada",
+    "Leche en Polvo Entera": "Leche en polvo entera",
+    "Queso Chanco": "Queso chanco",
+    "Queso Gauda": "Queso gauda",
+    "Queso Mantecoso": "Queso mantecoso",
+    "Yoghurt": "Yogur",
+    "Yoghurt (vainilla ó frutilla)": "Yogur de vainilla o frutilla",
+}
+
+
+def nombre(label: str) -> str:
+    """El nombre para mostrar de un producto (NOMBRES), o el de ODEPA."""
+    return NOMBRES.get(label, label)
+
+
+# sustantivos femeninos que no terminan en "a" (la leche, la miel, la
+# coliflor) y femeninos con "a" tónica que llevan "el" (el haba)
+FEMENINOS = {"leche", "miel", "coliflor"}
+EL_FEMENINO = {"haba"}
+
+
+def concordancia(label: str) -> dict:
+    """Artículo y terminaciones para hablar del producto por su primera
+    palabra: {'el', 'del', 'o', 'cuesta', 'está'} y sus variantes para
+    femenino y plural ("las lentejas cuestan", "la leche está más cara")."""
+    p = nombre(label).split()[0].lower()
+    plural = p.endswith("s")
+    fem = (p.endswith("as") if plural else
+           p.endswith("a") or p in FEMENINOS or p in EL_FEMENINO)
+    if plural:
+        art = "las" if fem else "los"
+    else:
+        art = "el" if (not fem or p in EL_FEMENINO) else "la"
+    return {"art": art, "de": "del" if art == "el" else f"de {art}",
+            "o": ("a" if fem else "o") + ("s" if plural else ""),
+            "cuesta": "cuestan" if plural else "cuesta",
+            "esta": "están" if plural else "está",
+            "estaba": "estaban" if plural else "estaba"}
+
+
 QDEF = {"kg": "0.5", "un": "1", "l": "1"}   # cantidad por defecto del link de canasta
 
 
@@ -3174,9 +3264,62 @@ def numero_variacion(x: float, txt: str) -> str:
     return f'<span class="{"v-sube" if x > 0 else "v-baja"}">{num}</span>'
 
 
-def es_femenino(label: str) -> bool:
-    """Concordancia por la primera palabra del label (la palta / el asado)."""
-    return label.split()[0].lower().endswith("a")
+def frase_historia(vals: list, ult: float, anio: str, o: str = "o") -> str:
+    """La frase de las tarjetas: en cuántas de cada 10 semanas de su historia
+    (en pesos de hoy) el precio fue menor ("Más caro que en 8 de cada 10
+    semanas desde 2008") o mayor ("Más barato"), con el mismo criterio que la
+    línea del percentil de la ficha. 'o' es la terminación del adjetivo
+    (o, a, os, as)."""
+    n = len(vals)
+    caro = round(100 * sum(1 for v in vals if v < ult) / n)
+    barato = round(100 * sum(1 for v in vals if v > ult) / n)
+    adj, pct = ("car" + o, caro) if caro >= barato else ("barat" + o, barato)
+    k = int(pct / 10 + 0.5)
+    if k == 0:
+        return f"Igual que en casi todas las semanas desde {anio}, descontada la inflación."
+    return f"Más {adj} que en {k} de cada 10 semanas desde {anio}, descontada la inflación."
+
+
+# ---------------- og:image por página ----------------
+# Cada ficha, cada índice y la portada tienen su tarjeta (tarjetas.py), en
+# og/. La URL lleva en ?v= una huella de lo que muestra: WhatsApp y las redes
+# guardan la imagen por URL, y así la de una semana nueva no se confunde con
+# la anterior.
+OG_DIR = "og"
+with open(tarjetas.__file__, encoding="utf-8") as _fh:
+    DIBUJO_TARJETAS = _fh.read()
+OG_GENERICA = "https://carestia.cl/og.png"
+FUENTE_CITA = "Fuente: Carestía (carestia.cl), con datos de ODEPA"
+
+
+def og_meta(url_img: str, alt: str, generica: bool = False) -> str:
+    """Las etiquetas de la og:image de una página (y la de X). La genérica
+    (og.png) no declara tamaño."""
+    alt = html.escape(alt, quote=True)
+    medidas = ("" if generica else
+               f'\n<meta property="og:image:width" content="{tarjetas.ANCHO}">'
+               f'\n<meta property="og:image:height" content="{tarjetas.ALTO}">')
+    return (f'<meta property="og:image" content="{url_img}">{medidas}\n'
+            f'<meta property="og:image:alt" content="{alt}">\n'
+            f'<meta name="twitter:image" content="{url_img}">')
+
+
+def dibujar(funcion, ruta: str, datos: dict) -> None:
+    """Dibuja una tarjeta con tarjetas.ficha o tarjetas.portada. Con
+    CARESTIA_TARJETAS=0 (solo tests que no revisan las imágenes: cada build
+    dibuja más de cien) se salta el PNG; las etiquetas og quedan iguales."""
+    if os.environ.get("CARESTIA_TARJETAS") != "0":
+        funcion(ruta, tokens_css(), **datos)
+
+
+def og_url(ruta: str, datos: dict) -> str:
+    """URL pública de una tarjeta, versionada por su contenido y por el
+    dibujo (tarjetas.py): cambia solo cuando cambia la imagen."""
+    return f"{SITIO}/{ruta}?v={_ver(_json(datos) + DIBUJO_TARJETAS)}"
+
+
+def semana_larga(f: datetime.date) -> str:
+    return f"Semana del {f.strftime('%d-%m-%Y')}"
 
 
 def seccion_otros(slug: str, grupo: str, rueda: list, labels: dict) -> str:
@@ -3306,7 +3449,8 @@ def resumen_indice(d: dict) -> dict:
     r["delta"] = ((real[-1]["value"] / real[-2]["value"] - 1) * 100
                   if len(real) >= 2 and real[-2]["value"] else None)
     r["estacionalidad"] = d.get("estacionalidad") or {}
-    r["componentes"] = [{k: c.get(k) for k in ("label", "qty", "unidad", "aporte")}
+    r["componentes"] = [{**{k: c.get(k) for k in ("label", "qty", "unidad", "aporte")},
+                         "label": nombre(c.get("label") or "")}
                         for c in d.get("componentes") or []]
     return r
 
@@ -3330,13 +3474,42 @@ def slugs_de_datos(prods: dict, fichas: dict) -> dict:
     return out
 
 
+def dato_propio(p: dict) -> list:
+    """Por semana, si el precio es de esa misma semana y no uno que completó
+    el arrastre de indices.py (ffill de hasta 4 semanas): las semanas con
+    precio propio traen su rango (min y max) y las completadas no. Sin rango
+    en indices.json, toda semana con precio cuenta como propia."""
+    v, lo, hi = p["v"], p.get("min"), p.get("max")
+    if not lo or not hi or len(lo) != len(v) or len(hi) != len(v):
+        return [x is not None for x in v]
+    return [x is not None and (a is not None or b is not None)
+            for x, a, b in zip(v, lo, hi)]
+
+
+# lo que más subió y bajó de la portada se mide contra el promedio de estas
+# semanas anteriores, todas con precio propio (como la semana actual)
+SEMANAS_PROMEDIO = 4
+
+
+def variacion_promedio(v: list, propio: list, i: int):
+    """Variación (%) del precio de la semana i contra el promedio de las
+    SEMANAS_PROMEDIO anteriores. None si alguna de esas semanas o la i no
+    tiene precio propio: así no entra un producto que vuelve de temporada."""
+    k = SEMANAS_PROMEDIO
+    if i < k or not all(propio[i - k:i + 1]):
+        return None
+    prom = sum(v[i - k:i]) / k
+    return round((v[i] / prom - 1) * 100, 1) if prom else None
+
+
 def generar_catalogo(prods: dict, slugs: dict) -> dict:
     """datos/catalogo.json: una fila liviana por producto con datos, en el
-    orden de /productos/ (grupo A-Z, "Otros" al final, y nombre). Variaciones
-    en pesos de hoy contra 1, 13 y 52 semanas antes (null si esa semana no
-    tiene dato); percentil como el de los índices (semanas con precio menor
-    o igual al último); las últimas 52 semanas del calendario, con null donde
-    no hubo precio."""
+    orden de /productos/ (grupo A-Z, "Otros" al final, y nombre para
+    mostrar). Variaciones en pesos de hoy contra 1, 13 y 52 semanas antes
+    (null si esa semana no tiene dato) y contra el promedio de las 4 semanas
+    anteriores (variacion_promedio); percentil como el de los índices
+    (semanas con precio menor o igual al último); las últimas 52 semanas del
+    calendario, con null donde no hubo precio."""
     filas = []
     for clave, p in prods.items():
         v = p["v"]
@@ -3353,10 +3526,11 @@ def generar_catalogo(prods: dict, slugs: dict) -> dict:
         grupo = p.get("grupo") or "Otros"
         semana = (datetime.date.fromisoformat(p["t0"]) +
                   datetime.timedelta(weeks=i)).isoformat()
-        filas.append(((grupo == "Otros", _orden(grupo), _orden(p["label"])), {
+        mostrar = nombre(p["label"])
+        filas.append(((grupo == "Otros", _orden(grupo), _orden(mostrar)), {
             "slug": slugs[clave],
             "clave": clave,
-            "nombre": p["label"],
+            "nombre": mostrar,
             "grupo": grupo_txt(grupo),
             "unidad": p["unidad"],
             "semana": semana,
@@ -3364,6 +3538,7 @@ def generar_catalogo(prods: dict, slugs: dict) -> dict:
             "variacion_1s_pct": variacion(1),
             "variacion_13s_pct": variacion(13),
             "variacion_52s_pct": variacion(52),
+            "variacion_prom4s_pct": variacion_promedio(v, dato_propio(p), i),
             "percentil": round(100 * sum(1 for x in vals if x <= ult) / len(vals)),
             "ultimas_52": [None if x is None else int(round(x))
                            for x in v[max(0, i - 51):i + 1]],
@@ -3570,7 +3745,7 @@ def generar_datos(slugs: dict, catalogo: dict, uf: dict = None) -> dict:
     return {
         "indices": {code: resumen_indice(d) for code, d in indices.items()},
         "series": {primero: series[primero]},
-        "productos": {clave: {"label": p["label"], "grupo": p.get("grupo") or "Otros",
+        "productos": {clave: {"label": nombre(p["label"]), "grupo": p.get("grupo") or "Otros",
                               "unidad": p["unidad"], "slug": slugs[clave]}
                       for clave, p in prods.items()},
         "rango": rango_productos(prods),
@@ -3585,11 +3760,12 @@ def generar_datos(slugs: dict, catalogo: dict, uf: dict = None) -> dict:
 
 
 def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
-                    semana: datetime.date = None) -> str:
+                    semana: datetime.date = None, og: str = None) -> str:
     """Renderiza la página estática de UN producto con sus datos inline.
     'semana' es la semana vigente del catálogo: si el último dato del
     producto es de otra semana (mismo criterio que el "precio de la semana
-    del…" de /productos/), ni el texto ni la descripción dicen "Hoy"."""
+    del…" de /productos/), ni el texto ni la descripción dicen "Hoy". 'og'
+    son las etiquetas de su og:image (og_meta); sin ellas, la genérica."""
     vals = [v for v in p["v"] if v is not None]
     ult = vals[-1]
     n = len(vals)
@@ -3597,9 +3773,9 @@ def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
     fecha_fin = fin_serie(p)
     antiguo = semana is not None and fecha_fin != semana
     fecha_txt = fecha_fin.strftime("%d-%m-%Y")
-    fem = es_femenino(p["label"])
-    art, de = ("la", "de la") if fem else ("el", "del")
-    label_frase = p["label"][0].lower() + p["label"][1:]
+    c = concordancia(p["label"])
+    mostrar = nombre(p["label"])
+    label_frase = mostrar[0].lower() + mostrar[1:]
     uni_txt = UNI_TXT.get(p["unidad"], p["unidad"])
     precio = fmt_clp(ult)
 
@@ -3608,37 +3784,38 @@ def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
     pct_caro = round(100 * sum(1 for v in vals if v < ult) / n)
     pct_barato = round(100 * sum(1 for v in vals if v > ult) / n)
     if antiguo:
-        cuando, esta = "En esa semana", "estaba"
+        cuando, esta = "En esa semana", c["estaba"]
     else:
-        cuando, esta = "Hoy", "está"
+        cuando, esta = "Hoy", c["esta"]
     if pct_caro >= pct_barato:
-        adj = "cara" if fem else "caro"
-        pct_linea = (f"{cuando} {esta} más {adj} que en el {pct_caro}% de las "
+        pct_linea = (f"{cuando} {esta} más car{c['o']} que en el {pct_caro}% de las "
                      f"semanas desde {anio}, en pesos de hoy.")
     else:
-        adj = "barata" if fem else "barato"
-        pct_linea = (f"{cuando} {esta} más {adj} que en el {pct_barato}% de las "
+        pct_linea = (f"{cuando} {esta} más barat{c['o']} que en el {pct_barato}% de las "
                      f"semanas desde {anio}, en pesos de hoy.")
 
-    title = f"Precio {de} {label_frase} en Chile: histórico desde {anio} | Carestía"
+    title = f"Precio {c['de']} {label_frase} en Santiago: histórico desde {anio} | Carestía"
     if antiguo:
         ultimo = f"Último precio publicado por ODEPA (semana del {fecha_txt})"
         pct_linea = f"{ultimo}. {pct_linea}"
-        desc = (f"{ultimo}: {precio} por {uni_txt} {de} {label_frase} en Chile "
-                f"(promedio de ferias, supermercados y carnicerías de la RM, "
+        desc = (f"{ultimo}: {precio} por {uni_txt} {c['de']} {label_frase} en la "
+                f"Región Metropolitana (promedio de ferias, supermercados y carnicerías, "
                 f"en pesos de hoy). Serie semanal desde {anio} con datos ODEPA.")
     else:
-        desc = (f"Hoy {art} {label_frase} cuesta {precio} por {uni_txt} en Chile "
-                f"(promedio de ferias, supermercados y carnicerías de la RM, "
+        desc = (f"Hoy {c['art']} {label_frase} {c['cuesta']} {precio} por {uni_txt} en la "
+                f"Región Metropolitana (promedio de ferias, supermercados y carnicerías, "
                 f"en pesos de hoy). Serie semanal desde {anio} con datos ODEPA, "
                 f"actualizada cada viernes.")
+    if og is None:
+        og = og_meta(OG_GENERICA, "Carestía", generica=True)
 
     out = PRODUCT_HTML
     for token, valor in [
         ("__TITLE__", html.escape(title, quote=True)),
         ("__DESC__", html.escape(desc, quote=True)),
+        ("__OG__", og),
         ("__SLUG__", slug),
-        ("__LABEL__", html.escape(p["label"])),
+        ("__LABEL__", html.escape(mostrar)),
         ("__PRECIO__", precio),
         ("__UNI_TXT__", uni_txt),
         ("__DELTA__", fmt_delta(vals)),
@@ -3652,7 +3829,7 @@ def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
         ("__MIN__", json.dumps(p.get("min") or [])),
         ("__MAX__", json.dumps(p.get("max") or [])),
         # Advanced Charts: el datafeed, sus versiones y lo que la ficha ya sabe
-        ("__NOMBRE__", json.dumps(p["label"], ensure_ascii=False).replace("</", "<\\/")),
+        ("__NOMBRE__", json.dumps(mostrar, ensure_ascii=False).replace("</", "<\\/")),
         ("__UNIDAD__", p["unidad"]),
         ("__INDICES__", indices_tv()),
         ("__TV_JS__", TV_JS),
@@ -3716,15 +3893,38 @@ def generar_productos(slugs: dict) -> None:
         por_grupo.setdefault(g, []).append(slug)
     for lst in por_grupo.values():
         lst.sort()
-    labels = {s: lab for s, (_k, lab) in slugs.items()}
+    labels = {s: nombre(lab) for s, (_k, lab) in slugs.items()}
     semana = semana_vigente(prods[k] for k, _l in slugs.values())
     os.makedirs("productos", exist_ok=True)
     for slug, (key, _label) in slugs.items():
         grupo = prods[key].get("grupo") or "Otros"
         otros = seccion_otros(slug, grupo, por_grupo[grupo], labels)
+        og = tarjeta_producto(prods[key], slug)
         with open(os.path.join("productos", f"{slug}.html"), "w",
                   encoding="utf-8") as fh:
-            fh.write(pagina_producto(key, prods[key], slug, otros, semana))
+            fh.write(pagina_producto(key, prods[key], slug, otros, semana, og))
+
+
+def tarjeta_producto(p: dict, slug: str) -> str:
+    """og/productos/{slug}.png y las etiquetas de su og:image."""
+    vals = [v for v in p["v"] if v is not None]
+    mostrar = nombre(p["label"])
+    uni_txt = UNI_TXT.get(p["unidad"], p["unidad"])
+    datos = {
+        "antetitulo": "Precio real en Santiago",
+        "nombre": mostrar,
+        "precio": fmt_clp(vals[-1]),
+        "unidad": f"por {uni_txt}, en pesos de hoy",
+        "frase": frase_historia(vals, vals[-1], p["t0"][:4], concordancia(p["label"])["o"]),
+        "fecha": semana_larga(fin_serie(p)),
+        "fuente_txt": FUENTE_CITA,
+        "sitio": "carestia.cl",
+    }
+    ruta = f"{OG_DIR}/productos/{slug}.png"
+    dibujar(tarjetas.ficha, ruta, datos)
+    alt = (f"{mostrar}: {datos['precio']} {datos['unidad']}, "
+           f"{datos['fecha'][0].lower()}{datos['fecha'][1:]}. {datos['frase']}")
+    return og_meta(og_url(ruta, datos), alt)
 
 
 # ---------------- Advanced Charts (TradingView) ----------------
@@ -5006,7 +5206,7 @@ PAGINA_HTML = r"""<!DOCTYPE html>
 __HEAD_URL__
 <meta property="og:title" content="__TITLE__">
 <meta property="og:description" content="__DESC__">
-<meta property="og:image" content="https://carestia.cl/og.png">
+__OG__
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
 __ICONO__
@@ -5094,6 +5294,30 @@ __CSS_BASE__
   .pp { font:600 14px var(--sans);
     white-space:nowrap; text-align:right; }
   .pp small { font:400 12px var(--sans); color:var(--ash); }
+
+  /* ---- /indices/{codigo}.html: un índice para compartir ---- */
+  .ind-cifra { display:flex; flex-wrap:wrap; align-items:baseline; gap:8px 16px;
+    margin-top:18px; }
+  .ind-precio { font:700 clamp(40px,7vw,64px)/1 var(--display); letter-spacing:-.01em; }
+  .ind-uni { font:400 14px var(--sans); color:var(--ash); }
+  .ind-pill { align-self:center; font:500 12px var(--mono); letter-spacing:.08em;
+    padding:4px 11px; border-radius:999px; color:var(--bg); }
+  .ind-links { display:flex; flex-wrap:wrap; gap:12px; margin-top:22px; }
+  .ind-links a { display:inline-flex; align-items:center; min-height:40px; padding:0 16px;
+    font:600 13px var(--sans); color:var(--bone); text-decoration:none;
+    background:var(--panel); border:1px solid var(--line); border-radius:999px; }
+  .ind-links a:hover, .ind-links a:focus-visible { border-color:var(--bone);
+    background:var(--hover); }
+  .indice .intro a { color:var(--bone); text-underline-offset:3px;
+    text-decoration-color:var(--dim); }
+  .comp { list-style:none; margin-top:10px; max-width:560px; }
+  .comp li { display:flex; justify-content:space-between; align-items:baseline; gap:14px;
+    min-height:44px; padding:11px 0; border-bottom:1px solid var(--line);
+    font:500 14px/1.4 var(--sans); }
+  .comp small { font:400 12px var(--sans); color:var(--ash); margin-left:6px; }
+  .comp b { font-weight:600; white-space:nowrap; }
+  .tarjeta { display:block; width:100%; max-width:600px; height:auto; margin-top:32px;
+    border:1px solid var(--line); }
 __CSS_SITIO__
 </style>
 </head>
@@ -5117,9 +5341,14 @@ __PIE__
 
 
 def escribir_pagina(archivo: str, url: str, titulo: str, desc: str, cuerpo: str,
-                    actual: str = "", clase: str = "doc") -> None:
+                    actual: str = "", clase: str = "doc", og: str = None,
+                    exacto: bool = True) -> None:
     """Escribe una página del sitio. url=None: no indexable (el 404), sin
-    canonical y con noindex."""
+    canonical y con noindex. 'og': las etiquetas de su og:image (og_meta);
+    sin ellas, la genérica. exacto=False: la página está dentro de la
+    sección 'actual' del menú (como una ficha bajo Productos)."""
+    if og is None:
+        og = og_meta(OG_GENERICA, "Carestía", generica=True)
     if url:
         head_url = f'<link rel="canonical" href="{url}">'
     else:
@@ -5128,12 +5357,13 @@ def escribir_pagina(archivo: str, url: str, titulo: str, desc: str, cuerpo: str,
     for token, valor in [
         ("__TITLE__", html.escape(titulo, quote=True)),
         ("__DESC__", html.escape(desc, quote=True)),
+        ("__OG__", og),
         ("__HEAD_URL__", head_url),
         ("__ICONO__", ICONO),
         ("__FUENTES__", FUENTES),
         ("__CSS_BASE__", CSS_BASE),
         ("__CSS_SITIO__", CSS_SITIO),
-        ("__NAV__", nav_sitio(actual)),
+        ("__NAV__", nav_sitio(actual, exacto)),
         ("__PIE__", pie_sitio(actual)),
         ("__CLASE__", clase),
         ("__MAIN__", cuerpo),   # al final: HTML ya renderizado
@@ -5152,6 +5382,16 @@ def _orden(s: str) -> str:
     return "".join(c for c in s if not unicodedata.combining(c)).lower()
 
 
+def productos_recientes(fichas: dict) -> int:
+    """Productos con ficha y precio en el último año (los que /productos/ no
+    deja en "Sin datos hace más de un año"): el número que dicen los títulos
+    y los textos, en vez de una cifra fija."""
+    prods = DATA.get("productos", {})
+    fines = [fin_serie(prods[k]) for k, _l in fichas.values()]
+    semana = max(fines, default=None)
+    return sum(1 for f in fines if not sin_datos_hace_un_anio(f, semana))
+
+
 def generar_indice_productos(fichas: dict) -> None:
     """productos/index.html: las fichas publicadas agrupadas por grupo ODEPA
     (A-Z, "Otros" al final), cada una con su precio de hoy en pesos de hoy y
@@ -5165,7 +5405,7 @@ def generar_indice_productos(fichas: dict) -> None:
     for slug, (key, label) in fichas.items():
         p = prods[key]
         ult = [v for v in p["v"] if v is not None][-1]
-        filas.append((p.get("grupo") or "Otros", label, slug, ult,
+        filas.append((p.get("grupo") or "Otros", nombre(label), slug, ult,
                       UNI_TXT.get(p["unidad"], p["unidad"]), fin_serie(p)))
     semana = max((f[5] for f in filas), default=None)
     grupos, sin_datos = {}, []
@@ -5210,7 +5450,8 @@ def generar_indice_productos(fichas: dict) -> None:
             f'en los últimos 12 meses. Se muestran con su último dato y su fecha.</p>\n'
             f'      <ul class="plista">\n        {lis}\n      </ul>\n'
             f'    </section>')
-    n = len(filas)
+    # los títulos y el texto cuentan los productos con datos del último año
+    n = len(filas) - len(sin_datos)
     fecha = semana.strftime("%d-%m-%Y") if semana else "·"
     cuerpo = (
         f'    <div class="miga">Catálogo en pesos de hoy</div>\n'
@@ -5224,7 +5465,7 @@ def generar_indice_productos(fichas: dict) -> None:
         f'    </ul></nav>\n' + "\n".join(secciones))
     escribir_pagina(
         os.path.join("productos", "index.html"), f"{SITIO}/productos/",
-        f"Precios de {n} alimentos en Chile, en pesos de hoy | Carestía",
+        f"Precios de {n} alimentos en Santiago, en pesos de hoy | Carestía",
         f"Precios de {n} alimentos en la Región Metropolitana, en pesos "
         f"de hoy, agrupados por tipo y con la serie semanal de cada uno. Datos "
         f"ODEPA, actualizado cada viernes.",
@@ -5348,19 +5589,22 @@ def filas_portada(catalogo: dict, fichas: dict) -> tuple:
 
 def html_listas(vigentes: list) -> str:
     """Más subieron, más bajaron y más caros respecto de su historia: 5 de
-    cada una. Empates de percentil: primero el que más subió en un año."""
-    sube = sorted((f for f in vigentes if (f["variacion_1s_pct"] or 0) > 0),
-                  key=lambda f: (-f["variacion_1s_pct"], _orden(f["nombre"])))
-    baja = sorted((f for f in vigentes if (f["variacion_1s_pct"] or 0) < 0),
-                  key=lambda f: (f["variacion_1s_pct"], _orden(f["nombre"])))
+    cada una. Subieron y bajaron, contra el promedio de las 4 semanas
+    anteriores y solo con precio propio en esas 4 y en la actual
+    (variacion_prom4s_pct). Empates de percentil: primero el que más subió
+    en un año."""
+    sube = sorted((f for f in vigentes if (f["variacion_prom4s_pct"] or 0) > 0),
+                  key=lambda f: (-f["variacion_prom4s_pct"], _orden(f["nombre"])))
+    baja = sorted((f for f in vigentes if (f["variacion_prom4s_pct"] or 0) < 0),
+                  key=lambda f: (f["variacion_prom4s_pct"], _orden(f["nombre"])))
     caros = sorted(vigentes, key=lambda f: (
         -f["percentil"], f["variacion_52s_pct"] is None,
         -(f["variacion_52s_pct"] or 0), _orden(f["nombre"])))
     listas = [
-        ("sem-sub", "Más subieron", "Contra la semana anterior, en pesos de hoy",
-         sube, lambda f: cambio(f["variacion_1s_pct"])),
-        ("sem-baj", "Más bajaron", "Contra la semana anterior, en pesos de hoy",
-         baja, lambda f: cambio(f["variacion_1s_pct"])),
+        ("sem-sub", "Más subieron", "Frente al promedio de las 4 semanas anteriores",
+         sube, lambda f: cambio(f["variacion_prom4s_pct"])),
+        ("sem-baj", "Más bajaron", "Frente al promedio de las 4 semanas anteriores",
+         baja, lambda f: cambio(f["variacion_prom4s_pct"])),
         ("sem-car", "Más caros respecto de su historia", "Percentil de su serie completa",
          caros, lambda f: f"percentil {f['percentil']}"),
     ]
@@ -5419,8 +5663,193 @@ def html_productos(tabla: list, vigente: str) -> tuple:
     return "\n".join(chips), "\n".join(filas)
 
 
+# ---- semana sin datos nuevos ----
+# ODEPA publica los viernes a mediodía la semana que empezó ese lunes. Si a
+# la hora del build ya pasó el último viernes a las 12:00 (hora de Chile) y
+# los datos no llegan a esa semana, la portada lo dice junto a la fecha.
+# CARESTIA_AHORA (aaaa-mm-ddThh:mm, hora de Chile) fija la hora: solo tests.
+ODEPA_DIA, ODEPA_HORA = 4, 12          # viernes, 12:00
+
+
+def ahora_chile() -> datetime.datetime:
+    try:
+        from zoneinfo import ZoneInfo
+        tz = ZoneInfo("America/Santiago")
+    except Exception:   # sin base de zonas horarias: hora de verano de Chile
+        tz = datetime.timezone(datetime.timedelta(hours=-3))
+    fijo = os.environ.get("CARESTIA_AHORA")
+    if fijo:
+        f = datetime.datetime.fromisoformat(fijo)
+        return f.replace(tzinfo=tz) if f.tzinfo is None else f.astimezone(tz)
+    return datetime.datetime.now(tz)
+
+
+def semana_esperada(ahora: datetime.datetime) -> datetime.date:
+    """El lunes de la última semana que ODEPA ya publicó a esta hora."""
+    hoy = ahora.date()
+    viernes = hoy - datetime.timedelta(days=(hoy.weekday() - ODEPA_DIA) % 7)
+    if viernes == hoy and ahora.hour < ODEPA_HORA:
+        viernes -= datetime.timedelta(weeks=1)
+    return viernes - datetime.timedelta(days=ODEPA_DIA)
+
+
+def sin_datos_nuevos(ultima: datetime.date, ahora: datetime.datetime) -> bool:
+    return ultima < semana_esperada(ahora)
+
+
+def semana_de_los_datos(catalogo: dict):
+    """La semana más reciente entre los índices y el catálogo."""
+    fechas = [d["real"][-1]["time"] for d in DATA["indices"].values() if d.get("real")]
+    if catalogo.get("semana"):
+        fechas.append(catalogo["semana"])
+    return datetime.date.fromisoformat(max(fechas)) if fechas else None
+
+
+# ---- tarjetas y páginas de los índices ----
+# Cada índice tiene su página, /indices/{codigo}.html, con su costo, su
+# veredicto, la frase de su historia, lo que lleva y su tarjeta: es la URL
+# para compartirlo (un #asado de /graficos.html no puede tener su propia
+# og:image). El gráfico sigue en /graficos.html#{codigo}.
+COLOR_VEREDICTO = {"BARATO": "verde", "NORMAL": "ambar", "CARO": "rojo"}
+
+
+def frase_indice(d: dict) -> str:
+    real = d.get("real") or []
+    vals = [p["value"] for p in real]
+    return frase_historia(vals, vals[-1], real[0]["time"][:4], "o")
+
+
+def tarjeta_indice(code: str, d: dict) -> tuple:
+    """og/indices/{codigo}.png: (etiquetas og, ruta, datos de la tarjeta)."""
+    sub = d["subtitulo"][0].lower() + d["subtitulo"][1:]
+    datos = {
+        "antetitulo": f"Índice Carestía, {sub}",
+        "nombre": d["nombre"],
+        "precio": fmt_clp(d["costo_real"]),
+        "unidad": "en pesos de hoy",
+        "frase": frase_indice(d),
+        "fecha": semana_larga(datetime.date.fromisoformat(d["real"][-1]["time"])),
+        "fuente_txt": FUENTE_CITA,
+        "sitio": "carestia.cl",
+        "veredicto": d["veredicto"],
+        "color_veredicto": COLOR_VEREDICTO.get(d["veredicto"], "ambar"),
+    }
+    ruta = f"{OG_DIR}/indices/{code}.png"
+    dibujar(tarjetas.ficha, ruta, datos)
+    alt = (f"{d['nombre']}: {datos['precio']} en pesos de hoy, {d['veredicto']}, "
+           f"{datos['fecha'][0].lower()}{datos['fecha'][1:]}. {datos['frase']}")
+    return og_meta(og_url(ruta, datos), alt), og_url(ruta, datos), alt
+
+
+def tarjeta_portada(ultima) -> str:
+    """og/portada.png: los 4 índices, con la fecha de la semana."""
+    indices = [{"nombre": d["nombre"].replace("Índice ", ""),
+                "veredicto": d["veredicto"],
+                "color": COLOR_VEREDICTO.get(d["veredicto"], "ambar"),
+                "precio": fmt_clp(d["costo_real"]),
+                "frase": frase_indice(d)}
+               for d in DATA["indices"].values() if d.get("real")]
+    datos = {"indices": indices,
+             "fecha": semana_larga(ultima) if ultima else "",
+             "pie_txt": "Índices del costo de vida en Santiago, en pesos de hoy",
+             "sitio": "carestia.cl"}
+    ruta = f"{OG_DIR}/portada.png"
+    dibujar(tarjetas.portada, ruta, datos)
+    alt = "Índices Carestía, " + (f"{datos['fecha'][0].lower()}{datos['fecha'][1:]}: "
+                                  if ultima else "") + \
+        ". ".join(f"{i['nombre']} {i['precio']}, {i['veredicto']}" for i in indices) + "."
+    return og_meta(og_url(ruta, datos), alt)
+
+
+def generar_paginas_indices() -> list:
+    """indices/{codigo}.html por cada índice. Devuelve las rutas (sitemap)."""
+    rutas = []
+    for code, d in DATA["indices"].items():
+        if not d.get("real"):
+            continue
+        og, img, alt = tarjeta_indice(code, d)
+        img = img[len(SITIO):]   # la tarjeta, desde el mismo sitio
+        fecha = datetime.date.fromisoformat(d["real"][-1]["time"]).strftime("%d-%m-%Y")
+        vs = d["vs_promedio"]
+        vs_txt = f"+{vs}% sobre" if vs >= 0 else f"{vs}% bajo"
+        comp = "\n".join(
+            f'        <li><span>{html.escape(nombre(c["label"]))} '
+            f'<small>{fmt_cantidad(c["qty"], c["unidad"])}</small></span>'
+            f'<b>{fmt_clp(c["aporte"])}</b></li>'
+            for c in d.get("componentes") or [] if c.get("aporte") is not None)
+        cuerpo = (
+            f'    <div class="miga">Índice Carestía</div>\n'
+            f'    <h1>{html.escape(d["nombre"])}</h1>\n'
+            f'    <p class="intro">{html.escape(d["subtitulo"])}, en la Región '
+            f'Metropolitana. Semana del <span class="nw">{fecha}</span>.</p>\n'
+            f'    <div class="ind-cifra"><span class="ind-precio">{fmt_clp(d["costo_real"])}</span>'
+            f'<span class="ind-uni">en pesos de hoy</span>'
+            f'<span class="ind-pill" style="background:{SEMAFORO.get(d["veredicto"], "var(--ambar)")}">'
+            f'{html.escape(d["veredicto"])}</span></div>\n'
+            f'    <p class="intro">{html.escape(frase_indice(d))} Está en el percentil '
+            f'{d["percentil"]} de su historia, {vs_txt} su promedio histórico.</p>\n'
+            f'    <nav class="ind-links">\n'
+            f'      <a href="{SITIO}/graficos.html#{code}">Ver el gráfico</a>\n'
+            f'      <a href="{img}" download="carestia-{code}.png">Descargar la tarjeta</a>\n'
+            f'    </nav>\n'
+            f'    <section class="pgrupo">\n'
+            f'      <h2>Lo que lleva <span>(aporte al costo de la semana)</span></h2>\n'
+            f'      <ul class="comp">\n{comp}\n      </ul>\n'
+            f'    </section>\n'
+            f'    <img class="tarjeta" src="{img}" width="{tarjetas.ANCHO}" height="{tarjetas.ALTO}" '
+            f'alt="{html.escape(alt, quote=True)}" loading="lazy">\n'
+            f'    <p class="intro">Fuente: precios al consumidor de ODEPA, deflactados con '
+            f'el IPC. <a href="{SITIO}/metodologia.html#canasta-{code}">Cómo se calcula</a>.</p>')
+        ruta = f"indices/{code}.html"
+        escribir_pagina(
+            ruta, f"{SITIO}/{ruta}",
+            f"{d['nombre']}: {d['subtitulo'].lower()} en Santiago | Carestía",
+            f"{d['nombre']} en la Región Metropolitana: {fmt_clp(d['costo_real'])} en pesos "
+            f"de hoy la semana del {fecha}, {d['veredicto']}. {frase_indice(d)}",
+            cuerpo, actual="indices", clase="catalogo indice", og=og, exacto=False)
+        rutas.append(ruta)
+    return rutas
+
+
+# ---- /prensa.html ----
+PRENSA_LINEA = ("Carestía publica información de consumo. No opina sobre tasas, "
+                "mercados ni inversiones.")
+
+
+def generar_prensa(paginas_indices: list) -> None:
+    indices = DATA["indices"]
+    tarjetas_ind = "\n".join(
+        f'      <li><a href="{SITIO}/{r}">{html.escape(indices[r[8:-5]]["nombre"])}</a></li>'
+        for r in paginas_indices)
+    cuerpo = f"""    <h1>Prensa</h1>
+    <p>Carestía mide cuánto cuestan cada semana cuatro canastas fijas y {CIFRAS.get("productos", "")} productos en la Región Metropolitana, en pesos de hoy, con los precios al consumidor que publica ODEPA.</p>
+    <h2>Cómo citar</h2>
+    <p><strong>{html.escape(FUENTE_CITA)}</strong></p>
+    <p>Las cifras van en pesos de hoy: cada precio pasado se lleva a valor actual con el IPC. Si citas un precio, indica la semana a la que corresponde.</p>
+    <h2>Calendario</h2>
+    <p>El sitio se actualiza los viernes después de las 14:00, cuando ODEPA ya publicó los precios de la semana. Si una semana ODEPA no publica, la portada lo dice junto a la fecha.</p>
+    <h2>Tarjetas y gráficos</h2>
+    <p>Cada índice y cada producto tiene una tarjeta lista para compartir, con su precio de la semana y su comparación con la historia. Las de los índices:</p>
+    <ul>
+{tarjetas_ind}
+    </ul>
+    <p>La de cada producto está en su ficha, en <a href="{SITIO}/productos/">Productos</a>. La tarjeta con los cuatro índices es la de la <a href="{SITIO}/og/portada.png" download="carestia-indices.png">portada</a>.</p>
+    <p>En <a href="{SITIO}/graficos.html">Gráficos</a>, el botón captura PNG descarga el gráfico que estás viendo, con su fuente.</p>
+    <h2>Contacto</h2>
+    <p><a href="mailto:pedro@carestia.cl">pedro@carestia.cl</a></p>
+    <p>Fundador: Pedro Larraín.</p>
+    <p>{html.escape(PRENSA_LINEA)}</p>"""
+    escribir_pagina(
+        "prensa.html", f"{SITIO}/prensa.html", "Prensa | Carestía",
+        "Cómo citar a Carestía, calendario de actualización, tarjetas y gráficos "
+        "para compartir y contacto de prensa.",
+        cuerpo, actual="prensa")
+
+
 def generar_portada(catalogo: dict, fichas: dict) -> None:
-    """index.html: la portada en formato tabla (ver PORTADA_HTML)."""
+    """index.html: la portada en formato tabla (ver PORTADA_HTML), con su
+    tarjeta og/portada.png y, si ODEPA no publicó la semana que tocaba, el
+    aviso junto a la fecha."""
     indices = DATA["indices"]
     tabla, vigentes = filas_portada(catalogo, fichas)
     chips, filas = html_productos(tabla, catalogo["semana"])
@@ -5428,9 +5857,16 @@ def generar_portada(catalogo: dict, fichas: dict) -> None:
     hashes = "|".join(["canasta(?:=.*)?", "comparar", "productos"] +
                       [re.escape(c) for c in indices])
     fecha = next(iter(indices.values()))["fecha"] if indices else "·"
+    ultima = semana_de_los_datos(catalogo)
+    if ultima and sin_datos_nuevos(ultima, ahora_chile()):
+        aviso = '<span class="sin-nuevos">Sin datos nuevos de ODEPA esta semana.</span>'
+    else:
+        aviso = "<span>Se actualiza los viernes.</span>"
     out = PORTADA_HTML
     for token, valor in [
         ("__HASHES__", hashes),
+        ("__OG__", tarjeta_portada(ultima)),
+        ("__AVISO_SEMANA__", aviso),
         ("__ICONO__", ICONO),
         ("__FUENTES__", FUENTES),
         ("__CSS_BASE__", CSS_BASE),
@@ -5528,10 +5964,21 @@ def texto_pendiente(nombre: str) -> bool:
                for l in leer_texto(nombre).splitlines())
 
 
+# {productos} en un texto: el número de productos con datos del último año,
+# calculado en el build (productos_recientes). Lo demás va literal
+CIFRAS = {}
+
+
+def con_cifras(texto: str) -> str:
+    for clave, valor in CIFRAS.items():
+        texto = texto.replace("{" + clave + "}", str(valor))
+    return texto
+
+
 def cargar_texto(nombre: str) -> tuple:
     """(título, html) de textos/{nombre}.md. Si la primera línea no vacía va
     entera en negrita, es el título de la página (h1); si no, título None."""
-    lineas = leer_texto(nombre).splitlines()
+    lineas = con_cifras(leer_texto(nombre)).splitlines()
     while lineas and not lineas[0].strip():
         lineas.pop(0)
     titulo = None
@@ -5558,7 +6005,7 @@ def html_canastas() -> str:
     bloques = []
     for code, meta in BASKETS.items():
         filas = "\n          ".join(
-            f"<li>{html.escape(lab)}: {fmt_cantidad(qty, uni)}</li>"
+            f"<li>{html.escape(nombre(lab))}: {fmt_cantidad(qty, uni)}</li>"
             for (lab, _match, qty, uni) in meta["items"])
         bloques.append(
             f'      <div class="canasta" id="canasta-{code}">\n'
@@ -5589,13 +6036,13 @@ def generar_metodologia() -> None:
     BASKETS tras la primera, y al final las de textos/notas_metodologicas.md.
     Cada sección lleva su propio título ('## ')."""
     secciones = []
-    for titulo, contenido in secciones_md(leer_texto("metodologia")):
+    for titulo, contenido in secciones_md(con_cifras(leer_texto("metodologia"))):
         titulo = titulo or "Metodología"
         secciones.append(("resumen" if titulo == "Cómo se calcula"
                           else slug_url(titulo), md_en_linea(titulo), contenido))
         if titulo == "Cómo se calcula":
             secciones.append(("canastas", html.escape("Las canastas"), html_canastas()))
-    for titulo, contenido in secciones_md(leer_texto("notas_metodologicas")):
+    for titulo, contenido in secciones_md(con_cifras(leer_texto("notas_metodologicas"))):
         titulo = titulo or "Notas metodológicas"
         secciones.append((slug_url(titulo), md_en_linea(titulo), contenido))
     cuerpo = "    <h1>Metodología</h1>\n" + "\n".join(
@@ -5615,7 +6062,7 @@ def generar_metodologia() -> None:
 PAGINAS_TEXTO = [
     ("acerca", "acerca.html", f"{SITIO}/acerca.html", "acerca", "Acerca de",
      "Acerca de | Carestía",
-     "Acerca de Carestía, índices del costo de vida en Chile."),
+     "Acerca de Carestía, índices del costo de vida en la Región Metropolitana."),
     ("contacto", "contacto.html", f"{SITIO}/contacto.html", "contacto", "Contacto",
      "Contacto | Carestía", "Contacto de Carestía."),
     ("terminos", "terminos.html", f"{SITIO}/terminos.html", "terminos",
@@ -5688,16 +6135,17 @@ def generar_resumen() -> None:
 # salud.yml chequea la primera URL con /productos/ del sitemap y así sigue
 # siendo una ficha
 PAGINAS_SITEMAP = ["graficos.html", "productos/", "metodologia.html", "acerca.html",
-                   "contacto.html", "terminos.html", "privacidad.html"]
+                   "prensa.html", "contacto.html", "terminos.html", "privacidad.html"]
 
 
-def generar_sitemap(slugs: list) -> None:
-    """Raíz + las URLs de producto + las páginas del sitio, todas con el
-    lastmod del build."""
+def generar_sitemap(slugs: list, indices: list = ()) -> None:
+    """Raíz + las URLs de producto + las páginas del sitio (con las de los
+    índices), todas con el lastmod del build."""
     lastmod = datetime.date.today().isoformat()
     locs = ["https://carestia.cl/"] + \
         [f"https://carestia.cl/productos/{s}.html" for s in slugs] + \
-        [f"https://carestia.cl/{p}" for p in PAGINAS_SITEMAP]
+        [f"https://carestia.cl/{p}" for p in PAGINAS_SITEMAP] + \
+        [f"https://carestia.cl/{p}" for p in indices]
     with open("sitemap.xml", "w", encoding="utf-8") as fh:
         fh.write('<?xml version="1.0" encoding="UTF-8"?>\n')
         fh.write('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n')
@@ -5719,6 +6167,7 @@ if PENDIENTES:
     print("BORRADOR: textos pendientes: " + ", ".join(PENDIENTES))
 
 FICHAS = asignar_fichas(DATA.get("productos", {}))
+CIFRAS["productos"] = productos_recientes(FICHAS)
 SLUGS = slugs_de_datos(DATA.get("productos", {}), FICHAS)
 CATALOGO = generar_catalogo(DATA.get("productos", {}), SLUGS)
 UF = cargar_uf()
@@ -5756,12 +6205,16 @@ generar_productos(FICHAS)
 generar_indice_productos(FICHAS)
 generar_metodologia()
 generar_paginas_texto()
-generar_sitemap(sorted(FICHAS))
+PAGINAS_INDICES = generar_paginas_indices()
+generar_prensa(PAGINAS_INDICES)
+generar_sitemap(sorted(FICHAS), PAGINAS_INDICES)
 generar_resumen()
 generar_tradingview(APP, CATALOGO)
 
 print(f"Listo: index.html + graficos.html + robots.txt + sitemap.xml + resumen.json + "
       f"{len(FICHAS)} páginas en productos/ + productos/index.html + "
+      f"{len(PAGINAS_INDICES)} páginas en indices/ + prensa.html + "
+      f"{len(FICHAS) + len(PAGINAS_INDICES) + 1} tarjetas en og/ + "
       f"metodologia.html + {len(PAGINAS_TEXTO)} páginas institucionales + "
       f"datos/ ({len(DATA['indices'])} índices, "
       f"{len(DATA.get('productos', {}))} productos y catalogo.json)")
