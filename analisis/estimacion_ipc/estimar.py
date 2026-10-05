@@ -85,21 +85,20 @@ def mapa_odepa(base: int) -> dict:
     return out
 
 
-def jevons(precios: pd.DataFrame, series: dict, claves: list, m: pd.Period,
-           actual: pd.DataFrame = None):
+def jevons(anterior: pd.DataFrame, actual: pd.DataFrame, series: dict, claves: list,
+           m: pd.Period):
     """Relativo de un producto del IPC con ODEPA y cuántos productos ODEPA
     entraron. Cada producto ODEPA da la media geométrica de p(m)/p(m-1) de sus
     series (una por unidad) con precio en ambos meses; el producto del IPC, la
-    media geométrica de esos productos. precios: pivote mes x serie; series:
-    {clave: [series]}; actual: pivote del mes m si viene con menos semanas que
-    el mes anterior (estimación a mitad de mes)."""
-    actual = precios if actual is None else actual
-    if m not in actual.index or (m - 1) not in precios.index:
+    media geométrica de esos productos. anterior y actual: pivotes mes x serie
+    con lo que se sabía al estimar m (p(m-1) sale de anterior y p(m) de
+    actual); series: {clave: [series]}."""
+    if m not in actual.index or (m - 1) not in anterior.index:
         return None, 0
     logs = []
     for clave in claves:
-        cols = [c for c in series.get(clave, []) if c in precios.columns and c in actual.columns]
-        a, b = actual.loc[m, cols], precios.loc[m - 1, cols]
+        cols = [c for c in series.get(clave, []) if c in anterior.columns and c in actual.columns]
+        a, b = actual.loc[m, cols], anterior.loc[m - 1, cols]
         ok = a.notna() & b.notna() & (a > 0) & (b > 0)
         if ok.any():
             logs.append(np.log(a[ok] / b[ok]).mean())
@@ -155,23 +154,26 @@ def estimar(odepa_semanal: pd.DataFrame, variante: str = "mes_anterior",
     productos cubiertos su relativo oficial en vez del de ODEPA (aísla el
     error que viene de la parte no cubierta). atraso_odepa: días entre el
     lunes de una semana y su publicación en ODEPA (4 = el viernes).
-    semanas: si viene, del mes m solo entran sus primeras 'semanas' semanas
-    (la estimación que se publicaría a mitad de mes); el mes anterior va
-    completo. detalle: si viene una lista, se le agrega una fila por mes y
+    semanas: si viene, solo entran las primeras 'semanas' semanas de m y de
+    m-1 (la estimación que se publicaría a mitad de mes). detalle: si viene una lista, se le agrega una fila por mes y
     producto con el aporte de su error a la variación estimada."""
     oficial = ine.alimentos_oficial().set_index("mes")["variacion"]
     hasta = HASTA or oficial.index.max()
     meses = pd.period_range(DESDE, hasta, freq="M")
     corte = fechas_publicacion(meses)
-    mensual = odepa_mensual.precios_mensuales(odepa_semanal, corte, atraso_odepa)
-    precios = mensual.pivot(index="mes", columns="serie", values="precio")
-    series = mensual.groupby("clave")["serie"].unique().to_dict()
-    actual = None
+    # lo que se sabía al estimar m: de m, las semanas publicadas antes del
+    # IPC de m; de m-1, todo lo publicado hasta esa misma fecha. A mitad de
+    # mes se comparan las mismas k primeras semanas de m y de m-1.
+    semanal = odepa_semanal
     if semanas:
-        orden = (odepa_semanal["semana"].dt.day - 1) // 7 + 1   # semana del mes, por su lunes
-        parcial = odepa_mensual.precios_mensuales(odepa_semanal[orden <= semanas], corte,
-                                                  atraso_odepa)
-        actual = parcial.pivot(index="mes", columns="serie", values="precio")
+        semanal = semanal[(semanal["semana"].dt.day - 1) // 7 + 1 <= semanas]
+
+    def pivote(cortes):
+        return odepa_mensual.precios_mensuales(semanal, cortes, atraso_odepa).pivot(
+            index="mes", columns="serie", values="precio")
+    actual = pivote(corte)
+    anterior = pivote({m - 1: corte[m] for m in meses})
+    series = odepa_semanal.groupby("clave")["serie"].unique().to_dict()
     bases = {b: ine.productos(b) for b in (2018, 2023)}
     indices = {b: p.pivot(index="mes", columns="codigo", values="indice") for b, p in bases.items()}
     pesos = {b: p.groupby("codigo")["ponderacion"].first() for b, p in bases.items()}
@@ -191,7 +193,7 @@ def estimar(odepa_semanal: pd.DataFrame, variante: str = "mes_anterior",
                 if oraculo:
                     r = I.loc[m, cod] / previo[cod] if m in I.index else None
                 else:
-                    r, n = jevons(precios, series, mapa[cod], m, actual)
+                    r, n = jevons(anterior, actual, series, mapa[cod], m)
                     n_odepa += n
                 if r is not None:
                     peso_odepa += wi

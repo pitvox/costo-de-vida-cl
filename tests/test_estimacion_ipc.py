@@ -46,16 +46,16 @@ def test_jevons_en_dos_niveles():
     precios = pd.DataFrame({"a | kilo": [100, 110], "a | unidad": [100, 121],
                             "b | kilo": [50, 50], "c | kilo": [10, np.nan]}, index=meses)
     series = {"a": ["a | kilo", "a | unidad"], "b": ["b | kilo"], "c": ["c | kilo"]}
-    r, n = estimar.jevons(precios, series, ["a", "b", "c"], meses[1])
+    r, n = estimar.jevons(precios, precios, series, ["a", "b", "c"], meses[1])
     assert n == 2  # c no tiene precio en febrero
     assert r == pytest.approx(np.sqrt(np.sqrt(1.1 * 1.21)))
 
 
-def test_jevons_a_mitad_de_mes_usa_el_mes_anterior_completo():
+def test_jevons_toma_p_anterior_y_p_actual_de_tablas_distintas():
     meses = pd.PeriodIndex(["2026-01", "2026-02"], freq="M")
-    completo = pd.DataFrame({"a | kilo": [100.0, 130.0]}, index=meses)
-    parcial = pd.DataFrame({"a | kilo": [90.0, 120.0]}, index=meses)
-    r, _ = estimar.jevons(completo, {"a": ["a | kilo"]}, ["a"], meses[1], parcial)
+    anterior = pd.DataFrame({"a | kilo": [100.0, 130.0]}, index=meses)
+    actual = pd.DataFrame({"a | kilo": [90.0, 120.0]}, index=meses)
+    r, _ = estimar.jevons(anterior, actual, {"a": ["a | kilo"]}, ["a"], meses[1])
     assert r == pytest.approx(1.2)
 
 
