@@ -15,6 +15,8 @@ import matplotlib.dates as mdates  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
 import pandas as pd  # noqa: E402
 
+from estimar import redondear  # noqa: E402
+
 AQUI = os.path.dirname(os.path.abspath(__file__))
 # paleta validada (dataviz): superficie clara, dos series categóricas
 SUPERFICIE, TEXTO, TEXTO_2, GRILLA = "#fcfcfb", "#0b0b0b", "#52514e", "#e4e3df"
@@ -25,7 +27,7 @@ def graficar(variante: str = "mes_anterior", salida: str = None) -> str:
     r = pd.read_csv(os.path.join(AQUI, "resultados", f"estimacion_{variante}.csv"))
     r = r.dropna(subset=["oficial"])
     x = pd.PeriodIndex(r["mes"], freq="M").to_timestamp()
-    est = r["estimada"].round(1)
+    est = pd.Series(redondear(r["estimada"]), index=r.index)
 
     plt.rcParams.update({"font.family": "DejaVu Sans", "font.size": 10})
     fig, ax = plt.subplots(figsize=(10, 4.4), dpi=160)

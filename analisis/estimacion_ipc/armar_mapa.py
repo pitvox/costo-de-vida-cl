@@ -37,12 +37,14 @@ ARROZ = ["Arroz grano ancho grado 1", "Arroz grano ancho grado 2",
 HARINA = ["Harina con polvos de hornear", "Harina sin polvos de hornear"]
 LEGUMBRES = ["Arvejas verdes partidas", "Garbanzos sin piel", "Lentejas 6 mm",
              "Poroto Hallado", "Poroto Negro", "Poroto Tórtola"]
-FRUTAS_ESTACION = ["Arándano (blue)", "Cereza", "Chirimoya", "Ciruela", "Damasco", "Durazno",
-                   "Frambuesa", "Frutilla", "Kiwi", "Mandarina", "Mango", "Melón", "Nectarín",
-                   "Sandia", "Tuna", "Uva"]
-VERDURAS_ESTACION = ["Alcachofa", "Apio", "Arveja Verde", "Brócoli", "Choclo", "Coliflor",
-                     "Espárragos", "Haba", "Pepino ensalada", "Poroto granado", "Poroto verde",
-                     "Repollo"]
+# frutas y verduras de estación: solo lo que el INE cotiza dentro del
+# producto (lista del anexo 4 del manual base 2023 y variedades de los
+# microdatos de las dos bases; el cuadro 9 del manual 2018 nombra frutas y
+# verduras que en 2019 a 2023 no se cotizaron)
+FRUTAS_ESTACION = ["Ciruela", "Durazno", "Frutilla", "Kiwi", "Melón", "Nectarín", "Sandia",
+                   "Tuna", "Uva"]
+VERDURAS_ESTACION = ["Alcachofa", "Brócoli", "Choclo", "Coliflor", "Pepino ensalada",
+                     "Poroto verde", "Repollo"]
 
 # glosa del INE -> productos ODEPA (base 2023)
 BASE_2023 = {
@@ -57,7 +59,8 @@ BASE_2023 = {
     "LECHE LÍQUIDA": ["Leche Fluida Entera", "Leche Fluida Descremada"],
     "LECHE EN POLVO": ["Leche en Polvo Entera", "Leche en Polvo Descremada"],
     "QUESOS": ["Queso Chanco", "Queso Gauda", "Queso Mantecoso"],
-    "YOGURES Y PRODUCTOS SIMILARES": ["Yoghurt", "Yoghurt (vainilla ó frutilla)"],
+    # el INE cotiza vasos y packs (115 g a 480 ml), no la bolsa de 1 kilo
+    "YOGURES Y PRODUCTOS SIMILARES": ["Yoghurt (vainilla ó frutilla)"],
     "HUEVOS": ["Huevo blanco grande (primera)", "Huevo color grande (primera)"],
     "ACEITE VEGETAL Y DE MARAVILLA": ["Aceite vegetal", "Aceite maravilla"],
     "ACEITE DE OLIVA": ["Aceite de oliva"],
@@ -96,12 +99,13 @@ BASE_2018 = {
     "CARNE DE POLLO": POLLO,
     "LECHE EN POLVO": ["Leche en Polvo Entera", "Leche en Polvo Descremada"],
     "LECHE LÍQUIDA": ["Leche Fluida Entera", "Leche Fluida Descremada"],
-    "YOGHURT": ["Yoghurt", "Yoghurt (vainilla ó frutilla)"],
+    "YOGHURT": ["Yoghurt (vainilla ó frutilla)"],
     "QUESO": ["Queso Chanco", "Queso Gauda", "Queso Mantecoso"],
     "HUEVOS": ["Huevo blanco grande (primera)", "Huevo color grande (primera)"],
     "MANTEQUILLA": ["Mantequilla con sal"],
     "MARGARINA": ["Margarina"],
-    "ACEITE VEGETAL": ["Aceite vegetal", "Aceite maravilla"],
+    # en 2018 el aceite de oliva era una variedad de ACEITE VEGETAL
+    "ACEITE VEGETAL": ["Aceite vegetal", "Aceite maravilla", "Aceite de oliva"],
     "MANZANA": ["Manzana"],
     "NARANJA": ["Naranja"],
     "PERA": ["Pera"],

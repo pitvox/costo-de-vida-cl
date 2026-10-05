@@ -21,23 +21,23 @@ base,codigo,producto_ipc,ponderacion,odepa
 2018,1.1.4.1.1,LECHE EN POLVO,0.18644,Leche en Polvo Entera | Leche en Polvo Descremada
 2018,1.1.4.1.2,LECHE LÍQUIDA,0.45256,Leche Fluida Entera | Leche Fluida Descremada
 2018,1.1.4.1.3,LECHE CONSERVADA,0.08348,
-2018,1.1.4.2.1,YOGHURT,0.37669,Yoghurt | Yoghurt (vainilla ó frutilla)
+2018,1.1.4.2.1,YOGHURT,0.37669,Yoghurt (vainilla ó frutilla)
 2018,1.1.4.2.2,POSTRES LÁCTEOS,0.07293,
 2018,1.1.4.3.1,QUESO,0.84248,Queso Chanco | Queso Gauda | Queso Mantecoso
 2018,1.1.4.4.1,HUEVOS,0.40773,Huevo blanco grande (primera) | Huevo color grande (primera)
 2018,1.1.5.1.1,MANTEQUILLA,0.16426,Mantequilla con sal
 2018,1.1.5.1.2,MARGARINA,0.07462,Margarina
-2018,1.1.5.2.1,ACEITE VEGETAL,0.29183,Aceite vegetal | Aceite maravilla
+2018,1.1.5.2.1,ACEITE VEGETAL,0.29183,Aceite vegetal | Aceite maravilla | Aceite de oliva
 2018,1.1.6.1.1,MANZANA,0.11296,Manzana
 2018,1.1.6.1.2,NARANJA,0.1119,Naranja
 2018,1.1.6.1.3,PERA,0.03486,Pera
 2018,1.1.6.1.4,PLÁTANO,0.14182,Plátano
-2018,1.1.6.1.5,FRUTAS DE ESTACIÓN,0.3918,Arándano (blue) | Cereza | Chirimoya | Ciruela | Damasco | Durazno | Frambuesa | Frutilla | Kiwi | Mandarina | Mango | Melón | Nectarín | Sandia | Tuna | Uva
+2018,1.1.6.1.5,FRUTAS DE ESTACIÓN,0.3918,Ciruela | Durazno | Frutilla | Kiwi | Melón | Nectarín | Sandia | Tuna | Uva
 2018,1.1.6.2.1,FRUTOS SECOS,0.13142,
 2018,1.1.6.2.2,FRUTAS EN CONSERVA,0.0484,
 2018,1.1.7.1.1,ACELGA Y ESPINACA,0.04289,Espinaca
 2018,1.1.7.1.10,ZAPALLO ITALIANO,0.03675,Zapallo italiano
-2018,1.1.7.1.11,VERDURAS DE ESTACIÓN,0.30569,Alcachofa | Apio | Arveja Verde | Brócoli | Choclo | Coliflor | Espárragos | Haba | Pepino ensalada | Poroto granado | Poroto verde | Repollo
+2018,1.1.7.1.11,VERDURAS DE ESTACIÓN,0.30569,Alcachofa | Brócoli | Choclo | Coliflor | Pepino ensalada | Poroto verde | Repollo
 2018,1.1.7.1.12,VERDURAS CONGELADAS,0.11295,
 2018,1.1.7.1.13,VERDURAS EN CONSERVA,0.04367,
 2018,1.1.7.1.14,VERDURAS ENCURTIDAS,0.0731,
@@ -101,7 +101,7 @@ base,codigo,producto_ipc,ponderacion,odepa
 2023,1.1.4.2.2,CREMAS Y LECHES CONSERVADAS,0.1023,
 2023,1.1.4.3.1,BEBIDAS VEGETALES,0.02403,
 2023,1.1.4.4.1,QUESOS,0.99125,Queso Chanco | Queso Gauda | Queso Mantecoso
-2023,1.1.4.5.1,YOGURES Y PRODUCTOS SIMILARES,0.33643,Yoghurt | Yoghurt (vainilla ó frutilla)
+2023,1.1.4.5.1,YOGURES Y PRODUCTOS SIMILARES,0.33643,Yoghurt (vainilla ó frutilla)
 2023,1.1.4.6.1,POSTRES LÁCTEOS,0.22855,
 2023,1.1.4.7.1,HUEVOS,0.47199,Huevo blanco grande (primera) | Huevo color grande (primera)
 2023,1.1.5.1.1,ACEITE VEGETAL Y DE MARAVILLA,0.31637,Aceite vegetal | Aceite maravilla
@@ -109,7 +109,7 @@ base,codigo,producto_ipc,ponderacion,odepa
 2023,1.1.5.2.1,MANTEQUILLA,0.20964,Mantequilla con sal
 2023,1.1.5.3.1,MARGARINA,0.07009,Margarina
 2023,1.1.6.1.1,PALTAS,0.44206,Palta
-2023,1.1.6.1.2,FRUTAS DE ESTACIÓN,0.39019,Arándano (blue) | Cereza | Chirimoya | Ciruela | Damasco | Durazno | Frambuesa | Frutilla | Kiwi | Mandarina | Mango | Melón | Nectarín | Sandia | Tuna | Uva
+2023,1.1.6.1.2,FRUTAS DE ESTACIÓN,0.39019,Ciruela | Durazno | Frutilla | Kiwi | Melón | Nectarín | Sandia | Tuna | Uva
 2023,1.1.6.1.3,PLÁTANOS,0.20535,Plátano
 2023,1.1.6.1.4,LIMONES,0.15015,Limón
 2023,1.1.6.1.5,NARANJAS,0.12263,Naranja
@@ -117,7 +117,7 @@ base,codigo,producto_ipc,ponderacion,odepa
 2023,1.1.6.1.7,PERAS,0.02868,Pera
 2023,1.1.6.2.1,FRUTOS SECOS,0.14506,
 2023,1.1.6.3.1,FRUTAS PRESERVADAS,0.02926,
-2023,1.1.7.1.1,VERDURAS DE ESTACIÓN,0.41119,Alcachofa | Apio | Arveja Verde | Brócoli | Choclo | Coliflor | Espárragos | Haba | Pepino ensalada | Poroto granado | Poroto verde | Repollo | Espinaca
+2023,1.1.7.1.1,VERDURAS DE ESTACIÓN,0.41119,Alcachofa | Brócoli | Choclo | Coliflor | Pepino ensalada | Poroto verde | Repollo | Espinaca
 2023,1.1.7.1.2,TOMATES,0.33514,Tomate
 2023,1.1.7.1.3,LECHUGAS,0.18525,Lechuga
 2023,1.1.7.1.4,CEBOLLAS Y CEBOLLINES,0.14496,Cebolla

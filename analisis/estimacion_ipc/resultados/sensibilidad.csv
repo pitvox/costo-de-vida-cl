@@ -1,9 +1,9 @@
 corrida,meses,eam_estimacion,eam_ingenuo,acierto_dir_estimacion,acierto_dir_ingenuo,meses_mejor_que_ingenuo,eam_promedio_12m,acierto_dir_promedio_12m,acierto_dir_siempre_sube,p_dm_ingenuo,p_dm_promedio_12m
-principal (mes anterior),92.0,0.624,0.793,69.565,61.957,54.348,0.634,75.0,75.0,0.007,0.882
-no cubiertos con promedio de 12 meses,92.0,0.537,0.793,69.565,61.957,56.522,0.634,75.0,75.0,0.0,0.107
-ODEPA publicada una semana más tarde,92.0,0.626,0.793,67.391,61.957,55.435,0.634,75.0,75.0,0.012,0.914
-oráculo: cubiertos con su variación oficial,92.0,0.386,0.793,79.348,61.957,76.087,0.634,75.0,75.0,0.0,0.0
-con las primeras 1 semanas del mes,92.0,0.589,0.793,64.13,61.957,60.87,0.634,75.0,75.0,0.001,0.453
-con las primeras 2 semanas del mes,92.0,0.595,0.793,68.478,61.957,58.696,0.634,75.0,75.0,0.002,0.552
-con las primeras 3 semanas del mes,92.0,0.615,0.793,67.391,61.957,59.783,0.634,75.0,75.0,0.005,0.782
-principal sin enero 2019 ni enero 2024,90.0,0.63,0.786,68.889,62.222,53.333,0.636,75.556,75.556,0.014,0.934
+principal (mes anterior),92.0,0.62,0.793,69.565,61.957,57.609,0.635,75.0,75.0,0.008,0.828
+no cubiertos con promedio de 12 meses,92.0,0.547,0.793,70.652,61.957,58.696,0.635,75.0,75.0,0.001,0.157
+ODEPA publicada una semana más tarde,92.0,0.624,0.793,69.565,61.957,56.522,0.635,75.0,75.0,0.009,0.876
+oráculo: cubiertos con su variación oficial,92.0,0.386,0.793,79.348,61.957,76.087,0.635,75.0,75.0,0.0,0.0
+con las primeras 1 semanas del mes,92.0,0.609,0.793,66.304,61.957,58.696,0.635,75.0,75.0,0.013,0.723
+con las primeras 2 semanas del mes,92.0,0.627,0.793,65.217,61.957,56.522,0.635,75.0,75.0,0.027,0.922
+con las primeras 3 semanas del mes,92.0,0.641,0.793,66.304,61.957,59.783,0.635,75.0,75.0,0.028,0.93
+principal sin enero 2019 ni enero 2024,90.0,0.623,0.786,68.889,62.222,56.667,0.637,75.556,75.556,0.014,0.852
