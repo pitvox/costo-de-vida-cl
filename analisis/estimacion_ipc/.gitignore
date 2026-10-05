@@ -1,0 +1,5 @@
+# Descargas del INE, el Ministerio de Desarrollo Social y ODEPA: las vuelve a
+# bajar el script; no van al repo
+datos_crudos/
+# Tablas intermedias que regenera el script
+datos/
