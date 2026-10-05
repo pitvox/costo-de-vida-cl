@@ -2,7 +2,7 @@
 
 **Canastas fijas.** Cada índice es una canasta con cantidades que no cambian. Lo único que se mueve de una semana a otra es el precio. El costo semanal es la suma de la cantidad por el precio de cada producto.
 
-**Nominal y en pesos de hoy.** El sitio muestra las dos series. La nominal es el precio que se pagó esa semana. La de pesos de hoy lleva cada semana a valor actual con el IPC, para comparar años distintos sin que la inflación general distorsione la comparación.
+**Pesos de hoy, precio de la época y UF.** El sitio muestra cada serie de tres formas. El precio de la época es el que se pagó esa semana. En pesos de hoy, cada semana se lleva a valor actual con el IPC, para comparar años distintos sin que la inflación general distorsione la comparación. En UF, el precio de cada semana se divide por el valor de la UF de ese día, según el Banco Central de Chile; como la UF se reajusta con el IPC, la forma es casi la misma que en pesos de hoy, con un pequeño desfase. El veredicto y el percentil se calculan siempre en pesos de hoy.
 
 **Deflactación.** Usamos el IPC empalmado del Banco Central de Chile, con base 2023=100. Sus variaciones mensuales pueden diferir levemente de las que publica el INE; para comparar series largas, la serie empalmada es la adecuada.
 
