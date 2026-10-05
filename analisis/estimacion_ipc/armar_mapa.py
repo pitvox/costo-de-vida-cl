@@ -149,7 +149,11 @@ CBA = {
     "Queso gouda": ["Queso Gauda"],
     "Queso chanco o mantecoso": ["Queso Chanco", "Queso Mantecoso"],
     "Quesos no identificados": ["Queso Chanco", "Queso Gauda", "Queso Mantecoso"],
-    "Yogur sin probióticos o lactobacilos (batido)": ["Yoghurt (vainilla ó frutilla)"],
+    # el pote de 125 g hasta junio de 2023 y la bolsa de 1 kilo desde julio:
+    # el CCIF no pone condición de envase (en el IPC, en cambio, manda lo que
+    # cotiza el INE)
+    "Yogur sin probióticos o lactobacilos (batido)": ["Yoghurt (vainilla ó frutilla)",
+                                                      "Yoghurt"],
     "Aceites vegetales, de fruta o semillas": ["Aceite vegetal", "Aceite maravilla"],
     "Mantequillas": ["Mantequilla con sal"],
     "Margarinas y preparaciones similares": ["Margarina"],
