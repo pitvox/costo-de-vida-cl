@@ -117,8 +117,8 @@ def test_tarjetas_de_indices_llevan_a_su_grafico(sitio):
     assert "+0% sobre su promedio" in tarjetas[1][1]
     assert "-5% bajo su promedio" in tarjetas[2][1]
     assert 'style="background:var(--verde)">BARATO<' in tarjetas[2][1]
-    # cambio semanal con flecha neutra
-    assert '<i class="f">▲</i> 0,1% esta semana' in asado
+    # cambio semanal: la flecha al lado y el número en rojo (subió)
+    assert '<i class="f">▲</i> <span class="v-sube">0,1%</span> esta semana' in asado
 
 
 def test_cinta_con_links_a_cada_indice(sitio):
@@ -127,6 +127,56 @@ def test_cinta_con_links_a_cada_indice(sitio):
     # dos vueltas para el desplazamiento continuo; la segunda, oculta
     assert links == [f"/graficos.html#{c}" for c in BASKETS] * 2
     assert h.count('aria-hidden="true" tabindex="-1"><span class="tn">') == len(BASKETS)
+
+
+def _valores(h, lid):
+    bloque = re.search(rf'id="{lid}">(.*?)</ul>', h, re.S).group(1)
+    return re.findall(r'<span class="sv">(.*?)</span></a>', bloque)
+
+
+def test_variaciones_en_color_con_criterio_de_consumidor(sitio):
+    """El número de cada variación va en rojo si el precio subió y en verde
+    si bajó (sin cambio, en el color del texto); la flecha va al lado, en
+    gris, y el resto del texto en hueso."""
+    h = _leer(sitio, "index.html")
+    # los tokens: rojo y verde del sitio, con su propio nombre
+    assert "--sube:var(--rojo); --baja:var(--verde);" in h
+    assert "--verde:#5bbf7a;" in h and "--rojo:#e0552f;" in h
+    assert ".f { font-style:normal; color:var(--dim); }" in h
+    assert ".v-sube { color:var(--sube); }" in h and ".v-baja { color:var(--baja); }" in h
+    # Esta semana: los que subieron en rojo, los que bajaron en verde
+    sube, baja = _valores(h, "sem-sub"), _valores(h, "sem-baj")
+    assert len(sube) == len(baja) == 5
+    assert all(re.fullmatch(r'<i class="f">▲</i> <span class="v-sube">\d+,\d%</span>', v) for v in sube)
+    assert all(re.fullmatch(r'<i class="f">▼</i> <span class="v-baja">\d+,\d%</span>', v) for v in baja)
+    # la tabla: 1 semana, 3 meses y 1 año
+    fila = re.search(r'<a class="fila" href="/productos/baja-0.html".*?</a>', h).group(0)
+    assert '<span class="c-v c-w"><i class="f">▼</i> <span class="v-baja">30,0%</span></span>' in fila
+    fila = re.search(r'<a class="fila" href="/productos/sube-0.html".*?</a>', h).group(0)
+    assert '<span class="c-v c-w"><i class="f">▲</i> <span class="v-sube">30,0%</span></span>' in fila
+    # la cinta y las tarjetas
+    assert '<span class="td"><i class="f">▲</i><span class="v-sube">0,1%</span></span>' in h
+    assert '<div class="ic-m"><i class="f">▲</i> <span class="v-sube">0,1%</span> (p88)</div>' in h
+    # el resto del texto en hueso
+    assert ".titem .td { font:500 12px var(--sans); color:var(--bone); }" in h
+    assert "font:400 12px/1.5 var(--sans); color:var(--bone);\n    border-top:1px solid var(--line); padding-top:12px; }" in h
+    assert ".ic-m { display:block; font:400 11px/1.4 var(--sans); color:var(--bone); }" in h
+
+
+def test_variacion_de_la_ficha_y_de_graficos_en_color(sitio):
+    for slug, clase, flecha in [("sube-0", "v-sube", "▲"), ("baja-0", "v-baja", "▼")]:
+        h = _leer(sitio, f"productos/{slug}.html")
+        assert (f'<div class="odelta"><i class="f">{flecha}</i><span class="{clase}">30,0%</span> '
+                f'<small>sem.</small></div>') in h, slug
+        assert ".odelta { font:600 15px var(--sans); color:var(--bone); }" in h
+    quieto = _leer(sitio, "productos/quieto.html")
+    assert '<div class="odelta"><i class="f">▲</i>0,0% <small>sem.</small></div>' in quieto
+    # /productos/ no muestra variaciones
+    assert "v-sube" not in _leer(sitio, "productos/index.html").split("</style>")[1]
+    # /graficos.html arma la cinta y la cifra del índice con el mismo criterio
+    g = _leer(sitio, "graficos.html")
+    assert "'<span class=\"' + (x > 0 ? 'v-sube' : 'v-baja') + '\">' + num + '</span>'" in g
+    assert "document.getElementById('odelta').innerHTML = fmtDelta(deltaSemanal(d));" in g
 
 
 def test_semaforo_solo_en_los_indices(sitio):
@@ -148,7 +198,8 @@ def test_listas_de_esta_semana(sitio):
         assert "Atrasado" not in _lista(h, lid) and "Viejo" not in _lista(h, lid)
     # empate de percentil 100: primero el que más subió en un año
     assert caros[:3] == ["Sube 0", "Sube 1", "Sube 2"]
-    assert '<i class="f">▲</i> 30,0%' in h and '<i class="f">▼</i> 30,0%' in h
+    assert '<i class="f">▲</i> <span class="v-sube">30,0%</span>' in h
+    assert '<i class="f">▼</i> <span class="v-baja">30,0%</span>' in h
     assert re.search(r'id="sem-car">.*?percentil 100</span>', h, re.S)
 
 
@@ -187,9 +238,9 @@ def test_fila_con_sus_columnas_y_datos_para_ordenar(sitio):
     assert '<span class="c-p">$1.300</span>' in cuerpo
     assert '<span style="width:100%"></span>' in cuerpo            # barra neutra
     assert re.search(r'<svg class="sp" viewBox="0 0 51 100"[^>]*><path d="M0 \d+ 1 ', cuerpo)
-    # sin cambio: flecha "="
+    # sin cambio: flecha "=" y el número en el color del texto
     quieto = re.search(r'href="/productos/quieto.html".*?</a>', h).group(0)
-    assert '<i class="f">=</i> 0,0%' in quieto
+    assert '<i class="f">=</i> 0,0%' in quieto and "v-sube" not in quieto and "v-baja" not in quieto
     # huecos en el último año: la línea se corta (más de un trazo)
     estacional = re.search(r'href="/productos/estacional.html".*?</a>', h).group(0)
     assert re.search(r'<path d="([^"]+)"', estacional).group(1).count("M") == 2
@@ -277,3 +328,19 @@ def test_referencia_de_diseno_fuera_del_sitio_publicado():
     assert "diseno" not in wf and "design" not in wf
     # nada se copia por comodín: solo archivos y carpetas nombrados
     assert not re.search(r"cp\s+(-r\s+)?(\.|\*|\./\*)\s", wf)
+
+
+def test_paginas_de_texto_con_el_ancho_del_pie(sitio):
+    """Metodología, acerca, contacto, términos, privacidad, /productos/ y el
+    404: el texto usa el mismo ancho y el mismo margen izquierdo que el pie
+    (sin columna angosta centrada)."""
+    pie = re.search(r"\.sitefoot \{[^}]*padding:18px (clamp\([^)]*\)) 24px;",
+                    _leer(sitio, "index.html")).group(1)
+    for pagina in ["metodologia.html", "acerca.html", "contacto.html", "terminos.html",
+                   "privacidad.html", "productos/index.html", "404.html"]:
+        h = _leer(sitio, pagina)
+        css = h[h.index("<style>"):h.index("</style>")]
+        assert f"  main {{ padding:clamp(20px,4vw,36px) {pie} clamp(28px,4vw,44px); }}" in css, pagina
+        assert "max-width:980px" not in css and "max-width:760px" not in css, pagina
+        assert "max-width:70ch" not in css, pagina
+        assert "margin:0 auto" not in css, pagina

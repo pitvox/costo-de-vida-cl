@@ -15,6 +15,16 @@ Todo texto visible del sitio (páginas, meta descriptions, textos que arma el JS
 
 La guardia está en `tests/test_texto.py` (pytest, sin red). Falla si aparece "—", "–", " · ", " vs ", "inédit", "al descuento" o "sin precedentes" en `textos/*.md`, en los strings de `build_site.py` que terminan en el sitio (docstrings y `print` de consola quedan fuera) o en el HTML de un build sintético. Corre con `python -m pytest -q tests`.
 
+## Colores de las variaciones
+
+Por decisión del dueño, esta regla reemplaza la de "flechas neutras". El número de cada variación de precio (la cinta de índices, las tarjetas de "Índices Carestía", "Esta semana", la tabla de la portada, la ficha de cada producto y la cifra del índice en /graficos.html) va en color con criterio de consumidor:
+
+- Si el precio subió, rojo #e0552f (token `--sube`, clase `.v-sube`).
+- Si bajó, verde #5bbf7a (token `--baja`, clase `.v-baja`).
+- Si no cambió (redondea a 0,0), en el color del texto, sin clase.
+
+La flecha sigue al lado del número, en gris (`.f`), y el resto del texto va en hueso. Las clases las ponen `cambio()` y `fmt_delta()` en `build_site.py` y `fmtDelta()` en el JS de /graficos.html. Las velas no cambian: siguen la convención de los gráficos (verde sube, rojo baja). El semáforo CARO/NORMAL/BARATO sigue reservado a los 4 índices.
+
 ## Alcance
 
 Un cambio de texto no toca la lógica, los datos, el diseño, los colores ni las URLs. `indices.py`, `validar.py`, `resumen.json` y la metodología no se modifican sin autorización del dueño.

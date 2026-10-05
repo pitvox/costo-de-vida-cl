@@ -304,6 +304,102 @@ async function temporalidades(info, semanales, t, completo) {
   }
   if (UFJ) ok(semanasSinUF === 0, 'la UF cubre todas las semanas de producto (' + semanasSinUF + ' sin UF)');
 
+  // ---- Tu canasta ----
+  // la cuenta de calcularCanasta en /graficos.html, escrita aparte: las
+  // semanas en que todos los productos tienen precio y, en cada una, la suma
+  // de cantidad × precio en el orden de la canasta
+  const serieProd = slug => {
+    const p = leer(path.join('datos', 'productos', slug + '.json')), real = [];
+    p.v.forEach((v, i) => { if (v != null) real.push({ time: ms(p.t0) + i * semana, value: v }); });
+    return { real, huecos: p.v.filter(v => v == null).length };
+  };
+  function cuentaPagina(items) {
+    const ps = items.map(x => ({ q: x.cantidad, real: serieProd(x.slug).real })).filter(x => x.real.length);
+    if (!ps.length) return [];
+    const mapas = ps.map(x => new Map(x.real.map(p => [p.time, p.value])));
+    const serie = [];
+    ps[0].real.forEach(p => {
+      let suma = 0;
+      for (let i = 0; i < ps.length; i++) {
+        const v = mapas[i].get(p.time);
+        if (v == null) return;
+        suma += ps[i].q * v;
+      }
+      serie.push({ time: p.time, value: suma });
+    });
+    return serie;
+  }
+  const slugs = CAT.productos.map(p => p.slug);
+  const prodInfo = new Map(slugs.map(sl => [sl, serieProd(sl)]));
+  const desde = sl => prodInfo.get(sl).real[0].time;
+  const tardio = slugs.slice().sort((a, b) => desde(b) - desde(a))[0];
+  const temprano = slugs.slice().sort((a, b) => desde(a) - desde(b))[0];
+  const estacionales = slugs.slice().sort((a, b) => prodInfo.get(b).huecos - prodInfo.get(a).huecos).slice(0, 3);
+  const QS = [0.1, 0.5, 1, 12, 0.3, 2, 0.25, 1.5];
+  const pruebasCanasta = [
+    [[slugs[0], 0.1], [slugs[1], 0.1]],
+    [[temprano, 1], [tardio, 0.5]],                      // truncada por el de historia corta
+    [[slugs[2], 0.5]],
+    // 8 productos, con los de más semanas sin precio
+    [...estacionales, ...slugs.filter(sl => !estacionales.includes(sl)).slice(0, 5)].map((sl, i) => [sl, QS[i]]),
+  ];
+  // las 5 canastas compartidas de la verificación, si el build trae esos
+  // productos (con el indices.json real de carestia.cl)
+  const porClave = new Map(CAT.productos.map(p => [p.clave, p.slug]));
+  ['marraqueta:0.1,palta:0.1', 'palta:0.5,marraqueta:0.1,tomate:1', 'asado_de_tira:0.5',
+   'yoghurt:1,leche_entera:2,marraqueta:0.5,huevos:12,platano:1',
+   'cereza:0.5,durazno:1,frutilla:0.5,manzana:1,platano:1,palta:0.3,tomate:1,lechuga:1'].forEach(txt => {
+    const pares = txt.split(',').map(par => par.split(':'));
+    if (pares.every(([k]) => porClave.has(k))) pruebasCanasta.push(pares.map(([k, q]) => [porClave.get(k), +q]));
+  });
+  const vistos = new Set();
+  let semanasCanasta = 0;
+  for (const c of pruebasCanasta) {
+    const items = c.map(([slug, cantidad]) => ({ slug, cantidad }));
+    const nombre = c.map(x => x.join(':')).join(',');
+    const t = feed.canasta(items);
+    ok(/^tu-canasta-[a-z0-9]+$/.test(t), 'canasta: ticker sin paréntesis ni dos puntos: ' + t);
+    ok(feed.canasta(items.map(x => Object.assign({}, x))) === t, nombre + ': la misma canasta, el mismo ticker');
+    ok(!vistos.has(t), nombre + ': otra canasta, otro ticker');
+    vistos.add(t);
+    const info = await llamar((res, rej) => feed.resolveSymbol(t.toUpperCase(), res, rej));
+    ok(info.ticker === t && info.description === 'Tu canasta' &&
+       info.long_description === 'Tu canasta, en pesos de hoy', nombre + ': se llama Tu canasta');
+    ok(info.type !== 'index' && !/[íi]ndice/i.test(info.description + info.long_description),
+       nombre + ': nunca índice');
+    ok(info.visible_plots_set === 'c' && info.pricescale === 1 && info.currency_code === 'CLP',
+       nombre + ': una línea, en pesos');
+    const bars = await historia(info, 300);
+    const esperada = cuentaPagina(items);
+    semanasCanasta += esperada.length;
+    ok(esperada.length > 0, nombre + ': tiene semanas en común');
+    ok(JSON.stringify(bars.map(b => [b.time, b.close])) === JSON.stringify(esperada.map(p => [p.time, p.value])),
+       nombre + ': la cuenta de la página, semana a semana y al peso');
+    ok(bars.every((b, i) => b.open === (i ? bars[i - 1].close : b.close) &&
+       b.high === Math.max(b.open, b.close) && b.low === Math.min(b.open, b.close)),
+       nombre + ': abre en el cierre anterior, sin mecha');
+    ok(bars.every(b => lunes(b.time)), nombre + ': cada barra a las 00:00 UTC de un lunes');
+    // 2S a 12M: las mismas semanas, agrupadas como las de los índices
+    await temporalidades(info, bars, nombre, false);
+    // con un producto de historia corta, parte cuando parte el más nuevo
+    ok(!bars.length || bars[0].time === Math.max(...items.map(x => desde(x.slug))) ||
+       items.some(x => prodInfo.get(x.slug).huecos), nombre + ': parte con el producto más nuevo');
+  }
+  const t1 = feed.canasta([{ slug: slugs[0], cantidad: 0.1 }]);
+  ok(t1 !== feed.canasta([{ slug: slugs[0], cantidad: 0.2 }]), 'canasta: otra cantidad, otro ticker');
+  ok(t1 !== feed.canasta([{ slug: slugs[1], cantidad: 0.1 }]), 'canasta: otro producto, otro ticker');
+  const vacia = feed.canasta([]);
+  ok(vacia === 'tu-canasta', 'canasta vacía: tu-canasta');
+  const iv = await llamar((res, rej) => feed.resolveSymbol(vacia, res, rej));
+  const bv = await llamar((res, rej) => feed.getBars(iv, '1W',
+    { from: 0, to: 4e9, countBack: 10, firstDataRequest: true }, (b, m) => res({ b, m }), rej));
+  ok(!bv.b.length && bv.m.noData, 'canasta vacía: noData');
+  ok(!(await feed.lista()).some(x => /^tu-canasta/.test(x.ticker)), 'canasta: fuera de la lista de símbolos');
+  const enBusqueda = await llamar(res => feed.searchSymbols('canasta', '', '', res));
+  ok(!enBusqueda.some(x => /^tu-canasta/.test(x.ticker)), 'canasta: fuera de la búsqueda');
+  // la misma función que usa el datafeed, expuesta
+  ok(TV.serieCanasta([]).length === 0 && TV.NOMBRE_CANASTA === 'Tu canasta', 'serieCanasta y el nombre, expuestos');
+
   // ---- otras resoluciones y búsqueda ----
   for (const r of ['1D', '60', '4W', '2M', '24M']) {
     const x = await llamar((res, rej) => feed.getBars(asado, r,
@@ -511,6 +607,7 @@ async function temporalidades(info, semanales, t, completo) {
   console.log(`datafeed: ${chequeos - fallas}/${chequeos} chequeos OK; ` +
     `${CODES.length} índices y ${CAT.productos.length} productos, cada uno en ${UNIDADES.join(', ')} ` +
     `y en ${RES.join(', ')}; ` +
+    `${pruebasCanasta.length} canastas (${semanasCanasta} semanas) iguales a la cuenta de la página; ` +
     `${semanasProd - sinFactor} de ${semanasProd} semanas de producto con precio de la época ` +
     `(${sinFactor} sin índice publicado ese mes); factor mensual con error máximo de $${maxErr}` +
     (UFJ ? `; ${semanasUF} semanas de producto en UF (${UFJ.fuente}, UF del ${UFJ.t0} en adelante)` : '; sin UF'));

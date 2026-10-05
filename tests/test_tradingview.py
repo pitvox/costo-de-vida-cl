@@ -436,8 +436,15 @@ def test_graficos_indices_y_comparar_en_advanced_charts(sitio):
     js = _script(_leer(sitio, "graficos.html"))
     # la configuración común, un widget por modo, montado al estar a la vista
     assert js.count("TV.montar(") == 1
-    assert "sitio: true" in js and "estilo: m === 'indices'" in js
+    assert "sitio: true" in js and "estilo: m !== 'productos' })" in js
     assert "if (modo === m) montarTV(m);" in js
+    for m, caja, clase, dato in [("indices", "tvind", "tv-ind", "motorIndices"),
+                                 ("productos", "tvprod", "tv-prod", "motorProductos"),
+                                 ("canasta", "tvcan", "tv-can", "motorCanasta")]:
+        assert (f"{m}: {{ estado: 'nada', caja: '{caja}', clase: '{clase}', "
+                f"dato: '{dato}' }}") in js, m
+    # sin carestia-tv.js, los tres modos van en Lightweight
+    assert "Object.keys(tv).forEach(m => { tv[m].estado = 'falla';" in js
     # las tabs cambian el símbolo del mismo widget; cada unidad es otro símbolo
     assert "const simboloIndice = code => code + SUF[unidad];" in js
     assert "const SUF = { real: '', epoca: '-epoca', uf: '-uf' };" in js
@@ -462,8 +469,9 @@ def test_graficos_indices_y_comparar_en_advanced_charts(sitio):
     assert "c.createStudy('Compare', false, false," in js
     assert "{ 'plot.color': e.color, 'plot.linestyle': e.punteada ? 1 : 0, 'plot.linewidth': 2 }" in js
     assert "escala.setMode(2)" in js
-    # Arma tu canasta sigue en Lightweight
+    # Lightweight queda como respaldo, también para Arma tu canasta
     assert "cchart = LightweightCharts.createChart(el," in js
+    assert "if (usaLW('canasta')) initCChart();" in js
     # la caja con su tamaño final antes de crear el widget; sin ella, al respaldo
     montar = js[js.index("function montarTV(m)"):js.index("const simboloIndice")]
     assert montar.index("document.body.classList.add(e.clase);") < montar.index("TV.montar(")
@@ -472,7 +480,58 @@ def test_graficos_indices_y_comparar_en_advanced_charts(sitio):
     assert "const sinFuente = t => String(t || '').split(':').pop().toLowerCase();" in js
     # respaldo: el modo que no inicia dibuja con Lightweight
     assert "if (m === 'indices') { initChart(); pintarSerie(cur); }" in js
-    assert "else { initPChart(); syncProductos(); }" in js
+    assert "else if (m === 'productos') { initPChart(); syncProductos(); }" in js
+    assert "else { initCChart(); syncCanasta(); }" in js
+
+
+def test_graficos_canasta_en_advanced_charts(sitio):
+    """Arma tu canasta: un símbolo que calcula el datafeed con los productos y
+    cantidades de la canasta, en línea y en hueso; la cifra y las
+    estadísticas siguen saliendo de calcularCanasta."""
+    h = _leer(sitio, "graficos.html")
+    assert '<div id="tvcan" class="tvbox m-can"></div>' in h
+    js = _script(h)
+    assert ("const tickerCanasta = () => feed.canasta([...canasta.entries()].filter(([k]) => PRODS[k])\n"
+            "    .map(([k, q]) => ({ slug: PRODS[k].slug, cantidad: q })));") in js
+    assert "simbolo: m === 'indices' ? simboloIndice(cur) : m === 'canasta' ? tickerCanasta() :" in js
+    sync = js[js.index("function syncCanasta()"):js.index("function buildCanasta()")]
+    assert "const r = calcularCanasta();" in sync
+    assert "ponerSimbolo(w, tickerCanasta());" in sync
+    assert "w.activeChart().getSeries().setVisible(r.serie.length > 0);" in sync
+    # el datafeed y la página piden los mismos archivos
+    assert "pedir: pedirJSON," in js
+    tvjs = _leer(sitio, "carestia-tv.js")
+    assert "const NOMBRE_CANASTA = 'Tu canasta';" in tvjs
+    assert "visible_plots_set: s.clase === 'canasta' ? 'c' : 'ohlc'," in tvjs
+    # en línea, como todos los gráficos (velas a un clic)
+    assert "'mainSeriesProperties.style': 2," in tvjs
+    # la franja de la canasta sobre el gráfico, como la de los índices
+    assert ("body.tv-ind .overlay.m-ind, body.tv-prod .overlay.m-prod, "
+            "body.tv-can .overlay.m-can {") in h
+
+
+def test_graficos_altos_y_captura_cuadrada(sitio):
+    """Escritorio: alto de 0,6 veces el ancho, entre 520 y 760px; celular:
+    el ancho, sin pasar del 75% de la pantalla. La captura PNG, de 1080 ×
+    1080, con el gráfico fotografiado en la proporción de su recuadro."""
+    h = _leer(sitio, "graficos.html")
+    assert ".hero-wrap, .tvbox { aspect-ratio:5 / 3; min-height:520px; max-height:760px; }" in h
+    assert (".hero-wrap, .tvbox { aspect-ratio:1 / 1; min-height:0; max-height:75vh;\n"
+            "      max-height:75svh; } }") in h
+    assert "100vh - " not in h and "100svh - " not in h
+    ficha = _leer(sitio, "productos/producto-000.html")
+    assert ("#grafico { position:relative; max-width:none; aspect-ratio:5 / 3;\n"
+            "    min-height:520px; max-height:760px; margin-top:16px; }") in ficha
+    assert "#grafico { aspect-ratio:1 / 1; min-height:0; max-height:75vh;" in ficha
+    js = _script(h)
+    assert "const W = 1080, H = 1080;" in js
+    assert "const chartH = H - headH - footH;" in js
+    assert ("const shot = w ? await fotoTV(w, chartW / chartH).catch(() => null) :\n"
+            "      fotoLW(ch, chartW / chartH);") in js
+    # Advanced Charts: siempre la captura del cliente
+    foto = js[js.index("async function fotoTV("):js.index("async function capturarPNG()")]
+    assert foto.count("TV.capturaCliente(w, tok, caja)") == 2
+    assert "'Preparando la captura...'" in js
 
 
 def test_graficos_controles_y_captura(sitio):
@@ -499,7 +558,7 @@ def test_graficos_controles_y_captura(sitio):
     assert '<div id="tvprod" class="tvbox m-prod"></div>' in h
     js = _script(h)
     # la captura de Advanced Charts es la del cliente; nunca la del servidor
-    assert "TV.capturaCliente(w, tok)" in js
+    assert "TV.capturaCliente(w, tok, caja)" in js
     assert not re.search(r"\bw\.takeScreenshot\(", js)
     # la captura dice la unidad y, en UF, la cifra en pesos de hoy debajo
     assert "const TITULO_UNIDAD = { epoca: ', PRECIO DE LA ÉPOCA', uf: ', EN UF' };" in js
