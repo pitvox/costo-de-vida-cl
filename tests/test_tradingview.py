@@ -52,7 +52,8 @@ def _build(d, data, uf=None):
     if uf is not None:
         (d / "datos").mkdir(exist_ok=True)
         (d / "datos" / "uf.json").write_text(json.dumps(uf), encoding="utf-8")
-    env = dict(os.environ, PYTHONPATH=RAIZ, PYTHONIOENCODING="utf-8")
+    env = dict(os.environ, PYTHONPATH=RAIZ, PYTHONIOENCODING="utf-8",
+               CARESTIA_TARJETAS="0")
     env.pop("CARESTIA_BORRADOR", None)
     r = subprocess.run([sys.executable, os.path.join(RAIZ, "build_site.py")],
                        cwd=d, env=env, capture_output=True, text=True)

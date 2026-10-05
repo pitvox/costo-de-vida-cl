@@ -3304,6 +3304,14 @@ def og_meta(url_img: str, alt: str, generica: bool = False) -> str:
             f'<meta name="twitter:image" content="{url_img}">')
 
 
+def dibujar(funcion, ruta: str, datos: dict) -> None:
+    """Dibuja una tarjeta con tarjetas.ficha o tarjetas.portada. Con
+    CARESTIA_TARJETAS=0 (solo tests que no revisan las imágenes: cada build
+    dibuja más de cien) se salta el PNG; las etiquetas og quedan iguales."""
+    if os.environ.get("CARESTIA_TARJETAS") != "0":
+        funcion(ruta, tokens_css(), **datos)
+
+
 def og_url(ruta: str, datos: dict) -> str:
     """URL pública de una tarjeta, versionada por su contenido y por el
     dibujo (tarjetas.py): cambia solo cuando cambia la imagen."""
@@ -3913,7 +3921,7 @@ def tarjeta_producto(p: dict, slug: str) -> str:
         "sitio": "carestia.cl",
     }
     ruta = f"{OG_DIR}/productos/{slug}.png"
-    tarjetas.ficha(ruta, tokens_css(), **datos)
+    dibujar(tarjetas.ficha, ruta, datos)
     alt = (f"{mostrar}: {datos['precio']} {datos['unidad']}, "
            f"{datos['fecha'][0].lower()}{datos['fecha'][1:]}. {datos['frase']}")
     return og_meta(og_url(ruta, datos), alt)
@@ -5727,7 +5735,7 @@ def tarjeta_indice(code: str, d: dict) -> tuple:
         "color_veredicto": COLOR_VEREDICTO.get(d["veredicto"], "ambar"),
     }
     ruta = f"{OG_DIR}/indices/{code}.png"
-    tarjetas.ficha(ruta, tokens_css(), **datos)
+    dibujar(tarjetas.ficha, ruta, datos)
     alt = (f"{d['nombre']}: {datos['precio']} en pesos de hoy, {d['veredicto']}, "
            f"{datos['fecha'][0].lower()}{datos['fecha'][1:]}. {datos['frase']}")
     return og_meta(og_url(ruta, datos), alt), og_url(ruta, datos), alt
@@ -5746,7 +5754,7 @@ def tarjeta_portada(ultima) -> str:
              "pie_txt": "Índices del costo de vida en Santiago, en pesos de hoy",
              "sitio": "carestia.cl"}
     ruta = f"{OG_DIR}/portada.png"
-    tarjetas.portada(ruta, tokens_css(), **datos)
+    dibujar(tarjetas.portada, ruta, datos)
     alt = "Índices Carestía, " + (f"{datos['fecha'][0].lower()}{datos['fecha'][1:]}: "
                                   if ultima else "") + \
         ". ".join(f"{i['nombre']} {i['precio']}, {i['veredicto']}" for i in indices) + "."

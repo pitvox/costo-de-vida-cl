@@ -138,6 +138,7 @@ def sitio(tmp_path_factory):
     shutil.copytree(os.path.join(RAIZ, "textos"), d / "textos")
     (d / "indices.json").write_text(json.dumps(indices_sintetico()), encoding="utf-8")
     env = dict(os.environ, PYTHONPATH=RAIZ, PYTHONIOENCODING="utf-8",
+               CARESTIA_TARJETAS="0",
                CARESTIA_AHORA="2026-09-25T15:00")
     env.pop("CARESTIA_BORRADOR", None)
     r = subprocess.run([sys.executable, os.path.join(RAIZ, "build_site.py")],

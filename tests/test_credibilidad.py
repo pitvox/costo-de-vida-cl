@@ -86,6 +86,7 @@ def _construir(d, ahora):
     (d / "indices.json").write_text(json.dumps(sintetico()), encoding="utf-8")
     env = dict(os.environ, PYTHONPATH=RAIZ, PYTHONIOENCODING="utf-8", CARESTIA_AHORA=ahora)
     env.pop("CARESTIA_BORRADOR", None)
+    env.pop("CARESTIA_TARJETAS", None)      # aquí sí se dibujan las tarjetas
     r = subprocess.run([sys.executable, os.path.join(RAIZ, "build_site.py")],
                        cwd=d, env=env, capture_output=True, text=True)
     assert r.returncode == 0, r.stdout + r.stderr
