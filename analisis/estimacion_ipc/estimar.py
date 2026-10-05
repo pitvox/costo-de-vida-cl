@@ -148,7 +148,8 @@ def comprobar_agregacion() -> pd.DataFrame:
 
 
 def estimar(odepa_semanal: pd.DataFrame, variante: str = "mes_anterior",
-            oraculo: bool = False, atraso_odepa: int = 4, semanas: int = None) -> pd.DataFrame:
+            oraculo: bool = False, atraso_odepa: int = 4, semanas: int = None,
+            detalle: list = None) -> pd.DataFrame:
     """Una fila por mes con la variación estimada (%), la cobertura efectiva
     (peso con relativo ODEPA ese mes) y el detalle. oraculo=True usa para los
     productos cubiertos su relativo oficial en vez del de ODEPA (aísla el
@@ -156,7 +157,8 @@ def estimar(odepa_semanal: pd.DataFrame, variante: str = "mes_anterior",
     lunes de una semana y su publicación en ODEPA (4 = el viernes).
     semanas: si viene, del mes m solo entran sus primeras 'semanas' semanas
     (la estimación que se publicaría a mitad de mes); el mes anterior va
-    completo."""
+    completo. detalle: si viene una lista, se le agrega una fila por mes y
+    producto con el aporte de su error a la variación estimada."""
     oficial = ine.alimentos_oficial().set_index("mes")["variacion"]
     hasta = HASTA or oficial.index.max()
     meses = pd.period_range(DESDE, hasta, freq="M")
@@ -198,6 +200,12 @@ def estimar(odepa_semanal: pd.DataFrame, variante: str = "mes_anterior",
                      else relativo_propio(I[cod], m, variante))
             num += wi * previo[cod] * r
             den += wi * previo[cod]
+            if detalle is not None and m in I.index:
+                detalle.append({"mes": m, "codigo": cod, "con_odepa": cod in mapa,
+                                "aporte": wi * previo[cod] * (r - I.loc[m, cod] / I.loc[m - 1, cod])})
+        if detalle is not None:
+            for fila in detalle[-len(w):]:
+                fila["aporte"] = fila["aporte"] / den * 100
         filas.append({"mes": m, "base": b, "estimada": (num / den - 1) * 100,
                       "oficial": oficial.get(m), "ingenuo": oficial.get(m - 1),
                       "promedio_12m": oficial.loc[m - 12:m - 1].mean(),
@@ -303,6 +311,18 @@ if __name__ == "__main__":
         m.round(3).to_csv(os.path.join(RESULTADOS, f"metricas_{variante}.csv"),
                           index_label="periodo")
         print(f"\n== {variante} ==\n{m.round(2).to_string()}\n{criterio(m)}")
+    det = []
+    estimar(semanal, "mes_anterior", detalle=det)
+    det = pd.DataFrame(det)
+    glosas = pd.read_csv(os.path.join(AQUI, "mapa_productos.csv"), dtype={"codigo": str})
+    det["base"] = det["mes"].map(base_de)
+    det = det.merge(glosas[["base", "codigo", "producto_ipc"]], on=["base", "codigo"])
+    aportes = (det.assign(aporte_abs=det["aporte"].abs())
+               .groupby(["producto_ipc", "con_odepa"])["aporte_abs"].sum() / det["mes"].nunique())
+    aportes.sort_values(ascending=False).round(4).rename("error_medio_aportado").to_csv(
+        os.path.join(RESULTADOS, "aporte_error_productos.csv"))
+    print("\n== productos que más error aportan (puntos, promedio mensual) ==")
+    print(aportes.sort_values(ascending=False).head(12).round(3).to_string())
     filas = []
     for nombre, r in corridas.items():
         t = metricas(r).loc["total"]
