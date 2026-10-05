@@ -1,11 +1,51 @@
 # IPC de alimentos y canasta básica con precios de ODEPA: prueba hacia atrás
 
-Pregunta: ¿puede Carestía publicar cada semana una estimación del IPC de alimentos y una valorización de la Canasta Básica de Alimentos con los precios al consumidor de ODEPA? Esta prueba hacia atrás mide qué tan bien lo habría hecho entre enero de 2019 y agosto de 2026. Es solo análisis: no cambia el sitio ni el pipeline. Cómo reproducirlo, en [README.md](README.md).
+Pregunta: ¿puede Carestía publicar cada semana una estimación del IPC de alimentos y una valorización de la Canasta Básica de Alimentos con los precios al consumidor de ODEPA? Esta prueba hacia atrás mide qué tan bien lo habría hecho entre enero de 2019 y agosto de 2026, y la decisión sale de una prueba fuera de muestra (2024 a 2026) con una regla fijada antes de ver los resultados. Es solo análisis: no cambia el sitio ni el pipeline. Cómo reproducirlo, en [README.md](README.md).
 
 ## Respuesta corta
 
-- **IPC de alimentos: cumple los dos criterios pedidos, pero no le gana a referencias igual de simples.** El error absoluto medio de la variación mensual es 0,62 puntos, contra 0,79 del pronóstico ingenuo (repetir la variación del mes anterior), y acierta la dirección en 64 de 92 meses (69,6%), sobre el umbral de 2 de cada 3. Pero el promedio de los últimos 12 meses del propio IPC de alimentos tiene casi el mismo error (0,63), y decir "sube" todos los meses acierta la dirección en 75% de los meses.
-- **Canasta básica: se puede valorizar, pero no es el valor oficial.** ODEPA da precio por kilo o litro al 61% del valor de la canasta. Con esos precios, la canasta de agosto de 2026 vale 88.255 pesos por persona, 4,4% bajo los 92.327 que publicó el Ministerio. La brecha cambia con los años (4,4% bajo en 2019, pareja en 2022 y 2023, otra vez 4,5% bajo en 2026) porque el Ministerio reajusta toda la canasta con un índice agregado y ODEPA sigue producto por producto.
+**Ningún producto pasa la regla.** Ni la estimación semanal del IPC de alimentos (en ninguna de sus cuatro versiones) ni la canasta básica anclada le ganan al mejor comparador simple, y ninguna acierta la dirección más que "siempre sube". Falla con 1, con 2 y con 3 semanas del mes.
+
+- **IPC de alimentos.** De enero de 2024 a agosto de 2026, el mejor comparador fue el promedio de 12 meses del propio IPC de alimentos, con un error de 0,58 puntos. Las cuatro versiones tienen más error: entre 0,60 y 0,80. Aciertan la dirección en 16 a 20 de 32 meses, contra 23 de "siempre sube".
+- **Canasta básica anclada.** Valor oficial del mes anterior más la variación ODEPA del mes: error de 0,56 a 0,62 puntos, contra 0,44 del promedio de 12 meses. Acierta la dirección en 17 a 19 de 32 meses, contra 25 de "siempre sube".
+- **Canasta básica valorizada con ODEPA.** Se puede calcular, pero es otra medida: en agosto de 2026 vale 88.255 pesos por persona, 4,4% bajo los 92.327 que publicó el Ministerio.
+
+## La regla y la prueba fuera de muestra
+
+La regla, las versiones y los períodos quedaron escritos en [preregistro.md](preregistro.md) y subidos al repositorio el 5 de octubre de 2026 a las 18:26 (UTC), antes de calcular cualquier resultado de 2024 a 2026; no se cambió nada después. La regla principal (V0) y la versión con promedio de 12 meses (V2) ya se habían medido en todo el período en la versión anterior de este informe, así que sus cifras de 2024 a 2026 no eran ciegas; el AR(1), la combinación y la canasta anclada sí.
+
+- **Regla.** El error absoluto medio de la variación mensual tiene que ser menor que el del mejor comparador simple (el de menos error entre el ingenuo, que repite la variación oficial del mes anterior, y el promedio de las variaciones oficiales de los 12 meses anteriores), con una diferencia significativa en la prueba de Diebold y Mariano (p < 0,05). Además, tiene que acertar la dirección (sube, baja o 0,0) en más meses que "siempre sube". Como se publicaría cada semana, un producto pasa solo si cumple con 1, 2 y 3 semanas del mes.
+- **Períodos.** Desarrollo: 2019 a 2023, donde se estiman los parámetros. Prueba: enero de 2024 a agosto de 2026 (32 meses), sin tocar nada.
+- **Versiones del IPC.** Cambian en cómo se proyecta lo que no tiene variación ODEPA ese mes. V0: su variación del mes anterior (la regla principal). V1: un AR(1) alrededor de su promedio de 12 meses, con un coeficiente estimado en desarrollo (φ = -0,30: lo que no tiene ODEPA tiende a devolver parte de lo que se movió el mes anterior). V2: su promedio de 12 meses. V3: la estimación V0 combinada con el promedio de 12 meses de Alimentos, con el peso estimado en desarrollo (0,65, 0,56 y 0,61 para V0 con 1, 2 y 3 semanas).
+- **Canasta anclada.** Valor oficial de cada producto el mes anterior, movido con su variación ODEPA del mes; lo que no tiene ODEPA, con el promedio de 12 meses de la variación oficial de la canasta. Se compara con la variación mensual oficial.
+- **Semanas.** Con k semanas, la variación de cada producto ODEPA compara las primeras k semanas del mes con las mismas del mes anterior.
+
+### IPC de alimentos, enero 2024 a agosto 2026 (32 meses)
+
+| Versión | Error con 1 semana | 2 semanas | 3 semanas | Meses con la dirección correcta (1, 2 y 3 semanas) |
+|---|---|---|---|---|
+| V0 regla principal | 0,76 (p = 0,10) | 0,73 (p = 0,09) | 0,80 (p = 0,04, peor) | 17, 17 y 18 |
+| V1 AR(1) | 0,70 (p = 0,23) | 0,67 (p = 0,28) | 0,68 (p = 0,30) | 18, 16 y 19 |
+| V2 promedio de 12 meses | 0,67 (p = 0,35) | 0,66 (p = 0,35) | 0,67 (p = 0,35) | 18, 17 y 19 |
+| V3 combinación | 0,64 (p = 0,42) | 0,60 (p = 0,79) | 0,65 (p = 0,37) | 19, 20 y 19 |
+| Mejor comparador: promedio de 12 meses | 0,58 | 0,58 | 0,58 | "siempre sube": 23 |
+
+El ingenuo tuvo un error de 0,91. El p es el de Diebold y Mariano contra el promedio de 12 meses. "Peor" quiere decir que la estimación tiene significativamente más error que el comparador.
+
+### Canasta básica anclada, enero 2024 a agosto 2026 (32 meses)
+
+| | Error con 1 semana | 2 semanas | 3 semanas | Meses con la dirección correcta (1, 2 y 3 semanas) |
+|---|---|---|---|---|
+| Canasta anclada | 0,62 (p = 0,09) | 0,56 (p = 0,16) | 0,60 (p = 0,11) | 19, 17 y 19 |
+| Mejor comparador: promedio de 12 meses | 0,44 | 0,44 | 0,44 | "siempre sube": 25 |
+
+El ingenuo tuvo un error de 0,71. Antes de 2026 la variación oficial es la de la canasta reconstruida con la regla del Ministerio (ver más abajo).
+
+Lo que muestran las dos tablas:
+
+- Todo queda del lado equivocado: más error que el comparador y menos aciertos de dirección que "siempre sube". Como ninguna versión tiene menos error que el comparador, la corrección por hacer 15 pruebas no cambia nada.
+- En desarrollo la combinación sí le ganaba al promedio de 12 meses (0,47 a 0,49 contra 0,66, p = 0,01), pero con un peso estimado en esos mismos años. Fuera de muestra la ventaja desaparece.
+- Con el mes completo, que no cuenta para la regla, el resultado es el mismo: el mejor queda en 0,60 (V1) contra 0,58 del comparador, y la canasta anclada en 0,52 contra 0,44 ([evaluacion.csv](resultados/evaluacion.csv)).
 
 ## Cobertura
 
@@ -21,12 +61,12 @@ Mes a mes, la parte que efectivamente se mueve con ODEPA promedia 60,9% en la ba
 
 - **Agregación.** Laspeyres con las ponderaciones del INE, la misma fórmula del índice oficial. Aplicada a los índices oficiales de producto, reproduce la variación publicada de Alimentos en 91 de 92 meses (en el otro difiere en 0,1 por redondeo).
 - **Productos con ODEPA.** Media geométrica de la variación de sus productos ODEPA en la Región Metropolitana (cada uno, media de sus series por unidad), con la limpieza de las series del sitio.
-- **Productos sin ODEPA.** Su propia variación oficial del mes anterior (regla principal) o su variación mensual promedio de los últimos 12 meses (alternativa). Las dos ya estaban publicadas.
+- **Productos sin ODEPA.** Su propia variación oficial del mes anterior (regla principal), o una de las otras versiones de la prueba fuera de muestra. Todo lo que usan ya estaba publicado.
 - **Sin mirar al futuro.** Para cada mes solo entran las semanas de ODEPA publicadas antes de la fecha del IPC, sacada de la portada de cada boletín del INE ([calendario_ipc.csv](calendario_ipc.csv)). El INE no revisó ninguna cifra de alimentos después de publicarla.
 - **Cambio de base.** Base 2018 hasta diciembre de 2023 y base 2023 desde enero de 2024. En enero de 2019 y enero de 2024 el INE ya había publicado la canasta nueva, pero no los índices de sus productos en el año base. Esos dos meses van con las ponderaciones sin reescalar y los productos sin ODEPA con la variación oficial de Alimentos. Esa aproximación mueve la cifra en 0,1 a 0,2 puntos por sí sola.
 - **Comparación.** La estimación se redondea a un decimal, como la publica el INE. Dirección: sube, baja o 0,0. Significancia: prueba de Diebold y Mariano con la corrección de Harvey, Leybourne y Newbold.
 
-## Resultados del IPC de alimentos
+## Resultados de 2019 a 2026 con la regla principal (mes completo)
 
 | Año | Error estimación | Error ingenuo | Dirección estimación | Dirección ingenuo |
 |---|---|---|---|---|
@@ -40,26 +80,11 @@ Mes a mes, la parte que efectivamente se mueve con ODEPA promedia 60,9% en la ba
 | 2026 (a agosto) | 0,53 | 0,65 | 50% | 50% |
 | **Total (92 meses)** | **0,62** | **0,79** | **69,6%** | **62,0%** |
 
-Error: error absoluto medio de la variación mensual, en puntos porcentuales. La diferencia con el ingenuo es significativa (p = 0,008).
+Error: error absoluto medio de la variación mensual, en puntos porcentuales. Con la regla anterior (ganarle al ingenuo y acertar la dirección en 2 de cada 3 meses) la estimación pasaba. Con la regla nueva no, porque el promedio de 12 meses tiene casi el mismo error en todo el período (0,63) y "siempre sube" acierta la dirección en 75% de los meses.
 
 ![Variación mensual del IPC de alimentos, oficial y estimada](grafico_estimado_oficial.png)
 
-| Variante (92 meses salvo indicación) | Error | Dirección |
-|---|---|---|
-| Regla principal | 0,62 | 69,6% |
-| Sin ODEPA con su promedio de 12 meses | 0,55 | 70,7% |
-| Con las primeras 2 semanas del mes y del mes anterior | 0,63 | 65,2% |
-| ODEPA publicada una semana más tarde | 0,62 | 69,6% |
-| Sin enero de 2019 ni enero de 2024 (90 meses) | 0,62 | 68,9% |
-| Referencia: promedio de 12 meses del IPC de alimentos | 0,63 | 75,0% |
-| Referencia: siempre sube | | 75,0% |
-| Cota: productos con ODEPA con su variación oficial | 0,39 | 79,3% |
-
-Lo que dicen las variantes:
-
-- Frente al promedio de 12 meses la ventaja desaparece: 0,62 contra 0,63 (p = 0,83). Con la regla alternativa baja a 0,55, pero tampoco es significativa (p = 0,16).
-- A mitad de mes, con dos semanas de ODEPA, el error sube a 0,63 y la dirección cae a 65,2%, bajo el umbral. Una cifra semanal sería más débil que la mensual.
-- La cota usa, para los mismos productos, la variación del INE en vez de la de ODEPA, y baja el error de 0,62 a 0,39. La mayor parte del error viene de que la variación de ODEPA en la RM no es la que mide el INE en el país. Los productos que más error aportan son pan, frutas de estación, carne de vacuno y pollo, todos con ODEPA. Entre los que no tienen ODEPA pesan las bebidas gaseosas y las cecinas ([aporte_error_productos.csv](resultados/aporte_error_productos.csv)).
+¿De dónde sale el error? Si a los productos con ODEPA se les pone la variación del INE en vez de la de ODEPA, el error baja de 0,62 a 0,39. La mayor parte viene de que la variación de ODEPA en la RM no es la que mide el INE en el país. Los productos que más error aportan son pan, frutas de estación, carne de vacuno y pollo, todos con ODEPA. Entre los que no tienen ODEPA pesan las bebidas gaseosas y las cecinas ([aporte_error_productos.csv](resultados/aporte_error_productos.csv)).
 
 ## Canasta básica
 
@@ -89,12 +114,16 @@ La diferencia tiene dos partes:
 
 ## Conclusión
 
-Con los criterios pedidos, la estimación pasa: le gana al ingenuo en error (0,62 contra 0,79) y acierta la dirección en 64 de 92 meses, más de 2 de cada 3. Aun así, no recomiendo publicarla como estimación del IPC de alimentos. Una regla que no usa ODEPA (el promedio de 12 meses) tiene el mismo error, y otra (siempre sube) acierta más la dirección. A mitad de mes, que es cuando una cifra semanal tendría sentido, queda bajo el umbral de dirección. Con un error típico de 0,6 puntos en un indicador que se mueve 0,6% al mes en promedio, la cifra informaría poco. Si se quiere publicar algo, lo honesto es la variación de precios de los productos del IPC que ODEPA cubre en la RM, presentada como tal y no como anticipo del IPC.
+**Ningún producto pasa la regla.** En la prueba de 2024 a 2026, con 1, 2 y 3 semanas, ni la estimación del IPC de alimentos (V0, V1, V2 ni V3) ni la canasta básica anclada tienen menos error que el promedio de 12 meses, y ninguna acierta la dirección en más meses que "siempre sube". No recomiendo publicar ninguna de las dos como estimación.
 
-Para la canasta básica vale lo mismo: la valorización con ODEPA es otra medida, no una estimación del valor oficial. Cubre el 61% del valor, mide la RM y no el país, y en 2026 queda entre 4% y 5% bajo lo publicado. Se puede publicar como "la canasta básica con precios de ferias y supermercados de la RM", con el valor del Ministerio al lado.
+Lo que sí se puede publicar, presentado como tal y no como anticipo de una cifra oficial:
+
+- la variación de precios ODEPA de los productos del IPC que ODEPA cubre en la RM;
+- la canasta básica valorizada con precios de ferias y supermercados de la RM, con el valor del Ministerio al lado. Cubre el 61% del valor, mide la RM y no el país, y en 2026 queda entre 4% y 5% bajo lo publicado.
 
 Límites de la prueba:
 
+- El período de prueba es corto (32 meses) e incluye 2024, el año con más error de toda la serie.
 - ODEPA mide la RM y el INE el país.
 - Se supone que ODEPA publica cada semana el viernes.
 - Los precios de ODEPA son la copia del 5 de octubre de 2026. El portal volvió a subir todos sus archivos el 25 de marzo de 2026, y el de 2025 otra vez el 29 de abril, así que no se puede saber si cambió datos ya publicados. Para medirlo habría que guardar una copia de cada semana.
