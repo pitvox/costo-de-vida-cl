@@ -448,7 +448,7 @@ def test_graficos_indices_y_comparar_en_advanced_charts(sitio):
     assert "Object.keys(tv).forEach(m => { tv[m].estado = 'falla';" in js
     # las tabs cambian el símbolo del mismo widget; cada unidad es otro símbolo
     assert "const simboloIndice = code => code + SUF[unidad];" in js
-    assert "const SUF = { real: '', epoca: '-epoca', uf: '-uf' };" in js
+    assert "const SUF = { real: '', epoca: '-epoca' };" in js
     assert "ponerSimbolo(tv.indices.w, simboloIndice(code))" in js
     # LÍNEA / VELAS cambia el tipo de gráfico; el resto de los cambios (de
     # índice, de unidad, de temporalidad) respeta el que haya, también uno
@@ -457,11 +457,10 @@ def test_graficos_indices_y_comparar_en_advanced_charts(sitio):
     assert "if (forzar && c.chartType() !== pedido) Promise.resolve(c.setChartType(pedido))" in js
     assert "document.getElementById('v-velas').onclick = () => { vista = 'velas'; aplicarVista(true); };" in js
     assert "w.activeChart().onIntervalChanged().subscribe(null, () => setTimeout(() => aplicarVista(), 0));" in js
-    # la cifra en UF nunca muestra la del índice anterior: primero la de pesos
-    assert "countUp(oprice, d.costo_real);\n    if (unidad !== 'uf') { opesos.hidden = true; return; }" in js
-    assert "opesos.textContent = fmt(d.costo_real) + ' en pesos de hoy';\n    opesos.hidden = false;" in js
-    # en Lightweight el eje y la ayuda siguen a la unidad ya dibujada
-    assert "priceFormatter: v => unidadLW === 'uf' && TV ? TV.numUFEje(v) : fmt(v) } }));" in js
+    # la cifra grande es el precio de esta semana en las dos unidades
+    assert "countUp(document.getElementById('oprice'), d.costo_real);" in js
+    assert "opesos" not in js and "textoUF" not in js and "numUFEje" not in js
+    assert "priceFormatter: fmt } }));" in js
     # Comparar: comparación de la librería en escala porcentual, colores por
     # puesto, en la unidad elegida (al cambiarla, se rehacen las comparaciones)
     assert "const sim = k => PRODS[k].slug + SUF[unidad];" in js
@@ -537,10 +536,9 @@ def test_graficos_altos_y_captura_cuadrada(sitio):
 
 def test_graficos_controles_y_captura(sitio):
     h = _leer(sitio, "graficos.html")
-    # la unidad: Pesos de hoy (por defecto) y Precio de la época; sin
-    # datos/uf.json, sin UF
+    # la unidad: Ajustado por inflación (por defecto) y Precio de la época
     assert ('<button class="vbtn ubtn active" type="button" data-unidad="real" '
-            'aria-pressed="true">Pesos de hoy</button>') in h
+            'aria-pressed="true">Ajustado por inflación</button>') in h
     assert ('<button class="vbtn ubtn" type="button" data-unidad="epoca" '
             'aria-pressed="false">Precio de la época</button>') in h
     assert '<option value="epoca">Precio de la época</option>' in h
@@ -561,30 +559,29 @@ def test_graficos_controles_y_captura(sitio):
     # la captura de Advanced Charts es la del cliente; nunca la del servidor
     assert "TV.capturaCliente(w, tok, caja)" in js
     assert not re.search(r"\bw\.takeScreenshot\(", js)
-    # la captura dice la unidad y, en UF, la cifra en pesos de hoy debajo
-    assert "const TITULO_UNIDAD = { epoca: ', PRECIO DE LA ÉPOCA', uf: ', EN UF' };" in js
+    # la captura dice la unidad cuando es el precio de la época
+    assert "const TITULO_UNIDAD = { epoca: ', PRECIO DE LA ÉPOCA' };" in js
     assert "titulo += TITULO_UNIDAD[unidad];" in js
-    assert "compLineas.unshift(fmt(d.costo_real) + ' en pesos de hoy');" in js
+    assert "EN UF" not in js
     tvjs = _leer(sitio, "carestia-tv.js")
     assert "widget.takeClientScreenshot({" in tvjs
     assert "takeScreenshot()" not in tvjs and "snapshot_url:" not in tvjs
 
 
-def test_graficos_y_ficha_con_uf(sitio_uf):
-    """Con datos/uf.json, la opción UF aparece en /graficos.html, en las
-    fichas y en el datafeed de la página de prueba."""
-    for pagina in ["graficos.html", "productos/producto-000.html"]:
+def test_graficos_y_ficha_sin_uf_aunque_haya_uf_json(sitio_uf):
+    """La UF salió de la interfaz: con datos/uf.json, ni /graficos.html, ni
+    las fichas, ni la página de prueba la ofrecen."""
+    for pagina in ["graficos.html", "productos/producto-000.html", "prueba-graficos.html"]:
         h = _leer(sitio_uf, pagina)
-        assert ('<button class="vbtn ubtn" type="button" data-unidad="uf" '
-                'aria-pressed="false">UF</button>') in h, pagina
-        assert '<option value="uf">UF</option>' in h, pagina
+        assert 'data-unidad="uf"' not in h and '<option value="uf">' not in h, pagina
+        assert "const UF" not in h and "uf: true" not in h, pagina
     app = json.loads(re.search(r"const DATA = (\{.*?\});\n", _leer(sitio_uf, "graficos.html"))
                      .group(1).replace("<\\/", "</"))
-    assert app["uf"] is True
-    assert "const UF = true;" in _leer(sitio_uf, "productos/producto-000.html")
+    assert "uf" not in app
     prueba = _leer(sitio_uf, "prueba-graficos.html")
-    assert "uf: true });" in prueba
-    assert "a precio de la época o en UF (por ejemplo, asado-epoca o asado-uf)" in prueba
+    assert ("ajustados por inflación, en pesos de agosto de 2026, o a precio de la época "
+            "(por ejemplo, asado-epoca)") in prueba
+    assert "asado-uf" not in prueba
 
 
 def test_ficha_con_advanced_charts_despues_del_primer_pantallazo(sitio):
@@ -601,17 +598,14 @@ def test_ficha_con_advanced_charts_despues_del_primer_pantallazo(sitio):
     assert "sitio: true" in js
     # sus otras unidades, para superponer desde Comparar
     assert "comparar: unidadesHay().map(u => ({ symbol: SLUG + SUF[u], title: NOMBRE + EN[u] })) });" in js
-    assert "const EN = { real: ', en pesos de hoy', epoca: ', precio de la época', uf: ', en UF' };" in js
+    assert "const EN = { real: ', en pesos de agosto 2026', epoca: ', precio de la época' };" in js
     # su Comparar superpone el producto en otras unidades: el nombre la dice
     assert "nombreConUnidad: true," in js
     assert "nombreConUnidad" not in _script(_leer(sitio, "graficos.html"))
-    # el selector de unidad cambia el símbolo; en UF la cifra va en UF y
-    # debajo, en pesos de hoy
+    # el selector de unidad cambia el símbolo; la cifra grande es el precio
+    # de esta semana en las dos unidades
     assert "Promise.resolve(c.setSymbol(SLUG + SUF[u])).catch(() => {});" in js
-    assert "oprice.textContent = TV.textoUF(b[b.length - 1].close);" in js
-    assert "opesos.textContent = PRECIO + ' en pesos de hoy';" in js
-    assert '<div class="opesos" id="opesos" hidden></div>' in h
-    assert "const UF = false;" in js
+    assert "opesos" not in h and "textoUF" not in js and "const UF" not in js
     assert "const SLUG = 'producto-000';" in js and 'const NOMBRE = "Producto 000";' in js
     # la serie de la página alimenta el datafeed (no se vuelve a pedir)
     assert "precargados: { ['productos/' + SLUG + '.json']: { t0: T0, v: V, min: MIN, max: MAX } }" in js
@@ -625,8 +619,7 @@ def test_ficha_con_advanced_charts_despues_del_primer_pantallazo(sitio):
     # la referencia de las velas se muestra mientras estén a la vista
     assert "c.onChartTypeChanged().subscribe(null, ver);" in js
     assert "chart.addLineSeries({ color: tok('bone'), lineWidth: 2, priceLineVisible: false })" in js
-    assert ("localization: { locale: 'es-CL', priceFormatter: v => unidadLW === 'uf' && TV ? "
-            "TV.numUFEje(v) : fmt(v) }") in js
+    assert "localization: { locale: 'es-CL', priceFormatter: fmt }," in js
 
 
 def test_configuracion_comun_en_una_funcion(sitio):

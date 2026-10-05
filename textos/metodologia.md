@@ -2,11 +2,11 @@
 
 **Canastas fijas.** Cada índice es una canasta con cantidades que no cambian. Lo único que se mueve de una semana a otra es el precio. El costo semanal es la suma de la cantidad por el precio de cada producto.
 
-**Pesos de hoy, precio de la época y UF.** El sitio muestra cada serie de tres formas. El precio de la época es el que se pagó esa semana. En pesos de hoy, cada semana se lleva a valor actual con el IPC, para comparar años distintos sin que la inflación general distorsione la comparación. En UF, el precio de cada semana se divide por el valor de la UF de ese día, según el Banco Central de Chile; como la UF se reajusta con el IPC, la forma es casi la misma que en pesos de hoy, con un pequeño desfase. El veredicto y el percentil se calculan siempre en pesos de hoy.
+**Precio de la época y ajustado por inflación.** El sitio muestra cada serie de dos formas. El precio de la época es el que se pagó esa semana. Ajustado por inflación, cada semana se lleva a pesos del último mes con IPC publicado, para comparar años distintos sin que la inflación general distorsione la comparación. El número grande de cada ficha es siempre el precio de esta semana.
 
 **Deflactación.** Usamos el IPC empalmado del Banco Central de Chile, con base 2023=100. Sus variaciones mensuales pueden diferir levemente de las que publica el INE; para comparar series largas, la serie empalmada es la adecuada.
 
-**Caro o barato.** Se mide con el percentil histórico, que indica dónde cae el costo de esta semana dentro de toda su historia en pesos de hoy. Bajo el percentil 33 se marca en verde, entre 33 y 66 en amarillo y sobre 66 en rojo. Esos cortes son una convención para leer el dato de un vistazo.
+**Caro o barato.** Se compara el precio de esta semana, ajustado por inflación, con el mismo mes de los últimos 10 años, o de todos los disponibles si son al menos 5. Si es más caro que en 7 o más de esos años, el índice se marca caro; si es más caro que en 3 o menos, barato; entre medio, normal. El color cambia solo si la nueva zona se mantiene dos semanas seguidas. El percentil contra toda la historia se sigue mostrando como referencia.
 
 **Estacionalidad.** Es el patrón típico de cada mes, una vez descontada la tendencia. Indica en qué meses la canasta suele estar más barata o más cara.
 

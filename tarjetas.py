@@ -3,8 +3,10 @@ tarjetas.py - las og:image de 1200 x 630 que muestran WhatsApp y las redes
 =========================================================================
 build_site.py las genera en cada build: una por ficha de producto, una por
 índice y una para la portada, en og/. Cada tarjeta lleva el nombre, el precio
-de la semana, la frase de su historia ("Más caro que en 8 de cada 10 semanas
-desde 2008, descontada la inflación"), la fecha de la semana y la marca.
+de la semana, la frase de su veredicto ("Más caro que en 7 de los últimos 10
+septiembres, aun descontando la inflación", o con menos de 5 años de ese mes
+"Más caro que en 8 de cada 10 semanas desde 2008, descontada la inflación"),
+la fecha de la semana y la marca.
 
 Aquí solo se dibuja: las frases y las cifras las arma build_site.py (ahí las
 revisa la guardia de texto). Colores: los tokens de CSS_BASE, que build_site

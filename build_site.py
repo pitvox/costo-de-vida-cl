@@ -3,10 +3,10 @@ build_site.py - genera el sitio Carestía
 ========================================
 Lee 'indices.json' (lo produce indices.py) y escribe dos páginas principales:
 
-- index.html, la portada en formato tabla: cinta de índices, las 4 tarjetas
-  de "Índices Carestía" (el único lugar del semáforo), lo que más se movió
-  esta semana y la tabla de productos, todo en HTML estático (cada fila es un
-  link a su ficha); el JS solo ordena y filtra. Los links viejos de la app
+- index.html, la portada en formato tabla: cinta de índices, lo que más se
+  movió esta semana, la tabla de productos y las 4 tarjetas de "Índices
+  Carestía" (el único lugar del semáforo), todo en HTML estático (cada fila
+  es un link a su ficha); el JS solo ordena y filtra. Los links viejos de la app
   que entraban por la portada (#comparar, #canasta=..., un índice) se
   redirigen a /graficos.html con el mismo hash.
 - graficos.html, la app de gráficos: cinta ticker y una sola superficie; el
@@ -58,8 +58,9 @@ import re
 import unicodedata
 
 # las cantidades de /metodologia.html salen del mismo diccionario que usa el
-# cálculo (nunca escritas a mano)
-from indices import BASKETS
+# cálculo (nunca escritas a mano); el veredicto por temporada, de la misma
+# regla que usa indices.py para los índices (aquí, para los productos)
+from indices import BASKETS, COLORES, comparar_temporada, resumen_temporada
 # las og:image de 1200 x 630 (Pillow): fichas, índices y portada
 import tarjetas
 
@@ -72,10 +73,10 @@ GRAFICOS_HTML = r"""<!DOCTYPE html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Gráficos de los índices del costo de vida en Santiago | Carestía</title>
-<meta name="description" content="Gráficos semanales de los índices Carestía en pesos de hoy, con velas y estacionalidad. Compara productos y arma tu propia canasta con datos públicos de ODEPA.">
+<meta name="description" content="Gráficos semanales de los índices Carestía, __AJUSTADOS__, con velas y estacionalidad. Compara productos y arma tu propia canasta con datos públicos de ODEPA.">
 <link rel="canonical" href="https://carestia.cl/graficos.html">
 <meta property="og:title" content="Gráficos de los índices del costo de vida en Santiago | Carestía">
-<meta property="og:description" content="Los índices Carestía en pesos de hoy desde 2008, para comparar productos y armar tu propia canasta. Datos públicos de ODEPA, actualizados cada viernes.">
+<meta property="og:description" content="Los índices Carestía desde 2008, __AJUSTADOS__, para comparar productos y armar tu propia canasta. Datos públicos de ODEPA, actualizados cada viernes.">
 <meta property="og:image" content="https://carestia.cl/og.png">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
@@ -163,8 +164,9 @@ __CSS_CABECERA__
       max-height:75svh; } }
   .hero-wrap { position:relative; background:var(--bg); }
   @media (max-width:759px) { .overlay .oname, .overlay .cstats, .overlay .caviso,
-    .overlay .can-reg { max-width:calc(100vw - 160px); }
-    body.tv-ind .overlay.m-ind .oname, body.tv-can .overlay.m-can > * { max-width:none; } }
+    .overlay .can-reg, .overlay .opct, .overlay .ovs { max-width:calc(100vw - 160px); }
+    body.tv-ind .overlay.m-ind .oname, body.tv-ind .overlay.m-ind .opct,
+    body.tv-ind .overlay.m-ind .ovs, body.tv-can .overlay.m-can > * { max-width:none; } }
   #chart, #pchart, #cchart { position:absolute; inset:0; }
   /* ---- Advanced Charts (índices, Comparar y Arma tu canasta) ---- */
   /* la librería trae su barra arriba y su leyenda: el texto del modo sale
@@ -207,10 +209,6 @@ __CSS_CABECERA__
     margin-top:4px; flex-wrap:wrap; }
   .oprice { font:700 clamp(34px,6vw,68px)/1 var(--display);
     letter-spacing:-.01em; color:var(--bone); }
-  /* en UF, la cifra grande va en UF y debajo, más chica, en pesos de hoy */
-  .ocifra { display:flex; flex-direction:column; }
-  .opesos { font:400 clamp(11px,1.3vw,13px) var(--sans); color:var(--ash);
-    margin-top:6px; }
   /* la variación semanal: el número en color (ver .v-sube y .v-baja) y el
      resto en hueso */
   .odelta { font:600 clamp(13px,1.6vw,18px) var(--sans); color:var(--bone); }
@@ -219,8 +217,12 @@ __CSS_CABECERA__
   .badge { font:600 clamp(11px,1.4vw,13px) var(--mono); letter-spacing:.14em;
     padding:5px 12px; background:var(--verdict); color:var(--bg);
     animation:car-pulse 2.4s ease-in-out infinite; }
-  .opct, .ovs { font:400 clamp(11px,1.3vw,13px) var(--sans); color:var(--ash); }
-  .ovs { margin-top:8px; }
+  /* la frase del veredicto por temporada junto a la píldora y, debajo, el
+     percentil de toda la historia como dato secundario */
+  .opct { font:400 clamp(12px,1.4vw,14px)/1.45 var(--sans); color:var(--bone);
+    text-wrap:pretty; }
+  .ovs { font:400 clamp(11px,1.3vw,13px)/1.45 var(--sans); color:var(--ash);
+    margin-top:8px; text-wrap:pretty; }
   .onote { display:inline-block; font:500 12px var(--sans); color:var(--ash);
     border:1px solid var(--line); padding:4px 10px; background:var(--panel);
     margin-top:8px; }
@@ -240,8 +242,8 @@ __CSS_CABECERA__
     flex-wrap:wrap; justify-content:flex-end; }
   .cbar-right > * { flex:none; }
   .cbar-ctrl { display:flex; align-items:center; gap:14px; }
-  /* ---- unidad: pesos de hoy, precio de la época o UF ---- */
-  /* tres botones o, si no caben en la fila de controles, el desplegable
+  /* ---- unidad: ajustado por inflación o precio de la época ---- */
+  /* dos botones o, si no caben en la fila de controles, el desplegable
      (JS_UNIDAD prueba la fila sin envolver: .midiendo). Bajo la barra, la
      línea de la unidad elegida, que reemplaza a la leyenda de las series */
   .unidad { flex:none; }
@@ -256,8 +258,8 @@ __CSS_CABECERA__
   .urow { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between;
     gap:4px 24px; padding:0 clamp(16px,3vw,32px) 9px; border-bottom:1px solid var(--line); }
   .utxt { flex:1 1 320px; font:400 11px/1.5 var(--sans); color:var(--ash); text-wrap:pretty; }
-  /* la leyenda de la línea del índice: las tres unidades, la elegida a la
-     vista y las otras atenuadas; en escritorio junto a la línea de la
+  /* la leyenda de la línea del índice: las dos unidades, la elegida a la
+     vista y la otra atenuada; en escritorio junto a la línea de la
      unidad, en el celular en la franja bajo el lienzo */
   .legend { display:none; gap:14px; font:400 11px/1.5 var(--sans); color:var(--ash);
     white-space:nowrap; }
@@ -475,10 +477,7 @@ __CSS_SITIO__
       <div class="overlay m-ind">
         <div class="oname"><span id="oname"></span> <span id="osub"></span></div>
         <div class="orow">
-          <div class="ocifra">
-            <div class="oprice" id="oprice"></div>
-            <div class="opesos" id="opesos" hidden></div>
-          </div>
+          <div class="oprice" id="oprice"></div>
           <div class="odelta"><span id="odelta"></span> <small>sem.</small></div>
         </div>
         <div class="overd">
@@ -508,7 +507,7 @@ __CSS_SITIO__
       </div>
       <div class="tooltip" id="tooltip">
         <div class="tt-d" id="tt-d"></div>
-        <div class="tt-r"><span id="tt-r"></span> <small id="tt-u">pesos de hoy</small></div>
+        <div class="tt-r"><span id="tt-r"></span> <small id="tt-u">__PESOS_CORTO__</small></div>
         <div class="tt-n" id="tt-n"></div>
       </div>
     </section>
@@ -707,7 +706,7 @@ __JS_UNIDAD__
     Object.keys(DATA.series || {}).forEach(c => {
       precargados['indices/' + c + '.json'] = { serie: DATA.series[c] };
     });
-    feed = TV.crearDatafeed({ base: '/datos/', ver: DATA.ver, precargados, uf: DATA.uf,
+    feed = TV.crearDatafeed({ base: '/datos/', ver: DATA.ver, precargados,
       // los mismos pedidos de la página: un archivo de datos/ se baja una vez
       pedir: pedirJSON,
       indices: CODES.map(c => ({ codigo: c, nombre: INDICES[c].nombre })),
@@ -769,8 +768,8 @@ __JS_UNIDAD__
     return Promise.resolve(c.setSymbol(sim)).catch(() => {});
   }
 
-  // todos los gráficos parten en línea y en pesos de hoy; las velas (las de
-  // ODEPA, del más bajo al más alto) quedan a un clic
+  // todos los gráficos parten en línea y ajustados por inflación; las velas
+  // (las de ODEPA, del más bajo al más alto) quedan a un clic
   let cur = CODES[0], vista = 'linea', unidad = 'real';
   let chart, sLinea, sCandle, pchart;
   let mapaUnidad = new Map(), mapaReal = new Map(), mapaEpoca = new Map();
@@ -780,9 +779,8 @@ __JS_UNIDAD__
   const dia = ms => new Date(ms).toISOString().slice(0, 10);
   const SEMANA_MS = 7 * DIA;
   // en Comparar, el cambio del precio en la unidad elegida
-  const ONOTE = { real: 'Cambio del precio real, en porcentaje',
-    epoca: 'Cambio del precio de la época, en porcentaje',
-    uf: 'Cambio del precio en UF, en porcentaje' };
+  const ONOTE = { real: 'Cambio del precio ajustado por inflación, en porcentaje',
+    epoca: 'Cambio del precio de la época, en porcentaje' };
 
   // variación de las dos últimas semanas: viene calculada en el resumen,
   // así el ticker no necesita las series
@@ -927,9 +925,8 @@ __JS_UNIDAD__
       el.innerHTML = '<div class="nochart">No se pudo cargar el motor de gráficos (revisa la conexión).</div>';
       return;
     }
-    // el eje en pesos o, en UF, con sus decimales (los de la unidad dibujada)
     chart = LightweightCharts.createChart(el, opcionesChart({ localization: {
-      priceFormatter: v => unidadLW === 'uf' && TV ? TV.numUFEje(v) : fmt(v) } }));
+      priceFormatter: fmt } }));
     // la línea de los índices oficiales: el único lugar de la brasa en los gráficos
     sLinea = chart.addLineSeries({ color: COL.ember, lineWidth: 2, priceLineVisible: false });
     // C2: convención estándar de trading, verde sube y rojo baja
@@ -939,9 +936,10 @@ __JS_UNIDAD__
     chart.subscribeCrosshairMove(onCrosshair);
   }
 
-  // la semana bajo el cursor: su valor en la unidad elegida y, abajo, en
-  // pesos de hoy (o a precio de la época, si la unidad es pesos de hoy)
-  const UNIDAD_TT = { real: 'pesos de hoy', epoca: 'precio de la época', uf: '' };
+  // la semana bajo el cursor: su valor en la unidad elegida y, abajo, en la
+  // otra (ajustado por inflación, en pesos del último mes con IPC, o a
+  // precio de la época)
+  const UNIDAD_TT = { real: '__PESOS_CORTO__', epoca: 'precio de la época' };
   const tooltip = document.getElementById('tooltip');
   function onCrosshair(param) {
     const el = document.getElementById('chart');
@@ -954,10 +952,10 @@ __JS_UNIDAD__
     if (uv == null) { tooltip.style.display = 'none'; return; }
     const u = unidadLW, otra = u === 'real' ? mapaEpoca.get(t) : mapaReal.get(t);
     document.getElementById('tt-d').textContent = ddmmyyyy(t);
-    document.getElementById('tt-r').textContent = u === 'uf' ? TV.textoUF(uv) : fmt(uv);
+    document.getElementById('tt-r').textContent = fmt(uv);
     document.getElementById('tt-u').textContent = UNIDAD_TT[u];
     document.getElementById('tt-n').textContent = (otra != null ? fmt(otra) : '·') +
-      (u === 'real' ? ' precio de la época' : ' pesos de hoy');
+      ' ' + UNIDAD_TT[u === 'real' ? 'epoca' : 'real'];
     tooltip.style.display = 'block';
     const w = tooltip.offsetWidth, cw = el.clientWidth;
     let x = param.point.x + 14;
@@ -999,11 +997,11 @@ __JS_UNIDAD__
   document.getElementById('v-linea').onclick = () => { vista = 'linea'; aplicarVista(true); };
   document.getElementById('v-velas').onclick = () => { vista = 'velas'; aplicarVista(true); };
 
-  /* ---------- unidad: pesos de hoy, precio de la época o UF ---------- */
+  /* ---------- unidad: ajustado por inflación o precio de la época ---------- */
   // vale para los índices y para Comparar. En Advanced Charts cada unidad
   // es otro símbolo; en Lightweight, otras semanas para la línea y las velas.
-  // Sin carestia-tv.js (que calcula la época y la UF) solo hay pesos de hoy
-  const unidadesHay = () => !feed ? ['real'] : DATA.uf ? ['real', 'epoca', 'uf'] : ['real', 'epoca'];
+  // Sin carestia-tv.js (que calcula la época) solo hay ajustado por inflación
+  const unidadesHay = () => !feed ? ['real'] : ['real', 'epoca'];
   // la leyenda de la línea del índice (escritorio y franja del celular): las
   // unidades que hay, la elegida a la vista y las otras atenuadas
   function pintarLeyenda() {
@@ -1019,7 +1017,6 @@ __JS_UNIDAD__
     selector.poner(u);
     pintarLeyenda();
     document.getElementById('onote').textContent = ONOTE[u];
-    pintarCifra();
     pintarSerie(cur);
     syncProductos();
   }
@@ -1072,32 +1069,10 @@ __JS_UNIDAD__
   }
 
   /* ---------- render de un índice ---------- */
-  // el último cierre de un índice en una unidad: la cifra en UF y el
-  // encabezado de la captura
+  // el último cierre de un índice en una unidad: el encabezado de la captura
   function ultimoCierre(code, u) {
     if (feed) return feed.barras(code + SUF[u]).then(b => b && b.length ? b[b.length - 1].close : null);
     return Promise.resolve(u === 'real' ? INDICES[code].costo_real : null);
-  }
-  // la cifra grande: en pesos de hoy (también con el precio de la época, que
-  // en la última semana es el mismo) o, en UF, la del índice en UF y debajo,
-  // más chica, la de pesos de hoy
-  function pintarCifra() {
-    const code = cur, d = INDICES[code];
-    const oprice = document.getElementById('oprice'), opesos = document.getElementById('opesos');
-    // primero la de pesos de hoy del índice elegido (la que queda si la UF
-    // no llega); en UF se reemplaza al llegar. La línea de pesos de hoy de
-    // debajo queda a la vista mientras tanto: el bloque no cambia de alto
-    countUp(oprice, d.costo_real);
-    if (unidad !== 'uf') { opesos.hidden = true; return; }
-    opesos.textContent = fmt(d.costo_real) + ' en pesos de hoy';
-    opesos.hidden = false;
-    const enPesos = () => { if (cur === code && unidad === 'uf') opesos.hidden = true; };
-    ultimoCierre(code, 'uf').then(x => {
-      if (cur !== code || unidad !== 'uf') return;
-      if (x == null) { enPesos(); return; }
-      cifraGen++;   // la cifra en pesos que venía animándose ya no va
-      oprice.textContent = TV.textoUF(x);
-    }, enPesos);
   }
   const fmtQty = q => String(q).replace('.', ',');
   function aplicar(code) {
@@ -1106,16 +1081,16 @@ __JS_UNIDAD__
     document.getElementById('fecha').textContent = d.fecha;
     document.getElementById('oname').textContent = d.nombre.replace(/^Índice /i, '');
     document.getElementById('osub').textContent = d.subtitulo;
-    pintarCifra();
+    // la cifra grande: el precio de esta semana (en su semana, ajustado y de
+    // la época son el mismo), sin etiqueta
+    countUp(document.getElementById('oprice'), d.costo_real);
     document.getElementById('odelta').innerHTML = fmtDelta(deltaSemanal(d));
     document.getElementById('obadge').textContent = d.veredicto;
     document.getElementById('obadge').style.background = d.color;
-    document.getElementById('opct').textContent =
-      'percentil ' + d.percentil + ' de ' + d.n + ' semanas';
-    document.getElementById('ovs').textContent =
-      (d.vs_promedio >= 0 ? '+' : '') + d.vs_promedio +
-      (d.vs_promedio >= 0 ? '% sobre' : '% bajo') +
-      ' su promedio histórico, en pesos de hoy';
+    // la frase del veredicto por temporada y el percentil de toda la
+    // historia como dato secundario: los arma el build
+    document.getElementById('opct').textContent = d.frase;
+    document.getElementById('ovs').textContent = d.historia;
     pintarSerie(code);
     renderEstacional(d);
     const comp = document.getElementById('comp');
@@ -1158,10 +1133,6 @@ __JS_UNIDAD__
       // si el usuario arrastró el eje de precios, autoScale quedó apagado
       // y la serie nueva caería fuera del encuadre
       chart.priceScale('right').applyOptions({ autoScale: true });
-      const formato = u === 'uf' ? { type: 'price', precision: 4, minMove: 0.0001 } :
-        { type: 'price', precision: 0, minMove: 1 };
-      sLinea.applyOptions({ priceFormat: formato });
-      sCandle.applyOptions({ priceFormat: formato });
       sLinea.setData(linea);
       sCandle.setData(velas);
       aplicarVista();
@@ -1172,7 +1143,7 @@ __JS_UNIDAD__
     pintarCarga();
   }
   // la línea y las velas del índice en una unidad, con la fecha como texto:
-  // pesos de hoy desde su serie; precio de la época y UF, del datafeed
+  // ajustado por inflación desde su serie; precio de la época, del datafeed
   function semanasLW(code, u) {
     const d = INDICES[code];
     if (u === 'real' || !feed) return Promise.resolve([d.real, d.velas || []]);
@@ -1411,7 +1382,7 @@ __JS_UNIDAD__
           pchart.timeScale().fitContent();
         }, () => {
           // sin las semanas de esa unidad: la serie sigue en la que tenía y el
-          // selector vuelve a ella (pesos de hoy, si recién se agregó)
+          // selector vuelve a ella (ajustado por inflación, si recién se agregó)
           const y = pseries.get(k);
           if (!y || y.s !== s || y.unidad !== u) return;
           y.unidad = y.dibujada;
@@ -1428,7 +1399,7 @@ __JS_UNIDAD__
   }
 
   // un producto en Lightweight, en la unidad elegida y con huecos donde no
-  // hubo precio: pesos de hoy desde la página; época y UF, del datafeed
+  // hubo precio: ajustado por inflación desde la página; época, del datafeed
   function puntosProducto(k, u) {
     if (u === 'real' || !feed) return Promise.resolve(PRODS[k].gaps);
     return feed.barras(PRODS[k].slug + SUF[u]).then(b => {
@@ -1747,7 +1718,7 @@ __JS_UNIDAD__
   }
 
   /* ---------- captura PNG compartible (estilo TradingView) ---------- */
-  const TITULO_UNIDAD = { epoca: ', PRECIO DE LA ÉPOCA', uf: ', EN UF' };
+  const TITULO_UNIDAD = { epoca: ', PRECIO DE LA ÉPOCA' };
   // la marca va en tres segmentos medidos para pintar SOLO la í en brasa,
   // en la tipografía del wordmark
   function marcaDeAgua(ctx, xDer, yBase, size) {
@@ -1898,8 +1869,7 @@ __JS_UNIDAD__
     }
     // contexto arriba a la izquierda: qué es, cuánto vale, de cuándo;
     // productos no tiene un costo único y lleva su etiqueta en vez del monto.
-    // Un índice fuera de pesos de hoy dice su unidad y, en UF, debajo va la
-    // cifra en pesos de hoy
+    // Un índice a precio de la época dice su unidad
     let titulo, precio,
       precioFont = '700 ' + Math.round(W * 0.037) + 'px "Space Grotesk", sans-serif';
     if (modo === 'canasta') {
@@ -1916,8 +1886,7 @@ __JS_UNIDAD__
       if (unidad !== 'real') {
         titulo += TITULO_UNIDAD[unidad];
         const x = await ultimoCierre(cur, unidad).catch(() => null);
-        if (x != null) precio = unidad === 'uf' ? TV.textoUF(x) : fmt(x);
-        if (x != null && unidad === 'uf') compLineas.unshift(fmt(d.costo_real) + ' en pesos de hoy');
+        if (x != null) precio = fmt(x);
       }
     }
     const compH = (compLineas.length + prodLineas.length) * compAlto;
@@ -2045,7 +2014,8 @@ __JS_UNIDAD__
 """
 
 # ---------------- Portada (formato tabla) ----------------
-# Índices arriba, lo que más se movió esta semana y la tabla de productos.
+# Los productos primero: lo que más se movió esta semana, la tabla de
+# productos y después las 4 tarjetas de los índices.
 # Todo va en el HTML estático (las filas son <a href> a cada ficha: se leen
 # sin JS y las indexan los buscadores); el JS solo ordena, filtra por grupo
 # y cambia las pestañas de "Esta semana" en móvil. Sin Lightweight Charts ni
@@ -2070,10 +2040,10 @@ PORTADA_HTML = r"""<!DOCTYPE html>
   })();
 </script>
 <title>Carestía: índices del costo de vida en Santiago</title>
-<meta name="description" content="Índices del costo de vida en la Región Metropolitana: asado, desayuno, ensalada y fruta en pesos de hoy, con datos públicos de ODEPA desde 2008. Actualizado cada viernes.">
+<meta name="description" content="Índices del costo de vida en la Región Metropolitana: asado, desayuno, ensalada y fruta, __AJUSTADOS__, con datos públicos de ODEPA desde 2008. Actualizado cada viernes.">
 <link rel="canonical" href="https://carestia.cl/">
 <meta property="og:title" content="Carestía: índices del costo de vida en Santiago">
-<meta property="og:description" content="Cuánto cuesta la vida cotidiana en la Región Metropolitana, en pesos de hoy. Índices propios sobre datos públicos de ODEPA, actualizados cada viernes.">
+<meta property="og:description" content="Cuánto cuesta la vida cotidiana en la Región Metropolitana, __AJUSTADO__. Índices propios sobre datos públicos de ODEPA, actualizados cada viernes.">
 __OG__
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
@@ -2120,20 +2090,29 @@ __CSS_CABECERA__
     border-radius:999px; color:var(--bg); }
   .ic-mid { display:flex; flex-direction:column; gap:4px; }
   .ic-sub { font:400 13px var(--sans); color:var(--ash); }
+  /* el precio de esta semana, sin etiqueta: en su semana, ajustado y de la
+     época son el mismo */
   .ic-precio { font:700 38px/1.05 var(--display); letter-spacing:-.02em; }
-  .ic-ph { font:400 12px var(--sans); color:var(--dim); }
-  .ic-niv { display:flex; flex-direction:column; gap:7px; }
-  .ic-nl { display:flex; justify-content:space-between; gap:8px;
-    font:400 12px var(--sans); }
-  .ic-nl span:first-child { color:var(--ash); }
-  /* las tres zonas del percentil (0 a 33, 33 a 66, 66 a 100) y la marca */
+  /* la frase crece y la barra queda abajo: con frases de largo distinto,
+     las barras de las 4 tarjetas quedan a la misma altura */
+  .ic-niv { flex:1 1 auto; display:flex; flex-direction:column; gap:9px; }
+  /* la frase del veredicto: el mismo mes de los últimos 10 años */
+  .ic-fr { flex:1 1 auto; font:400 13px/1.45 var(--sans); color:var(--bone);
+    text-wrap:pretty; }
+  /* las tres zonas del veredicto (más caro que en 3 o menos de cada 10 años,
+     entre medio y en 7 o más: 0 a 30, 30 a 70 y 70 a 100) y la marca en la
+     cuenta de esta semana. Sin temporada, las del percentil de toda la
+     historia (0 a 33, 33 a 66 y 66 a 100) */
   .zonas { position:relative; height:8px; display:flex; gap:2px; }
-  .zonas .z { flex:33 1 0; }
+  .zonas .z { flex:30 1 0; }
   .zonas .z1 { background:color-mix(in srgb, var(--verde) 28%, transparent);
     border-radius:4px 0 0 4px; }
-  .zonas .z2 { background:color-mix(in srgb, var(--ambar) 28%, transparent); }
-  .zonas .z3 { flex-grow:34; border-radius:0 4px 4px 0;
+  .zonas .z2 { flex-grow:40;
+    background:color-mix(in srgb, var(--ambar) 28%, transparent); }
+  .zonas .z3 { border-radius:0 4px 4px 0;
     background:color-mix(in srgb, var(--rojo) 28%, transparent); }
+  .zonas.historia .z { flex-grow:33; }
+  .zonas.historia .z3 { flex-grow:34; }
   .zonas .marca { position:absolute; top:-4px; width:3px; height:16px;
     margin-left:-1px; background:var(--bone); border-radius:2px; }
   .ic-pie { display:flex; flex-wrap:wrap; justify-content:space-between; gap:4px 8px;
@@ -2298,7 +2277,8 @@ __CSS_CABECERA__
     /* Índices: 2 por fila, tarjeta compacta */
     .icards { gap:10px; }
     .icard { gap:8px; padding:14px; border-radius:12px; }
-    .ic-ind, .ic-sub, .ic-ph, .ic-nl, .ic-pie { display:none; }
+    .ic-ind, .ic-sub, .ic-pie { display:none; }
+    .ic-fr { font-size:12px; }
     .ic-ey { font-size:10px; letter-spacing:.12em; }
     .ic-pill { font-size:10px; letter-spacing:.06em; padding:2px 7px; }
     .ic-precio { font-size:24px; line-height:1.1; }
@@ -2330,20 +2310,7 @@ __CINTA__
   </header>
 
   <main>
-    <h1 class="vh">Carestía: el costo de vida en Santiago, en pesos de hoy</h1>
-
-    <section class="bloque" aria-labelledby="h-indices">
-      <div class="sec-head ind-head">
-        <div class="sec-tit">
-          <h2 id="h-indices">Índices Carestía</h2>
-          <p>Canastas fijas en pesos de hoy. El color dice si están caras o baratas respecto de su propia historia.</p>
-        </div>
-        <a class="sec-link" href="/metodologia.html">Cómo se calculan</a>
-      </div>
-      <div class="icards">
-__TARJETAS__
-      </div>
-    </section>
+    <h1 class="vh">Carestía: el costo de vida en Santiago, __AJUSTADO__</h1>
 
     <section class="bloque" aria-labelledby="h-semana">
       <h2 class="chico" id="h-semana">Esta semana</h2>
@@ -2363,7 +2330,7 @@ __LISTAS__
       <div class="sec-head prod-head">
         <div class="sec-tit">
           <h2 id="h-productos">Productos</h2>
-          <p>Precios al consumidor ODEPA, Región Metropolitana, en pesos de hoy.<span class="d-only"> Cada fila abre su gráfico.</span></p>
+          <p>Precios al consumidor ODEPA, Región Metropolitana, __AJUSTADOS__.<span class="d-only"> Cada fila abre su gráfico.</span></p>
         </div>
         <label class="orden">Ordenar por
           <select id="orden">
@@ -2395,6 +2362,19 @@ __FILAS__
         </div>
       </div>
       <a class="ver-todos" href="/productos/">Ver todos los productos</a>
+    </section>
+
+    <section class="bloque" aria-labelledby="h-indices">
+      <div class="sec-head ind-head">
+        <div class="sec-tit">
+          <h2 id="h-indices">Índices Carestía</h2>
+          <p>Canastas fijas, __AJUSTADAS__. El color compara el precio de esta semana con el mismo mes de los últimos 10 años.</p>
+        </div>
+        <a class="sec-link" href="/metodologia.html">Cómo se calculan</a>
+      </div>
+      <div class="icards">
+__TARJETAS__
+      </div>
     </section>
   </main>
 
@@ -2851,18 +2831,19 @@ __CSS_BASE__
     flex-wrap:wrap; margin-top:14px; min-height:52px; }
   .oprice { font:700 clamp(38px,7vw,64px)/1 var(--display);
     letter-spacing:-.01em; color:var(--bone); }
-  /* en UF, la cifra grande va en UF y debajo, más chica, en pesos de hoy */
-  .ocifra { display:flex; flex-direction:column; }
-  .opesos { font:400 13px var(--sans); color:var(--ash); margin-top:6px; }
   .ouni { font:400 13px var(--sans); color:var(--ash); }
   /* la variación semanal: el número en color (ver .v-sube y .v-baja) y el
      resto en hueso */
   .odelta { font:600 15px var(--sans); color:var(--bone); }
   .odelta small { font:400 12px var(--sans); color:var(--bone); }
+  /* la frase del veredicto por temporada y, debajo, el percentil de toda la
+     historia como dato secundario */
   .pct { font:400 15px/1.6 var(--sans); color:var(--bone);
     margin-top:12px; text-wrap:pretty; }
-  /* la unidad del gráfico: pesos de hoy, precio de la época o UF, en tres
-     botones o, si no caben, en un desplegable (JS_UNIDAD), y su línea */
+  .pct2 { font:400 13px/1.6 var(--sans); color:var(--ash); margin-top:4px;
+    text-wrap:pretty; }
+  /* la unidad del gráfico: ajustado por inflación o precio de la época, en
+     dos botones o, si no caben, en un desplegable (JS_UNIDAD), y su línea */
   .unidad { margin-top:18px; }
   .vtoggle { display:inline-flex; border:1px solid var(--line); background:var(--bg); }
   .vbtn { font:500 13px var(--sans); padding:8px 14px; border:none; cursor:pointer;
@@ -2922,17 +2903,15 @@ __CSS_SITIO__
   </header>
 
   <main>
-    <div class="miga" id="miga">Precio real en Santiago, en pesos de hoy</div>
+    <div class="miga">__MIGA__</div>
     <h1>__LABEL__</h1>
     <div class="orow">
-      <div class="ocifra">
-        <div class="oprice" id="oprice">__PRECIO__</div>
-        <div class="opesos" id="opesos" hidden></div>
-      </div>
-      <div class="ouni" id="ouni">por __UNI_TXT__, en pesos de hoy</div>
+      <div class="oprice">__PRECIO__</div>
+      <div class="ouni">__OUNI__</div>
       <div class="odelta">__DELTA__ <small>sem.</small></div>
     </div>
-    <p class="pct">__PCT_LINEA__</p>
+    <p class="pct">__FRASE__</p>
+    __HISTORIA__
     <div class="unidad" id="unidad">
       __SELECTOR_UNIDAD__
       <p class="utxt" id="utxt">__UNIDAD_REAL__</p>
@@ -2963,10 +2942,7 @@ __PIE__
   const SLUG = '__SLUG__';
   const NOMBRE = __NOMBRE__;
   const UNIDAD = '__UNIDAD__';
-  const UNI_TXT = '__UNI_TXT__';
   const INDICES = __INDICES__;
-  // el build trae datos/uf.json: hay opción UF
-  const UF = __UF__;
   const LIGHTWEIGHT = 'https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js';
   const fmt = v => '$' + Math.round(v).toLocaleString('es-CL');
   // colores desde los tokens de :root
@@ -2984,18 +2960,15 @@ __PIE__
   }
 __JS_UNIDAD__
   // la unidad: en Advanced Charts es otro símbolo; en Lightweight, otra
-  // serie. Sin carestia-tv.js (que calcula la época y la UF), pesos de hoy
-  // (unidadLW: la que está dibujada en Lightweight, que cambia al llegar)
+  // serie. Sin carestia-tv.js (que calcula la época), solo ajustado por
+  // inflación (unidadLW: la que está dibujada en Lightweight, que cambia al
+  // llegar). El número grande es el precio de esta semana en las dos
   let TV = null, feed = null, widget = null, lw = null, unidad = 'real', unidadLW = 'real';
-  const unidadesHay = () => !feed ? ['real'] : UF ? ['real', 'epoca', 'uf'] : ['real', 'epoca'];
-  const oprice = document.getElementById('oprice'), opesos = document.getElementById('opesos');
-  const ouni = document.getElementById('ouni'), miga = document.getElementById('miga');
-  const PRECIO = oprice.textContent, OUNI = ouni.textContent, MIGA = miga.textContent;
+  const unidadesHay = () => !feed ? ['real'] : ['real', 'epoca'];
   function ponerUnidad(u) {
     if (unidadesHay().indexOf(u) === -1) u = 'real';
     unidad = u;
     selector.poner(u);
-    pintarCifra();
     if (widget) {
       const c = widget.activeChart();
       if (c.symbol().split(':').pop().toLowerCase() !== SLUG + SUF[u]) {
@@ -3004,27 +2977,6 @@ __JS_UNIDAD__
     } else if (lw) lw(u);
   }
   const selector = selectorUnidad(ponerUnidad);
-  // la cifra grande: en UF, la del producto en UF (el último cierre de su
-  // serie) y debajo, más chica, en pesos de hoy. Con el precio de la época
-  // queda la de pesos de hoy: en la última semana es la misma
-  function pintarCifra() {
-    if (unidad !== 'uf' || !feed) {
-      oprice.textContent = PRECIO;
-      ouni.textContent = OUNI;
-      miga.textContent = MIGA;
-      opesos.hidden = true;
-      return;
-    }
-    feed.barras(SLUG + SUF.uf).then(b => {
-      if (unidad !== 'uf' || !b || !b.length) return;
-      oprice.textContent = TV.textoUF(b[b.length - 1].close);
-      ouni.textContent = 'por ' + UNI_TXT;
-      // el antetítulo deja de decir "en pesos de hoy": la cifra va en UF
-      miga.textContent = MIGA.replace(/, en pesos de hoy$/, '');
-      opesos.textContent = PRECIO + ' en pesos de hoy';
-      opesos.hidden = false;
-    }, () => {});
-  }
 
   function lightweight() {
     el.dataset.motor = 'lightweight';
@@ -3044,8 +2996,8 @@ __JS_UNIDAD__
         grid: { vertLines: { color: tok('grid') }, horzLines: { color: tok('grid') } },
         rightPriceScale: { borderColor: tok('line') },
         timeScale: { borderColor: tok('line') },
-        // fechas en castellano de Chile, como en la portada; la UF con decimales
-        localization: { locale: 'es-CL', priceFormatter: v => unidadLW === 'uf' && TV ? TV.numUFEje(v) : fmt(v) },
+        // fechas en castellano de Chile, como en la portada
+        localization: { locale: 'es-CL', priceFormatter: fmt },
         // misma política de gestos del sitio: la rueda acerca y mueve el
         // gráfico; el swipe vertical en táctil queda para la página
         handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: true },
@@ -3074,8 +3026,6 @@ __JS_UNIDAD__
         datos.then(d => {
           if (unidad !== u) return;
           unidadLW = u;
-          linea.applyOptions({ priceFormat: u === 'uf' ? { type: 'price', precision: 4, minMove: 0.0001 } :
-            { type: 'price', precision: 0, minMove: 1 } });
           linea.setData(d);
           chart.timeScale().fitContent();
         }, () => { if (unidad === u && u !== unidadLW) ponerUnidad(unidadLW); });
@@ -3091,14 +3041,14 @@ __JS_UNIDAD__
       TV = window.CarestiaTV;
       if (!TV) throw new Error('sin carestia-tv.js');
       // la serie ya viene en la página: el datafeed no la vuelve a pedir
-      feed = TV.crearDatafeed({ base: '/datos/', ver: '__VER__', indices: INDICES, uf: UF,
+      feed = TV.crearDatafeed({ base: '/datos/', ver: '__VER__', indices: INDICES,
         // su Comparar superpone el producto en otras unidades: el nombre la dice
         nombreConUnidad: true,
         productos: [{ slug: SLUG, nombre: NOMBRE, unidad: UNIDAD }],
         precargados: { ['productos/' + SLUG + '.json']: { t0: T0, v: V, min: MIN, max: MAX } } });
       selector.limitar(unidadesHay());
       el.innerHTML = '';
-      const EN = { real: ', en pesos de hoy', epoca: ', precio de la época', uf: ', en UF' };
+      const EN = { real: '__EN_PESOS__', epoca: ', precio de la época' };
       return TV.montar({ contenedor: el, libreria: '/charting_library/', simbolo: SLUG + SUF[unidad],
         datafeed: feed, tok, sitio: true, css: location.origin + '/__TV_CSS__?v=__VER_CSS__',
         // sus unidades, listas para superponer desde Comparar (la lista no
@@ -3265,11 +3215,12 @@ def numero_variacion(x: float, txt: str) -> str:
 
 
 def frase_historia(vals: list, ult: float, anio: str, o: str = "o") -> str:
-    """La frase de las tarjetas: en cuántas de cada 10 semanas de su historia
-    (en pesos de hoy) el precio fue menor ("Más caro que en 8 de cada 10
-    semanas desde 2008") o mayor ("Más barato"), con el mismo criterio que la
-    línea del percentil de la ficha. 'o' es la terminación del adjetivo
-    (o, a, os, as)."""
+    """La frase contra toda la historia: en cuántas de cada 10 semanas de su
+    historia (ajustada por inflación) el precio fue menor ("Más caro que en 8
+    de cada 10 semanas desde 2008") o mayor ("Más barato"), con el mismo
+    criterio que la línea del percentil de la ficha. Es la que queda cuando
+    no hay veredicto por temporada (menos de 5 años del mes). 'o' es la
+    terminación del adjetivo (o, a, os, as)."""
     n = len(vals)
     caro = round(100 * sum(1 for v in vals if v < ult) / n)
     barato = round(100 * sum(1 for v in vals if v > ult) / n)
@@ -3278,6 +3229,108 @@ def frase_historia(vals: list, ult: float, anio: str, o: str = "o") -> str:
     if k == 0:
         return f"Igual que en casi todas las semanas desde {anio}, descontada la inflación."
     return f"Más {adj} que en {k} de cada 10 semanas desde {anio}, descontada la inflación."
+
+
+# ---------------- Veredicto por temporada: las frases ----------------
+# La regla está en indices.py (comparar_temporada): el precio de esta semana,
+# ajustado por inflación, frente al promedio del mismo mes en cada uno de los
+# 10 años anteriores. Aquí, las frases. Dentro de una frase los meses van con
+# su nombre completo y en minúscula; en plural, para contar años ("los
+# últimos 10 octubres").
+MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio",
+         "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
+MESES_PLURAL = ["eneros", "febreros", "marzos", "abriles", "mayos", "junios",
+                "julios", "agostos", "septiembres", "octubres", "noviembres",
+                "diciembres"]
+
+
+def frase_temporada(t: dict, o: str = "o") -> str:
+    """La frase del veredicto por temporada, según la zona de esta semana
+    (t es comparar_temporada; en los índices, su 'temporada'). La frase dice
+    lo de esta semana; el color del índice, en cambio, espera a que la zona
+    se mantenga dos semanas seguidas. 'o' es la terminación del adjetivo."""
+    mes, plural, k = MESES[t["mes"] - 1], MESES_PLURAL[t["mes"] - 1], t["anios"]
+    if t["zona"] == "CARO":
+        return (f"Más car{o} que en {t['debajo']} de los últimos {k} {plural}, "
+                f"aun descontando la inflación.")
+    if t["zona"] == "BARATO":
+        return (f"Más barat{o} que en {t['encima']} de los últimos {k} {plural}, "
+                f"aun descontando la inflación.")
+    return f"Dentro de lo normal para {mes}: más car{o} que en {t['debajo']} de los últimos {k}."
+
+
+def temporada_producto(p: dict, i: int = None):
+    """comparar_temporada de un producto (serie compacta t0 + v): su última
+    semana con precio (o la i) frente a los mismos meses de los 10 años
+    anteriores. None con menos de 5 años de ese mes."""
+    base = datetime.date.fromisoformat(p["t0"])
+    fechas = [base + datetime.timedelta(weeks=j) for j in range(len(p["v"]))]
+    return comparar_temporada(fechas, p["v"], i)
+
+
+# ---------------- El mes del IPC: "en pesos de agosto de 2026" ----------------
+# Los precios ajustados por inflación van en pesos del último mes con IPC: el
+# que usó indices.py (indices.json["ipc_mes"]). Donde antes decía "pesos de
+# hoy", el sitio dice "ajustado por inflación, en pesos de agosto de 2026" y,
+# en las etiquetas cortas, "pesos de agosto 2026". El número grande (el
+# precio de esta semana) no lleva etiqueta: en su semana, ajustado y de la
+# época son el mismo.
+def mes_ipc() -> datetime.date:
+    """El mes del último IPC con que se deflactó, del indices.json. Uno
+    anterior a este cambio no lo trae: se deduce de los índices (desde la
+    primera semana de ese mes, el valor ajustado y el de la época son el
+    mismo) y, si ni así, es el mes de la última semana. Lo deducido se avisa."""
+    texto = DATA.get("ipc_mes")
+    if texto:
+        try:
+            return datetime.date.fromisoformat(f"{texto}-01")
+        except ValueError:
+            raise SystemExit(f"build_site.py: ipc_mes ilegible en indices.json: {texto!r}")
+    desde, ultima = [], []
+    for d in DATA["indices"].values():
+        real = d.get("real") or []
+        nominal = {p["time"]: p["value"] for p in d.get("nominal") or []}
+        distintas = [i for i, p in enumerate(real) if nominal.get(p["time"]) not in (None, p["value"])]
+        if distintas and distintas[-1] + 1 < len(real):
+            desde.append(real[distintas[-1] + 1]["time"])
+        if real:
+            ultima.append(real[-1]["time"])
+    if desde:
+        mes = datetime.date.fromisoformat(max(desde)).replace(day=1)
+        print(f"AVISO IPC: indices.json no trae ipc_mes; por los índices, el último IPC "
+              f"es el de {mes:%Y-%m}.")
+        return mes
+    mes = (datetime.date.fromisoformat(max(ultima)) if ultima else datetime.date.today()).replace(day=1)
+    print(f"AVISO IPC: indices.json no trae ipc_mes ni se puede deducir; se usa el mes "
+          f"de la última semana, {mes:%Y-%m}.")
+    return mes
+
+
+def pesos(corto: bool = False) -> str:
+    """'pesos de agosto de 2026' o, en etiquetas cortas, 'pesos de agosto 2026'."""
+    mes = MESES[MES_IPC.month - 1]
+    return f"pesos de {mes} {MES_IPC.year}" if corto else f"pesos de {mes} de {MES_IPC.year}"
+
+
+def ajustado(o: str = "o") -> str:
+    """'ajustado por inflación, en pesos de agosto de 2026'; 'o' es la
+    terminación (ajustados, ajustadas)."""
+    return f"ajustad{o} por inflación, en {pesos()}"
+
+
+def completar_temporada() -> None:
+    """Un indices.json anterior al veredicto por temporada no trae sus
+    campos: se calculan aquí sobre su serie publicada, con la misma función
+    que usa indices.py (resumen_temporada). El veredicto de ese archivo, el
+    del percentil de toda la historia, es el que queda si no hay temporada."""
+    faltan = [c for c, d in DATA["indices"].items() if "base_veredicto" not in d]
+    for c in faltan:
+        d = DATA["indices"][c]
+        d.update(resumen_temporada(d.get("real") or [], d["veredicto"]))
+        d["color"] = COLORES[d["veredicto"]]
+    if faltan:
+        print("AVISO: indices.json sin el veredicto por temporada (anterior a este "
+              "cambio de indices.py); se calcula aquí para " + ", ".join(faltan) + ".")
 
 
 # ---------------- og:image por página ----------------
@@ -3440,7 +3493,8 @@ def compactar_indice(code: str, d: dict) -> dict:
 
 def resumen_indice(d: dict) -> dict:
     """Lo que /graficos.html (y la cinta y las tarjetas de la portada)
-    muestra de un índice sin su serie: el overlay, el ticker, la
+    muestra de un índice sin su serie: el overlay (con la frase del
+    veredicto y el percentil de toda la historia), el ticker, la
     estacionalidad y los componentes. La variación semanal es la
     misma cuenta que hacía el navegador con las dos últimas semanas, sin
     redondear, para que la cifra mostrada no cambie."""
@@ -3449,6 +3503,10 @@ def resumen_indice(d: dict) -> dict:
     r["delta"] = ((real[-1]["value"] / real[-2]["value"] - 1) * 100
                   if len(real) >= 2 and real[-2]["value"] else None)
     r["estacionalidad"] = d.get("estacionalidad") or {}
+    # la frase del veredicto (por temporada) y el dato secundario (el
+    # percentil de toda la historia), ya escritos
+    r["frase"] = frase_indice(d)
+    r["historia"] = historia_indice(d)
     r["componentes"] = [{**{k: c.get(k) for k in ("label", "qty", "unidad", "aporte")},
                          "label": nombre(c.get("label") or "")}
                         for c in d.get("componentes") or []]
@@ -3505,7 +3563,7 @@ def variacion_promedio(v: list, propio: list, i: int):
 def generar_catalogo(prods: dict, slugs: dict) -> dict:
     """datos/catalogo.json: una fila liviana por producto con datos, en el
     orden de /productos/ (grupo A-Z, "Otros" al final, y nombre para
-    mostrar). Variaciones en pesos de hoy contra 1, 13 y 52 semanas antes
+    mostrar). Variaciones ajustadas por inflación contra 1, 13 y 52 semanas antes
     (null si esa semana no tiene dato) y contra el promedio de las 4 semanas
     anteriores (variacion_promedio); percentil como el de los índices
     (semanas con precio menor o igual al último); las últimas 52 semanas del
@@ -3567,124 +3625,59 @@ def escribir_json(ruta: str, obj) -> None:
         fh.write(_json(obj))
 
 
-# ---------------- UF y unidades de los gráficos ----------------
-# Los gráficos se ven en pesos de hoy (por defecto), a precio de la época o en
-# UF. La UF de cada semana es su precio de la época dividido por la UF del
-# lunes en que empieza: el datafeed la calcula con datos/uf.json, que escribe
-# uf.py (aparte de indices.py) con la UF de cada lunes. Si falta o no cubre
-# todas las semanas de las series, el sitio sale sin la opción UF y el build
-# lo avisa.
-UF_JSON = os.path.join(DATOS, "uf.json")
-UNIDADES = ("real", "epoca", "uf")
-UNIDAD_NOMBRE = {"real": "Pesos de hoy", "epoca": "Precio de la época", "uf": "UF"}
-# la línea bajo el selector: textos del dueño, literales
-UNIDAD_TXT = {
-    "real": "Cada precio pasado, llevado a pesos de hoy con la inflación. "
-            "Sirve para comparar años distintos.",
-    "epoca": "Lo que costaba en su momento, tal como salía en la boleta.",
-    "uf": "Cada precio dividido por el valor de la UF de esa semana. Como la UF "
-          "sube con la inflación, también sirve para comparar años distintos.",
-}
+# ---------------- Unidades de los gráficos ----------------
+# Los gráficos se ven ajustados por inflación (por defecto, en pesos del último
+# mes con IPC) o a precio de la época. La UF salió de la interfaz por decisión
+# del dueño: datos/uf.json lo sigue escribiendo uf.py y se publica con datos/,
+# pero el build ya no lo lee y ninguna página lo ofrece.
+UNIDADES = ("real", "epoca")
+UNIDAD_NOMBRE = {"real": "Ajustado por inflación", "epoca": "Precio de la época"}
 
 
-def semanas_de_las_series() -> tuple:
-    """(primer lunes, último lunes) con dato entre índices y productos."""
-    fechas = []
-    for d in DATA["indices"].values():
-        for k in SERIES_INDICE:
-            fechas += [p["time"] for p in d.get(k) or []]
-    for p in DATA.get("productos", {}).values():
-        con_dato = [i for i, x in enumerate(p["v"]) if x is not None]
-        if con_dato:
-            t0 = datetime.date.fromisoformat(p["t0"])
-            fechas += [(t0 + datetime.timedelta(weeks=i)).isoformat()
-                       for i in (con_dato[0], con_dato[-1])]
-    if not fechas:
-        return None, None
-    return (datetime.date.fromisoformat(min(fechas)),
-            datetime.date.fromisoformat(max(fechas)))
+def unidad_txt() -> dict:
+    """La línea bajo el selector de cada unidad: textos del dueño, literales,
+    con el mes del último IPC."""
+    return {
+        "real": f"Cada precio pasado, llevado a {pesos()} con el IPC. "
+                f"Sirve para comparar años distintos.",
+        "epoca": "Lo que costaba en su momento, tal como salía en la boleta.",
+    }
 
 
-def _no_es_json(constante):
-    raise ValueError(f"{constante} no es JSON")
-
-
-def cargar_uf():
-    """datos/uf.json si existe, el navegador lo puede leer y trae la UF
-    (positiva) de cada uno de sus lunes, desde la primera hasta la última
-    semana de las series; si no, None y un aviso. Nunca corta el build."""
-    def aviso(motivo):
-        print(f"AVISO UF: {motivo}. El sitio sale sin la opción UF.")
-        return None
-    try:
-        with open(UF_JSON, encoding="utf-8") as fh:
-            # estricto: NaN e Infinity no son JSON y el navegador no los lee
-            uf = json.load(fh, parse_constant=_no_es_json)
-        t0 = datetime.date.fromisoformat(uf["t0"])
-        v = uf["v"]
-        # t0 aaaa-mm-dd, como lo lee el datafeed (Date.parse no lee otras
-        # formas ISO que Python sí acepta, como 20071231 o 2008-W01-1)
-        if (uf["t0"] != t0.isoformat() or t0.weekday() != 0 or not isinstance(v, list)
-                or not v):
-            return aviso(f"{UF_JSON} no viene por semanas desde un lunes")
-        # se escribe como lo hará el build (la versión de datos/ lo incluye)
-        _json(uf).encode("utf-8")
-        ini, fin = semanas_de_las_series()
-        if ini is None:
-            return aviso("no hay series")
-        i, j = (ini - t0).days // 7, (fin - t0).days // 7
-        if i < 0 or j >= len(v):
-            ult = t0 + datetime.timedelta(weeks=len(v) - 1)
-            return aviso(f"{UF_JSON} va de {t0} a {ult} y las series, de {ini} a {fin}")
-        malas = [t0 + datetime.timedelta(weeks=k) for k, x in enumerate(v)
-                 if isinstance(x, bool) or not isinstance(x, (int, float))
-                 or not math.isfinite(x) or not x > 0]
-        if malas:
-            return aviso(f"{UF_JSON} no trae la UF de {len(malas)} lunes (el primero, {malas[0]})")
-        print(f"UF: {UF_JSON}, {uf.get('fuente', 'sin fuente')}, de {t0} a "
-              f"{t0 + datetime.timedelta(weeks=len(v) - 1)}; la del lunes {fin}: {v[j]}")
-        return uf
-    except FileNotFoundError:
-        return aviso(f"no está {UF_JSON} (uf.py no corrió o no obtuvo la UF)")
-    except Exception as e:  # noqa: un uf.json roto nunca corta el build
-        return aviso(f"{UF_JSON} no se puede leer ({type(e).__name__}: {str(e)[:120]})")
-
-
-def selector_unidad(con_uf: bool) -> str:
-    """Pesos de hoy, Precio de la época y UF: tres botones o, si no caben en
-    su fila, un desplegable (lo decide JS_UNIDAD). Sin datos/uf.json, sin UF."""
-    unidades = [u for u in UNIDADES if con_uf or u != "uf"]
+def selector_unidad() -> str:
+    """Ajustado por inflación y Precio de la época: dos botones o, si no caben
+    en su fila, un desplegable (lo decide JS_UNIDAD)."""
     botones = "\n        ".join(
         f'<button class="vbtn ubtn{" active" if u == "real" else ""}" type="button" '
         f'data-unidad="{u}" aria-pressed="{"true" if u == "real" else "false"}">'
-        f'{UNIDAD_NOMBRE[u]}</button>' for u in unidades)
+        f'{UNIDAD_NOMBRE[u]}</button>' for u in UNIDADES)
     opciones = "\n        ".join(
-        f'<option value="{u}">{UNIDAD_NOMBRE[u]}</option>' for u in unidades)
+        f'<option value="{u}">{UNIDAD_NOMBRE[u]}</option>' for u in UNIDADES)
     return (f'<div class="vtoggle ubtns" role="group" aria-label="Unidad">\n'
             f'        {botones}\n      </div>\n'
             f'      <select class="usel" aria-label="Unidad">\n'
             f'        {opciones}\n      </select>')
 
 
-def leyenda_unidad(con_uf: bool, clase: str) -> str:
+def leyenda_unidad(clase: str) -> str:
     """La leyenda de la línea del índice en /graficos.html: las unidades, con
-    la de pesos de hoy a la vista y las otras atenuadas (pintarLeyenda las
-    sigue al elegir)."""
+    la ajustada por inflación a la vista y la otra atenuada (pintarLeyenda
+    las sigue al elegir)."""
     clase = f' class="{clase}"' if clase else ""
     tenue = ' style="opacity:.35"'
     return "\n      ".join(
         f'<span{clase} data-leyenda="{u}"{"" if u == "real" else tenue}>'
         f'<span class="sw"></span>{UNIDAD_NOMBRE[u]}</span>'
-        for u in UNIDADES if con_uf or u != "uf")
+        for u in UNIDADES)
 
 
 # el selector de unidad en el navegador, igual en /graficos.html y las fichas.
 # Prueba con los botones y, si la fila se desborda, pasa al desplegable
 JS_UNIDAD = r"""  /* ---------- selector de unidad ---------- */
-  // Pesos de hoy, Precio de la época o UF: tres botones o, si no caben en su
-  // fila, un desplegable; bajo el selector, la línea de la unidad elegida
+  // Ajustado por inflación o Precio de la época: dos botones o, si no caben
+  // en su fila, un desplegable; bajo el selector, la línea de la unidad elegida
   const UNIDAD_TXT = __UNIDAD_TXT__;
-  const SUF = { real: '', epoca: '-epoca', uf: '-uf' };
+  const SUF = { real: '', epoca: '-epoca' };
   function selectorUnidad(alElegir) {
     const caja = document.getElementById('unidad');
     const fila = document.getElementById(caja.dataset.fila) || caja;
@@ -3728,9 +3721,8 @@ JS_UNIDAD = r"""  /* ---------- selector de unidad ---------- */
 """
 
 
-def generar_datos(slugs: dict, catalogo: dict, uf: dict = None) -> dict:
-    """Escribe datos/ y devuelve lo que va inline en /graficos.html. 'uf' es
-    datos/uf.json ya validado (cargar_uf), o None si el sitio sale sin UF."""
+def generar_datos(slugs: dict, catalogo: dict) -> dict:
+    """Escribe datos/ y devuelve lo que va inline en /graficos.html."""
     indices = DATA["indices"]
     prods = DATA.get("productos", {})
     series = {code: compactar_indice(code, d) for code, d in indices.items()}
@@ -3750,12 +3742,8 @@ def generar_datos(slugs: dict, catalogo: dict, uf: dict = None) -> dict:
                       for clave, p in prods.items()},
         "rango": rango_productos(prods),
         # versión de los datos: los pedidos a datos/ la llevan en la URL para
-        # que el navegador no mezcle archivos de dos builds distintos (con la
-        # UF, también la de datos/uf.json)
-        "ver": hashlib.sha1((_json(DATA) + (_json(uf) if uf else "")).encode("utf-8"))
-                      .hexdigest()[:10],
-        # datos/uf.json cubre todas las semanas: la opción UF existe
-        "uf": bool(uf),
+        # que el navegador no mezcle archivos de dos builds distintos
+        "ver": hashlib.sha1(_json(DATA).encode("utf-8")).hexdigest()[:10],
     }
 
 
@@ -3764,8 +3752,14 @@ def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
     """Renderiza la página estática de UN producto con sus datos inline.
     'semana' es la semana vigente del catálogo: si el último dato del
     producto es de otra semana (mismo criterio que el "precio de la semana
-    del…" de /productos/), ni el texto ni la descripción dicen "Hoy". 'og'
-    son las etiquetas de su og:image (og_meta); sin ellas, la genérica."""
+    del…" de /productos/), ni el texto ni la descripción dicen "Hoy" y el
+    número grande dice que va ajustado por inflación (el de esta semana no
+    lleva etiqueta: en su semana, ajustado y de la época son el mismo). La
+    frase principal es la del veredicto por temporada (sin píldora: el
+    semáforo es de los índices) y el percentil de toda la historia queda como
+    dato secundario; sin temporada (menos de 5 años del mes), la frase contra
+    toda la historia. 'og' son las etiquetas de su og:image (og_meta); sin
+    ellas, la genérica."""
     vals = [v for v in p["v"] if v is not None]
     ult = vals[-1]
     n = len(vals)
@@ -3788,24 +3782,29 @@ def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
     else:
         cuando, esta = "Hoy", c["esta"]
     if pct_caro >= pct_barato:
-        pct_linea = (f"{cuando} {esta} más car{c['o']} que en el {pct_caro}% de las "
-                     f"semanas desde {anio}, en pesos de hoy.")
+        en_historia = f"{esta} más car{c['o']} que en el {pct_caro}% de las semanas desde {anio}"
     else:
-        pct_linea = (f"{cuando} {esta} más barat{c['o']} que en el {pct_barato}% de las "
-                     f"semanas desde {anio}, en pesos de hoy.")
+        en_historia = f"{esta} más barat{c['o']} que en el {pct_barato}% de las semanas desde {anio}"
+    t = temporada_producto(p)
+    if t:
+        frase = frase_temporada(t, c["o"])
+        historia = f"Frente a toda su historia, {en_historia}, {ajustado()}."
+    else:
+        frase, historia = f"{cuando} {en_historia}, {ajustado()}.", ""
 
     title = f"Precio {c['de']} {label_frase} en Santiago: histórico desde {anio} | Carestía"
     if antiguo:
         ultimo = f"Último precio publicado por ODEPA (semana del {fecha_txt})"
-        pct_linea = f"{ultimo}. {pct_linea}"
+        frase = f"{ultimo}. {frase}"
+        miga, ouni = "Último precio publicado en Santiago", f"por {uni_txt}, {ajustado()}"
         desc = (f"{ultimo}: {precio} por {uni_txt} {c['de']} {label_frase} en la "
                 f"Región Metropolitana (promedio de ferias, supermercados y carnicerías, "
-                f"en pesos de hoy). Serie semanal desde {anio} con datos ODEPA.")
+                f"{ajustado()}). Serie semanal desde {anio} con datos ODEPA.")
     else:
+        miga, ouni = "Precio de esta semana en Santiago", f"por {uni_txt}"
         desc = (f"Hoy {c['art']} {label_frase} {c['cuesta']} {precio} por {uni_txt} en la "
-                f"Región Metropolitana (promedio de ferias, supermercados y carnicerías, "
-                f"en pesos de hoy). Serie semanal desde {anio} con datos ODEPA, "
-                f"actualizada cada viernes.")
+                f"Región Metropolitana (promedio de ferias, supermercados y carnicerías). "
+                f"Serie semanal desde {anio} con datos ODEPA, actualizada cada viernes.")
     if og is None:
         og = og_meta(OG_GENERICA, "Carestía", generica=True)
 
@@ -3817,9 +3816,12 @@ def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
         ("__SLUG__", slug),
         ("__LABEL__", html.escape(mostrar)),
         ("__PRECIO__", precio),
-        ("__UNI_TXT__", uni_txt),
+        ("__MIGA__", html.escape(miga)),
+        ("__OUNI__", html.escape(ouni)),
         ("__DELTA__", fmt_delta(vals)),
-        ("__PCT_LINEA__", html.escape(pct_linea)),
+        ("__FRASE__", html.escape(frase)),
+        # el percentil de toda la historia, como dato secundario
+        ("__HISTORIA__", f'<p class="pct2">{html.escape(historia)}</p>' if historia else ""),
         ("__FECHA__", fecha_txt),
         ("__ANIO__", anio),
         ("__CANASTA__", f"{key}:{QDEF.get(p['unidad'], '1')}"),
@@ -3833,16 +3835,16 @@ def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
         ("__UNIDAD__", p["unidad"]),
         ("__INDICES__", indices_tv()),
         ("__TV_JS__", TV_JS),
-        ("__VER_TV__", _ver(FEED_JS)),
+        ("__VER_TV__", _ver(feed_js())),
         ("__TV_CSS__", TV_CSS),
         ("__VER_CSS__", _ver(tv_css())),
         ("__VER__", APP["ver"]),
-        # la unidad: el selector, su línea y su JS; UF solo con datos/uf.json
-        ("__UF__", "true" if APP["uf"] else "false"),
-        ("__SELECTOR_UNIDAD__", selector_unidad(APP["uf"])),
-        ("__UNIDAD_REAL__", UNIDAD_TXT["real"]),
+        # la unidad: el selector, su línea y su JS
+        ("__SELECTOR_UNIDAD__", selector_unidad()),
+        ("__UNIDAD_REAL__", unidad_txt()["real"]),
         ("__JS_UNIDAD__", JS_UNIDAD),
-        ("__UNIDAD_TXT__", _json(UNIDAD_TXT)),
+        ("__UNIDAD_TXT__", _json(unidad_txt())),
+        ("__EN_PESOS__", ", en " + pesos(corto=True)),
         # HTML ya renderizado (seccion_otros escapa labels y grupo), no
         # se vuelve a escapar aquí
         ("__OTROS__", otros_html),
@@ -3899,23 +3901,29 @@ def generar_productos(slugs: dict) -> None:
     for slug, (key, _label) in slugs.items():
         grupo = prods[key].get("grupo") or "Otros"
         otros = seccion_otros(slug, grupo, por_grupo[grupo], labels)
-        og = tarjeta_producto(prods[key], slug)
+        og = tarjeta_producto(prods[key], slug, semana)
         with open(os.path.join("productos", f"{slug}.html"), "w",
                   encoding="utf-8") as fh:
             fh.write(pagina_producto(key, prods[key], slug, otros, semana, og))
 
 
-def tarjeta_producto(p: dict, slug: str) -> str:
-    """og/productos/{slug}.png y las etiquetas de su og:image."""
+def tarjeta_producto(p: dict, slug: str, semana: datetime.date = None) -> str:
+    """og/productos/{slug}.png y las etiquetas de su og:image. El precio de
+    esta semana va sin etiqueta de ajuste; uno de una semana anterior
+    ('semana' es la vigente del catálogo) dice en pesos de qué mes va. La
+    frase, la del veredicto por temporada o, sin ella, la de toda la historia."""
     vals = [v for v in p["v"] if v is not None]
     mostrar = nombre(p["label"])
     uni_txt = UNI_TXT.get(p["unidad"], p["unidad"])
+    o = concordancia(p["label"])["o"]
+    t = temporada_producto(p)
+    antiguo = semana is not None and fin_serie(p) != semana
     datos = {
-        "antetitulo": "Precio real en Santiago",
+        "antetitulo": "Último precio en Santiago" if antiguo else "Precio en Santiago",
         "nombre": mostrar,
         "precio": fmt_clp(vals[-1]),
-        "unidad": f"por {uni_txt}, en pesos de hoy",
-        "frase": frase_historia(vals, vals[-1], p["t0"][:4], concordancia(p["label"])["o"]),
+        "unidad": f"por {uni_txt}, en {pesos(corto=True)}" if antiguo else f"por {uni_txt}",
+        "frase": frase_temporada(t, o) if t else frase_historia(vals, vals[-1], p["t0"][:4], o),
         "fecha": semana_larga(fin_serie(p)),
         "fuente_txt": FUENTE_CITA,
         "sitio": "carestia.cl",
@@ -3937,12 +3945,13 @@ def tarjeta_producto(p: dict, slug: str) -> str:
 #   prueba-graficos.html   página oculta de prueba (noindex, fuera del menú y
 #                          del sitemap); si la librería no está o no inicia en
 #                          8 segundos, dibuja con Lightweight Charts
-# Símbolos: los 4 índices y los productos del catálogo, cada uno en pesos de
-# hoy, a precio de la época ("{slug}-epoca") y en UF ("{slug}-uf", solo si el
-# build tiene datos/uf.json); el ticker es el slug (el código del índice o el
+# Símbolos: los 4 índices y los productos del catálogo, cada uno ajustado por
+# inflación y a precio de la época ("{slug}-epoca"); el datafeed sabe además
+# de UF ("{slug}-uf", con su opción 'uf'), pero ninguna página del sitio la
+# ofrece desde que salió de la interfaz; el ticker es el slug (el código del índice o el
 # de la ficha del producto). Además, Tu canasta: un símbolo por cada canasta
 # que se arma en /graficos.html ("tu-canasta-{huella}"), fuera de la
-# búsqueda, con la cuenta de la página y solo en pesos de hoy. Semanales (1W)
+# búsqueda, con la cuenta de la página y solo ajustada por inflación. Semanales (1W)
 # y las temporalidades que el datafeed arma juntando semanas (2W, 1M, 3M, 6M
 # y 12M); en CLP sin decimales (la UF con decimales) y en America/Santiago.
 TV_JS = "carestia-tv.js"
@@ -3965,12 +3974,15 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
   const UNIDAD = { kg: 'kilo', un: 'unidad', l: 'litro' };
   // Tu canasta no es un índice: va con el tipo de los productos
   const TIPO = { indice: 'index', producto: 'commodity', canasta: 'commodity' };
-  // cada serie en tres unidades: pesos de hoy (el ticker solo), precio de la
-  // época y UF. Los nombres llevan la unidad: el largo (pantallas anchas y
-  // búsqueda) y el corto (la leyenda en el celular)
+  // cada serie en tres unidades: ajustada por inflación (el ticker solo), a
+  // precio de la época y en UF (solo con la opción 'uf': ninguna página del
+  // sitio la usa). Los nombres llevan la unidad: el largo (pantallas anchas y
+  // búsqueda) y el corto (la leyenda en el celular). PESOS: el mes del último
+  // IPC, lo pone build_site.py ("pesos de agosto 2026")
+  const PESOS = '__PESOS__';
   const UNIDADES = ['real', 'epoca', 'uf'];
   const SUFIJO = { real: '', epoca: '-epoca', uf: '-uf' };
-  const EN_LARGO = { real: ', en pesos de hoy', epoca: ', precio de la época', uf: ', en UF' };
+  const EN_LARGO = { real: ', en ' + PESOS, epoca: ', precio de la época', uf: ', en UF' };
   const EN_CORTO = { real: '', epoca: ', precio de la época', uf: ', en UF' };
 
   const sinTildes = s => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -4011,7 +4023,7 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
   };
   const mesDe = ms => new Date(ms).toISOString().slice(0, 7);
 
-  // índice en pesos de hoy: las velas de indices.py (apertura = cierre
+  // índice ajustado por inflación: las velas de indices.py (apertura = cierre
   // anterior, mecha = mínimo y máximo entre puntos de venta, cierre = promedio)
   function barrasIndice(s) {
     const t = tiempos(s.t0), out = [];
@@ -4066,7 +4078,7 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
     });
     return out;
   }
-  // factor de pesos de hoy a pesos de cada mes: indices.py deflacta con el IPC
+  // factor de pesos ajustados a pesos de cada mes: indices.py deflacta con el IPC
   // del mes (el mismo para índices y productos), así que el cociente entre el
   // nominal y el real publicados de los índices lo devuelve. Se suman los
   // cuatro índices de cada mes para que el redondeo a pesos no pese
@@ -4156,7 +4168,7 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
   // la canasta que arma cada persona en /graficos.html es un símbolo más,
   // calculado aquí desde sus productos con la cuenta de siempre de la página
   // (Laspeyres): el costo de una semana es la suma de cantidad × precio en
-  // pesos de hoy, en el orden de la canasta, y existe SOLO en las semanas en
+  // pesos ajustados, en el orden de la canasta, y existe SOLO en las semanas en
   // que todos los productos tienen precio (intersección estricta: un
   // producto de historia corta trunca la serie y una semana sin precio de
   // alguno queda sin costo). Un producto sin ningún precio no cuenta. Se
@@ -4231,7 +4243,7 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
     const indices = opciones.indices || [];
     const unidades = opciones.uf ? UNIDADES : UNIDADES.filter(u => u !== 'uf');
 
-    // símbolos: cada serie en pesos de hoy, a precio de la época y en UF. El
+    // símbolos: cada serie ajustada por inflación, a precio de la época y en UF. El
     // ticker es el slug (el código del índice o el de la ficha del producto)
     // más el sufijo de la unidad, sin paréntesis ni dos puntos. Cada uno con
     // un nombre corto (la leyenda en el celular) y uno largo (la leyenda en
@@ -4274,7 +4286,7 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
       if (!canastas.has(ticker)) {
         canastas.set(ticker, { ticker, base: ticker, clave, clase: 'canasta', unidad: 'real',
           items: lista, corto: NOMBRE_CANASTA, etiqueta: NOMBRE_CANASTA,
-          desc: NOMBRE_CANASTA + ', en pesos de hoy' });
+          desc: NOMBRE_CANASTA + ', en ' + PESOS });
       }
       return ticker;
     }
@@ -4828,7 +4840,7 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
   const api = { crearDatafeed, serieCanasta, miles, numUF, numUFEje, textoUF, fecha, almacenLocal,
     formateadores, overrides, opcionesWidget, alistarWidget, listoWidget, montar, verTodo,
     cargarLibreria, capturaCliente, colorLinea, temporalidad, MOVIL, RESOLUCION, RESOLUCIONES,
-    SUFIJO, ZONA, NOMBRE_CANASTA };
+    SUFIJO, ZONA, NOMBRE_CANASTA, PESOS };
   raiz.CarestiaTV = api;
   if (typeof module === 'object' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);
@@ -4985,7 +4997,7 @@ __PIE__
     });
   }
   if (!TV) { usar('ninguno', TEXTO.sin); return; }
-  const feed = TV.crearDatafeed({ base: '/datos/', ver: VER, indices: INDICES, uf: __UF__ });
+  const feed = TV.crearDatafeed({ base: '/datos/', ver: VER, indices: INDICES });
 
   /* ---------- Advanced Charts ---------- */
   cargarScript(LIBRERIA + 'charting_library.standalone.js').then(iniciar, () => respaldo('falta'));
@@ -5119,6 +5131,12 @@ TV_COLORES = """.theme-dark:root {{
 """
 
 
+def feed_js() -> str:
+    """carestia-tv.js: el datafeed, con el mes del último IPC en el nombre de
+    las series ajustadas por inflación."""
+    return FEED_JS.replace("__PESOS__", pesos(corto=True))
+
+
 def tokens_css() -> dict:
     """Los tokens de color de CSS_BASE ({nombre: valor}): el tema del iframe
     de la librería sale de los mismos valores que el resto del sitio."""
@@ -5159,14 +5177,14 @@ def _ver(texto: str) -> str:
 def generar_tradingview(app: dict, catalogo: dict) -> None:
     """carestia-tv.js, carestia-tv.css y /prueba-graficos.html."""
     css = tv_css()
-    for archivo, texto in [(TV_JS, FEED_JS), (TV_CSS, css)]:
+    for archivo, texto in [(TV_JS, feed_js()), (TV_CSS, css)]:
         with open(archivo, "w", encoding="utf-8") as fh:
             fh.write(texto)
     simbolo = "asado" if "asado" in DATA["indices"] else next(iter(DATA["indices"]))
     out = PRUEBA_HTML
     for token, valor in [
         ("__TV_JS__", TV_JS),
-        ("__VER_JS__", _ver(FEED_JS)),
+        ("__VER_JS__", _ver(feed_js())),
         ("__TV_CSS__", TV_CSS),
         ("__VER_CSS__", _ver(css)),
         ("__ICONO__", ICONO),
@@ -5180,11 +5198,8 @@ def generar_tradingview(app: dict, catalogo: dict) -> None:
         ("__VER__", app["ver"]),
         # "</" escapado: un nombre nunca puede cerrar el <script>
         ("__INDICES__", indices_tv()),
-        ("__UF__", "true" if app["uf"] else "false"),
         ("__UNIDADES_PRUEBA__",
-         "en pesos de hoy, a precio de la época o en UF (por ejemplo, asado-epoca o asado-uf)"
-         if app["uf"] else
-         "en pesos de hoy o a precio de la época (por ejemplo, asado-epoca)"),
+         f"{ajustado('os')}, o a precio de la época (por ejemplo, asado-epoca)"),
     ]:
         out = out.replace(token, valor)
     with open(TV_PRUEBA, "w", encoding="utf-8") as fh:
@@ -5299,7 +5314,6 @@ __CSS_BASE__
   .ind-cifra { display:flex; flex-wrap:wrap; align-items:baseline; gap:8px 16px;
     margin-top:18px; }
   .ind-precio { font:700 clamp(40px,7vw,64px)/1 var(--display); letter-spacing:-.01em; }
-  .ind-uni { font:400 14px var(--sans); color:var(--ash); }
   .ind-pill { align-self:center; font:500 12px var(--mono); letter-spacing:.08em;
     padding:4px 11px; border-radius:999px; color:var(--bg); }
   .ind-links { display:flex; flex-wrap:wrap; gap:12px; margin-top:22px; }
@@ -5394,7 +5408,7 @@ def productos_recientes(fichas: dict) -> int:
 
 def generar_indice_productos(fichas: dict) -> None:
     """productos/index.html: las fichas publicadas agrupadas por grupo ODEPA
-    (A-Z, "Otros" al final), cada una con su precio de hoy en pesos de hoy y
+    (A-Z, "Otros" al final), cada una con su precio ajustado por inflación y
     un <a href> a su ficha. Sin semáforo: está reservado a los 4 índices.
     Si la última semana con dato de un producto no es la más reciente del
     catálogo (estacionales), se dice de cuándo es el precio. Los productos
@@ -5454,10 +5468,10 @@ def generar_indice_productos(fichas: dict) -> None:
     n = len(filas) - len(sin_datos)
     fecha = semana.strftime("%d-%m-%Y") if semana else "·"
     cuerpo = (
-        f'    <div class="miga">Catálogo en pesos de hoy</div>\n'
+        f'    <div class="miga">Catálogo en {pesos(corto=True)}</div>\n'
         f'    <h1>Productos</h1>\n'
         f'    <p class="intro">Precios de {n} productos en la Región '
-        f'Metropolitana, en pesos de hoy: el promedio de los puntos que ODEPA '
+        f'Metropolitana, {ajustado("os")}: el promedio de los puntos que ODEPA '
         f'encuesta cada semana (ferias libres, supermercados y carnicerías). '
         f'Semana del {fecha}. Cada producto enlaza a su serie semanal.</p>\n'
         f'    <nav aria-label="Grupos de productos"><ul class="grupos">\n'
@@ -5465,9 +5479,9 @@ def generar_indice_productos(fichas: dict) -> None:
         f'    </ul></nav>\n' + "\n".join(secciones))
     escribir_pagina(
         os.path.join("productos", "index.html"), f"{SITIO}/productos/",
-        f"Precios de {n} alimentos en Santiago, en pesos de hoy | Carestía",
-        f"Precios de {n} alimentos en la Región Metropolitana, en pesos "
-        f"de hoy, agrupados por tipo y con la serie semanal de cada uno. Datos "
+        f"Precios de {n} alimentos en Santiago, en {pesos(corto=True)} | Carestía",
+        f"Precios de {n} alimentos en la Región Metropolitana, {ajustado('os')}, "
+        f"agrupados por tipo y con la serie semanal de cada uno. Datos "
         f"ODEPA, actualizado cada viernes.",
         cuerpo, actual="productos", clase="catalogo")
 
@@ -5538,33 +5552,38 @@ def html_cinta(indices: dict) -> str:
 
 def html_tarjetas(indices: dict) -> str:
     """Las 4 tarjetas de "Índices Carestía": veredicto con su color del
-    semáforo, costo en pesos de hoy, percentil sobre las tres zonas, cambio
-    semanal y distancia a su promedio. Cada una abre /graficos.html#codigo."""
+    semáforo, el precio de esta semana (sin etiqueta), la frase del veredicto
+    por temporada sobre las tres zonas (la marca en la cuenta de esta
+    semana), el cambio semanal y, como dato secundario, el percentil de toda
+    la historia y la distancia a su promedio. Sin temporada (menos de 5 años
+    del mes), la frase y las zonas de toda la historia. Cada una abre
+    /graficos.html#codigo."""
     out = []
     for code, d in indices.items():
         r = resumen_indice(d)
         corto = html.escape(d["nombre"].replace("Índice ", "").upper())
         color = SEMAFORO.get(d["veredicto"], html.escape(d["color"]))
         pct = d["percentil"]
+        t = d.get("temporada")
+        marca, zonas = (t["percentil"], "zonas") if t else (pct, "zonas historia")
         vs = d["vs_promedio"]
         vs_txt = f"+{vs}% sobre" if vs >= 0 else f"{vs}% bajo"
         # sin la semana anterior no hay cambio que mostrar
         semana = (f'{cambio(r["delta"])} esta semana' if r["delta"] is not None
                   else "sin la semana anterior")
-        semana_m = (f'{cambio(r["delta"])} (p{pct})' if r["delta"] is not None
-                    else f"percentil {pct}")
+        semana_m = (f'{cambio(r["delta"])}, percentil {pct} en su historia'
+                    if r["delta"] is not None else f"percentil {pct} en su historia")
         out.append(
             f'        <a class="icard" href="/graficos.html#{code}">\n'
             f'          <div class="ic-top"><span class="ic-ey"><span class="ic-ind">ÍNDICE </span>{corto}</span>'
             f'<span class="ic-pill" style="background:{color}">{html.escape(d["veredicto"])}</span></div>\n'
             f'          <div class="ic-mid"><span class="ic-sub">{html.escape(d["subtitulo"])}</span>'
-            f'<span class="ic-precio">{fmt_clp(d["costo_real"])}</span>'
-            f'<span class="ic-ph">en pesos de hoy</span></div>\n'
-            f'          <div class="ic-niv"><div class="ic-nl"><span>Nivel frente a su historia</span>'
-            f'<span>percentil {pct}</span></div>'
-            f'<div class="zonas" aria-hidden="true"><span class="z z1"></span><span class="z z2"></span>'
-            f'<span class="z z3"></span><span class="marca" style="left:{pct}%"></span></div></div>\n'
+            f'<span class="ic-precio">{fmt_clp(d["costo_real"])}</span></div>\n'
+            f'          <div class="ic-niv"><p class="ic-fr">{html.escape(r["frase"])}</p>'
+            f'<div class="{zonas}" aria-hidden="true"><span class="z z1"></span><span class="z z2"></span>'
+            f'<span class="z z3"></span><span class="marca" style="left:{marca}%"></span></div></div>\n'
             f'          <div class="ic-pie"><span>{semana}</span>'
+            f'<span>percentil {pct} en su historia</span>'
             f'<span>{vs_txt} su promedio</span></div>\n'
             f'          <div class="ic-m">{semana_m}</div>\n'
             f'        </a>')
@@ -5714,9 +5733,22 @@ COLOR_VEREDICTO = {"BARATO": "verde", "NORMAL": "ambar", "CARO": "rojo"}
 
 
 def frase_indice(d: dict) -> str:
+    """La frase del veredicto de un índice: por temporada (lo de esta
+    semana) o, sin ella, contra toda la historia."""
+    if d.get("temporada"):
+        return frase_temporada(d["temporada"])
     real = d.get("real") or []
     vals = [p["value"] for p in real]
     return frase_historia(vals, vals[-1], real[0]["time"][:4], "o")
+
+
+def historia_indice(d: dict) -> str:
+    """El dato secundario de un índice: su percentil en toda la historia y
+    la distancia a su promedio histórico."""
+    vs = d["vs_promedio"]
+    vs_txt = f"+{vs}% sobre" if vs >= 0 else f"{vs}% bajo"
+    return (f"Percentil {d['percentil']} de {d['n']} semanas en su historia, {vs_txt} "
+            f"su promedio histórico, {ajustado()}.")
 
 
 def tarjeta_indice(code: str, d: dict) -> tuple:
@@ -5726,7 +5758,8 @@ def tarjeta_indice(code: str, d: dict) -> tuple:
         "antetitulo": f"Índice Carestía, {sub}",
         "nombre": d["nombre"],
         "precio": fmt_clp(d["costo_real"]),
-        "unidad": "en pesos de hoy",
+        # el precio de esta semana, sin etiqueta de ajuste
+        "unidad": "",
         "frase": frase_indice(d),
         "fecha": semana_larga(datetime.date.fromisoformat(d["real"][-1]["time"])),
         "fuente_txt": FUENTE_CITA,
@@ -5736,7 +5769,7 @@ def tarjeta_indice(code: str, d: dict) -> tuple:
     }
     ruta = f"{OG_DIR}/indices/{code}.png"
     dibujar(tarjetas.ficha, ruta, datos)
-    alt = (f"{d['nombre']}: {datos['precio']} en pesos de hoy, {d['veredicto']}, "
+    alt = (f"{d['nombre']}: {datos['precio']}, {d['veredicto']}, "
            f"{datos['fecha'][0].lower()}{datos['fecha'][1:]}. {datos['frase']}")
     return og_meta(og_url(ruta, datos), alt), og_url(ruta, datos), alt
 
@@ -5751,7 +5784,7 @@ def tarjeta_portada(ultima) -> str:
                for d in DATA["indices"].values() if d.get("real")]
     datos = {"indices": indices,
              "fecha": semana_larga(ultima) if ultima else "",
-             "pie_txt": "Índices del costo de vida en Santiago, en pesos de hoy",
+             "pie_txt": f"Índices del costo de vida en Santiago, en {pesos(corto=True)}",
              "sitio": "carestia.cl"}
     ruta = f"{OG_DIR}/portada.png"
     dibujar(tarjetas.portada, ruta, datos)
@@ -5783,7 +5816,6 @@ def generar_paginas_indices() -> list:
             f'    <p class="intro">{html.escape(d["subtitulo"])}, en la Región '
             f'Metropolitana. Semana del <span class="nw">{fecha}</span>.</p>\n'
             f'    <div class="ind-cifra"><span class="ind-precio">{fmt_clp(d["costo_real"])}</span>'
-            f'<span class="ind-uni">en pesos de hoy</span>'
             f'<span class="ind-pill" style="background:{SEMAFORO.get(d["veredicto"], "var(--ambar)")}">'
             f'{html.escape(d["veredicto"])}</span></div>\n'
             f'    <p class="intro">{html.escape(frase_indice(d))} Está en el percentil '
@@ -5804,8 +5836,8 @@ def generar_paginas_indices() -> list:
         escribir_pagina(
             ruta, f"{SITIO}/{ruta}",
             f"{d['nombre']}: {d['subtitulo'].lower()} en Santiago | Carestía",
-            f"{d['nombre']} en la Región Metropolitana: {fmt_clp(d['costo_real'])} en pesos "
-            f"de hoy la semana del {fecha}, {d['veredicto']}. {frase_indice(d)}",
+            f"{d['nombre']} en la Región Metropolitana: {fmt_clp(d['costo_real'])} la "
+            f"semana del {fecha}, {d['veredicto']}. {frase_indice(d)}",
             cuerpo, actual="indices", clase="catalogo indice", og=og, exacto=False)
         rutas.append(ruta)
     return rutas
@@ -5822,10 +5854,10 @@ def generar_prensa(paginas_indices: list) -> None:
         f'      <li><a href="{SITIO}/{r}">{html.escape(indices[r[8:-5]]["nombre"])}</a></li>'
         for r in paginas_indices)
     cuerpo = f"""    <h1>Prensa</h1>
-    <p>Carestía mide cuánto cuestan cada semana cuatro canastas fijas y {CIFRAS.get("productos", "")} productos en la Región Metropolitana, en pesos de hoy, con los precios al consumidor que publica ODEPA.</p>
+    <p>Carestía mide cuánto cuestan cada semana cuatro canastas fijas y {CIFRAS.get("productos", "")} productos en la Región Metropolitana, {ajustado("os")}, con los precios al consumidor que publica ODEPA.</p>
     <h2>Cómo citar</h2>
     <p><strong>{html.escape(FUENTE_CITA)}</strong></p>
-    <p>Las cifras van en pesos de hoy: cada precio pasado se lleva a valor actual con el IPC. Si citas un precio, indica la semana a la que corresponde.</p>
+    <p>Las cifras van {ajustado("as")}: cada precio pasado se lleva a ese mes con el IPC. El precio de cada semana es el que se pagó esa semana. Si citas un precio, indica la semana a la que corresponde.</p>
     <h2>Calendario</h2>
     <p>El sitio se actualiza los viernes después de las 14:00, cuando ODEPA ya publicó los precios de la semana. Si una semana ODEPA no publica, la portada lo dice junto a la fecha.</p>
     <h2>Tarjetas y gráficos</h2>
@@ -5879,6 +5911,9 @@ def generar_portada(catalogo: dict, fichas: dict) -> None:
         ("__TARJETAS__", html_tarjetas(indices)),
         ("__LISTAS__", html_listas(vigentes)),
         ("__CHIPS__", chips),
+        ("__AJUSTADOS__", ajustado("os")),
+        ("__AJUSTADAS__", ajustado("as")),
+        ("__AJUSTADO__", ajustado()),
         ("__FILAS__", filas),   # al final: HTML ya renderizado
     ]:
         out = out.replace(token, valor)
@@ -6051,9 +6086,10 @@ def generar_metodologia() -> None:
     escribir_pagina(
         "metodologia.html", f"{SITIO}/metodologia.html",
         "Metodología de los índices del costo de vida | Carestía",
-        "Cómo se calculan los índices Carestía: canastas fijas, pesos de hoy "
-        "con el IPC, percentil histórico, estacionalidad y fuentes (ODEPA y "
-        "Banco Central de Chile).",
+        "Cómo se calculan los índices Carestía: canastas fijas, precios ajustados "
+        "por inflación con el IPC, el veredicto frente al mismo mes de los "
+        "últimos 10 años, estacionalidad y fuentes (ODEPA y Banco Central de "
+        "Chile).",
         cuerpo, actual="metodologia")
 
 
@@ -6095,7 +6131,10 @@ def generar_resumen() -> None:
     """resumen.json: endpoint liviano y estable con los 4 índices, para
     consumo externo (buscadores, agentes). Solo reempaqueta lo que ya viene
     calculado en indices.json; la variación semanal sale de las dos últimas
-    semanas de la serie real. UTF-8 sin BOM, tildes literales."""
+    semanas de la serie real. Los campos de antes no cambian ni se quitan:
+    "veredicto" pasa a la base por temporada ("base_veredicto"), "percentil"
+    sigue siendo el de toda la historia y se suman "percentil_temporada" y
+    "anios_temporada". UTF-8 sin BOM, tildes literales."""
     indices = {}
     semana = None
     for code, d in DATA["indices"].items():
@@ -6114,6 +6153,11 @@ def generar_resumen() -> None:
             "vs_promedio_pct": d["vs_promedio"],
             "variacion_semanal_pct": variacion,
             "semanas_historia": d["n"],
+            # el veredicto compara con el mismo mes de los últimos 10 años;
+            # "percentil" sigue siendo el de toda la historia
+            "percentil_temporada": d["percentil_temporada"],
+            "anios_temporada": d["anios_temporada"],
+            "base_veredicto": d["base_veredicto"],
         }
     resumen = {
         "generado": datetime.date.today().isoformat(),
@@ -6166,12 +6210,16 @@ if PENDIENTES:
             + ". No se genera el sitio hasta que estén completos.")
     print("BORRADOR: textos pendientes: " + ", ".join(PENDIENTES))
 
+# el veredicto por temporada (con un indices.json anterior, se calcula aquí)
+# y el mes del IPC de los textos, antes que cualquier página
+completar_temporada()
+MES_IPC = mes_ipc()
+
 FICHAS = asignar_fichas(DATA.get("productos", {}))
 CIFRAS["productos"] = productos_recientes(FICHAS)
 SLUGS = slugs_de_datos(DATA.get("productos", {}), FICHAS)
 CATALOGO = generar_catalogo(DATA.get("productos", {}), SLUGS)
-UF = cargar_uf()
-APP = generar_datos(SLUGS, CATALOGO, UF)
+APP = generar_datos(SLUGS, CATALOGO)
 
 with open("graficos.html", "w", encoding="utf-8") as fh:
     fh.write(GRAFICOS_HTML.replace("__ICONO__", ICONO)
@@ -6183,16 +6231,19 @@ with open("graficos.html", "w", encoding="utf-8") as fh:
                           .replace("__NAV__", nav_sitio("indices"))
                           .replace("__PIE__", pie_sitio(graficos=True))
                           .replace("__TV_JS__", TV_JS)
-                          .replace("__VER_TV__", _ver(FEED_JS))
+                          .replace("__VER_TV__", _ver(feed_js()))
                           .replace("__TV_CSS__", TV_CSS)
                           .replace("__VER_CSS__", _ver(tv_css()))
                           # la unidad: el selector, su línea y su JS
-                          .replace("__SELECTOR_UNIDAD__", selector_unidad(APP["uf"]))
-                          .replace("__LEYENDA__", leyenda_unidad(APP["uf"], ""))
-                          .replace("__LEYENDA_MOVIL__", leyenda_unidad(APP["uf"], "mleg m-ind"))
-                          .replace("__UNIDAD_REAL__", UNIDAD_TXT["real"])
+                          .replace("__SELECTOR_UNIDAD__", selector_unidad())
+                          .replace("__LEYENDA__", leyenda_unidad(""))
+                          .replace("__LEYENDA_MOVIL__", leyenda_unidad("mleg m-ind"))
+                          .replace("__UNIDAD_REAL__", unidad_txt()["real"])
                           .replace("__JS_UNIDAD__", JS_UNIDAD)
-                          .replace("__UNIDAD_TXT__", _json(UNIDAD_TXT))
+                          .replace("__UNIDAD_TXT__", _json(unidad_txt()))
+                          # el mes del último IPC
+                          .replace("__AJUSTADOS__", ajustado("os"))
+                          .replace("__PESOS_CORTO__", pesos(corto=True))
                           # "</" escapado: un label nunca puede cerrar el <script>
                           .replace("__DATA__", _json(APP).replace("</", "<\\/")))
 
@@ -6221,7 +6272,11 @@ print(f"Listo: index.html + graficos.html + robots.txt + sitemap.xml + resumen.j
 print(f"  index.html: {os.path.getsize('index.html'):,} bytes; "
       f"graficos.html: {os.path.getsize('graficos.html'):,} bytes; "
       f"catalogo.json: {os.path.getsize(os.path.join(DATOS, 'catalogo.json')):,} bytes")
+print(f"  Precios ajustados en {pesos()}")
 for c, d in DATA["indices"].items():
-    print(f"  {d['nombre']}: {d['veredicto']} (percentil {d['percentil']})")
+    t = d.get("temporada")
+    base = (f"más caro que {t['debajo']} de los últimos {t['anios']} "
+            f"{MESES_PLURAL[t['mes'] - 1]}, zona {t['zona']}" if t else "toda la historia")
+    print(f"  {d['nombre']}: {d['veredicto']} ({base}; percentil histórico {d['percentil']})")
 if "productos" in DATA:
     print(f"  Productos: {len(DATA['productos'])} series")

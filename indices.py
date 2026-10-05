@@ -15,6 +15,12 @@ Conserva: Asado, Ensalada, Fruta; deflactado a pesos de hoy (IPC BCCh o
 mindicador); percentil, z-score, vs-promedio, estacionalidad, velas mensuales;
 historico 2008-2026 blindado contra cambios de formato.
 
+Veredicto por temporada (05-10-2026): CARO / NORMAL / BARATO compara el
+precio de esta semana con el promedio del mismo mes en cada uno de los 10
+años anteriores (ver comparar_temporada); el percentil de toda la historia
+sigue en indices.json como dato secundario. indices.json lleva además el mes
+del último IPC con que se deflactó ("ipc_mes").
+
 Correr:
   pip install pandas numpy requests statsmodels
   python indices.py
@@ -25,6 +31,7 @@ import os
 import re
 import json
 import time
+import datetime
 import unicodedata
 import requests
 import numpy as np
@@ -800,6 +807,124 @@ def estacionalidad(real: pd.Series) -> dict:
             "amplitud": round(float((fac.max() - fac.min()) * 100))}
 
 
+# ---------------- Veredicto por temporada ----------------
+# El precio de una semana, ajustado por inflación, frente al promedio del
+# mismo mes en cada uno de los 10 años anteriores al suyo (los que tengan
+# precio ese mes, si son al menos 5). Así la temporada no se confunde con un
+# alza y la tendencia de largo plazo no marca casi todo como caro. Lo usan
+# resumen() para los 4 índices (su veredicto, en indices.json) y build_site.py
+# para las frases de los productos. Funciones puras sobre listas: las semanas
+# como fechas (o textos aaaa-mm-dd) y los valores en pesos del último IPC.
+TEMPORADA_ANIOS = 10      # años anteriores al de la semana
+TEMPORADA_MIN = 5         # con menos años de ese mes, vale toda la historia
+TEMPORADA_CARO = 7        # de cada 10 años: más caro que en 7 o más, CARO
+TEMPORADA_BARATO = 3      # y en 3 o menos, BARATO; entre medio, NORMAL
+BASE_TEMPORADA = "mismo mes, ultimos 10 anios"
+BASE_HISTORIA = "toda la historia"
+
+
+def _dia(t) -> datetime.date:
+    return t if isinstance(t, datetime.date) else datetime.date.fromisoformat(str(t)[:10])
+
+
+def _con_valor(v) -> bool:
+    return v is not None and v == v          # None y NaN no son precio
+
+
+def promedios_mes(fechas, valores) -> dict:
+    """{(año, mes): promedio} de las semanas con valor. Cada semana va al mes
+    del lunes en que empieza, como en la estacionalidad y en el IPC con que se
+    deflacta."""
+    suma, n = {}, {}
+    for f, v in zip(fechas, valores):
+        if not _con_valor(v):
+            continue
+        f = _dia(f)
+        k = (f.year, f.month)
+        suma[k] = suma.get(k, 0) + v
+        n[k] = n.get(k, 0) + 1
+    return {k: suma[k] / n[k] for k in suma}
+
+
+def zona_temporada(debajo: int, anios: int) -> str:
+    """CARO si el precio supera al de 7 o más de cada 10 años, BARATO si al de
+    3 o menos y NORMAL entre medio. Con menos de 10 años la cuenta se escala:
+    debajo / anios contra 7/10 y 3/10."""
+    if 10 * debajo >= TEMPORADA_CARO * anios:
+        return "CARO"
+    if 10 * debajo <= TEMPORADA_BARATO * anios:
+        return "BARATO"
+    return "NORMAL"
+
+
+def comparar_temporada(fechas, valores, i: int = None, promedios: dict = None):
+    """La semana i (por defecto, la última con valor) frente al promedio del
+    mismo mes en cada uno de los 10 años anteriores al suyo que tienen precio
+    ese mes. None si son menos de 5 (entonces se compara con toda la
+    historia). Si no:
+      mes      el mes de la semana (1 a 12)
+      anios    cuántos años entran (5 a 10)
+      debajo   años cuyo promedio queda bajo el precio de la semana
+      encima   años cuyo promedio queda sobre él (un empate no cuenta en
+               ninguno de los dos)
+      percentil  debajo / anios, de 0 a 100
+      zona     CARO, NORMAL o BARATO de esta semana (zona_temporada)"""
+    if i is None:
+        i = max((j for j, v in enumerate(valores) if _con_valor(v)), default=None)
+        if i is None:
+            return None
+    if promedios is None:
+        promedios = promedios_mes(fechas, valores)
+    f, precio = _dia(fechas[i]), valores[i]
+    anteriores = [promedios[(a, f.month)] for a in range(f.year - TEMPORADA_ANIOS, f.year)
+                  if (a, f.month) in promedios]
+    if len(anteriores) < TEMPORADA_MIN:
+        return None
+    k = len(anteriores)
+    debajo = sum(1 for p in anteriores if p < precio)
+    encima = sum(1 for p in anteriores if p > precio)
+    return {"mes": f.month, "anios": k, "debajo": debajo, "encima": encima,
+            "percentil": round(100 * debajo / k), "zona": zona_temporada(debajo, k)}
+
+
+def veredicto_temporada(fechas, valores):
+    """El veredicto de un índice con la regla de las dos semanas: el color
+    cambia solo si la nueva zona se mantiene dos semanas seguidas. Se recorre
+    la serie: la zona de una semana pasa a ser el veredicto si la semana
+    anterior (siete días antes) tuvo esa misma zona; si no, sigue el que venía.
+    La primera semana con comparación fija el de partida. Devuelve la
+    comparación de la última semana con valor (comparar_temporada) más su
+    'veredicto', o None si esa semana no tiene comparación."""
+    promedios = promedios_mes(fechas, valores)
+    veredicto, anterior, ultima = None, None, None
+    for i, (f, v) in enumerate(zip(fechas, valores)):
+        if not _con_valor(v):
+            continue
+        ultima = comparar_temporada(fechas, valores, i, promedios)
+        if ultima is None:
+            continue
+        f, zona = _dia(f), ultima["zona"]
+        if veredicto is None or anterior == (f - datetime.timedelta(weeks=1), zona):
+            veredicto = zona
+        anterior = (f, zona)
+    return None if ultima is None else {**ultima, "veredicto": veredicto}
+
+
+def resumen_temporada(real: list, veredicto_historia: str) -> dict:
+    """Los campos del veredicto de un índice, desde su serie publicada
+    ([{time, value}], la de indices.json): con comparación por temporada, el
+    veredicto de la regla de las dos semanas y 'temporada' (la comparación de
+    esta semana, con su zona antes de esa regla); sin ella (menos de 5 años
+    del mes de esta semana), el del percentil de toda la historia."""
+    t = veredicto_temporada([p["time"] for p in real], [p["value"] for p in real])
+    if t is None:
+        return {"veredicto": veredicto_historia, "base_veredicto": BASE_HISTORIA,
+                "percentil_temporada": None, "anios_temporada": None, "temporada": None}
+    return {"veredicto": t["veredicto"], "base_veredicto": BASE_TEMPORADA,
+            "percentil_temporada": t["percentil"], "anios_temporada": t["anios"],
+            "temporada": {k: v for k, v in t.items() if k != "veredicto"}}
+
+
 def clp(x: float) -> str:
     return "$" + f"{int(round(x)):,}".replace(",", ".")
 
@@ -810,20 +935,28 @@ def resumen(out: pd.DataFrame, meta: dict, comp: list) -> dict:
     pct = round(100.0 * (real <= ur).mean())
     z = (ur - real.mean()) / real.std()
     vsp = round(((ur / real.mean()) - 1) * 100)
-    ver = "BARATO" if pct < P_BARATO else ("NORMAL" if pct < P_CARO else "CARO")
+    # el veredicto de antes, por el percentil de toda la historia: vale solo
+    # si esta semana no tiene comparación por temporada (resumen_temporada)
+    historia = "BARATO" if pct < P_BARATO else ("NORMAL" if pct < P_CARO else "CARO")
+    serie_real = [{"time": f.strftime("%Y-%m-%d"), "value": int(round(v))}
+                  for f, v in zip(out.index, out["real"]) if pd.notna(v)]
+    # sobre la serie publicada (enteros): build_site.py recalcula lo mismo
+    # con un indices.json anterior a este cambio
+    t = resumen_temporada(serie_real, historia)
     return {
         "nombre": meta["nombre"], "subtitulo": meta["subtitulo"],
         "fecha": real.index[-1].strftime("%d-%m-%Y"),
         "costo_nominal": int(round(un)), "costo_real": int(round(ur)),
         "percentil": pct, "zscore": round(float(z), 2), "vs_promedio": vsp,
-        "veredicto": ver, "color": COLORES[ver], "n": int(len(real)),
+        "veredicto": t["veredicto"], "color": COLORES[t["veredicto"]],
+        **{k: v for k, v in t.items() if k != "veredicto"},
+        "n": int(len(real)),
         "componentes": comp,
         "estacionalidad": estacionalidad(out["real"]),
         "velas": velas_reales(out),
         "nominal": [{"time": f.strftime("%Y-%m-%d"), "value": int(round(v))}
                     for f, v in zip(out.index, out["nominal"]) if pd.notna(v)],
-        "real": [{"time": f.strftime("%Y-%m-%d"), "value": int(round(v))}
-                 for f, v in zip(out.index, out["real"]) if pd.notna(v)],
+        "real": serie_real,
     }
 
 
@@ -836,14 +969,21 @@ def main() -> None:
         return
     ipc = cargar_ipc()
 
-    salida = {"generado": pd.Timestamp.today().strftime("%Y-%m-%d"), "indices": {}}
+    # ipc_mes: el mes del último IPC de la serie, al que quedan llevados todos
+    # los precios (build_site.py lo muestra: "en pesos de agosto de 2026")
+    salida = {"generado": pd.Timestamp.today().strftime("%Y-%m-%d"),
+              "ipc_mes": ipc.index[-1].strftime("%Y-%m"), "indices": {}}
     print("\n" + "=" * 64)
     for code, meta in BASKETS.items():
         d, comp = calcular(df, ipc, meta["items"])
         r = resumen(d, meta, comp)
         salida["indices"][code] = r
-        print(f"{r['nombre']}: hoy {clp(r['costo_real'])} (pesos de hoy) | "
-              f"percentil {r['percentil']} | {r['vs_promedio']:+d}% vs prom | {r['veredicto']}")
+        t = r["temporada"]
+        temporada = (f"más caro que {t['debajo']} de {t['anios']} años de su mes "
+                     f"(zona {t['zona']})" if t else "sin temporada: toda la historia")
+        print(f"{r['nombre']}: hoy {clp(r['costo_real'])} (pesos de {salida['ipc_mes']}) | "
+              f"{temporada} | percentil histórico {r['percentil']} | "
+              f"{r['vs_promedio']:+d}% vs prom | {r['veredicto']}")
         # desglose para que valides unidades y aportes
         for c in comp:
             ap = clp(c["aporte"]) if c.get("aporte") is not None else "s/d"

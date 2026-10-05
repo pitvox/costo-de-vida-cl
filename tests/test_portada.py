@@ -114,7 +114,13 @@ def test_tarjetas_de_indices_llevan_a_su_grafico(sitio):
     asado = tarjetas[0][1]
     assert "ÍNDICE </span>ASADO" in asado
     assert 'style="background:var(--rojo)">CARO<' in asado
-    assert ">percentil 88<" in asado and 'style="left:88%"' in asado
+    # 60 semanas: sin temporada (menos de 5 años del mes), las zonas, la
+    # marca y la frase son las de toda la historia
+    assert ">percentil 88 en su historia<" in asado and 'style="left:88%"' in asado
+    assert '<div class="zonas historia" aria-hidden="true">' in asado
+    assert "semanas desde 2025, descontada la inflación.</p>" in asado
+    # el precio de esta semana, sin etiqueta de ajuste
+    assert '<span class="ic-precio">$10.590</span></div>' in asado and "pesos de hoy" not in asado
     assert "+14% sobre su promedio" in asado
     assert "+0% sobre su promedio" in tarjetas[1][1]
     assert "-5% bajo su promedio" in tarjetas[2][1]
@@ -158,7 +164,8 @@ def test_variaciones_en_color_con_criterio_de_consumidor(sitio):
     assert '<span class="c-v c-w"><i class="f">▲</i> <span class="v-sube">30,0%</span></span>' in fila
     # la cinta y las tarjetas
     assert '<span class="td"><i class="f">▲</i><span class="v-sube">0,1%</span></span>' in h
-    assert '<div class="ic-m"><i class="f">▲</i> <span class="v-sube">0,1%</span> (p88)</div>' in h
+    assert ('<div class="ic-m"><i class="f">▲</i> <span class="v-sube">0,1%</span>, '
+            'percentil 88 en su historia</div>') in h
     # el resto del texto en hueso
     assert ".titem .td { font:500 12px var(--sans); color:var(--bone); }" in h
     assert "font:400 12px/1.5 var(--sans); color:var(--bone);\n    border-top:1px solid var(--line); padding-top:12px; }" in h
@@ -183,7 +190,8 @@ def test_variacion_de_la_ficha_y_de_graficos_en_color(sitio):
 
 def test_semaforo_solo_en_los_indices(sitio):
     h = _leer(sitio, "index.html")
-    productos = h[h.index('id="h-semana"'):h.index("</main>")]
+    # los productos van primero: Esta semana y la tabla, antes de los índices
+    productos = h[h.index('id="h-semana"'):h.index('aria-labelledby="h-indices"')]
     for token in ["--verde", "--ambar", "--rojo", "#5bbf7a", "#e0a83c", "#e0552f"]:
         assert token not in productos, token
 

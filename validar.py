@@ -14,7 +14,10 @@ Chequeos:
   a. snapshot desplegado legible (carestia.cl, respaldo pitvox.github.io);
   b. por índice: semanas_historia avanza exactamente lo que avanzó "semana";
      |variacion_semanal_pct| <= 40; costo_pesos_hoy > 0; percentil 0..100;
-     veredicto en {BARATO, NORMAL, CARO};
+     veredicto en {BARATO, NORMAL, CARO}; base del veredicto coherente: con
+     base_veredicto "mismo mes, ultimos 10 anios", anios_temporada de 5 a 10
+     y percentil_temporada 0..100; con "toda la historia" (menos de 5 años
+     del mes), los dos null;
   c. por índice: suma de aportes = costo_nominal (±1%) y ningún mismatch;
   d. catálogo: len(indices.json["productos"]) == PRODUCTOS_ESPERADOS (120:
      los 125 de antes menos los 5 que el mínimo de puntos de venta deja sin
@@ -40,6 +43,11 @@ import requests
 
 INDICES = ("asado", "ensalada", "fruta", "desayuno")
 VEREDICTOS = {"BARATO", "NORMAL", "CARO"}
+# las bases del veredicto, como las escribe indices.py (BASE_TEMPORADA y
+# BASE_HISTORIA; tests/test_validar.py verifica que coincidan)
+BASE_TEMPORADA = "mismo mes, ultimos 10 anios"
+BASE_HISTORIA = "toda la historia"
+ANIOS_TEMPORADA = (5, 10)
 URLS_RESUMEN = ("https://carestia.cl/resumen.json",
                 "https://pitvox.github.io/costo-de-vida-cl/resumen.json")
 URLS_INDICES = ("https://carestia.cl/indices.json",
@@ -64,7 +72,8 @@ def clp(x) -> str:
 def resumen_desde_indices(data: dict) -> dict:
     """Misma receta que build_site.generar_resumen (solo los campos que se
     validan): variación semanal de las dos últimas semanas de la serie real,
-    'semana' = la última fecha más reciente entre los índices."""
+    'semana' = la última fecha más reciente entre los índices. El veredicto y
+    su base vienen calculados en indices.json (indices.resumen_temporada)."""
     indices, semana = {}, None
     for code, d in data["indices"].items():
         real = d.get("real") or []
@@ -82,6 +91,9 @@ def resumen_desde_indices(data: dict) -> dict:
             "vs_promedio_pct": d["vs_promedio"],
             "variacion_semanal_pct": variacion,
             "semanas_historia": d["n"],
+            "percentil_temporada": d.get("percentil_temporada"),
+            "anios_temporada": d.get("anios_temporada"),
+            "base_veredicto": d.get("base_veredicto"),
         }
     return {"semana": semana, "indices": indices}
 
@@ -161,7 +173,33 @@ def chequear_indice(code, nuevo, ant, semana_nueva, semana_ant) -> list:
                 isinstance(pct, (int, float)) and 0 <= pct <= 100, f"{pct}"))
     ver = nuevo.get("veredicto")
     out.append((f"{code}: veredicto", ver in VEREDICTOS, f"{ver}"))
+    out.append(chequear_base(code, nuevo))
     return out
+
+
+def chequear_base(code, nuevo) -> tuple:
+    """La base del veredicto y sus cifras: por temporada (mismo mes de los
+    últimos 10 años, con 5 a 10 años y percentil 0..100) o, sin temporada,
+    toda la historia (y entonces sin cifras de temporada)."""
+    base = nuevo.get("base_veredicto")
+    anios, pct = nuevo.get("anios_temporada"), nuevo.get("percentil_temporada")
+    if base == BASE_TEMPORADA:
+        ok = (isinstance(anios, int) and not isinstance(anios, bool)
+              and ANIOS_TEMPORADA[0] <= anios <= ANIOS_TEMPORADA[1]
+              and isinstance(pct, (int, float)) and not isinstance(pct, bool)
+              and 0 <= pct <= 100)
+    else:
+        ok = base == BASE_HISTORIA and anios is None and pct is None
+    return (f"{code}: base del veredicto", ok,
+            f"{base}; percentil_temporada {pct} con {anios} años")
+
+
+def texto_temporada(n: dict) -> str:
+    """La columna "Temporada" del resumen: el percentil de temporada y sus
+    años, o la base cuando no hay temporada."""
+    if n.get("base_veredicto") == BASE_TEMPORADA:
+        return f"{n.get('percentil_temporada')} ({n.get('anios_temporada')} años)"
+    return str(n.get("base_veredicto"))
 
 
 def chequear_componentes(code, d) -> list:
@@ -339,12 +377,13 @@ def armar_summary(filas, chequeos, url_ref, error=None) -> str:
     if error:
         lineas += [f"{KO} {error}", ""]
     if filas:
-        lineas += ["| Índice | Precio (pesos de hoy) | Percentil | Veredicto "
+        lineas += ["| Índice | Precio (pesos de hoy) | Percentil | Temporada | Veredicto "
                    "| Semanas anterior → nueva | Variación semanal |",
-                   "|---|---:|---:|---|---:|---:|"]
+                   "|---|---:|---:|---:|---|---:|---:|"]
         for f in filas:
             lineas.append(f"| {f['code']} | {f['precio']} | {f['percentil']} | "
-                          f"{f['veredicto']} | {f['n_ant']} → {f['n_new']} | {f['var']} |")
+                          f"{f['temporada']} | {f['veredicto']} | {f['n_ant']} → "
+                          f"{f['n_new']} | {f['var']} |")
         lineas.append("")
     if chequeos:
         lineas += ["| Estado | Chequeo | Detalle |", "|:-:|---|---|"]
@@ -386,6 +425,7 @@ def main() -> int:
             "code": code,
             "precio": clp(costo) if isinstance(costo, (int, float)) else costo,
             "percentil": n.get("percentil"), "veredicto": n.get("veredicto"),
+            "temporada": texto_temporada(n),
             "n_ant": a.get("semanas_historia"), "n_new": n.get("semanas_historia"),
             "var": f"{var:+.1f}%" if isinstance(var, (int, float)) else var,
         })
@@ -403,7 +443,7 @@ def main() -> int:
         return 1
     for f in filas:
         print(f"OK {f['code']}: {f['precio']} | p{f['percentil']} | "
-              f"{f['veredicto']} | {f['n_ant']}→{f['n_new']}")
+              f"temporada {f['temporada']} | {f['veredicto']} | {f['n_ant']}→{f['n_new']}")
     return 0
 
 

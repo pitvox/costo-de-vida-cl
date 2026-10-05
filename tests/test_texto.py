@@ -89,7 +89,10 @@ def _semanas(fin: datetime.date, n: int) -> list:
 
 def indices_sintetico() -> dict:
     fin = datetime.date(2026, 9, 21)
-    out = {"generado": "2026-09-26", "indices": {}, "productos": {}, "descartes": []}
+    # sin el veredicto por temporada (como un indices.json anterior a ese
+    # cambio: build_site lo calcula) y con el mes del último IPC
+    out = {"generado": "2026-09-26", "ipc_mes": "2026-08", "indices": {}, "productos": {},
+           "descartes": []}
     costos = {"asado": 52000, "ensalada": 8000, "fruta": 12000, "desayuno": 15000}
     colores = {"BARATO": "#5bbf7a", "NORMAL": "#e0a83c", "CARO": "#e0552f"}
     for k, (code, meta) in enumerate(BASKETS.items()):
@@ -171,13 +174,15 @@ def test_portada_textos(sitio):
         "<title>Carestía: índices del costo de vida en Santiago</title>",
         'content="Carestía: índices del costo de vida en Santiago"',
         "Índices del costo de vida en la Región Metropolitana: asado, desayuno,",
-        "Cuánto cuesta la vida cotidiana en la Región Metropolitana, en pesos de hoy.",
+        "Cuánto cuesta la vida cotidiana en la Región Metropolitana, ajustado por inflación, "
+        "en pesos de agosto de 2026.",
+        "asado, desayuno, ensalada y fruta, ajustados por inflación, en pesos de agosto de 2026,",
         "Índices del costo de vida en Chile</div>",
         "Se actualiza los viernes.",
         ">Índices Carestía</h2>",
-        "Canastas fijas en pesos de hoy. El color dice si están caras o baratas "
-        "respecto de su propia historia.",
-        "Nivel frente a su historia",
+        "Canastas fijas, ajustadas por inflación, en pesos de agosto de 2026. El color compara "
+        "el precio de esta semana con el mismo mes de los últimos 10 años.",
+        "en su historia</span>",
         "+14% sobre su promedio",       # vs_promedio positivo
         "-5% bajo su promedio",         # y negativo: "bajo", nunca "vs"
         ">Esta semana</h2>",
@@ -187,7 +192,8 @@ def test_portada_textos(sitio):
         ">API pública (uso no comercial)</a>",
         ">Prensa</a>",
         ">Productos</h2>",
-        "Precios al consumidor ODEPA, Región Metropolitana, en pesos de hoy.",
+        "Precios al consumidor ODEPA, Región Metropolitana, ajustados por inflación, en pesos "
+        "de agosto de 2026.",
         "Percentil en su historia",
         ">Ver todos los productos</a>",
         "© 2026 Carestía SpA, ",
@@ -198,6 +204,10 @@ def test_portada_textos(sitio):
         assert esperado in h, esperado
     # el deslinde va solo en metodología (ver test_deslinde_solo_en_metodologia)
     assert "No constituye asesoría" not in h
+    # los productos primero: Esta semana, la tabla y después los índices
+    assert h.index('id="h-semana"') < h.index('id="h-productos"') < h.index('id="h-indices"')
+    # "pesos de hoy" ya no se dice: ajustado por inflación, en pesos del mes del IPC
+    assert "pesos de hoy" not in h
     # los textos de ejemplo de la referencia no llegan al sitio
     for ejemplo in ["Cifras de ejemplo", "Los 125 productos", "Ver los 125 productos",
                     ".dc.html"]:
@@ -211,24 +221,24 @@ def test_graficos_textos(sitio):
         "Índices del costo de vida en Chile</div>",
         "Se actualiza los viernes.",
         # bajo el selector de unidad, la línea de la unidad elegida (la de
-        # pesos de hoy ya en el HTML; las tres en el JS)
-        '<p class="utxt" id="utxt">Cada precio pasado, llevado a pesos de hoy con la '
-        'inflación. Sirve para comparar años distintos.</p>',
-        # la leyenda de la línea del índice, con las tres opciones (en el
+        # ajustado por inflación ya en el HTML; las dos en el JS)
+        '<p class="utxt" id="utxt">Cada precio pasado, llevado a pesos de agosto de 2026 con '
+        'el IPC. Sirve para comparar años distintos.</p>',
+        # la leyenda de la línea del índice, con las dos opciones (en el
         # escritorio y en la franja del celular)
-        '<span data-leyenda="real"><span class="sw"></span>Pesos de hoy</span>',
+        '<span data-leyenda="real"><span class="sw"></span>Ajustado por inflación</span>',
         '<span class="mleg m-ind" data-leyenda="epoca" style="opacity:.35"><span class="sw">'
         '</span>Precio de la época</span>',
         "Lo que costaba en su momento, tal como salía en la boleta.",
-        "Cada precio dividido por el valor de la UF de esa semana. Como la UF sube con la "
-        "inflación, también sirve para comparar años distintos.",
-        ">Pesos de hoy</button>", ">Precio de la época</button>",
+        ">Ajustado por inflación</button>", ">Precio de la época</button>",
+        # el tooltip del respaldo: etiqueta corta
+        '<small id="tt-u">pesos de agosto 2026</small>',
         "Para acercar, arrastra el eje de los años o el de los precios. "
         "En el celular, usa dos dedos.",
         "Desliza hacia los lados para moverte. Usa dos dedos para acercar.",
         "Velas semanales. La mecha va del precio más bajo al más alto que ODEPA "
         "encontró entre los locales encuestados.",
-        "Cambio del precio real, en porcentaje",
+        "Cambio del precio ajustado por inflación, en porcentaje",
         "ARMA TU CANASTA <span>Y COMPÁRTELA</span>",
         "Esta canasta la armaste tú con datos de ODEPA. No es un índice de Carestía.",
         "COMPONENTES DE LA CANASTA <span>(aporte de cada uno al total)</span>",
@@ -245,6 +255,9 @@ def test_graficos_textos(sitio):
     assert "Carne de Cerdo - Ave - Cordero" in h        # la clave en los datos
     # el deslinde va solo en metodología
     assert "No constituye asesoría" not in h
+    # ni "pesos de hoy" ni la UF
+    assert "pesos de hoy" not in h and "Cada precio dividido por el valor de la UF" not in h
+    assert ">UF</button>" not in h
 
 
 def test_pie_con_la_fuente_en_una_linea(sitio):
@@ -305,25 +318,28 @@ def test_ficha_textos_nuevos(sitio):
     h = _leer(sitio, "productos/producto-0.html")
     for esperado in [
         "Índices del costo de vida en Chile</span>",
-        "Precio real en Santiago, en pesos de hoy",
-        ", en pesos de hoy</div>",
+        # el número grande es el precio de esta semana, sin etiqueta de ajuste
+        '<div class="miga">Precio de esta semana en Santiago</div>',
+        '<div class="ouni">por kilo</div>',
         "Serie desde ",
         "Se actualiza los viernes.",
         "Carne de cerdo, ave y cordero",
         # el selector de unidad y su línea
-        ">Pesos de hoy</button>", ">Precio de la época</button>",
-        '<p class="utxt" id="utxt">Cada precio pasado, llevado a pesos de hoy con la '
-        'inflación. Sirve para comparar años distintos.</p>',
-        "opesos.textContent = PRECIO + ' en pesos de hoy';",
+        ">Ajustado por inflación</button>", ">Precio de la época</button>",
+        '<p class="utxt" id="utxt">Cada precio pasado, llevado a pesos de agosto de 2026 con '
+        'el IPC. Sirve para comparar años distintos.</p>',
     ]:
         assert esperado in h, esperado
+    assert "pesos de hoy" not in h
     assert re.search(r"Semana del \d\d-\d\d-\d{4}\. Serie desde \d{4}\. "
                      r"Se actualiza los viernes\.", h)
 
 
 def test_listado_de_productos(sitio):
     h = _leer(sitio, "productos/index.html")
-    assert "Catálogo en pesos de hoy" in h
+    assert "Catálogo en pesos de agosto 2026" in h
+    assert ("Precios de 24 productos en la Región Metropolitana, ajustados por inflación, en "
+            "pesos de agosto de 2026: el promedio") in h
     assert re.search(r"<h2>Frutas <span>\(\d+\)</span></h2>", h)
     assert re.search(r"Sin datos hace más de un año <span>\(1\)</span></h2>", h)
     assert "Carne de cerdo, ave y cordero" in h
@@ -353,11 +369,28 @@ def test_metodologia_usa_el_texto_del_dueno_y_las_canastas(sitio):
     assert h.count('<div class="canasta"') == len(BASKETS)
     # ya no se copia el README
     assert "Metodología (resumen)" not in h
-    # pesos de hoy, precio de la época y UF, con el párrafo del dueño
-    assert ("<strong>Pesos de hoy, precio de la época y UF.</strong> El sitio muestra cada serie "
-            "de tres formas.") in h
-    assert "El veredicto y el percentil se calculan siempre en pesos de hoy." in h
-    assert "Nominal y en pesos de hoy" not in md
+    # precio de la época y ajustado por inflación, y caro o barato: los
+    # párrafos del dueño
+    assert ("<strong>Precio de la época y ajustado por inflación.</strong> El sitio muestra "
+            "cada serie de dos formas.") in h
+    assert "El número grande de cada ficha es siempre el precio de esta semana." in h
+    assert ("<strong>Caro o barato.</strong> Se compara el precio de esta semana, ajustado por "
+            "inflación, con el mismo mes de los últimos 10 años, o de todos los disponibles si "
+            "son al menos 5.") in h
+    assert "El percentil contra toda la historia se sigue mostrando como referencia." in h
+    for viejo in ["Nominal y en pesos de hoy", "Pesos de hoy, precio de la época y UF",
+                  "Se mide con el percentil histórico", "pesos de hoy"]:
+        assert viejo not in md, viejo
+    # la nota metodológica del cambio, al final de las notas
+    notas = h[h.index("<h2>Notas metodológicas</h2>"):]
+    notas = notas[:notas.index("</section>") + len("</section>")]
+    assert notas.endswith(
+        '<li><strong><span class="nw">05-10-2026</span>.</strong> El veredicto pasa a '
+        "compararse con el mismo mes de "
+        "los últimos 10 años en vez de con toda la historia, para no confundir la temporada "
+        "con un alza ni marcar casi todo como caro por la tendencia de largo plazo. Los "
+        "veredictos publicados antes de esta fecha no son comparables con los nuevos.</li>\n"
+        "</ul>\n    </section>")
 
 
 def test_paginas_del_dueno(sitio):
