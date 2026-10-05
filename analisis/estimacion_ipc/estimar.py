@@ -85,18 +85,21 @@ def mapa_odepa(base: int) -> dict:
     return out
 
 
-def jevons(precios: pd.DataFrame, series: dict, claves: list, m: pd.Period):
+def jevons(precios: pd.DataFrame, series: dict, claves: list, m: pd.Period,
+           actual: pd.DataFrame = None):
     """Relativo de un producto del IPC con ODEPA y cuántos productos ODEPA
     entraron. Cada producto ODEPA da la media geométrica de p(m)/p(m-1) de sus
     series (una por unidad) con precio en ambos meses; el producto del IPC, la
     media geométrica de esos productos. precios: pivote mes x serie; series:
-    {clave: [series]}."""
-    if m not in precios.index or (m - 1) not in precios.index:
+    {clave: [series]}; actual: pivote del mes m si viene con menos semanas que
+    el mes anterior (estimación a mitad de mes)."""
+    actual = precios if actual is None else actual
+    if m not in actual.index or (m - 1) not in precios.index:
         return None, 0
     logs = []
     for clave in claves:
-        cols = [c for c in series.get(clave, []) if c in precios.columns]
-        a, b = precios.loc[m, cols], precios.loc[m - 1, cols]
+        cols = [c for c in series.get(clave, []) if c in precios.columns and c in actual.columns]
+        a, b = actual.loc[m, cols], precios.loc[m - 1, cols]
         ok = a.notna() & b.notna() & (a > 0) & (b > 0)
         if ok.any():
             logs.append(np.log(a[ok] / b[ok]).mean())
@@ -125,13 +128,35 @@ def relativo_agregado(variacion: pd.Series, m: pd.Period, variante: str) -> floa
     return float(np.prod(1 + previos / 100) ** (1 / len(previos)))
 
 
+def comprobar_agregacion() -> pd.DataFrame:
+    """La agregación de Laspeyres con las ponderaciones del INE, aplicada a los
+    índices oficiales de producto, contra la variación publicada de Alimentos:
+    si calzan, el error de la estimación viene de los relativos y no de la
+    fórmula. Una fila por mes con las dos variaciones (1 decimal)."""
+    oficial = ine.alimentos_oficial().set_index("mes")["variacion"]
+    filas = []
+    for b in (2018, 2023):
+        p = ine.productos(b)
+        I = p.pivot(index="mes", columns="codigo", values="indice")
+        w = p.groupby("codigo")["ponderacion"].first()
+        agregado = (I * w).sum(axis=1) / w.sum()
+        for m in agregado.index[1:]:
+            if base_de(m) == b and m >= DESDE and m in oficial.index:
+                filas.append({"mes": m, "base": b, "oficial": oficial[m],
+                              "agregada": round((agregado[m] / agregado[m - 1] - 1) * 100, 1)})
+    return pd.DataFrame(filas)
+
+
 def estimar(odepa_semanal: pd.DataFrame, variante: str = "mes_anterior",
-            oraculo: bool = False, atraso_odepa: int = 4) -> pd.DataFrame:
+            oraculo: bool = False, atraso_odepa: int = 4, semanas: int = None) -> pd.DataFrame:
     """Una fila por mes con la variación estimada (%), la cobertura efectiva
     (peso con relativo ODEPA ese mes) y el detalle. oraculo=True usa para los
     productos cubiertos su relativo oficial en vez del de ODEPA (aísla el
     error que viene de la parte no cubierta). atraso_odepa: días entre el
-    lunes de una semana y su publicación en ODEPA (4 = el viernes)."""
+    lunes de una semana y su publicación en ODEPA (4 = el viernes).
+    semanas: si viene, del mes m solo entran sus primeras 'semanas' semanas
+    (la estimación que se publicaría a mitad de mes); el mes anterior va
+    completo."""
     oficial = ine.alimentos_oficial().set_index("mes")["variacion"]
     hasta = HASTA or oficial.index.max()
     meses = pd.period_range(DESDE, hasta, freq="M")
@@ -139,6 +164,12 @@ def estimar(odepa_semanal: pd.DataFrame, variante: str = "mes_anterior",
     mensual = odepa_mensual.precios_mensuales(odepa_semanal, corte, atraso_odepa)
     precios = mensual.pivot(index="mes", columns="serie", values="precio")
     series = mensual.groupby("clave")["serie"].unique().to_dict()
+    actual = None
+    if semanas:
+        orden = (odepa_semanal["semana"].dt.day - 1) // 7 + 1   # semana del mes, por su lunes
+        parcial = odepa_mensual.precios_mensuales(odepa_semanal[orden <= semanas], corte,
+                                                  atraso_odepa)
+        actual = parcial.pivot(index="mes", columns="serie", values="precio")
     bases = {b: ine.productos(b) for b in (2018, 2023)}
     indices = {b: p.pivot(index="mes", columns="codigo", values="indice") for b, p in bases.items()}
     pesos = {b: p.groupby("codigo")["ponderacion"].first() for b, p in bases.items()}
@@ -158,7 +189,7 @@ def estimar(odepa_semanal: pd.DataFrame, variante: str = "mes_anterior",
                 if oraculo:
                     r = I.loc[m, cod] / previo[cod] if m in I.index else None
                 else:
-                    r, n = jevons(precios, series, mapa[cod], m)
+                    r, n = jevons(precios, series, mapa[cod], m, actual)
                     n_odepa += n
                 if r is not None:
                     peso_odepa += wi
@@ -245,6 +276,11 @@ def criterio(m: pd.DataFrame) -> str:
 if __name__ == "__main__":
     semanal = pd.read_csv(os.path.join(DATOS, "odepa_semanal.csv"), parse_dates=["semana"])
     os.makedirs(RESULTADOS, exist_ok=True)
+    agr = comprobar_agregacion()
+    calzan = (agr["agregada"] == agr["oficial"]).sum()
+    print(f"agregación con las ponderaciones del INE: calza con la variación publicada en "
+          f"{calzan} de {len(agr)} meses; diferencia máxima "
+          f"{(agr['agregada'] - agr['oficial']).abs().max():.1f} puntos")
     corridas = {
         "principal (mes anterior)": estimar(semanal, "mes_anterior"),
         "no cubiertos con promedio de 12 meses": estimar(semanal, "12_meses"),
@@ -253,6 +289,9 @@ if __name__ == "__main__":
         "oráculo: cubiertos con su variación oficial": estimar(semanal, "mes_anterior",
                                                                oraculo=True),
     }
+    for k in (1, 2, 3):
+        corridas[f"con las primeras {k} semanas del mes"] = estimar(semanal, "mes_anterior",
+                                                                     semanas=k)
     principal = corridas["principal (mes anterior)"]
     corridas["principal sin enero 2019 ni enero 2024"] = principal[
         ~principal["mes"].isin(PRIMEROS_MESES)]
