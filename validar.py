@@ -16,11 +16,17 @@ Chequeos:
      |variacion_semanal_pct| <= 40; costo_pesos_hoy > 0; percentil 0..100;
      veredicto en {BARATO, NORMAL, CARO};
   c. por índice: suma de aportes = costo_nominal (±1%) y ningún mismatch;
-  d. catálogo: len(indices.json["productos"]) == PRODUCTOS_ESPERADOS (125);
+  d. catálogo: len(indices.json["productos"]) == PRODUCTOS_ESPERADOS (120:
+     los 125 de antes menos los 5 que el mínimo de puntos de venta deja sin
+     ninguna semana publicable);
   e. limpieza de productos: los descartes de indices.json["descartes"] no
      superan el 0,5% de las semanas-producto con dato (si los supera, la
      regla estaría borrando de más). Sin la clave no se chequea; por debajo
      del umbral los descartes solo se informan, nunca hacen fallar el build.
+     Los dos controles que se sumaron después, la mediana de las últimas 52
+     semanas con dato (indices.json["descartes_anuales"]) y el mínimo de 3
+     puntos de venta (indices.json["descartes_puntos"]), van en la misma
+     sección y solo se informan: nunca hacen fallar el build.
 
 Siempre escribe un resumen en $GITHUB_STEP_SUMMARY (o stdout si no existe).
 Solo usa json/requests (+ stdlib).
@@ -253,7 +259,64 @@ def revisar_limpieza(data: dict) -> tuple:
         lineas += [fila(d) for d in sorted(descartes, key=lambda d: (str(d.get("semana")),
                                                                       str(d.get("slug"))))]
         lineas += ["", "</details>"]
+    lineas += [""] + controles_nuevos(data, semana, con_dato)
     return lineas, chequeo
+
+
+def controles_nuevos(data: dict, semana, con_dato: int) -> list:
+    """Los dos controles que se sumaron a la limpieza: la mediana de las
+    últimas 52 semanas con dato (cuando la ventana de 8 semanas trae menos de
+    3 valores) y el mínimo de puntos de venta. Solo informan: ninguno hace
+    fallar el build. Sin sus claves (indices.json anterior) lo dicen."""
+    lineas = []
+
+    def ordenar(ds):
+        return sorted(ds, key=lambda d: (str(d.get("semana")), str(d.get("slug"))))
+    controles = [
+        ("descartes_anuales", "Mediana de las últimas 52 semanas con dato",
+         "fuera de un quinto a cinco veces la mediana de sus últimas 52 semanas "
+         "con dato, en semanas con menos de 3 valores en la ventana de 8",
+         "| Producto | Semana | Precio | Mediana 52 sem. con dato |",
+         lambda d: f"| {d.get('slug')} | {d.get('semana')} | {d.get('precio')} | {d.get('mediana')} |"),
+        ("descartes_puntos", "Menos de 3 puntos de venta",
+         "semanas que ODEPA encuestó en menos de 3 puntos de la Región Metropolitana",
+         "| Producto | Semana | Precio | Puntos |",
+         lambda d: f"| {d.get('slug')} | {d.get('semana')} | {d.get('precio')} | {d.get('puntos')} |"),
+    ]
+    productos = data.get("productos") or {}
+    for clave, titulo, que, cab, fila in controles:
+        lineas += [f"### {titulo}", ""]
+        if clave not in data:
+            lineas += [f"indices.json no trae la clave `{clave}`: sin información de este control.", ""]
+            continue
+        ds = data.get(clave) or []
+        frac = len(ds) / con_dato if con_dato else 0.0
+        lineas += [f"**{len(ds)} semanas descartadas** ({que}; {frac * 100:.2f}% de "
+                   f"{con_dato} semanas-producto con dato). Solo se informa: no hace "
+                   f"fallar el build. Precios nominales por unidad base.", ""]
+        ultima = [d for d in ds if d.get("semana") == semana]
+        lineas.append(f"**Última semana ({semana or '·'}):** "
+                      + (f"{len(ultima)} descarte(s)" if ultima else "sin descartes"))
+        if ultima:
+            lineas += ["", cab, "|---|---|---:|---:|"] + [fila(d) for d in ordenar(ultima)]
+        lineas.append("")
+        fuera = sorted({d.get("slug") for d in ds} - set(productos))
+        if fuera:
+            lineas += ["**Sin ninguna semana publicable** (no están en el catálogo):", ""]
+            lineas += [f"- {sl}" for sl in fuera] + [""]
+        if ds:
+            por_slug = {}
+            for d in ds:
+                por_slug[d.get("slug")] = por_slug.get(d.get("slug"), 0) + 1
+            lineas += ["<details><summary>Semanas descartadas por producto</summary>", "",
+                       "| Producto | Semanas |", "|---|---:|"]
+            lineas += [f"| {sl} | {n} |" for sl, n in
+                       sorted(por_slug.items(), key=lambda x: (-x[1], str(x[0])))]
+            lineas += ["", "</details>", "",
+                       "<details><summary>Todos los descartes</summary>", "", cab,
+                       "|---|---|---:|---:|"] + [fila(d) for d in ordenar(ds)]
+            lineas += ["", "</details>", ""]
+    return lineas
 
 
 # ---------------- Salida ----------------
@@ -291,7 +354,7 @@ def armar_summary(filas, chequeos, url_ref, error=None) -> str:
 
 
 def main() -> int:
-    esperados = int(os.environ.get("PRODUCTOS_ESPERADOS", "125"))
+    esperados = int(os.environ.get("PRODUCTOS_ESPERADOS", "120"))
     chequeos, filas, url_ref = [], [], None
     try:
         with open("indices.json", encoding="utf-8") as fh:
