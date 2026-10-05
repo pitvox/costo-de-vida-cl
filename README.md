@@ -16,7 +16,7 @@ La idea: que mirar cuánto cuesta lo de todos los días sea tan fácil como mira
 Correr localmente:
 
 ```bash
-pip install pandas numpy requests
+pip install pandas numpy requests pillow
 python indices.py
 python uf.py            # opcional: sin la UF, el sitio sale sin esa opción
 python build_site.py

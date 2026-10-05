@@ -47,8 +47,8 @@ def test_textos_md_sin_rayas_ni_muletillas(ruta):
 
 
 # ---------- 2. strings de build_site.py que llegan al sitio ----------
-def _strings_del_sitio() -> list:
-    with open(os.path.join(RAIZ, "build_site.py"), encoding="utf-8") as fh:
+def _strings_del_sitio(archivo: str = "build_site.py") -> list:
+    with open(os.path.join(RAIZ, archivo), encoding="utf-8") as fh:
         arbol = ast.parse(fh.read())
     fuera = set()
     for nodo in ast.walk(arbol):
@@ -65,8 +65,10 @@ def _strings_del_sitio() -> list:
             and id(n) not in fuera]
 
 
-def test_strings_de_build_site_sin_rayas_ni_muletillas():
-    malos = [(lin, inf) for lin, s in _strings_del_sitio()
+@pytest.mark.parametrize("archivo", ["build_site.py", "tarjetas.py"])
+def test_strings_de_build_site_sin_rayas_ni_muletillas(archivo):
+    # tarjetas.py dibuja las og:image: su texto también llega al sitio
+    malos = [(lin, inf) for lin, s in _strings_del_sitio(archivo)
              for inf in infracciones(s)]
     assert malos == []
 
@@ -135,7 +137,8 @@ def sitio(tmp_path_factory):
     d = tmp_path_factory.mktemp("build")
     shutil.copytree(os.path.join(RAIZ, "textos"), d / "textos")
     (d / "indices.json").write_text(json.dumps(indices_sintetico()), encoding="utf-8")
-    env = dict(os.environ, PYTHONPATH=RAIZ, PYTHONIOENCODING="utf-8")
+    env = dict(os.environ, PYTHONPATH=RAIZ, PYTHONIOENCODING="utf-8",
+               CARESTIA_AHORA="2026-09-25T15:00")
     env.pop("CARESTIA_BORRADOR", None)
     r = subprocess.run([sys.executable, os.path.join(RAIZ, "build_site.py")],
                        cwd=d, env=env, capture_output=True, text=True)
@@ -164,8 +167,10 @@ def test_html_del_build_sin_rayas_ni_muletillas(sitio):
 def test_portada_textos(sitio):
     h = _leer(sitio, "index.html")
     for esperado in [
-        "<title>Carestía: índices del costo de vida en Chile</title>",
-        'content="Carestía: índices del costo de vida en Chile"',
+        "<title>Carestía: índices del costo de vida en Santiago</title>",
+        'content="Carestía: índices del costo de vida en Santiago"',
+        "Índices del costo de vida en la Región Metropolitana: asado, desayuno,",
+        "Cuánto cuesta la vida cotidiana en la Región Metropolitana, en pesos de hoy.",
         "Índices del costo de vida en Chile</div>",
         "Se actualiza los viernes.",
         ">Índices Carestía</h2>",
@@ -177,7 +182,9 @@ def test_portada_textos(sitio):
         ">Esta semana</h2>",
         "<h3>Más subieron</h3>", "<h3>Más bajaron</h3>",
         "<h3>Más caros respecto de su historia</h3>",
-        "Contra la semana anterior, en pesos de hoy",
+        "Frente al promedio de las 4 semanas anteriores",
+        ">API pública (uso no comercial)</a>",
+        ">Prensa</a>",
         ">Productos</h2>",
         "Precios al consumidor ODEPA, Región Metropolitana, en pesos de hoy.",
         "Percentil en su historia",
@@ -199,7 +206,7 @@ def test_portada_textos(sitio):
 def test_graficos_textos(sitio):
     h = _leer(sitio, "graficos.html")
     for esperado in [
-        "<title>Gráficos de los índices del costo de vida en Chile | Carestía</title>",
+        "<title>Gráficos de los índices del costo de vida en Santiago | Carestía</title>",
         "Índices del costo de vida en Chile</div>",
         "Se actualiza los viernes.",
         # bajo el selector de unidad, la línea de la unidad elegida (la de
@@ -261,7 +268,7 @@ def test_ficha_textos_nuevos(sitio):
     h = _leer(sitio, "productos/producto-0.html")
     for esperado in [
         "Índices del costo de vida en Chile</span>",
-        "Precio real en Chile, en pesos de hoy",
+        "Precio real en Santiago, en pesos de hoy",
         ", en pesos de hoy</div>",
         "Serie desde ",
         "Se actualiza los viernes.",
@@ -323,4 +330,9 @@ def test_paginas_del_dueno(sitio):
     assert "Carestía SpA, RUT" in _leer(sitio, "contacto.html")
     assert "78.521.796-9</span>. Santiago, Chile.</p>" in _leer(sitio, "contacto.html")
     h404 = _leer(sitio, "404.html")
-    assert '<a href="/">Volver al inicio</a> o <a href="/productos/">ver los 125 productos</a>.' in h404
+    # el número de productos con datos del último año, calculado en el build
+    # (24 sintéticos con datos recientes; la chirimoya es de 2024)
+    assert '<a href="/">Volver al inicio</a> o <a href="/productos/">ver los 24 productos</a>.' in h404
+    assert "las series de 24 productos de la Región Metropolitana" in _leer(sitio, "acerca.html")
+    for p in _paginas(sitio):
+        assert not re.search(r"\b125 (productos|alimentos)", _leer(sitio, p)), p
