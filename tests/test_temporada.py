@@ -435,6 +435,65 @@ def test_tarjetas_de_la_portada(sitio):
     assert ".zonas.historia .z { flex-grow:33; }" in h
 
 
+NOTA_CARA = "Primera semana en zona cara; el color cambia si se repite la próxima."
+
+
+def test_nota_de_las_dos_semanas_en_la_portada(sitio):
+    """La Ensalada entra esta semana a CARO y el color sigue NORMAL: su
+    tarjeta lleva la nota al final. Las otras tres reservan el mismo alto,
+    sin texto en la página (para que las barras sigan alineadas)."""
+    d, _ = sitio
+    h = _leer(d, "index.html")
+    tarjetas = dict(re.findall(r'<a class="icard" href="/graficos.html#(\w+)">(.*?)</a>', h, re.S))
+    assert tarjetas["ensalada"].rstrip().endswith(f'<div class="ic-nota">{NOTA_CARA}</div>')
+    for code in ("asado", "fruta", "desayuno"):
+        assert (f'<div class="ic-nota sin" aria-hidden="true" data-alto="{NOTA_CARA}"></div>'
+                in tarjetas[code]), code
+        assert "Primera semana" not in _visible(tarjetas[code]), code
+    assert _visible(h).count("Primera semana") == 1
+    assert ".ic-nota.sin::after { content:attr(data-alto); visibility:hidden; }" in h
+
+
+def test_nota_de_las_dos_semanas_en_graficos(sitio):
+    d, _ = sitio
+    g = _leer(d, "graficos.html")
+    app = json.loads(re.search(r"const DATA = (\{.*?\});\n", g).group(1).replace("<\\/", "</"))
+    assert app["indices"]["ensalada"]["nota"] == NOTA_CARA
+    assert all(app["indices"][c]["nota"] == "" for c in ("asado", "fruta", "desayuno"))
+    assert '<div class="ovs onota" id="onota"></div>' in g
+    assert "document.getElementById('onota').textContent = d.nota || '';" in g
+    assert ".onota:empty { display:none; }" in g
+
+
+def _nota_indice():
+    """nota_indice de build_site.py, sin correr el build."""
+    import ast
+    with open(os.path.join(RAIZ, "build_site.py"), encoding="utf-8") as fh:
+        arbol = ast.parse(fh.read())
+    piezas = [n for n in arbol.body
+              if (isinstance(n, ast.FunctionDef) and n.name == "nota_indice")
+              or (isinstance(n, ast.Assign) and any(getattr(t, "id", "") == "ZONA_NOMBRE" for t in n.targets))]
+    ns = {"zona_historia": indices.zona_historia}
+    exec(compile(ast.Module(body=piezas, type_ignores=[]), "build_site.py", "exec"), ns)
+    return ns["nota_indice"]
+
+
+@pytest.mark.parametrize("veredicto, temporada, percentil, esperado", [
+    ("NORMAL", {"zona": "CARO"}, 80, NOTA_CARA),
+    ("NORMAL", {"zona": "BARATO"}, 20,
+     "Primera semana en zona barata; el color cambia si se repite la próxima."),
+    ("CARO", {"zona": "NORMAL"}, 50,
+     "Primera semana en zona normal; el color cambia si se repite la próxima."),
+    ("CARO", {"zona": "CARO"}, 50, ""),
+    # sin temporada, la zona de esta semana es la del percentil de toda la historia
+    ("NORMAL", None, 70, NOTA_CARA),
+    ("BARATO", None, 20, ""),
+])
+def test_nota_indice(veredicto, temporada, percentil, esperado):
+    nota = _nota_indice()
+    assert nota({"veredicto": veredicto, "temporada": temporada, "percentil": percentil}) == esperado
+
+
 def test_graficos_y_paginas_de_los_indices(sitio):
     d, _ = sitio
     app = json.loads(re.search(r"const DATA = (\{.*?\});\n", _leer(d, "graficos.html"))
@@ -500,7 +559,10 @@ def test_tarjetas_og_con_la_frase(sitio):
             'últimos 10 septiembres, aun descontando la inflación."') in palta
     ens = _leer(d, "indices/ensalada.html")
     assert ('content="Índice Ensalada: $1.750, NORMAL, semana del 28-09-2026. Dentro de lo normal '
-            'para septiembre: más caro que en 8 de los últimos 10."') in ens
+            'para septiembre: más caro que en 8 de los últimos 10. Primera semana en zona cara; el '
+            'color cambia si se repite la próxima."') in ens
+    # sin la regla de las dos semanas corriendo, sin nota
+    assert "Primera semana" not in _leer(d, "indices/asado.html")
     # con menos de 5 años de ese mes, la frase contra toda la historia
     assert re.search(r'content="Kiwi: \$1\.450 por kilo, semana del 28-09-2026\. Más barato que '
                      r'en \d+ de cada 10 semanas desde 2024, descontada la inflación\."',

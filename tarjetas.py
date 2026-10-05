@@ -142,11 +142,13 @@ class Lienzo:
 
 def ficha(ruta: str, tok: dict, *, antetitulo: str, nombre: str, precio: str,
           unidad: str, frase: str, fecha: str, fuente_txt: str, sitio: str,
-          veredicto: str = None, color_veredicto: str = None) -> None:
+          veredicto: str = None, color_veredicto: str = None, nota: str = None) -> None:
     """La tarjeta de un producto o de un índice: antetítulo, nombre (hasta dos
     líneas), precio con su unidad (y, en los índices, la píldora del
     veredicto), la frase y el pie con la fuente y la marca. Con el nombre en
-    dos líneas, el precio y la frase se achican para no tocar el pie."""
+    dos líneas, el precio y la frase se achican para no tocar el pie. 'nota'
+    (índices: la regla de las dos semanas) va bajo la frase, en gris y en una
+    línea; con ella, la frase usa los tamaños chicos."""
     c = Lienzo(tok)
     c.marca()
     c.fecha(fecha)
@@ -170,14 +172,19 @@ def ficha(ruta: str, tok: dict, *, antetitulo: str, nombre: str, precio: str,
         c.pildora(x, y - 4, veredicto, color_veredicto)
     # la frase en una línea si cabe con una fuente razonable; si no, en dos.
     # Nunca se corta: ajustar() solo trunca si ni la más chica alcanza
-    una = (30, 28, 26, 24) if dos else (34, 32, 30)
+    chica = dos or bool(nota)
+    una = (30, 28, 26, 24) if chica else (34, 32, 30)
     f_fra, l_fra = c.ajustar(frase, "sans", una, ancho, 1)
     if len(c.lineas(frase, f_fra, ancho)) > 1:
-        f_fra, l_fra = c.ajustar(frase, "sans", (26, 24) if dos else (34, 30), ancho, 2)
+        f_fra, l_fra = c.ajustar(frase, "sans", (26, 24) if chica else (34, 30), ancho, 2)
     y += 30
     for linea in l_fra:
         y += int(f_fra.size * 1.3)
         c.texto((MARGEN, y), linea, f_fra, "bone")
+    if nota:
+        f_not, l_not = c.ajustar(nota, "sans", (24, 22, 20), ancho, 1)
+        y += int(f_not.size * 1.5)
+        c.texto((MARGEN, y), l_not[0], f_not, "ash")
     c.pie(fuente_txt, sitio)
     c.guardar(ruta)
 

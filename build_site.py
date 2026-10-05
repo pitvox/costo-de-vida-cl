@@ -60,7 +60,7 @@ import unicodedata
 # las cantidades de /metodologia.html salen del mismo diccionario que usa el
 # cálculo (nunca escritas a mano); el veredicto por temporada, de la misma
 # regla que usa indices.py para los índices (aquí, para los productos)
-from indices import BASKETS, COLORES, comparar_temporada, resumen_temporada
+from indices import BASKETS, COLORES, comparar_temporada, resumen_temporada, zona_historia
 # las og:image de 1200 x 630 (Pillow): fichas, índices y portada
 import tarjetas
 
@@ -227,6 +227,10 @@ __CSS_CABECERA__
     text-wrap:pretty; }
   .ovs { font:400 clamp(11px,1.3vw,13px)/1.45 var(--sans); color:var(--ash);
     margin-top:8px; text-wrap:pretty; }
+  /* la nota de la regla de las dos semanas, bajo el percentil */
+  .ovs.onota { margin-top:2px; }
+  .onota:empty { display:none; }
+  body.tv-ind .overlay.m-ind .onota { flex-basis:100%; }
   .onote { display:inline-block; font:500 12px var(--sans); color:var(--ash);
     border:1px solid var(--line); padding:4px 10px; background:var(--panel);
     margin-top:8px; }
@@ -489,6 +493,7 @@ __CSS_SITIO__
           <span class="opct" id="opct"></span>
         </div>
         <div class="ovs" id="ovs"></div>
+        <div class="ovs onota" id="onota"></div>
       </div>
       <div class="overlay m-prod">
         <div class="oname">COMPARAR PRODUCTOS <span id="prod-rango"></span></div>
@@ -1095,6 +1100,8 @@ __JS_UNIDAD__
     // historia como dato secundario: los arma el build
     document.getElementById('opct').textContent = d.frase;
     document.getElementById('ovs').textContent = d.historia;
+    // la nota de la regla de las dos semanas (vacía si no corre)
+    document.getElementById('onota').textContent = d.nota || '';
     pintarSerie(code);
     renderEstacional(d);
     const comp = document.getElementById('comp');
@@ -2129,6 +2136,10 @@ __CSS_CABECERA__
   .icard { container-type:inline-size; }
   @container (max-width:264px) { .ic-pie { flex-direction:column; } }
   .ic-m { display:none; }
+  /* la nota de la regla de las dos semanas, como texto secundario; en las
+     tarjetas sin nota, el mismo alto vacío */
+  .ic-nota { font:400 12px/1.45 var(--sans); color:var(--ash); text-wrap:pretty; }
+  .ic-nota.sin::after { content:attr(data-alto); visibility:hidden; }
 
   /* ---- Esta semana ---- */
   .sem-tabs { display:none; }
@@ -2291,6 +2302,7 @@ __CSS_CABECERA__
     .zonas { height:6px; }
     .zonas .marca { top:-3px; height:12px; }
     .ic-m { display:block; font:400 11px/1.4 var(--sans); color:var(--bone); }
+    .ic-nota { font-size:11px; line-height:1.4; }
   }
 __CSS_SITIO__
 </style>
@@ -3563,6 +3575,8 @@ def resumen_indice(d: dict) -> dict:
     # percentil de toda la historia), ya escritos
     r["frase"] = frase_indice(d)
     r["historia"] = historia_indice(d)
+    # la nota de la regla de las dos semanas ("" si no corre)
+    r["nota"] = nota_indice(d)
     r["componentes"] = [{**{k: c.get(k) for k in ("label", "qty", "unidad", "aporte")},
                          "label": nombre(c.get("label") or "")}
                         for c in d.get("componentes") or []]
@@ -5633,8 +5647,20 @@ def html_tarjetas(indices: dict) -> str:
     del mes), la frase y las zonas de toda la historia. Cada una abre
     /graficos.html#codigo."""
     out = []
+    # la nota de la regla de las dos semanas va al final de su tarjeta; las
+    # otras reservan el mismo alto (sin texto en la página), para que las
+    # barras de las 4 sigan a la misma altura
+    notas = [nota_indice(d) for d in indices.values()]
+    alto = max(notas, key=len, default="")
     for code, d in indices.items():
         r = resumen_indice(d)
+        if r["nota"]:
+            nota = f'          <div class="ic-nota">{html.escape(r["nota"])}</div>\n'
+        elif alto:
+            nota = (f'          <div class="ic-nota sin" aria-hidden="true" '
+                    f'data-alto="{html.escape(alto, quote=True)}"></div>\n')
+        else:
+            nota = ""
         corto = html.escape(d["nombre"].replace("Índice ", "").upper())
         color = SEMAFORO.get(d["veredicto"], html.escape(d["color"]))
         pct = d["percentil"]
@@ -5660,6 +5686,7 @@ def html_tarjetas(indices: dict) -> str:
             f'<span>percentil {pct} en su historia</span>'
             f'<span>{vs_txt} su promedio</span></div>\n'
             f'          <div class="ic-m">{semana_m}</div>\n'
+            f'{nota}'
             f'        </a>')
     return "\n".join(out)
 
@@ -5819,6 +5846,28 @@ def frase_indice(d: dict) -> str:
     return frase_historia(vals, vals[-1], real[0]["time"][:4], "o")
 
 
+ZONA_NOMBRE = {"CARO": "cara", "BARATO": "barata", "NORMAL": "normal"}
+
+
+def nota_indice(d: dict) -> str:
+    """La nota de la regla de las dos semanas: si esta semana el índice está
+    en otra zona que su color (el veredicto), es su primera semana ahí y el
+    color espera a la próxima ("Primera semana en zona cara; el color cambia
+    si se repite la próxima."). La zona de esta semana es la de la temporada
+    o, sin ella, la del percentil de toda la historia (la misma con que
+    cuenta veredicto_temporada). "" si el color ya es el de su zona."""
+    t = d.get("temporada")
+    if t:
+        zona = t["zona"]
+    elif d.get("percentil") is not None:
+        zona = zona_historia(d["percentil"])
+    else:
+        return ""
+    if zona == d["veredicto"] or zona not in ZONA_NOMBRE:
+        return ""
+    return f"Primera semana en zona {ZONA_NOMBRE[zona]}; el color cambia si se repite la próxima."
+
+
 def historia_indice(d: dict) -> str:
     """El dato secundario de un índice: su percentil en toda la historia y
     la distancia a su promedio histórico."""
@@ -5843,11 +5892,15 @@ def tarjeta_indice(code: str, d: dict) -> tuple:
         "sitio": "carestia.cl",
         "veredicto": d["veredicto"],
         "color_veredicto": COLOR_VEREDICTO.get(d["veredicto"], "ambar"),
+        # la nota de la regla de las dos semanas, bajo la frase ("" si no corre)
+        "nota": nota_indice(d),
     }
     ruta = f"{OG_DIR}/indices/{code}.png"
     dibujar(tarjetas.ficha, ruta, datos)
     alt = (f"{d['nombre']}: {datos['precio']}, {d['veredicto']}, "
            f"{datos['fecha'][0].lower()}{datos['fecha'][1:]}. {datos['frase']}")
+    if datos["nota"]:
+        alt += f" {datos['nota']}"
     return og_meta(og_url(ruta, datos), alt), og_url(ruta, datos), alt
 
 
