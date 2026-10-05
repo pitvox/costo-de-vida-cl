@@ -1,6 +1,6 @@
 **Acerca de Carestía**
 
-Carestía mide cuánto cuesta la vida cotidiana en Chile. Publica cuatro índices de canastas fijas (Asado, Ensalada, Fruta y Desayuno) y las series de {productos} productos de la Región Metropolitana, todos expresados en pesos de hoy, para que cualquiera pueda ver si algo está caro o barato respecto de su propia historia, descontada la inflación.
+Carestía mide cuánto cuesta la vida cotidiana en Chile. Publica cuatro índices de canastas fijas (Asado, Ensalada, Fruta y Desayuno) y las series de {productos} productos de la Región Metropolitana, todos expresados ajustados por inflación, para que cualquiera pueda ver si algo está caro o barato respecto de su propia historia, descontada la inflación.
 
 Carestía no compara tiendas ni te dice dónde comprar más barato.
 

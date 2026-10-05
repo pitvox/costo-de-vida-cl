@@ -477,10 +477,10 @@ def test_tarjetas_og_con_la_frase(sitio):
             'de los últimos 10 septiembres, aun descontando la inflación."') in ens
 
 
-def test_sin_pesos_de_hoy_salvo_el_texto_del_dueno(sitio):
-    """"Pesos de hoy" ya no se dice: ajustado por inflación, en pesos del mes
-    del último IPC. Queda solo en acerca.md y terminos.md, textos del dueño
-    (literales), a la espera de su decisión."""
+def test_sin_pesos_de_hoy(sitio):
+    """"Pesos de hoy" ya no se dice en ninguna página: ajustado por inflación,
+    en pesos del mes del último IPC. Acerca y términos (textos del dueño)
+    dicen "ajustados por inflación"."""
     d, _ = sitio
     con = []
     for raiz, _dirs, archivos in os.walk(d):
@@ -491,4 +491,9 @@ def test_sin_pesos_de_hoy_salvo_el_texto_del_dueno(sitio):
                     texto = fh.read()
                 if "pesos de hoy" in (_visible(texto) if a.endswith(".html") else texto):
                     con.append(os.path.relpath(ruta, d))
-    assert sorted(con) == ["acerca.html", "terminos.html"], con
+    assert con == [], con
+    assert "expresados ajustados por inflación, para que" in _visible(_leer(d, "acerca.html"))
+    terminos = _visible(_leer(d, "terminos.html"))
+    assert "Última actualización: 5 de octubre de 2026" in terminos
+    assert "expresados ajustados por inflación y elaborados" in terminos
+    assert "sus valores históricos ajustados por inflación cambian" in terminos
