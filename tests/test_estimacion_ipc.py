@@ -121,3 +121,47 @@ def test_criterio_acepta_exactamente_dos_de_cada_tres():
     r = pd.DataFrame({"mes": meses, "estimada": estimada, "oficial": oficial,
                       "ingenuo": [0.0] * 12, "promedio_12m": [0.5] * 12})
     assert "2 de cada 3 meses: sí (8 de 12)" in estimar.criterio(r)
+
+
+def test_ar1_alrededor_del_promedio_de_12_meses():
+    idx = pd.period_range("2025-01", "2026-02", freq="M")
+    x = np.log1p(np.array([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 0], dtype=float) / 100)
+    serie = pd.Series(100 * np.exp(np.cumsum(x)), index=idx)
+    m = pd.Period("2026-03", "M")
+    previos = x[-12:]
+    mu = previos.mean()
+    esperado = np.exp(mu + 0.5 * (x[-1] - mu))
+    assert estimar.relativo_propio(serie, m, "ar1", phi=0.5) == pytest.approx(esperado)
+    # phi = 0 es el promedio de 12 meses (geométrico)
+    assert estimar.relativo_propio(serie, m, "ar1", phi=0.0) == pytest.approx(
+        estimar.relativo_propio(serie, m, "12_meses"))
+
+
+def test_peso_de_la_combinacion_solo_con_desarrollo_y_recortado():
+    import evaluar
+    meses = pd.period_range("2019-01", "2024-12", freq="M")
+    n = len(meses)
+    rng = np.random.default_rng(0)
+    p12 = np.full(n, 0.5)
+    est = p12 + rng.normal(0, 1, n)
+    oficial = p12 + 0.3 * (est - p12)
+    # en la prueba la relación es otra: no debe influir en w
+    oficial[meses >= pd.Period("2024-01", "M")] = 9.0
+    v0 = pd.DataFrame({"mes": meses, "estimada": est, "oficial": oficial, "promedio_12m": p12})
+    assert evaluar.peso_combinacion(v0) == pytest.approx(0.3)
+    assert evaluar.peso_combinacion(v0.assign(oficial=p12 - 2 * (est - p12))) == 0.0
+
+
+def test_regla_usa_el_mejor_comparador_y_siempre_sube():
+    import evaluar
+    meses = pd.period_range("2024-01", periods=12, freq="M")
+    oficial = np.array([0.5, 0.3, -0.2, 0.8, 0.1, 0.4, 0.6, -0.1, 0.2, 0.9, 0.3, 0.5])
+    r = pd.DataFrame({"mes": meses, "oficial": oficial, "estimada": oficial,
+                      "ingenuo": np.roll(oficial, 1), "promedio_12m": np.full(12, 0.3)})
+    res = evaluar.regla(r)
+    assert res["mejor_comparador"] == "promedio_12m"
+    assert res["eam_estimacion"] == 0 and res["gana_error"] and res["pasa"]
+    assert res["aciertos_siempre_sube"] == 10 and res["aciertos_dir"] == 12
+    # misma precisión que "siempre sube" en dirección: no pasa
+    r2 = r.assign(estimada=np.where(oficial > 0, oficial, 0.3))
+    assert not evaluar.regla(r2)["gana_direccion"]

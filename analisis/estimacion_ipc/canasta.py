@@ -167,6 +167,47 @@ def valorizar(semanal: pd.DataFrame):
     return res, det
 
 
+def anclada(semanal: pd.DataFrame, semanas: int = None) -> pd.DataFrame:
+    """Canasta anclada (preregistro.md): estima la variación mensual (%) del
+    valor oficial. Cada producto parte del valor oficial de m-1 (su gasto de
+    marzo de 2022 por el mismo índice, así que su peso es fijo) y se mueve con
+    su variación ODEPA: las primeras 'semanas' semanas de m frente a las
+    mismas de m-1 (todas, si no se indica). Lo que no tiene ODEPA, o no tiene
+    variación comparable ese mes, se mueve con el promedio de las variaciones
+    oficiales de la canasta de los 12 meses anteriores. Columnas como las de
+    estimar.estimar: mes, estimada, oficial, ingenuo, promedio_12m y
+    peso_con_odepa."""
+    cba = pd.read_csv(os.path.join(AQUI, "mapa_cba.csv")).dropna(subset=["gasto_mar2022"])
+    cba["odepa"] = cba["odepa"].fillna("")
+    pesos = cba["gasto_mar2022"] / cba["gasto_mar2022"].sum()
+    if semanas:
+        semanal = semanal[(semanal["semana"].dt.day - 1) // 7 + 1 <= semanas]
+    m_ = odepa_mensual.precios_mensuales(semanal)
+    precios = m_[m_["base"].isin(["kg", "l"])].pivot(index="mes", columns="serie",
+                                                      values="precio")
+    series = {}
+    for col in precios.columns:
+        series.setdefault(col.split(" | ")[0], []).append(col)
+    valor = cba_ministerio()["ministerio"]
+    oficial = pd.Series(estimar.redondear(valor.pct_change() * 100), index=valor.index)
+    filas = []
+    for m in pd.period_range(DESDE, valor.index.max(), freq="M"):
+        p12 = oficial.loc[m - 12:m - 1].mean()
+        total = con = 0.0
+        for (_, r), s in zip(cba.iterrows(), pesos):
+            claves = [odepa_mensual.clave_producto(x) for x in r["odepa"].split("|") if x.strip()]
+            rel, _n = estimar.jevons(precios, precios, series, claves, m) if claves else (None, 0)
+            if rel is None:
+                rel = 1 + p12 / 100
+            else:
+                con += s
+            total += s * rel
+        filas.append({"mes": m, "estimada": (total - 1) * 100, "oficial": oficial[m],
+                      "ingenuo": oficial[m - 1], "promedio_12m": p12,
+                      "peso_con_odepa": con * 100})
+    return pd.DataFrame(filas)
+
+
 if __name__ == "__main__":
     semanal = pd.read_csv(os.path.join(DATOS, "odepa_semanal.csv"), parse_dates=["semana"])
     res, det = valorizar(semanal)
