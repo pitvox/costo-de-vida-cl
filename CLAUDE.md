@@ -11,7 +11,7 @@ Todo texto visible del sitio (páginas, meta descriptions, textos que arma el JS
 - Nada de inglés en las ayudas de uso ("zoom", "pinch"): "Para acercar, arrastra el eje...", "usa dos dedos".
 - Nada de fórmulas típicas de texto generado por IA: "inédito", "al descuento", "sin precedentes" y parecidas.
 - Los textos del dueño (`textos/*.md`) se copian literales. `build_site.py` solo les da formato HTML.
-- El deslinde no se reformula: queda palabra por palabra.
+- El deslinde no se reformula: queda palabra por palabra. Va una sola vez en el sitio, en la sección Deslinde de metodología (decisión del dueño): no se repite en el pie, en las fichas ni en otras páginas.
 
 La guardia está en `tests/test_texto.py` (pytest, sin red). Falla si aparece "—", "–", " · ", " vs ", "inédit", "al descuento" o "sin precedentes" en `textos/*.md`, en los strings de `build_site.py` que terminan en el sitio (docstrings y `print` de consola quedan fuera) o en el HTML de un build sintético. Corre con `python -m pytest -q tests`.
 

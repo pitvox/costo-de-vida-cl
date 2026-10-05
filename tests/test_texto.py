@@ -188,8 +188,8 @@ def test_portada_textos(sitio):
         "licencia CC-BY), deflactados con el IPC.",
     ]:
         assert esperado in h, esperado
-    assert ("Información de consumo con fines analíticos. No constituye asesoría "
-            "ni recomendación de inversión.") in h
+    # el deslinde va solo en metodología (ver test_deslinde_solo_en_metodologia)
+    assert "No constituye asesoría" not in h
     # los textos de ejemplo de la referencia no llegan al sitio
     for ejemplo in ["Cifras de ejemplo", "Los 125 productos", "Ver los 125 productos",
                     ".dc.html"]:
@@ -235,9 +235,45 @@ def test_graficos_textos(sitio):
     # los grupos ODEPA se muestran con su nombre nuevo; las claves no cambian
     assert '"Carne de cerdo, ave y cordero"' in h
     assert "Carne de Cerdo - Ave - Cordero" in h        # la clave en los datos
-    # el aviso legal no se toca
-    assert ("Información de consumo con fines analíticos. No constituye asesoría "
-            "ni recomendación de inversión.") in h
+    # el deslinde va solo en metodología
+    assert "No constituye asesoría" not in h
+
+
+def test_pie_con_la_fuente_en_una_linea(sitio):
+    """Pedido del dueño: el pie solo cita la fuente (la licencia CC-BY lo
+    pide); cómo se arma cada precio está en metodología."""
+    fuente = ('<p class="pie-attr">Fuente: precios al consumidor de ODEPA '
+              '(<a href="https://datos.odepa.gob.cl">datos.odepa.gob.cl</a>, licencia '
+              'CC-BY), deflactados con el IPC.</p>')
+    for pagina in _paginas(sitio):
+        assert fuente in _leer(sitio, pagina), pagina
+    met = " ".join(_visible(_leer(sitio, "metodologia.html")).split())
+    for detalle in ["suele ser menor que el precio de supermercado", "Canastas fijas.",
+                    "ferias libres, supermercados y carnicerías"]:
+        assert detalle in met, detalle
+
+
+def test_deslinde_solo_en_metodologia(sitio):
+    """Pedido del dueño: el deslinde (no es asesoría de inversión) va una
+    sola vez en el sitio, en la sección Deslinde de metodología, con su
+    texto palabra por palabra. Ni el pie ni las fichas lo repiten. Los
+    términos de uso lo cubren dentro de su cláusula 2, que es texto del
+    dueño y no se toca."""
+    with open(os.path.join(RAIZ, "textos", "metodologia.md"), encoding="utf-8") as fh:
+        md = fh.read()
+    deslinde = md.split("## Deslinde", 1)[1].strip().split("\n\n", 1)[0]
+    assert deslinde.startswith("Información de consumo con fines informativos. No constituye "
+                               "asesoría ni recomendación de inversión.")
+    con = []
+    for pagina in _paginas(sitio):
+        h = _leer(sitio, pagina)
+        assert "Información de consumo con fines analíticos" not in h, pagina
+        if "No constituye asesoría" in h:
+            con.append(os.path.relpath(pagina, sitio))
+    assert con == ["metodologia.html"], con
+    assert _leer(sitio, "metodologia.html").count("No constituye asesoría") == 1
+    plano = lambda t: " ".join(t.split())
+    assert plano(deslinde) in plano(_visible(_leer(sitio, "metodologia.html")))
 
 
 def _visible(h: str) -> str:
