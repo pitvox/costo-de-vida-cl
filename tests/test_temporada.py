@@ -168,6 +168,33 @@ def test_un_hueco_no_cuenta_como_semana_seguida():
     assert veredicto_temporada(fechas, v)["veredicto"] == "NORMAL"
 
 
+def test_semanas_sin_temporada_llevan_el_veredicto_de_toda_la_historia():
+    """La fruta real no tiene 5 años de febrero a abril: esas semanas llevan
+    el veredicto del percentil de toda la historia (el que se publica). Al
+    volver la temporada, el color sigue la regla de las dos semanas desde ese
+    veredicto, no desde uno de meses atrás."""
+    fechas, v = [], []
+    f = D(2016, 1, 4)
+    while f <= D(2026, 6, 15):
+        if f.year == 2026 or f.month >= 6:            # sin enero a mayo antes de 2026
+            fechas.append(f)
+            v.append(1000 + 100 * (f.year - 2016) if f.year < 2026 else
+                     (5000 if f.month < 6 else NORMAL))
+        f += SEMANA
+    # mayo de 2026: sin temporada (ningún mayo antes); el precio más alto de la historia
+    hasta_mayo = [i for i, x in enumerate(fechas) if x <= D(2026, 5, 25)]
+    assert veredicto_temporada(fechas[:len(hasta_mayo)], v[:len(hasta_mayo)]) is None
+    # 1 de junio: NORMAL frente a los junios, pero la semana anterior iba CARO
+    k = len(hasta_mayo) + 1
+    t = veredicto_temporada(fechas[:k], v[:k])
+    assert (t["zona"], t["veredicto"]) == ("NORMAL", "CARO")
+    # 8 de junio: dos semanas seguidas en NORMAL
+    t = veredicto_temporada(fechas[:k + 1], v[:k + 1])
+    assert (t["zona"], t["veredicto"]) == ("NORMAL", "NORMAL")
+    assert indices.zona_historia(32) == "BARATO" and indices.zona_historia(65) == "NORMAL"
+    assert indices.zona_historia(66) == "CARO"
+
+
 def test_resumen_temporada():
     fechas, v = serie_2026([NORMAL, NORMAL, CARO])
     real = [{"time": f.isoformat(), "value": x} for f, x in zip(fechas, v)]

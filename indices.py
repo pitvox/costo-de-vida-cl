@@ -28,6 +28,7 @@ Correr:
 
 import io
 import os
+import bisect
 import re
 import json
 import time
@@ -887,25 +888,39 @@ def comparar_temporada(fechas, valores, i: int = None, promedios: dict = None):
             "percentil": round(100 * debajo / k), "zona": zona_temporada(debajo, k)}
 
 
+def zona_historia(percentil: int) -> str:
+    """El veredicto de antes, por el percentil de toda la historia: el que
+    vale en una semana sin comparación por temporada."""
+    return "BARATO" if percentil < P_BARATO else ("NORMAL" if percentil < P_CARO else "CARO")
+
+
 def veredicto_temporada(fechas, valores):
     """El veredicto de un índice con la regla de las dos semanas: el color
     cambia solo si la nueva zona se mantiene dos semanas seguidas. Se recorre
     la serie: la zona de una semana pasa a ser el veredicto si la semana
     anterior (siete días antes) tuvo esa misma zona; si no, sigue el que venía.
-    La primera semana con comparación fija el de partida. Devuelve la
-    comparación de la última semana con valor (comparar_temporada) más su
-    'veredicto', o None si esa semana no tiene comparación."""
+    Una semana sin comparación por temporada (menos de 5 años de su mes, como
+    la fruta de febrero a abril) lleva el veredicto del percentil de toda la
+    historia hasta esa semana, el que se publica entonces, y cuenta como su
+    zona: así, al volver la temporada, el color no salta a uno de meses atrás.
+    Devuelve la comparación de la última semana con valor
+    (comparar_temporada) más su 'veredicto', o None si esa semana no tiene
+    comparación (entonces vale el percentil de toda la historia)."""
     promedios = promedios_mes(fechas, valores)
     veredicto, anterior, ultima = None, None, None
+    vistos = []                     # los valores hasta esta semana, ordenados
     for i, (f, v) in enumerate(zip(fechas, valores)):
         if not _con_valor(v):
             continue
+        bisect.insort(vistos, v)
+        f = _dia(f)
         ultima = comparar_temporada(fechas, valores, i, promedios)
         if ultima is None:
-            continue
-        f, zona = _dia(f), ultima["zona"]
-        if veredicto is None or anterior == (f - datetime.timedelta(weeks=1), zona):
-            veredicto = zona
+            zona = veredicto = zona_historia(round(100.0 * bisect.bisect_right(vistos, v) / len(vistos)))
+        else:
+            zona = ultima["zona"]
+            if veredicto is None or anterior == (f - datetime.timedelta(weeks=1), zona):
+                veredicto = zona
         anterior = (f, zona)
     return None if ultima is None else {**ultima, "veredicto": veredicto}
 
@@ -937,7 +952,7 @@ def resumen(out: pd.DataFrame, meta: dict, comp: list) -> dict:
     vsp = round(((ur / real.mean()) - 1) * 100)
     # el veredicto de antes, por el percentil de toda la historia: vale solo
     # si esta semana no tiene comparación por temporada (resumen_temporada)
-    historia = "BARATO" if pct < P_BARATO else ("NORMAL" if pct < P_CARO else "CARO")
+    historia = zona_historia(pct)
     serie_real = [{"time": f.strftime("%Y-%m-%d"), "value": int(round(v))}
                   for f, v in zip(out.index, out["real"]) if pd.notna(v)]
     # sobre la serie publicada (enteros): build_site.py recalcula lo mismo
