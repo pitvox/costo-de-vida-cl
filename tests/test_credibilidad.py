@@ -190,7 +190,9 @@ def test_numero_de_productos_calculado_en_el_build(sitio):
     for md in ("acerca.md", "404.md"):
         with open(os.path.join(RAIZ, "textos", md), encoding="utf-8") as fh:
             texto = fh.read()
-        assert "125" not in texto and "{productos}" in texto, md
+        assert "125" not in texto, md
+        # acerca dice "más de cien productos" (texto del dueño); el 404, la cifra
+        assert ("más de cien productos" if md == "acerca.md" else "{productos}") in texto, md
 
 
 def test_api_publica_en_el_pie(sitio):

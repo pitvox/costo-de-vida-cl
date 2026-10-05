@@ -407,6 +407,8 @@ def test_paginas_del_dueno(sitio):
     # el número de productos con datos del último año, calculado en el build
     # (24 sintéticos con datos recientes; la chirimoya es de 2024)
     assert '<a href="/">Volver al inicio</a> o <a href="/productos/">ver los 24 productos</a>.' in h404
-    assert "las series de 24 productos de la Región Metropolitana" in _leer(sitio, "acerca.html")
+    # acerca ya no lleva la cifra: "más de cien productos" (texto del dueño)
+    assert "las series de más de cien productos de la Región Metropolitana, todos ajustados por inflación," \
+        in _leer(sitio, "acerca.html")
     for p in _paginas(sitio):
         assert not re.search(r"\b125 (productos|alimentos)", _leer(sitio, p)), p

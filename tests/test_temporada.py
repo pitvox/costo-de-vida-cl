@@ -14,6 +14,7 @@ portada, /graficos.html, las páginas de los índices, las fichas y
 resumen.json."""
 import datetime
 import json
+import math
 import os
 import re
 import shutil
@@ -305,8 +306,12 @@ def sintetico() -> dict:
     p["lentejas"] = producto("Lentejas", "Abarrotes y otros", 950)
     p["porotos"] = producto("Porotos", "Abarrotes y otros", 1450)
     p["kiwi"] = producto("Kiwi", "Frutas", 1450, desde=D(2024, 1, 1))
-    # su último precio es de abril: abriles, y una ficha de una semana anterior
+    # sin precio esta semana: su último dato es de abril (22 semanas), del
+    # 31 de agosto (4 semanas, lleva la frase de temporada) y del 24 de
+    # agosto (5 semanas, ya no)
     p["chirimoya"] = producto("Chirimoya", "Frutas", 1950, hasta=D(2026, 4, 27))
+    p["cereza"] = producto("Cereza", "Frutas", 1950, hasta=D(2026, 8, 31))
+    p["uva"] = producto("Uva", "Frutas", 1450, hasta=D(2026, 8, 24))
     return out
 
 
@@ -326,6 +331,19 @@ def sitio(tmp_path_factory):
 
 def _leer(d, ruta):
     return (d / ruta).read_text(encoding="utf-8")
+
+
+def _epoca(d, valor, mes):
+    """Un precio ajustado, a precio de la época de ese mes, con el factor del
+    datafeed: nominal sobre real de los 4 índices, sumados en el mes."""
+    data = json.loads(_leer(d, "indices.json"))
+    nom = real = 0
+    for ind in data["indices"].values():
+        n = {p["time"]: p["value"] for p in ind["nominal"]}
+        for p in ind["real"]:
+            if p["time"].startswith(mes):
+                nom, real = nom + n[p["time"]], real + p["value"]
+    return "$" + f"{math.floor(valor * nom / real + 0.5):,}".replace(",", ".")
 
 
 def _visible(h: str) -> str:
@@ -387,8 +405,9 @@ def test_resumen_json_con_los_campos_nuevos(sitio):
 
 FRASES = {
     "asado": "Más caro que en 10 de los últimos 10 septiembres, aun descontando la inflación.",
-    # la frase dice lo de esta semana (CARO, la primera); el color espera
-    "ensalada": "Más caro que en 8 de los últimos 10 septiembres, aun descontando la inflación.",
+    # esta semana entra a CARO (la primera) y el color sigue NORMAL: la frase
+    # sigue al color, con el N de esta semana
+    "ensalada": "Dentro de lo normal para septiembre: más caro que en 8 de los últimos 10.",
     "fruta": "Más barato que en 10 de los últimos 10 septiembres, aun descontando la inflación.",
 }
 
@@ -456,15 +475,22 @@ def test_fichas_frase_principal_y_percentil_secundario(sitio):
     assert re.search(r'<p class="pct">Hoy está más barato que en el \d+% de las semanas desde '
                      r'2024, ajustado por inflación, en pesos de agosto de 2026\.</p>', kiwi)
     assert 'class="pct2"' not in kiwi
-    # un último precio de otra semana: dice de cuándo y que va ajustado
+    # sin precio esta semana: sin número grande (es siempre el de esta
+    # semana), el último dato a precio de la época y su semana
     ch = _leer(d, "productos/chirimoya.html")
-    # los 10 años se cuentan desde esa semana: la frase lo dice
-    assert ('<p class="pct">Último precio publicado por ODEPA (semana del 27-04-2026). En esa '
-            'semana estaba más cara que en 10 de los últimos 10 abriles, aun descontando la '
-            'inflación.</p>') in ch
+    ultimo = f"Sin precio de ODEPA esta semana. Último dato: {_epoca(d, 1950, '2026-04')}, semana del 27-04-2026."
+    assert f'<p class="pct">{ultimo}</p>' in ch
     assert '<div class="miga">Último precio publicado en Santiago</div>' in ch
-    assert '<div class="ouni">por kilo, ajustado por inflación, en pesos de agosto de 2026</div>' in ch
+    assert 'class="orow"' not in ch and 'class="oprice"' not in ch
     assert re.search(r'<p class="pct2">Frente a toda su historia, estaba más cara que', ch)
+    assert re.search(r'<meta name="description" content="' + re.escape(ultimo) + ' Precio por kilo', ch)
+    assert "Hoy" not in _visible(ch.split("<main>")[1].split('<div class="unidad"')[0])
+    # con 4 semanas o menos, más la frase de temporada (agosto: el mes de ese dato)
+    assert ('<p class="pct">Sin precio de ODEPA esta semana. Último dato: $1.950, semana del '
+            '31-08-2026. Más cara que en 10 de los últimos 10 agostos, aun descontando la '
+            'inflación.</p>') in _leer(d, "productos/cereza.html")
+    assert ('<p class="pct">Sin precio de ODEPA esta semana. Último dato: $1.450, semana del '
+            '24-08-2026.</p>') in _leer(d, "productos/uva.html")
 
 
 def test_tarjetas_og_con_la_frase(sitio):
@@ -473,8 +499,20 @@ def test_tarjetas_og_con_la_frase(sitio):
     assert ('content="Palta: $1.950 por kilo, semana del 28-09-2026. Más cara que en 10 de los '
             'últimos 10 septiembres, aun descontando la inflación."') in palta
     ens = _leer(d, "indices/ensalada.html")
-    assert ('content="Índice Ensalada: $1.750, NORMAL, semana del 28-09-2026. Más caro que en 8 '
-            'de los últimos 10 septiembres, aun descontando la inflación."') in ens
+    assert ('content="Índice Ensalada: $1.750, NORMAL, semana del 28-09-2026. Dentro de lo normal '
+            'para septiembre: más caro que en 8 de los últimos 10."') in ens
+    # con menos de 5 años de ese mes, la frase contra toda la historia
+    assert re.search(r'content="Kiwi: \$1\.450 por kilo, semana del 28-09-2026\. Más barato que '
+                     r'en \d+ de cada 10 semanas desde 2024, descontada la inflación\."',
+                     _leer(d, "productos/kiwi.html"))
+    # sin precio esta semana: el último dato a precio de la época y, si es
+    # reciente, la frase de temporada; si no, que no hay precio esta semana
+    assert (f'content="Chirimoya: {_epoca(d, 1950, "2026-04")} por kilo, semana del 27-04-2026. '
+            'Sin precio de ODEPA esta semana."') in _leer(d, "productos/chirimoya.html")
+    assert ('content="Cereza: $1.950 por kilo, semana del 31-08-2026. Más cara que en 10 de los '
+            'últimos 10 agostos, aun descontando la inflación."') in _leer(d, "productos/cereza.html")
+    assert ('content="Uva: $1.450 por kilo, semana del 24-08-2026. Sin precio de ODEPA esta '
+            'semana."') in _leer(d, "productos/uva.html")
 
 
 def test_sin_pesos_de_hoy(sitio):
@@ -492,8 +530,10 @@ def test_sin_pesos_de_hoy(sitio):
                 if "pesos de hoy" in (_visible(texto) if a.endswith(".html") else texto):
                     con.append(os.path.relpath(ruta, d))
     assert con == [], con
-    assert "expresados ajustados por inflación, para que" in _visible(_leer(d, "acerca.html"))
+    assert ("las series de más de cien productos de la Región Metropolitana, todos ajustados por inflación, para que cualquiera pueda ver si algo está caro o barato respecto de su propia historia. ") \
+        in _visible(_leer(d, "acerca.html"))
+    assert "expresados" not in _visible(_leer(d, "acerca.html"))
     terminos = _visible(_leer(d, "terminos.html"))
     assert "Última actualización: 5 de octubre de 2026" in terminos
-    assert "expresados ajustados por inflación y elaborados" in terminos
+    assert "de la Región Metropolitana, ajustados por inflación y elaborados sobre datos públicos." in terminos
     assert "sus valores históricos ajustados por inflación cambian" in terminos

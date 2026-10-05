@@ -2911,12 +2911,7 @@ __CSS_SITIO__
   <main>
     <div class="miga">__MIGA__</div>
     <h1>__LABEL__</h1>
-    <div class="orow">
-      <div class="oprice">__PRECIO__</div>
-      <div class="ouni">__OUNI__</div>
-      <div class="odelta">__DELTA__ <small>sem.</small></div>
-    </div>
-    <p class="pct">__FRASE__</p>
+__OROW__    <p class="pct">__FRASE__</p>
     __HISTORIA__
     <div class="unidad" id="unidad">
       __SELECTOR_UNIDAD__
@@ -3250,16 +3245,19 @@ MESES_PLURAL = ["eneros", "febreros", "marzos", "abriles", "mayos", "junios",
                 "diciembres"]
 
 
-def frase_temporada(t: dict, o: str = "o") -> str:
-    """La frase del veredicto por temporada, según la zona de esta semana
-    (t es comparar_temporada; en los índices, su 'temporada'). La frase dice
-    lo de esta semana; el color del índice, en cambio, espera a que la zona
-    se mantenga dos semanas seguidas. 'o' es la terminación del adjetivo."""
+def frase_temporada(t: dict, o: str = "o", zona: str = None) -> str:
+    """La frase del veredicto por temporada, con los números de esta semana
+    (t es comparar_temporada; en los índices, su 'temporada'). La plantilla
+    es la de 'zona': en los índices, su veredicto, porque la frase sigue al
+    color (que cambia solo si la nueva zona se mantiene dos semanas
+    seguidas); sin 'zona', la de esta semana, como en los productos, que no
+    tienen color. 'o' es la terminación del adjetivo."""
     mes, plural, k = MESES[t["mes"] - 1], MESES_PLURAL[t["mes"] - 1], t["anios"]
-    if t["zona"] == "CARO":
+    zona = zona or t["zona"]
+    if zona == "CARO":
         return (f"Más car{o} que en {t['debajo']} de los últimos {k} {plural}, "
                 f"aun descontando la inflación.")
-    if t["zona"] == "BARATO":
+    if zona == "BARATO":
         return (f"Más barat{o} que en {t['encima']} de los últimos {k} {plural}, "
                 f"aun descontando la inflación.")
     return f"Dentro de lo normal para {mes}: más car{o} que en {t['debajo']} de los últimos {k}."
@@ -3415,6 +3413,58 @@ def semana_vigente(prods) -> datetime.date:
     precio de un producto es "de hoy" o de una semana anterior."""
     return max((fin_serie(p) for p in prods if any(v is not None for v in p["v"])),
                default=None)
+
+
+# Una ficha sin precio esta semana dice "Sin precio de ODEPA esta semana.
+# Último dato: $X, semana del dd-mm-aaaa." y lleva la frase de temporada solo
+# si ese último dato tiene hasta estas semanas
+SEMANAS_FRASE_ULTIMO = 4
+
+
+def factor_epoca() -> dict:
+    """{"aaaa-mm": factor}: de pesos ajustados por inflación a pesos de ese
+    mes. Es el del datafeed (factorMensual): nominal sobre real de los 4
+    índices, sumados por mes, porque indices.py deflacta índices y productos
+    con el mismo IPC."""
+    nom, real = {}, {}
+    for d in DATA["indices"].values():
+        nominal = {p["time"]: p["value"] for p in d.get("nominal") or []}
+        for p in d.get("real") or []:
+            n = nominal.get(p["time"])
+            if p["value"] is None or n is None:
+                continue
+            m = p["time"][:7]
+            nom[m] = nom.get(m, 0) + n
+            real[m] = real.get(m, 0) + p["value"]
+    return {m: nom[m] / r for m, r in real.items() if r}
+
+
+SIN_PRECIO = "Sin precio de ODEPA esta semana."
+
+
+def ultimo_dato(p: dict, semana: datetime.date) -> dict:
+    """Lo que dicen la ficha y la tarjeta og de un producto sin precio esta
+    semana. 'texto' es "Sin precio de ODEPA esta semana. Último dato: $X,
+    semana del dd-mm-aaaa.", con $X ('precio') el precio de la época de esa
+    semana: el que publicó ODEPA, el mismo del gráfico en "Precio de la
+    época". Si ese mes no tuviera factor va el ajustado y 'ajuste' lo dice.
+    'temporada' es la frase de temporada solo si el dato tiene hasta
+    SEMANAS_FRASE_ULTIMO semanas (si no, o sin temporada, None)."""
+    vals = [v for v in p["v"] if v is not None]
+    fin = fin_serie(p)
+    f = factor_epoca().get(fin.strftime("%Y-%m"))
+    if f is None:
+        precio, ajuste = fmt_clp(vals[-1]), ajustado()
+    else:
+        # Math.round del datafeed: la mitad sube
+        precio, ajuste = fmt_clp(math.floor(vals[-1] * f + 0.5)), ""
+    dato = f"{precio}, {ajuste}" if ajuste else precio
+    t = temporada_producto(p)
+    reciente = (semana - fin).days <= 7 * SEMANAS_FRASE_ULTIMO
+    o = concordancia(p["label"])["o"]
+    return {"texto": f"{SIN_PRECIO} Último dato: {dato}, semana del {fin:%d-%m-%Y}.",
+            "precio": precio, "ajuste": ajuste,
+            "temporada": frase_temporada(t, o) if t and reciente else None}
 
 
 # sobre este umbral el producto va a "Sin datos hace más de un año"
@@ -3756,15 +3806,16 @@ def generar_datos(slugs: dict, catalogo: dict) -> dict:
 def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
                     semana: datetime.date = None, og: str = None) -> str:
     """Renderiza la página estática de UN producto con sus datos inline.
-    'semana' es la semana vigente del catálogo: si el último dato del
-    producto es de otra semana (mismo criterio que el "precio de la semana
-    del…" de /productos/), ni el texto ni la descripción dicen "Hoy" y el
-    número grande dice que va ajustado por inflación (el de esta semana no
-    lleva etiqueta: en su semana, ajustado y de la época son el mismo). La
-    frase principal es la del veredicto por temporada (sin píldora: el
-    semáforo es de los índices) y el percentil de toda la historia queda como
-    dato secundario; sin temporada (menos de 5 años del mes), la frase contra
-    toda la historia. 'og' son las etiquetas de su og:image (og_meta); sin
+    'semana' es la semana vigente del catálogo. El número grande es el precio
+    de esta semana, sin etiqueta (en su semana, ajustado y de la época son el
+    mismo). La frase principal es la del veredicto por temporada (sin
+    píldora: el semáforo es de los índices) y el percentil de toda la
+    historia queda como dato secundario; sin temporada (menos de 5 años del
+    mes), la frase contra toda la historia. Si el último dato es de otra
+    semana (mismo criterio que el "precio de la semana del…" de /productos/),
+    no hay número grande: la frase es la de ultimo_dato ("Sin precio de ODEPA
+    esta semana. Último dato: …") más la de temporada si el dato es reciente,
+    y nada dice "Hoy". 'og' son las etiquetas de su og:image (og_meta); sin
     ellas, la genérica."""
     vals = [v for v in p["v"] if v is not None]
     ult = vals[-1]
@@ -3792,25 +3843,30 @@ def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
     else:
         en_historia = f"{esta} más barat{c['o']} que en el {pct_barato}% de las semanas desde {anio}"
     t = temporada_producto(p)
-    if t:
-        frase = frase_temporada(t, c["o"])
-        if antiguo:
-            # los 10 años se cuentan desde esa semana, no desde hoy
-            frase = f"En esa semana {c['estaba']} {frase[0].lower()}{frase[1:]}"
-        historia = f"Frente a toda su historia, {en_historia}, {ajustado(c['o'])}."
-    else:
-        frase, historia = f"{cuando} {en_historia}, {ajustado(c['o'])}.", ""
-
     title = f"Precio {c['de']} {label_frase} en Santiago: histórico desde {anio} | Carestía"
     if antiguo:
-        ultimo = f"Último precio publicado por ODEPA (semana del {fecha_txt})"
-        frase = f"{ultimo}. {frase}"
-        miga, ouni = "Último precio publicado en Santiago", f"por {uni_txt}, {ajustado()}"
-        desc = (f"{ultimo}: {precio} por {uni_txt} {c['de']} {label_frase} en la "
-                f"Región Metropolitana (promedio de ferias, supermercados y carnicerías, "
-                f"{ajustado()}). Serie semanal desde {anio} con datos ODEPA.")
+        # sin precio esta semana no hay número grande: el número grande es
+        # siempre el precio de esta semana. La frase de temporada, solo si el
+        # último dato es reciente; el percentil de toda la historia, siempre
+        u = ultimo_dato(p, semana)
+        texto, frase = u["texto"], " ".join(x for x in (u["texto"], u["temporada"]) if x)
+        historia = f"Frente a toda su historia, {en_historia}, {ajustado(c['o'])}."
+        miga, orow = "Último precio publicado en Santiago", ""
+        desc = (f"{texto} Precio por {uni_txt} {c['de']} {label_frase} en la Región "
+                f"Metropolitana: serie semanal desde {anio} con datos ODEPA (promedio de "
+                f"ferias, supermercados y carnicerías).")
     else:
-        miga, ouni = "Precio de esta semana en Santiago", f"por {uni_txt}"
+        if t:
+            frase = frase_temporada(t, c["o"])
+            historia = f"Frente a toda su historia, {en_historia}, {ajustado(c['o'])}."
+        else:
+            frase, historia = f"{cuando} {en_historia}, {ajustado(c['o'])}.", ""
+        miga = "Precio de esta semana en Santiago"
+        orow = (f'    <div class="orow">\n'
+                f'      <div class="oprice">{precio}</div>\n'
+                f'      <div class="ouni">{html.escape(f"por {uni_txt}")}</div>\n'
+                f'      <div class="odelta">{fmt_delta(vals)} <small>sem.</small></div>\n'
+                f'    </div>\n')
         desc = (f"Hoy {c['art']} {label_frase} {c['cuesta']} {precio} por {uni_txt} en la "
                 f"Región Metropolitana (promedio de ferias, supermercados y carnicerías). "
                 f"Serie semanal desde {anio} con datos ODEPA, actualizada cada viernes.")
@@ -3824,10 +3880,9 @@ def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
         ("__OG__", og),
         ("__SLUG__", slug),
         ("__LABEL__", html.escape(mostrar)),
-        ("__PRECIO__", precio),
         ("__MIGA__", html.escape(miga)),
-        ("__OUNI__", html.escape(ouni)),
-        ("__DELTA__", fmt_delta(vals)),
+        # el número grande, su unidad y el cambio semanal (HTML ya armado)
+        ("__OROW__", orow),
         ("__FRASE__", html.escape(frase)),
         # el percentil de toda la historia, como dato secundario
         ("__HISTORIA__", f'<p class="pct2">{html.escape(historia)}</p>' if historia else ""),
@@ -3918,21 +3973,31 @@ def generar_productos(slugs: dict) -> None:
 
 def tarjeta_producto(p: dict, slug: str, semana: datetime.date = None) -> str:
     """og/productos/{slug}.png y las etiquetas de su og:image. El precio de
-    esta semana va sin etiqueta de ajuste; uno de una semana anterior
-    ('semana' es la vigente del catálogo) dice en pesos de qué mes va. La
-    frase, la del veredicto por temporada o, sin ella, la de toda la historia."""
+    esta semana va sin etiqueta de ajuste y la frase es la de la ficha: la
+    del veredicto por temporada o, con menos de 5 años de ese mes, la de toda
+    la historia. Sin precio esta semana ('semana' es la vigente del
+    catálogo), el precio es el último dato a precio de la época, como en la
+    ficha, y la frase de temporada va solo si ese dato es reciente; si no,
+    "Sin precio de ODEPA esta semana."."""
     vals = [v for v in p["v"] if v is not None]
     mostrar = nombre(p["label"])
     uni_txt = UNI_TXT.get(p["unidad"], p["unidad"])
     o = concordancia(p["label"])["o"]
     t = temporada_producto(p)
     antiguo = semana is not None and fin_serie(p) != semana
+    precio, unidad = fmt_clp(vals[-1]), f"por {uni_txt}"
+    frase = frase_temporada(t, o) if t else frase_historia(vals, vals[-1], p["t0"][:4], o)
+    if antiguo:
+        u = ultimo_dato(p, semana)
+        precio, frase = u["precio"], u["temporada"] or SIN_PRECIO
+        if u["ajuste"]:
+            unidad = f"por {uni_txt}, {u['ajuste']}"
     datos = {
         "antetitulo": "Último precio en Santiago" if antiguo else "Precio en Santiago",
         "nombre": mostrar,
-        "precio": fmt_clp(vals[-1]),
-        "unidad": f"por {uni_txt}, en {pesos(corto=True)}" if antiguo else f"por {uni_txt}",
-        "frase": frase_temporada(t, o) if t else frase_historia(vals, vals[-1], p["t0"][:4], o),
+        "precio": precio,
+        "unidad": unidad,
+        "frase": frase,
         "fecha": semana_larga(fin_serie(p)),
         "fuente_txt": FUENTE_CITA,
         "sitio": "carestia.cl",
@@ -5742,10 +5807,11 @@ COLOR_VEREDICTO = {"BARATO": "verde", "NORMAL": "ambar", "CARO": "rojo"}
 
 
 def frase_indice(d: dict) -> str:
-    """La frase del veredicto de un índice: por temporada (lo de esta
-    semana) o, sin ella, contra toda la historia."""
+    """La frase del veredicto de un índice: por temporada, con la plantilla
+    de su veredicto (la frase sigue al color) y los números de esta semana,
+    o, sin temporada, contra toda la historia."""
     if d.get("temporada"):
-        return frase_temporada(d["temporada"])
+        return frase_temporada(d["temporada"], zona=d["veredicto"])
     real = d.get("real") or []
     if not real:
         return ""
