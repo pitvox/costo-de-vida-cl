@@ -2518,16 +2518,16 @@ PIE_LINKS = [
     ("privacidad", "Privacidad", f"{SITIO}/privacidad.html"),
     ("datos", "Datos abiertos (resumen.json)", f"{SITIO}/resumen.json"),
 ]
-# atribución ODEPA CC-BY y deslinde: el mismo texto que ya tenía el pie de la
-# portada, ahora en el pie de todas las páginas
+# atribución ODEPA CC-BY: el mismo texto que ya tenía el pie de la portada,
+# ahora en el pie de todas las páginas. El deslinde (no es asesoría de
+# inversión) va una sola vez en el sitio: en la sección Deslinde de
+# metodología, el texto del dueño
 PIE_ATTR = ('Fuente: precios al consumidor de ODEPA (<a href="https://datos.odepa.gob.cl">'
             'datos.odepa.gob.cl</a>, licencia CC-BY), deflactados con el IPC. Cada precio es el '
             'promedio de los puntos que ODEPA encuesta cada semana en la Región '
             'Metropolitana: ferias libres, supermercados y carnicerías. Por eso suele '
             'ser menor que el precio de supermercado. Canastas fijas; precios '
             'normalizados a kilo, unidad o litro según el envase que cotiza ODEPA.')
-PIE_DISC = ('Información de consumo con fines analíticos. No constituye asesoría '
-            'ni recomendación de inversión.')
 
 # ---------------- Identidad común: fuentes, tokens y base ----------------
 # Una sola llamada a Google Fonts, igual en todas las páginas, con los pesos
@@ -2773,7 +2773,7 @@ def nav_sitio(actual: str = "", exacto: bool = True) -> str:
 
 def pie_sitio(actual: str = "", graficos: bool = False) -> str:
     """Pie común: links institucionales y legales, atribución ODEPA CC-BY,
-    deslinde, razón social y el aviso de atribución de Lightweight Charts
+    razón social y el aviso de atribución de Lightweight Charts
     tal cual su NOTICE, con link directo a tradingview.com (sin rel). En las
     páginas con gráficos ('graficos'), además la atribución de Advanced
     Charts: "Gráficos de TradingView", también con link sin rel."""
@@ -2787,7 +2787,6 @@ def pie_sitio(actual: str = "", graficos: bool = False) -> str:
             f'      {links}\n'
             f'    </ul></nav>\n'
             f'    <p class="pie-attr">{PIE_ATTR}</p>\n'
-            f'    <p class="pie-disc">{PIE_DISC}</p>\n'
             # el RUT no se corta en el guion
             f'    <p class="pie-legal">© 2026 Carestía SpA, '
             f'<span class="nw">RUT 78.521.796-9</span>. '
@@ -2898,10 +2897,6 @@ __CSS_BASE__
     text-decoration:none; border:1px solid var(--line); color:var(--bone);
     background:var(--panel); }
   .otros-links a:hover { border-color:var(--bone); background:var(--hover); }
-  .metodo { font:400 12px/1.6 var(--sans); color:var(--ash);
-    margin-top:18px; text-wrap:pretty; }
-  .disc { font:400 12px/1.6 var(--sans); color:var(--dim);
-    margin-top:6px; }
   .links { display:flex; gap:12px; flex-wrap:wrap; margin-top:24px; }
   .links a { font:600 13px var(--sans);
     padding:9px 16px; min-height:34px; display:inline-flex; align-items:center;
@@ -2945,12 +2940,6 @@ __CSS_SITIO__
     <p class="ref-velas" id="ref-velas" hidden>Velas semanales. La mecha va del precio más bajo al más alto que ODEPA encontró entre los locales encuestados.</p>
     <div class="fecha">Semana del __FECHA__. Serie desde __ANIO__. Se actualiza los viernes.</div>
     __OTROS__
-    <p class="metodo">Cada punto es el promedio de los puntos que ODEPA encuesta
-      cada semana en la Región Metropolitana: ferias libres, supermercados y
-      carnicerías, deflactado por IPC a pesos de hoy. Fuente: precios al
-      consumidor ODEPA (datos.odepa.gob.cl, CC-BY). Actualizado cada viernes.</p>
-    <p class="disc">Información de consumo con fines analíticos. No constituye
-      asesoría ni recomendación de inversión.</p>
     <nav class="links">
       <a href="https://carestia.cl/">← todos los índices</a>
       <a href="https://carestia.cl/graficos.html#canasta=__CANASTA__">ármalo en una canasta →</a>
