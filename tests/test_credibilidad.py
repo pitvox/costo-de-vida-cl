@@ -53,7 +53,12 @@ def sintetico() -> dict:
             "nombre": meta["nombre"], "subtitulo": meta["subtitulo"],
             "fecha": "21-09-2026", "costo_nominal": 10815, "costo_real": 10815,
             "percentil": 82, "zscore": 0.1, "vs_promedio": [14, 0, -5, 6][k],
-            "veredicto": ver, "color": colores[ver], "n": len(real),
+            "veredicto": ver, "color": colores[ver],
+            # la forma de indices.json desde el veredicto por temporada: con
+            # 100 semanas no hay temporada y vale el veredicto de la historia
+            "base_veredicto": "toda la historia", "percentil_temporada": None,
+            "anios_temporada": None, "temporada": None,
+            "n": len(real),
             "componentes": [{"label": lab, "qty": qty, "unidad": uni,
                              "odepa_unit": "$/kg", "factor": 1.0, "mismatch": False,
                              "precio_ult": 1000, "aporte": 1000}

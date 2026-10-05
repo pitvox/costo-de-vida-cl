@@ -35,7 +35,8 @@ def _serie(ultima: float, penultima: float, base: float = 1000) -> list:
 
 
 def sintetico() -> dict:
-    out = {"generado": "2026-09-26", "indices": {}, "productos": {}, "descartes": []}
+    out = {"generado": "2026-09-26", "ipc_mes": "2026-08", "indices": {}, "productos": {},
+           "descartes": []}
     colores = {"BARATO": "#5bbf7a", "NORMAL": "#e0a83c", "CARO": "#e0552f"}
     for k, (code, meta) in enumerate(BASKETS.items()):
         fechas = [(FIN - datetime.timedelta(weeks=59 - i)).isoformat() for i in range(60)]
@@ -46,7 +47,12 @@ def sintetico() -> dict:
             "fecha": "21-09-2026", "costo_nominal": real[-1]["value"],
             "costo_real": real[-1]["value"], "percentil": [88, 50, 12, 63][k],
             "zscore": 0.1, "vs_promedio": [14, 0, -5, 6][k], "veredicto": ver,
-            "color": colores[ver], "n": len(real),
+            "color": colores[ver],
+            # la forma de indices.json desde el veredicto por temporada: con
+            # 60 semanas no hay temporada y vale el veredicto de la historia
+            "base_veredicto": "toda la historia", "percentil_temporada": None,
+            "anios_temporada": None, "temporada": None,
+            "n": len(real),
             "componentes": [{"label": lab, "qty": qty, "unidad": uni,
                              "odepa_unit": "$/kg", "factor": 1.0, "mismatch": False,
                              "precio_ult": 1000, "aporte": 1000}

@@ -166,7 +166,11 @@ __CSS_CABECERA__
   @media (max-width:759px) { .overlay .oname, .overlay .cstats, .overlay .caviso,
     .overlay .can-reg, .overlay .opct, .overlay .ovs { max-width:calc(100vw - 160px); }
     body.tv-ind .overlay.m-ind .oname, body.tv-ind .overlay.m-ind .opct,
-    body.tv-ind .overlay.m-ind .ovs, body.tv-can .overlay.m-can > * { max-width:none; } }
+    body.tv-ind .overlay.m-ind .ovs, body.tv-can .overlay.m-can > * { max-width:none; }
+    /* con el respaldo de Lightweight el texto queda sobre el lienzo: un
+       fondo tenue para que la línea no lo cruce */
+    body:not(.tv-ind) .overlay.m-ind .opct, body:not(.tv-ind) .overlay.m-ind .ovs {
+      background:color-mix(in srgb, var(--bg) 82%, transparent); } }
   #chart, #pchart, #cchart { position:absolute; inset:0; }
   /* ---- Advanced Charts (índices, Comparar y Arma tu canasta) ---- */
   /* la librería trae su barra arriba y su leyenda: el texto del modo sale
@@ -488,7 +492,7 @@ __CSS_SITIO__
       </div>
       <div class="overlay m-prod">
         <div class="oname">COMPARAR PRODUCTOS <span id="prod-rango"></span></div>
-        <div class="onote" id="onote">Cambio del precio real, en porcentaje</div>
+        <div class="onote" id="onote">Cambio del precio ajustado por inflación, en porcentaje</div>
       </div>
       <div class="overlay m-can">
         <div class="oname">ARMA TU CANASTA <span>Y COMPÁRTELA</span></div>
@@ -2100,14 +2104,16 @@ __CSS_CABECERA__
   .ic-fr { flex:1 1 auto; font:400 13px/1.45 var(--sans); color:var(--bone);
     text-wrap:pretty; }
   /* las tres zonas del veredicto (más caro que en 3 o menos de cada 10 años,
-     entre medio y en 7 o más: 0 a 30, 30 a 70 y 70 a 100) y la marca en la
-     cuenta de esta semana. Sin temporada, las del percentil de toda la
-     historia (0 a 33, 33 a 66 y 66 a 100) */
+     entre medio y en 7 o más) y la marca en la cuenta de esta semana. Los
+     bordes van en 32 y 68: con 5 a 10 años, un BARATO llega hasta 30, un
+     NORMAL va de 33 a 67 y un CARO parte en 70, así que ninguna marca cae
+     en el borde. Sin temporada, las del percentil de toda la historia (0 a
+     33, 33 a 66 y 66 a 100) */
   .zonas { position:relative; height:8px; display:flex; gap:2px; }
-  .zonas .z { flex:30 1 0; }
+  .zonas .z { flex:32 1 0; }
   .zonas .z1 { background:color-mix(in srgb, var(--verde) 28%, transparent);
     border-radius:4px 0 0 4px; }
-  .zonas .z2 { flex-grow:40;
+  .zonas .z2 { flex-grow:36;
     background:color-mix(in srgb, var(--ambar) 28%, transparent); }
   .zonas .z3 { border-radius:0 4px 4px 0;
     background:color-mix(in srgb, var(--rojo) 28%, transparent); }
@@ -2368,7 +2374,7 @@ __FILAS__
       <div class="sec-head ind-head">
         <div class="sec-tit">
           <h2 id="h-indices">Índices Carestía</h2>
-          <p>Canastas fijas, __AJUSTADAS__. El color compara el precio de esta semana con el mismo mes de los últimos 10 años.</p>
+          <p>Canastas fijas, __AJUSTADAS__. El color compara el precio con el mismo mes de los últimos 10 años y cambia solo si la nueva zona se mantiene dos semanas seguidas.</p>
         </div>
         <a class="sec-link" href="/metodologia.html">Cómo se calculan</a>
       </div>
@@ -3788,9 +3794,12 @@ def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
     t = temporada_producto(p)
     if t:
         frase = frase_temporada(t, c["o"])
-        historia = f"Frente a toda su historia, {en_historia}, {ajustado()}."
+        if antiguo:
+            # los 10 años se cuentan desde esa semana, no desde hoy
+            frase = f"En esa semana {c['estaba']} {frase[0].lower()}{frase[1:]}"
+        historia = f"Frente a toda su historia, {en_historia}, {ajustado(c['o'])}."
     else:
-        frase, historia = f"{cuando} {en_historia}, {ajustado()}.", ""
+        frase, historia = f"{cuando} {en_historia}, {ajustado(c['o'])}.", ""
 
     title = f"Precio {c['de']} {label_frase} en Santiago: histórico desde {anio} | Carestía"
     if antiguo:
@@ -5738,6 +5747,8 @@ def frase_indice(d: dict) -> str:
     if d.get("temporada"):
         return frase_temporada(d["temporada"])
     real = d.get("real") or []
+    if not real:
+        return ""
     vals = [p["value"] for p in real]
     return frase_historia(vals, vals[-1], real[0]["time"][:4], "o")
 
@@ -5784,7 +5795,7 @@ def tarjeta_portada(ultima) -> str:
                for d in DATA["indices"].values() if d.get("real")]
     datos = {"indices": indices,
              "fecha": semana_larga(ultima) if ultima else "",
-             "pie_txt": f"Índices del costo de vida en Santiago, en {pesos(corto=True)}",
+             "pie_txt": "Índices del costo de vida en Santiago",
              "sitio": "carestia.cl"}
     ruta = f"{OG_DIR}/portada.png"
     dibujar(tarjetas.portada, ruta, datos)
@@ -5857,7 +5868,7 @@ def generar_prensa(paginas_indices: list) -> None:
     <p>Carestía mide cuánto cuestan cada semana cuatro canastas fijas y {CIFRAS.get("productos", "")} productos en la Región Metropolitana, {ajustado("os")}, con los precios al consumidor que publica ODEPA.</p>
     <h2>Cómo citar</h2>
     <p><strong>{html.escape(FUENTE_CITA)}</strong></p>
-    <p>Las cifras van {ajustado("as")}: cada precio pasado se lleva a ese mes con el IPC. El precio de cada semana es el que se pagó esa semana. Si citas un precio, indica la semana a la que corresponde.</p>
+    <p>Las cifras van {ajustado("as")}: cada precio pasado se lleva a ese mes con el IPC. El precio de esta semana es el que se pagó esta semana. Si citas un precio, indica la semana a la que corresponde.</p>
     <h2>Calendario</h2>
     <p>El sitio se actualiza los viernes después de las 14:00, cuando ODEPA ya publicó los precios de la semana. Si una semana ODEPA no publica, la portada lo dice junto a la fecha.</p>
     <h2>Tarjetas y gráficos</h2>

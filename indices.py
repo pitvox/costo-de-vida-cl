@@ -894,50 +894,58 @@ def zona_historia(percentil: int) -> str:
     return "BARATO" if percentil < P_BARATO else ("NORMAL" if percentil < P_CARO else "CARO")
 
 
-def veredicto_temporada(fechas, valores):
+def veredicto_temporada(fechas, valores, historia_ultima: str = None):
     """El veredicto de un índice con la regla de las dos semanas: el color
     cambia solo si la nueva zona se mantiene dos semanas seguidas. Se recorre
     la serie: la zona de una semana pasa a ser el veredicto si la semana
     anterior (siete días antes) tuvo esa misma zona; si no, sigue el que venía.
-    Una semana sin comparación por temporada (menos de 5 años de su mes, como
-    la fruta de febrero a abril) lleva el veredicto del percentil de toda la
-    historia hasta esa semana, el que se publica entonces, y cuenta como su
-    zona: así, al volver la temporada, el color no salta a uno de meses atrás.
-    Devuelve la comparación de la última semana con valor
-    (comparar_temporada) más su 'veredicto', o None si esa semana no tiene
-    comparación (entonces vale el percentil de toda la historia)."""
+    La zona de una semana es la de su temporada o, sin temporada (menos de 5
+    años de su mes, como la fruta de febrero a abril), la del percentil de
+    toda la historia hasta esa semana: la regla vale igual en las dos, así el
+    color tampoco cambia en una sola semana cuando la temporada entra o sale.
+    'historia_ultima' es la zona de toda la historia de la última semana, si
+    ya se calculó (resumen la saca de la serie sin redondear). Devuelve
+    {"veredicto", "temporada"}, con la comparación de la última semana con
+    valor (comparar_temporada; None si no tiene temporada), o None si la
+    serie no tiene ningún valor."""
     promedios = promedios_mes(fechas, valores)
+    con_valor = [i for i, v in enumerate(valores) if _con_valor(v)]
     veredicto, anterior, ultima = None, None, None
     vistos = []                     # los valores hasta esta semana, ordenados
-    for i, (f, v) in enumerate(zip(fechas, valores)):
-        if not _con_valor(v):
-            continue
+    for i in con_valor:
+        f, v = _dia(fechas[i]), valores[i]
         bisect.insort(vistos, v)
-        f = _dia(f)
         ultima = comparar_temporada(fechas, valores, i, promedios)
-        if ultima is None:
-            zona = veredicto = zona_historia(round(100.0 * bisect.bisect_right(vistos, v) / len(vistos)))
-        else:
+        if ultima is not None:
             zona = ultima["zona"]
-            if veredicto is None or anterior == (f - datetime.timedelta(weeks=1), zona):
-                veredicto = zona
+        elif i == con_valor[-1] and historia_ultima:
+            zona = historia_ultima
+        else:
+            zona = zona_historia(round(100.0 * bisect.bisect_right(vistos, v) / len(vistos)))
+        if veredicto is None or anterior == (f - datetime.timedelta(weeks=1), zona):
+            veredicto = zona
         anterior = (f, zona)
-    return None if ultima is None else {**ultima, "veredicto": veredicto}
+    return None if veredicto is None else {"veredicto": veredicto, "temporada": ultima}
 
 
 def resumen_temporada(real: list, veredicto_historia: str) -> dict:
     """Los campos del veredicto de un índice, desde su serie publicada
-    ([{time, value}], la de indices.json): con comparación por temporada, el
-    veredicto de la regla de las dos semanas y 'temporada' (la comparación de
-    esta semana, con su zona antes de esa regla); sin ella (menos de 5 años
-    del mes de esta semana), el del percentil de toda la historia."""
-    t = veredicto_temporada([p["time"] for p in real], [p["value"] for p in real])
-    if t is None:
-        return {"veredicto": veredicto_historia, "base_veredicto": BASE_HISTORIA,
-                "percentil_temporada": None, "anios_temporada": None, "temporada": None}
+    ([{time, value}], la de indices.json): el veredicto de la regla de las dos
+    semanas y, si esta semana tiene temporada, 'temporada' (su comparación,
+    con su zona antes de esa regla) y la base "mismo mes, ultimos 10 anios";
+    sin temporada (menos de 5 años del mes de esta semana), la base es toda
+    la historia y 'veredicto_historia' (el del percentil de esta semana) es su
+    zona."""
+    t = veredicto_temporada([p["time"] for p in real], [p["value"] for p in real],
+                            veredicto_historia)
+    c = t["temporada"] if t else None
+    if c is None:
+        return {"veredicto": t["veredicto"] if t else veredicto_historia,
+                "base_veredicto": BASE_HISTORIA, "percentil_temporada": None,
+                "anios_temporada": None, "temporada": None}
     return {"veredicto": t["veredicto"], "base_veredicto": BASE_TEMPORADA,
-            "percentil_temporada": t["percentil"], "anios_temporada": t["anios"],
-            "temporada": {k: v for k, v in t.items() if k != "veredicto"}}
+            "percentil_temporada": c["percentil"], "anios_temporada": c["anios"],
+            "temporada": c}
 
 
 def clp(x: float) -> str:

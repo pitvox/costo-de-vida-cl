@@ -181,7 +181,8 @@ def test_portada_textos(sitio):
         "Se actualiza los viernes.",
         ">Índices Carestía</h2>",
         "Canastas fijas, ajustadas por inflación, en pesos de agosto de 2026. El color compara "
-        "el precio de esta semana con el mismo mes de los últimos 10 años.",
+        "el precio con el mismo mes de los últimos 10 años y cambia solo si la nueva zona se "
+        "mantiene dos semanas seguidas.",
         "en su historia</span>",
         "+14% sobre su promedio",       # vs_promedio positivo
         "-5% bajo su promedio",         # y negativo: "bajo", nunca "vs"
@@ -238,7 +239,9 @@ def test_graficos_textos(sitio):
         "Desliza hacia los lados para moverte. Usa dos dedos para acercar.",
         "Velas semanales. La mecha va del precio más bajo al más alto que ODEPA "
         "encontró entre los locales encuestados.",
-        "Cambio del precio ajustado por inflación, en porcentaje",
+        # la nota de Comparar al cargar, igual que la del JS
+        '<div class="onote" id="onote">Cambio del precio ajustado por inflación, en '
+        'porcentaje</div>',
         "ARMA TU CANASTA <span>Y COMPÁRTELA</span>",
         "Esta canasta la armaste tú con datos de ODEPA. No es un índice de Carestía.",
         "COMPONENTES DE LA CANASTA <span>(aporte de cada uno al total)</span>",
@@ -255,8 +258,9 @@ def test_graficos_textos(sitio):
     assert "Carne de Cerdo - Ave - Cordero" in h        # la clave en los datos
     # el deslinde va solo en metodología
     assert "No constituye asesoría" not in h
-    # ni "pesos de hoy" ni la UF
+    # ni "pesos de hoy" ni la UF, ni el nombre viejo de la unidad
     assert "pesos de hoy" not in h and "Cada precio dividido por el valor de la UF" not in h
+    assert "Cambio del precio real" not in h
     assert ">UF</button>" not in h
 
 

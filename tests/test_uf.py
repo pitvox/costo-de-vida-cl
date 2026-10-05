@@ -147,7 +147,7 @@ def es_falla_suave(capsys, retorno):
     out = capsys.readouterr().out
     avisos = [x for x in out.splitlines() if x.startswith("::warning::")]
     assert len(avisos) == 1, out
-    assert "sin la opción UF" in avisos[0]
+    assert "se publica sin datos/uf.json" in avisos[0]
     return avisos[0]
 
 
@@ -436,7 +436,7 @@ def test_ambas_fallan(monkeypatch, capsys, entorno, tmp_path):
                                                 for a in (2007, 2008, 2009)]
     assert len(red.a("mindicador")) == 3 * 3
     assert entorno == [2, 4] * 4                        # esperas de 2 y 4 s
-    assert "sin la opción UF" in resumen.read_text(encoding="utf-8")
+    assert "se publica sin datos/uf.json" in resumen.read_text(encoding="utf-8")
 
 
 def test_error_inesperado_es_falla_suave(monkeypatch, capsys):

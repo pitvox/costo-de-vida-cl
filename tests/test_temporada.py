@@ -101,7 +101,8 @@ def test_con_menos_de_5_anios_del_mes_no_hay_temporada():
     fechas = lunes(D(2022, 1, 3), FIN)             # septiembres: 2022 a 2025
     v = por_anio(fechas, 2000)
     assert comparar_temporada(fechas, v) is None
-    assert veredicto_temporada(fechas, v) is None
+    assert veredicto_temporada(fechas, v)["temporada"] is None
+    assert veredicto_temporada(fechas, [None] * len(fechas)) is None
     fechas = lunes(D(2021, 9, 6), FIN)             # con 2021: 5 años
     t = comparar_temporada(fechas, por_anio(fechas, 2000))
     assert t["anios"] == 5 and t["zona"] == "CARO"
@@ -149,7 +150,7 @@ def test_el_color_cambia_solo_con_dos_semanas_seguidas():
         t = veredicto_temporada(fechas, v)
         assert t["veredicto"] == esperado[k - 1], k
         # la zona de esta semana, antes de la regla
-        assert t["zona"] == crudo[k - 1], k
+        assert t["temporada"]["zona"] == crudo[k - 1], k
 
 
 def test_un_hueco_no_cuenta_como_semana_seguida():
@@ -169,10 +170,10 @@ def test_un_hueco_no_cuenta_como_semana_seguida():
 
 
 def test_semanas_sin_temporada_llevan_el_veredicto_de_toda_la_historia():
-    """La fruta real no tiene 5 años de febrero a abril: esas semanas llevan
-    el veredicto del percentil de toda la historia (el que se publica). Al
-    volver la temporada, el color sigue la regla de las dos semanas desde ese
-    veredicto, no desde uno de meses atrás."""
+    """La fruta real no tiene 5 años de febrero a abril: en esas semanas la
+    zona es la del percentil de toda la historia. Al volver la temporada, el
+    color sigue la regla de las dos semanas desde ese veredicto, no desde uno
+    de meses atrás."""
     fechas, v = [], []
     f = D(2016, 1, 4)
     while f <= D(2026, 6, 15):
@@ -183,16 +184,37 @@ def test_semanas_sin_temporada_llevan_el_veredicto_de_toda_la_historia():
         f += SEMANA
     # mayo de 2026: sin temporada (ningún mayo antes); el precio más alto de la historia
     hasta_mayo = [i for i, x in enumerate(fechas) if x <= D(2026, 5, 25)]
-    assert veredicto_temporada(fechas[:len(hasta_mayo)], v[:len(hasta_mayo)]) is None
+    t = veredicto_temporada(fechas[:len(hasta_mayo)], v[:len(hasta_mayo)])
+    assert t == {"veredicto": "CARO", "temporada": None}
     # 1 de junio: NORMAL frente a los junios, pero la semana anterior iba CARO
     k = len(hasta_mayo) + 1
     t = veredicto_temporada(fechas[:k], v[:k])
-    assert (t["zona"], t["veredicto"]) == ("NORMAL", "CARO")
+    assert (t["temporada"]["zona"], t["veredicto"]) == ("NORMAL", "CARO")
     # 8 de junio: dos semanas seguidas en NORMAL
     t = veredicto_temporada(fechas[:k + 1], v[:k + 1])
-    assert (t["zona"], t["veredicto"]) == ("NORMAL", "NORMAL")
+    assert (t["temporada"]["zona"], t["veredicto"]) == ("NORMAL", "NORMAL")
     assert indices.zona_historia(32) == "BARATO" and indices.zona_historia(65) == "NORMAL"
     assert indices.zona_historia(66) == "CARO"
+
+
+def test_al_salir_de_la_temporada_el_color_tambien_espera_dos_semanas():
+    """Al revés: de septiembre (con temporada, NORMAL) a octubre sin
+    temporada (ningún octubre antes), con el precio más alto de la historia.
+    La primera semana de octubre sigue NORMAL; la segunda pasa a CARO. En
+    resumen_temporada la base es toda la historia y su zona, la que se pasa."""
+    fechas = [f for f in lunes(D(2016, 1, 4), D(2026, 10, 12)) if f.year == 2026 or f.month < 10]
+    v = [5000 if f.month == 10 else 1000 + 100 * (f.year - 2016) if f.year < 2026 else NORMAL
+         for f in fechas]
+    real = [{"time": f.isoformat(), "value": x} for f, x in zip(fechas, v)]
+    t = veredicto_temporada(fechas[:-1], v[:-1])
+    assert t == {"veredicto": "NORMAL", "temporada": None}
+    assert veredicto_temporada(fechas, v) == {"veredicto": "CARO", "temporada": None}
+    assert resumen_temporada(real[:-1], "CARO") == {
+        "veredicto": "NORMAL", "base_veredicto": "toda la historia",
+        "percentil_temporada": None, "anios_temporada": None, "temporada": None}
+    assert resumen_temporada(real, "CARO")["veredicto"] == "CARO"
+    # la zona de la última semana es la que se pasa (la de resumen, sin redondear)
+    assert resumen_temporada(real, "NORMAL")["veredicto"] == "NORMAL"
 
 
 def test_resumen_temporada():
@@ -203,8 +225,10 @@ def test_resumen_temporada():
                  "percentil_temporada": 100, "anios_temporada": 10,
                  "temporada": {"mes": 1, "anios": 10, "debajo": 10, "encima": 0,
                                "percentil": 100, "zona": "CARO"}}
-    # sin temporada: el veredicto de toda la historia
-    assert resumen_temporada(real[-200:], "BARATO") == {
+    # sin temporada: la base es toda la historia (cuatro años: 2022 a 2025 y
+    # las tres semanas de 2026). Las dos de 1.450 son las más baratas: BARATO
+    # dos semanas seguidas; la última (1.950, la más cara) recién entra a CARO
+    assert resumen_temporada(real[-200:], "CARO") == {
         "veredicto": "BARATO", "base_veredicto": "toda la historia",
         "percentil_temporada": None, "anios_temporada": None, "temporada": None}
     assert resumen_temporada([], "CARO")["veredicto"] == "CARO"
@@ -388,7 +412,7 @@ def test_tarjetas_de_la_portada(sitio):
     for code in BASKETS:
         assert "<span>percentil 90 en su historia</span>" in tarjetas[code], code
     # las zonas: 30, 40 y 30 por temporada; 33, 33 y 34 en la historia
-    assert ".zonas .z { flex:30 1 0; }" in h and ".zonas .z2 { flex-grow:40;" in h
+    assert ".zonas .z { flex:32 1 0; }" in h and ".zonas .z2 { flex-grow:36;" in h
     assert ".zonas.historia .z { flex-grow:33; }" in h
 
 
@@ -415,8 +439,9 @@ def test_fichas_frase_principal_y_percentil_secundario(sitio):
     d, _ = sitio
     palta = _leer(d, "productos/palta.html")
     assert '<p class="pct">Más cara que en 10 de los últimos 10 septiembres, aun descontando la inflación.</p>' in palta
+    # "ajustada": concuerda con el producto (la palta)
     assert re.search(r'<p class="pct2">Frente a toda su historia, está más cara que en el \d+% de '
-                     r'las semanas desde 2014, ajustado por inflación, en pesos de agosto de 2026\.</p>',
+                     r'las semanas desde 2014, ajustada por inflación, en pesos de agosto de 2026\.</p>',
                      palta)
     # sin píldora: el semáforo es de los índices
     assert "ic-pill" not in palta and "badge" not in palta.split("</style>")[1]
@@ -433,8 +458,10 @@ def test_fichas_frase_principal_y_percentil_secundario(sitio):
     assert 'class="pct2"' not in kiwi
     # un último precio de otra semana: dice de cuándo y que va ajustado
     ch = _leer(d, "productos/chirimoya.html")
-    assert ('<p class="pct">Último precio publicado por ODEPA (semana del 27-04-2026). Más cara '
-            'que en 10 de los últimos 10 abriles, aun descontando la inflación.</p>') in ch
+    # los 10 años se cuentan desde esa semana: la frase lo dice
+    assert ('<p class="pct">Último precio publicado por ODEPA (semana del 27-04-2026). En esa '
+            'semana estaba más cara que en 10 de los últimos 10 abriles, aun descontando la '
+            'inflación.</p>') in ch
     assert '<div class="miga">Último precio publicado en Santiago</div>' in ch
     assert '<div class="ouni">por kilo, ajustado por inflación, en pesos de agosto de 2026</div>' in ch
     assert re.search(r'<p class="pct2">Frente a toda su historia, estaba más cara que', ch)
