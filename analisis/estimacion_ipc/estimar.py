@@ -216,8 +216,16 @@ def estimar(odepa_semanal: pd.DataFrame, variante: str = "mes_anterior",
     return pd.DataFrame(filas)
 
 
+def redondear(x):
+    """A un decimal, con la mitad hacia arriba (lejos de cero), como publica
+    el INE. El 1e-9 evita que el ruido de coma flotante decida un empate:
+    el promedio de 12 variaciones de un decimal cae a veces justo en x,x5."""
+    x = np.asarray(x, dtype=float)
+    return np.sign(x) * np.floor(np.abs(x) * 10 + 0.5 + 1e-9) / 10
+
+
 def signo(x: pd.Series) -> pd.Series:
-    return np.sign(x.round(1))
+    return np.sign(redondear(x))
 
 
 def errores(r: pd.DataFrame) -> pd.DataFrame:
@@ -225,28 +233,60 @@ def errores(r: pd.DataFrame) -> pd.DataFrame:
     la publica el INE), los errores absolutos y los aciertos de dirección
     (signo de la variación: sube, baja o 0,0)."""
     r = r.dropna(subset=["oficial", "ingenuo"]).copy()
-    r["est1"] = r["estimada"].round(1)
+    r["est1"] = redondear(r["estimada"])
     r["error_est"] = (r["est1"] - r["oficial"]).abs()
     r["error_ing"] = (r["ingenuo"] - r["oficial"]).abs()
     r["dir_est"] = signo(r["est1"]) == signo(r["oficial"])
     r["dir_ing"] = signo(r["ingenuo"]) == signo(r["oficial"])
     # otras dos referencias simples: el promedio de los últimos 12 meses y
     # "siempre sube"
-    r["error_p12"] = (r["promedio_12m"].round(1) - r["oficial"]).abs()
+    r["error_p12"] = (redondear(r["promedio_12m"]) - r["oficial"]).abs()
     r["dir_p12"] = signo(r["promedio_12m"]) == signo(r["oficial"])
     r["dir_sube"] = signo(r["oficial"]) > 0
     r["anio"] = r["mes"].dt.year.astype(str)
     return r
 
 
+def _beta_cf(a: float, b: float, x: float) -> float:
+    """Fracción continua de la beta incompleta (método de Lentz)."""
+    tiny, c, d = 1e-300, 1.0, 1.0 - (a + b) * x / (a + 1)
+    d = 1 / (d if abs(d) > tiny else tiny)
+    h = d
+    for m in range(1, 300):
+        for num in (m * (b - m) * x / ((a + 2 * m - 1) * (a + 2 * m)),
+                    -(a + m) * (a + b + m) * x / ((a + 2 * m) * (a + 2 * m + 1))):
+            d = 1 + num * d
+            d = 1 / (d if abs(d) > tiny else tiny)
+            c = 1 + num / c
+            c = c if abs(c) > tiny else tiny
+            h *= d * c
+        if abs(d * c - 1) < 1e-15:
+            break
+    return h
+
+
+def p_t_dos_colas(t: float, gl: int) -> float:
+    """Valor p de dos colas de la t de Student con gl grados de libertad
+    (beta incompleta regularizada I_x(gl/2, 1/2), x = gl / (gl + t^2))."""
+    x, a, b = gl / (gl + t * t), gl / 2, 0.5
+    if x <= 0:
+        return 0.0
+    bt = math.exp(math.lgamma(a + b) - math.lgamma(a) - math.lgamma(b)
+                  + a * math.log(x) + b * math.log(1 - x)) if x < 1 else 0.0
+    if x < (a + 1) / (a + b + 2):
+        return bt * _beta_cf(a, b, x) / a
+    return 1 - bt * _beta_cf(b, a, 1 - x) / b
+
+
 def diebold_mariano(a: pd.Series, b: pd.Series) -> float:
-    """Valor p (dos colas, aproximación normal) de la prueba de Diebold y
-    Mariano con la corrección de Harvey, Leybourne y Newbold para horizonte 1:
-    ¿los errores absolutos a y b son distintos en promedio?"""
+    """Valor p (dos colas) de la prueba de Diebold y Mariano para horizonte 1
+    con la corrección de Harvey, Leybourne y Newbold: ¿los errores absolutos
+    a y b son distintos en promedio? Con horizonte 1 el estadístico corregido
+    es la t de una muestra de las diferencias (varianza con n-1), y se compara
+    con una t de n-1 grados de libertad."""
     d = (a - b).to_numpy()
     n = len(d)
-    dm = d.mean() / np.sqrt(d.var(ddof=1) / n) * np.sqrt((n - 1) / n)
-    return float(math.erfc(abs(dm) / math.sqrt(2)))
+    return p_t_dos_colas(d.mean() / math.sqrt(d.var(ddof=1) / n), n - 1)
 
 
 def resumen(g: pd.DataFrame) -> pd.Series:
@@ -271,16 +311,17 @@ def metricas(r: pd.DataFrame) -> pd.DataFrame:
     return pd.concat([por_anio, total])
 
 
-def criterio(m: pd.DataFrame) -> str:
+def criterio(r: pd.DataFrame) -> str:
     """La pregunta del encargo: ¿le gana al ingenuo en EAM y acierta la
-    dirección en al menos 2 de cada 3 meses?"""
-    t = m.loc["total"]
-    gana = t["eam_estimacion"] < t["eam_ingenuo"]
-    dos_tercios = t["acierto_dir_estimacion"] >= 200 / 3
+    dirección en al menos 2 de cada 3 meses? (cuenta meses, no porcentajes)"""
+    e = errores(r)
+    gana = e["error_est"].mean() < e["error_ing"].mean()
+    aciertos, n = int(e["dir_est"].sum()), len(e)
+    dos_tercios = 3 * aciertos >= 2 * n
     return (f"le gana al ingenuo en EAM: {'sí' if gana else 'no'} "
-            f"({t['eam_estimacion']:.2f} contra {t['eam_ingenuo']:.2f}); "
+            f"({e['error_est'].mean():.2f} contra {e['error_ing'].mean():.2f}); "
             f"dirección en al menos 2 de cada 3 meses: {'sí' if dos_tercios else 'no'} "
-            f"({t['acierto_dir_estimacion']:.1f}%)")
+            f"({aciertos} de {n})")
 
 
 if __name__ == "__main__":
@@ -312,7 +353,7 @@ if __name__ == "__main__":
         m = metricas(r)
         m.round(3).to_csv(os.path.join(RESULTADOS, f"metricas_{variante}.csv"),
                           index_label="periodo")
-        print(f"\n== {variante} ==\n{m.round(2).to_string()}\n{criterio(m)}")
+        print(f"\n== {variante} ==\n{m.round(2).to_string()}\n{criterio(r)}")
     det = []
     estimar(semanal, "mes_anterior", detalle=det)
     det = pd.DataFrame(det)

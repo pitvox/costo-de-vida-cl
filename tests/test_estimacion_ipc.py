@@ -103,3 +103,21 @@ def test_informe_sin_rayas_ni_muletillas():
     texto = open(ruta, encoding="utf-8").read()
     for patron in ("—", "–", r"\bvs\b", "inédit", "al descuento", "sin precedentes"):
         assert not re.search(patron, texto, re.I), patron
+
+
+def test_redondeo_mitad_hacia_arriba_sin_ruido_de_coma_flotante():
+    assert list(estimar.redondear([1.3499999999999999, 0.25, -0.25, 0.04])) == [1.4, 0.3, -0.3, 0.0]
+
+
+def test_t_de_student_dos_colas():
+    assert estimar.p_t_dos_colas(2.0, 10) == pytest.approx(0.07339, abs=1e-5)
+    assert estimar.p_t_dos_colas(1.96, 10 ** 6) == pytest.approx(0.05, abs=1e-4)
+
+
+def test_criterio_acepta_exactamente_dos_de_cada_tres():
+    meses = pd.period_range("2025-01", periods=12, freq="M")
+    oficial = [0.5] * 12
+    estimada = [0.5] * 8 + [-0.5] * 4   # 8 de 12 aciertos
+    r = pd.DataFrame({"mes": meses, "estimada": estimada, "oficial": oficial,
+                      "ingenuo": [0.0] * 12, "promedio_12m": [0.5] * 12})
+    assert "2 de cada 3 meses: sí (8 de 12)" in estimar.criterio(r)

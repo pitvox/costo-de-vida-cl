@@ -34,7 +34,7 @@ python graficar.py       # grafico_estimado_oficial.png
 | `calendario_ipc.csv` | Fecha de publicación de cada IPC, sacada de la portada de cada boletín del INE |
 | `cba_2024.csv` | Composición de la canasta básica, metodología 2024 (anexo 6.2) |
 | `cba_publicada.csv` | Valor mensual publicado de la canasta básica, 2019 a 2026 (cuadro 1 de cada informe) |
-| `resultados/` | Estimaciones, métricas, sensibilidad y canasta mes a mes |
+| `resultados/` | Estimaciones (`estimacion_*.csv`), métricas por año (`metricas_*.csv`), variantes (`sensibilidad.csv`), error que aporta cada producto (`aporte_error_productos.csv`) y canasta mes a mes y por producto (`canasta_*.csv`) |
 
 ## Fuentes y licencias
 
