@@ -6,6 +6,12 @@ productos de ODEPA que lo representan. Se escribe por glosa del INE y el
 código y la ponderación salen de los cuadros del INE, así que no se tipean
 a mano. Lo que no aparece aquí queda sin cubrir.
 
+También escribe mapa_cba.csv: cada producto de la Canasta Básica de
+Alimentos (metodología 2024, cba_2024.csv) con los productos ODEPA que le dan
+precio. Ahí solo sirven los que ODEPA cotiza por kilo o por litro (la canasta
+viene en gramos y mililitros): lechuga, choclo, pepino, pimentón, zapallo
+italiano, brócoli, ajo y huevos van por unidad y quedan sin precio ODEPA.
+
 Uso: python armar_mapa.py   (necesita datos_crudos/, ver descargar.py)
 """
 import os
@@ -118,6 +124,53 @@ BASE_2018 = {
 }
 
 
+# producto de la canasta básica -> productos ODEPA (por kilo o por litro).
+# "Otros cortes de carne de vacuno" son los del CCIF 2018.CL 01.1.2.02.06;
+# los cortes "no identificados", todos los de vacuno.
+OTROS_CORTES = ["Abastero", "Asado Carnicero", "Asado de tira", "Choclillo",
+                "Estomaguillo (Tapabarriga)", "Ganso", "Huachalomo", "Malaya", "Osobuco",
+                "Palanca", "Plateada", "Pollo Ganso", "Punta de Ganso", "Punta paleta",
+                "Punta picana", "Sobrecostilla", "Tapapecho"]
+CBA = {
+    "Arroz": ARROZ,
+    "Harina de trigo blanca": HARINA,
+    "Pan corriente a granel": ["Marraqueta", "Hallulla corriente"],
+    "Pan especial a granel": ["Hallulla especial", "Hallulla integral", "Pan amasado"],
+    "Espaguetis": ["Spaghetti N°5"],
+    "Carne de vacuno corte posta": ["Posta Negra", "Posta Paleta", "Posta Rosada"],
+    "Otros cortes de carne de vacuno": OTROS_CORTES,
+    "Cortes de carne de vacuno no identificados": VACUNO,
+    "Carne de cerdo corte chuleta": ["Chuleta (centro)", "Chuleta (Parrillera)"],
+    "Pechuga de pollo": ["Pollo Pechuga", "Pollo Pechuga Deshuesada"],
+    "Trutro de pollo": ["Pollo Trutro Entero"],
+    "Leche líquida entera": ["Leche Fluida Entera"],
+    "Leche líquida descremada y semidescremada": ["Leche Fluida Descremada"],
+    "Leche en polvo": ["Leche en Polvo Entera", "Leche en Polvo Descremada"],
+    "Queso gouda": ["Queso Gauda"],
+    "Queso chanco o mantecoso": ["Queso Chanco", "Queso Mantecoso"],
+    "Quesos no identificados": ["Queso Chanco", "Queso Gauda", "Queso Mantecoso"],
+    "Yogur sin probióticos o lactobacilos (batido)": ["Yoghurt (vainilla ó frutilla)"],
+    "Aceites vegetales, de fruta o semillas": ["Aceite vegetal", "Aceite maravilla"],
+    "Mantequillas": ["Mantequilla con sal"],
+    "Margarinas y preparaciones similares": ["Margarina"],
+    "Plátanos frescos": ["Plátano"],
+    "Paltas frescas": ["Palta"],
+    "Naranjas frescas": ["Naranja"],
+    "Limones y limas, frescas": ["Limón"],
+    "Manzanas frescas": ["Manzana"],
+    "Duraznos y nectarinas, frescos": ["Durazno", "Nectarín"],
+    "Uvas frescas": ["Uva"],
+    "Zapallos frescos o refrigerados": ["Zapallo"],
+    "Tomates frescos o refrigerados": ["Tomate"],
+    "Zanahorias frescas o refrigeradas": ["Zanahoria"],
+    "Cebollas frescas o refrigeradas": ["Cebolla"],
+    "Papas y otros tubérculos": ["Papa"],
+    "Porotos secos": ["Poroto Hallado", "Poroto Negro", "Poroto Tórtola"],
+    "Lentejas secas": ["Lentejas 6 mm"],
+    "Azúcar de caña y remolacha": ["Azúcar"],
+}
+
+
 def armar() -> pd.DataFrame:
     filas = []
     for base, borrador in ((2018, BASE_2018), (2023, BASE_2023)):
@@ -133,7 +186,21 @@ def armar() -> pd.DataFrame:
     return pd.DataFrame(filas)
 
 
+def armar_cba() -> pd.DataFrame:
+    cba = pd.read_csv(os.path.join(AQUI, "cba_2024.csv"))
+    faltan = sorted(set(CBA) - set(cba["producto"]))
+    if faltan:
+        raise SystemExit(f"productos que no están en cba_2024.csv: {faltan}")
+    cba["odepa"] = cba["producto"].map(lambda p: " | ".join(CBA.get(p, [])))
+    return cba[["producto", "unidad", "cantidad_mensual", "gasto_mar2022", "odepa"]]
+
+
 if __name__ == "__main__":
+    cba = armar_cba()
+    cba.to_csv(os.path.join(AQUI, "mapa_cba.csv"), index=False)
+    cub = cba[cba["odepa"] != ""]
+    print(f"canasta básica: {len(cub)} de {cba['gasto_mar2022'].notna().sum()} productos con "
+          f"ODEPA, {cub['gasto_mar2022'].sum() / cba['gasto_mar2022'].sum() * 100:.1f}% del valor")
     mapa = armar()
     ruta = os.path.join(AQUI, "mapa_productos.csv")
     mapa.to_csv(ruta, index=False)

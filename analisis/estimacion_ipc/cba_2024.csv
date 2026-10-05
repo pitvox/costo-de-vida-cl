@@ -1,0 +1,98 @@
+producto,unidad,cantidad_mensual,gasto_mar2022,calorias_diarias,ultraprocesado,division_ccif
+Arroz,GR,942.0,1061.0,115,no,1
+Harina de trigo blanca,GR,647.0,628.0,79,no,1
+Pan corriente a granel,GR,6282.0,10239.0,666,no,1
+Pan especial a granel,GR,307.0,618.0,22,no,1
+Pan envasado,GR,126.0,408.0,11,si,1
+Galletas dulces con relleno,GR,51.0,328.0,9,si,1
+Galletas dulces sin relleno,GR,20.0,117.0,3,si,1
+Galletas no dulces,GR,18.0,101.0,3,si,1
+Galletas no identificadas,GR,63.0,391.0,9,no,1
+Tortas y masas dulces grandes,GR,63.0,371.0,6,si,1
+Pasteles y masas dulces pequeñas o por porción,GR,44.0,359.0,5,si,1
+Cereales para el desayuno,GR,49.0,263.0,6,si,1
+Espaguetis,GR,559.0,462.0,28,no,1
+Otras pastas secas sin relleno,GR,648.0,528.0,24,no,1
+"Snacks, chips y frituras a base de cereal",GR,30.0,225.0,5,no,1
+Carne de vacuno corte posta,GR,81.0,1107.0,6,no,1
+Carne de vacuno molida,GR,150.0,1803.0,9,no,1
+Otros cortes de carne de vacuno,GR,209.0,1758.0,14,no,1
+Cortes de carne de vacuno no identificados,GR,204.0,1638.0,14,no,1
+Carne de cerdo corte chuleta,GR,95.0,759.0,7,no,1
+Pechuga de pollo,GR,202.0,1407.0,11,no,1
+Trutro de pollo,GR,490.0,2045.0,28,no,1
+Cecinas secas y semisecas,GR,17.0,152.0,2,no,1
+Cecinas y fiambres de cerdo cocidos,GR,72.0,512.0,5,si,1
+Cecinas y fiambres de pavo cocidos,GR,21.0,189.0,1,si,1
+Cecinas y fiambres no identificados,GR,96.0,628.0,7,si,1
+Vienesas tradicionales,GR,67.0,267.0,9,si,1
+Patés y pastas de untar,GR,25.0,144.0,2,si,1
+Otros embutidos frescos,GR,102.0,579.0,9,no,1
+Atún en conserva,GR,68.0,591.0,4,no,1
+Jurel en conserva,GR,69.0,261.0,5,no,1
+Leche líquida entera,ML,995.0,1031.0,21,no,1
+Leche líquida descremada y semidescremada,ML,351.0,335.0,5,no,1
+Leche en polvo,GR,96.0,614.0,16,no,1
+Cremas de leche,ML,33.0,203.0,3,no,1
+Queso gouda,GR,183.0,1446.0,21,no,1
+Queso chanco o mantecoso,GR,70.0,606.0,9,no,1
+Quesos no identificados,GR,60.0,487.0,7,no,1
+Yogur sin probióticos o lactobacilos (batido),GR,392.0,1106.0,13,no,1
+Postres y bebidas a base de leche sin probióticos o lactobacilos,GR,179.0,320.0,5,si,1
+"Huevos de gallina, frescos y con cáscara",GR,632.0,2273.0,31,no,1
+"Aceites vegetales, de fruta o semillas",ML,712.0,1564.0,197,no,1
+Mantequillas,GR,81.0,693.0,20,no,1
+Margarinas y preparaciones similares,GR,105.0,407.0,11,no,1
+Plátanos frescos,GR,476.0,891.0,14,no,1
+Paltas frescas,GR,365.0,1647.0,19,no,1
+Naranjas frescas,GR,230.0,304.0,4,no,1
+"Limones y limas, frescas",GR,359.0,633.0,3,no,1
+Manzanas frescas,GR,380.0,466.0,7,no,1
+"Duraznos y nectarinas, frescos",GR,141.0,239.0,2,no,1
+Uvas frescas,GR,141.0,193.0,3,no,1
+Lechugas frescas o refrigeradas,GR,451.0,779.0,2,no,1
+Acelgas frescas o refrigeradas,GR,88.0,130.0,1,no,1
+Brócolis frescos o refrigerados,GR,39.0,127.0,0,no,1
+Zapallos frescos o refrigerados,GR,237.0,499.0,3,no,1
+Pepinos (hortalizas) frescos o refrigerados,GR,68.0,102.0,0,no,1
+Pimentones y morrones frescos o refrigerados,GR,94.0,288.0,1,no,1
+Zapallos italianos frescos o refrigerados,GR,89.0,127.0,1,no,1
+Tomates frescos o refrigerados,GR,1047.0,1446.0,6,no,1
+Ajos frescos o refrigerados,GR,44.0,136.0,2,no,1
+Zanahorias frescas o refrigeradas,GR,467.0,424.0,7,no,1
+Cebollas frescas o refrigeradas,GR,674.0,687.0,9,no,1
+Choclos frescos o refrigerados,GR,356.0,247.0,10,no,1
+Papas y otros tubérculos,GR,2979.0,1916.0,75,no,1
+Porotos secos,GR,192.0,394.0,21,no,1
+Lentejas secas,GR,92.0,199.0,10,no,1
+Choclos congelados,GR,58.0,155.0,2,no,1
+Snacks y chips de papas fritas envasadas,GR,28.0,224.0,5,si,1
+Verduras encurtidas,GR,50.0,217.0,1,no,1
+Azúcar de caña y remolacha,GR,680.0,680.0,89,no,1
+Mermeladas,GR,25.0,106.0,2,si,1
+Postres no lácteos preparados,GR,28.0,91.0,0,no,1
+Chocolates de todo tipo,GR,22.0,312.0,4,no,1
+Helado familiar cassata,ML,71.0,164.0,2,si,1
+Helados individuales,ML,11.0,105.0,1,si,1
+Caramelos y chicles,GR,14.0,148.0,1,si,1
+Ensaladas preparadas frescas,GR,94.0,340.0,2,no,1
+"Sándwiches, completos, pizzas, empanadas y masas saladas con relleno listos para su consumo",GR,54.0,285.0,4,si,1
+Sal,GR,158.0,98.0,0,no,1
+Salsas de tomate,GR,181.0,471.0,1,no,1
+Mayonesas,GR,101.0,417.0,24,no,1
+Kétchup,GR,51.0,136.0,2,no,1
+Especias y semillas,GR,10.0,113.0,1,no,1
+Hierbas frescas y secas,GR,46.0,262.0,2,no,1
+Caldos y concentrados,GR,8.0,73.0,1,si,1
+Jugos líquidos,ML,456.0,535.0,5,si,1
+Jugos y refrescos en polvo,GR,10.0,168.0,1,si,1
+Café,GR,22.0,503.0,2,no,1
+Té,GR,35.0,526.0,0,no,1
+Aguas minerales embotelladas sin sabor,ML,2565.0,933.0,0,no,1
+Refrescos,ML,2143.0,1903.0,16,si,1
+"Sándwiches, completos, pizzas, empanadas y masas saladas con relleno adquiridos en restaurantes, cafés y similares, con servicio completo",GR,40.0,379.0,4,si,11
+"Platos de fondo adquiridos en restaurantes, cafés y similares, con servicio completo",GR,73.0,1327.0,4,si,11
+"Almuerzos y cenas adquiridos en restaurantes, cafés y similares, con servicio completo",GR,135.0,2446.0,7,si,11
+"Sándwiches, completos, pizzas, empanadas y masas saladas con relleno listos para su consumo, adquiridos en restaurantes, cafés y similares, con servicio limitado",GR,49.0,470.0,5,si,11
+"Sándwiches completos, pizzas, empanadas y masas saladas con relleno listos para su consumo, adquiridos en comercio ambulante, carritos de comida y similares",GR,43.0,414.0,4,si,11
+Programa de Alimentación Escolar (PAE),,,,126,,

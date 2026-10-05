@@ -1,0 +1,98 @@
+producto,unidad,cantidad_mensual,gasto_mar2022,odepa
+Arroz,GR,942.0,1061.0,Arroz grano ancho grado 1 | Arroz grano ancho grado 2 | Arroz grano largo delgado grado 2
+Harina de trigo blanca,GR,647.0,628.0,Harina con polvos de hornear | Harina sin polvos de hornear
+Pan corriente a granel,GR,6282.0,10239.0,Marraqueta | Hallulla corriente
+Pan especial a granel,GR,307.0,618.0,Hallulla especial | Hallulla integral | Pan amasado
+Pan envasado,GR,126.0,408.0,
+Galletas dulces con relleno,GR,51.0,328.0,
+Galletas dulces sin relleno,GR,20.0,117.0,
+Galletas no dulces,GR,18.0,101.0,
+Galletas no identificadas,GR,63.0,391.0,
+Tortas y masas dulces grandes,GR,63.0,371.0,
+Pasteles y masas dulces pequeñas o por porción,GR,44.0,359.0,
+Cereales para el desayuno,GR,49.0,263.0,
+Espaguetis,GR,559.0,462.0,Spaghetti N°5
+Otras pastas secas sin relleno,GR,648.0,528.0,
+"Snacks, chips y frituras a base de cereal",GR,30.0,225.0,
+Carne de vacuno corte posta,GR,81.0,1107.0,Posta Negra | Posta Paleta | Posta Rosada
+Carne de vacuno molida,GR,150.0,1803.0,
+Otros cortes de carne de vacuno,GR,209.0,1758.0,Abastero | Asado Carnicero | Asado de tira | Choclillo | Estomaguillo (Tapabarriga) | Ganso | Huachalomo | Malaya | Osobuco | Palanca | Plateada | Pollo Ganso | Punta de Ganso | Punta paleta | Punta picana | Sobrecostilla | Tapapecho
+Cortes de carne de vacuno no identificados,GR,204.0,1638.0,Abastero | Asado Carnicero | Asado de tira | Asiento | Choclillo | Estomaguillo (Tapabarriga) | Filete | Ganso | Huachalomo | Lomo Liso | Lomo Vetado | Malaya | Osobuco | Palanca | Plateada | Pollo Ganso | Posta Negra | Posta Paleta | Posta Rosada | Punta de Ganso | Punta paleta | Punta picana | Sobrecostilla | Tapapecho
+Carne de cerdo corte chuleta,GR,95.0,759.0,Chuleta (centro) | Chuleta (Parrillera)
+Pechuga de pollo,GR,202.0,1407.0,Pollo Pechuga | Pollo Pechuga Deshuesada
+Trutro de pollo,GR,490.0,2045.0,Pollo Trutro Entero
+Cecinas secas y semisecas,GR,17.0,152.0,
+Cecinas y fiambres de cerdo cocidos,GR,72.0,512.0,
+Cecinas y fiambres de pavo cocidos,GR,21.0,189.0,
+Cecinas y fiambres no identificados,GR,96.0,628.0,
+Vienesas tradicionales,GR,67.0,267.0,
+Patés y pastas de untar,GR,25.0,144.0,
+Otros embutidos frescos,GR,102.0,579.0,
+Atún en conserva,GR,68.0,591.0,
+Jurel en conserva,GR,69.0,261.0,
+Leche líquida entera,ML,995.0,1031.0,Leche Fluida Entera
+Leche líquida descremada y semidescremada,ML,351.0,335.0,Leche Fluida Descremada
+Leche en polvo,GR,96.0,614.0,Leche en Polvo Entera | Leche en Polvo Descremada
+Cremas de leche,ML,33.0,203.0,
+Queso gouda,GR,183.0,1446.0,Queso Gauda
+Queso chanco o mantecoso,GR,70.0,606.0,Queso Chanco | Queso Mantecoso
+Quesos no identificados,GR,60.0,487.0,Queso Chanco | Queso Gauda | Queso Mantecoso
+Yogur sin probióticos o lactobacilos (batido),GR,392.0,1106.0,Yoghurt (vainilla ó frutilla)
+Postres y bebidas a base de leche sin probióticos o lactobacilos,GR,179.0,320.0,
+"Huevos de gallina, frescos y con cáscara",GR,632.0,2273.0,
+"Aceites vegetales, de fruta o semillas",ML,712.0,1564.0,Aceite vegetal | Aceite maravilla
+Mantequillas,GR,81.0,693.0,Mantequilla con sal
+Margarinas y preparaciones similares,GR,105.0,407.0,Margarina
+Plátanos frescos,GR,476.0,891.0,Plátano
+Paltas frescas,GR,365.0,1647.0,Palta
+Naranjas frescas,GR,230.0,304.0,Naranja
+"Limones y limas, frescas",GR,359.0,633.0,Limón
+Manzanas frescas,GR,380.0,466.0,Manzana
+"Duraznos y nectarinas, frescos",GR,141.0,239.0,Durazno | Nectarín
+Uvas frescas,GR,141.0,193.0,Uva
+Lechugas frescas o refrigeradas,GR,451.0,779.0,
+Acelgas frescas o refrigeradas,GR,88.0,130.0,
+Brócolis frescos o refrigerados,GR,39.0,127.0,
+Zapallos frescos o refrigerados,GR,237.0,499.0,Zapallo
+Pepinos (hortalizas) frescos o refrigerados,GR,68.0,102.0,
+Pimentones y morrones frescos o refrigerados,GR,94.0,288.0,
+Zapallos italianos frescos o refrigerados,GR,89.0,127.0,
+Tomates frescos o refrigerados,GR,1047.0,1446.0,Tomate
+Ajos frescos o refrigerados,GR,44.0,136.0,
+Zanahorias frescas o refrigeradas,GR,467.0,424.0,Zanahoria
+Cebollas frescas o refrigeradas,GR,674.0,687.0,Cebolla
+Choclos frescos o refrigerados,GR,356.0,247.0,
+Papas y otros tubérculos,GR,2979.0,1916.0,Papa
+Porotos secos,GR,192.0,394.0,Poroto Hallado | Poroto Negro | Poroto Tórtola
+Lentejas secas,GR,92.0,199.0,Lentejas 6 mm
+Choclos congelados,GR,58.0,155.0,
+Snacks y chips de papas fritas envasadas,GR,28.0,224.0,
+Verduras encurtidas,GR,50.0,217.0,
+Azúcar de caña y remolacha,GR,680.0,680.0,Azúcar
+Mermeladas,GR,25.0,106.0,
+Postres no lácteos preparados,GR,28.0,91.0,
+Chocolates de todo tipo,GR,22.0,312.0,
+Helado familiar cassata,ML,71.0,164.0,
+Helados individuales,ML,11.0,105.0,
+Caramelos y chicles,GR,14.0,148.0,
+Ensaladas preparadas frescas,GR,94.0,340.0,
+"Sándwiches, completos, pizzas, empanadas y masas saladas con relleno listos para su consumo",GR,54.0,285.0,
+Sal,GR,158.0,98.0,
+Salsas de tomate,GR,181.0,471.0,
+Mayonesas,GR,101.0,417.0,
+Kétchup,GR,51.0,136.0,
+Especias y semillas,GR,10.0,113.0,
+Hierbas frescas y secas,GR,46.0,262.0,
+Caldos y concentrados,GR,8.0,73.0,
+Jugos líquidos,ML,456.0,535.0,
+Jugos y refrescos en polvo,GR,10.0,168.0,
+Café,GR,22.0,503.0,
+Té,GR,35.0,526.0,
+Aguas minerales embotelladas sin sabor,ML,2565.0,933.0,
+Refrescos,ML,2143.0,1903.0,
+"Sándwiches, completos, pizzas, empanadas y masas saladas con relleno adquiridos en restaurantes, cafés y similares, con servicio completo",GR,40.0,379.0,
+"Platos de fondo adquiridos en restaurantes, cafés y similares, con servicio completo",GR,73.0,1327.0,
+"Almuerzos y cenas adquiridos en restaurantes, cafés y similares, con servicio completo",GR,135.0,2446.0,
+"Sándwiches, completos, pizzas, empanadas y masas saladas con relleno listos para su consumo, adquiridos en restaurantes, cafés y similares, con servicio limitado",GR,49.0,470.0,
+"Sándwiches completos, pizzas, empanadas y masas saladas con relleno listos para su consumo, adquiridos en comercio ambulante, carritos de comida y similares",GR,43.0,414.0,
+Programa de Alimentación Escolar (PAE),,,,

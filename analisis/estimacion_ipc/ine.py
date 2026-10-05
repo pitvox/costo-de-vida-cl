@@ -9,6 +9,8 @@ los baja descargar.py a datos_crudos/ (ver FUENTES ahí).
   "D.G.C.SC.P". Base 2018: enero 2019 a diciembre 2023 (más la serie
   referencial de 2018). Base 2023: enero 2024 en adelante (más la serie
   referencial de 2023).
+- agregado(base, division, grupo): índice mensual de una división o un grupo
+  (con la serie referencial delante), para el deflactor de la canasta básica.
 - alimentos_oficial(): el índice y la variación mensual publicada de
   Alimentos, de la serie de analíticos empalmados (idéntica a la división 01:
   base 2018 entre 2019 y 2023 y base 2023 desde 2024).
@@ -20,14 +22,12 @@ import pandas as pd
 AQUI = os.path.dirname(os.path.abspath(__file__))
 CRUDOS = os.path.join(AQUI, "datos_crudos")
 
-ARCHIVOS = {
-    2018: ("ine_base2018/ipc_base2018_series_tiempo.csv", 0),
-    "ref2018": ("ine_base2018/ipc_base2018_serie_referencial.csv", 4),
-    2023: ("ine_base2023/cuadros_series_de_tiempo/ipc_base_20237baa955a44fe4eada201c196338fb3be.csv", 0),
-    "ref2023": ("ine_base2023/cuadros_series_referenciales/"
-                "ipc_ref_base_20230bd18276c47b4ec68bda28582d82207d.csv", 3),
-    "empalmados": ("ine_base2023/series_empalmadas/"
-                   "serie_analíticos_empalmados047c1ef98b0e463c8c5fa4a657efaa20.csv", 0),
+ARCHIVOS = {   # clave: (archivo en datos_crudos/, filas de encabezado que se saltan)
+    2018: ("ine/ipc_base2018.csv", 0),
+    "ref2018": ("ine/ipc_base2018_referencial.csv", 4),
+    2023: ("ine/ipc_base2023.csv", 0),
+    "ref2023": ("ine/ipc_base2023_referencial.csv", 3),
+    "empalmados": ("ine/analiticos_empalmados.csv", 0),
 }
 
 
@@ -70,6 +70,24 @@ def productos(base: int) -> pd.DataFrame:
     pond = out.dropna(subset=["ponderacion"]).groupby("codigo")["ponderacion"].first()
     out["ponderacion"] = out["codigo"].map(pond)
     return out.drop_duplicates(["codigo", "mes"], keep="last").sort_values(["codigo", "mes"])
+
+
+def agregado(base: int, division: int, grupo: int = None) -> tuple:
+    """(índice mensual con PeriodIndex, ponderación) de la división, o del
+    grupo si se pide, con la serie referencial del año base delante."""
+    partes, pond = [], None
+    for clave in (f"ref{base}", base):
+        d = _leer(clave)
+        cod = {c: pd.to_numeric(d[c], errors="coerce") for c in ("División", "Grupo", "Clase")}
+        fila = (cod["División"] == division) & cod["Clase"].isna()
+        fila &= (cod["Grupo"] == grupo) if grupo else cod["Grupo"].isna()
+        d = d[fila]
+        if d["Ponderación"].notna().any():
+            pond = float(d["Ponderación"].dropna().iloc[0])
+        partes.append(pd.Series(d["Índice"].values, index=pd.PeriodIndex.from_fields(
+            year=d["Año"], month=d["Mes"], freq="M")))
+    s = pd.concat(partes)
+    return s[~s.index.duplicated(keep="last")].sort_index(), pond
 
 
 def alimentos_oficial() -> pd.DataFrame:
