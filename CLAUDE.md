@@ -23,7 +23,7 @@ Por decisión del dueño, esta regla reemplaza la de "flechas neutras". El núme
 - Si bajó, verde #5bbf7a (token `--baja`, clase `.v-baja`).
 - Si no cambió (redondea a 0,0), en el color del texto, sin clase.
 
-La flecha sigue al lado del número, en gris (`.f`), y el resto del texto va en hueso. Las clases las ponen `cambio()` y `fmt_delta()` en `build_site.py` y `fmtDelta()` en el JS de /graficos.html. Las velas no cambian: siguen la convención de los gráficos (verde sube, rojo baja). El semáforo CARO/NORMAL/BARATO sigue reservado a los 4 índices.
+La flecha sigue al lado del número, en gris (`.f`), y el resto del texto va en hueso. Las clases las ponen `cambio()` y `fmt_delta()` en `build_site.py`, `fmtDelta()` en el JS de /graficos.html y `cifraTramo()` en la frase de "Comparar con" de las fichas (ahí la cifra va con su signo, "+38%", sin flecha). Las velas no cambian: siguen la convención de los gráficos (verde sube, rojo baja). El semáforo CARO/NORMAL/BARATO sigue reservado a los 4 índices.
 
 ## Alcance
 
