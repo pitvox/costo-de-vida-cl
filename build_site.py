@@ -2981,34 +2981,48 @@ __JS_CAPTURA__
     }
     return Promise.resolve();
   }
+  // 'poniendo' cuenta las llamadas: si llega otro cambio mientras esta
+  // espera los datos, la más nueva se encarga del pedido completo (el mismo
+  // objeto, con las series de los dos cambios) y esta se retira
+  let poniendo = 0;
   async function ponerTramoPedido() {
     const p = pedido;
     if (!p || (!widget && !lwChart)) return;
-    pedido = null;
+    const yo = ++poniendo;
+    const primeros = new Map();         // clave -> su primer precio (ms)
+    let hechas = 0;
+    do {
+      const u = widget ? unidad : unidadLW, ks = p.nuevas.slice(hechas);
+      hechas = p.nuevas.length;
+      const ts = await Promise.all(ks.map(k => barrasDe(k, u).then(b => b.length ? b[0].time : null, () => null)));
+      ks.forEach((k, i) => primeros.set(k, ts[i]));
+      // el rango que la librería pone al montar o al cambiar de unidad, antes
+      if (widget && TV.rangoListo) await TV.rangoListo(widget);
+      if (yo !== poniendo) return;
+    } while (p.nuevas.length > hechas);
+    if (pedido === p) pedido = null;
     if (!cmp.claves().length) return;   // sin comparados, la ficha vuelve a precios
-    const u = widget ? unidad : unidadLW;
-    const primeros = await Promise.all(p.nuevas.filter(k => cmp.tiene(k)).map(k =>
-      barrasDe(k, u).then(b => b.length ? b[0].time : null, () => null)));
-    // el rango que la librería pone al montar o al cambiar de unidad, antes
-    if (widget && TV.rangoListo) await TV.rangoListo(widget);
-    if (pedido) return;                 // otro cambio tomó la posta
     let desde = p.desde, hasta = p.hasta;
     if (desde == null) {
       const r = tramoVisible();
       if (!r) return;
       [desde, hasta] = r;
     }
-    const ini = Math.max(...primeros.filter(x => x != null && x <= FIN));
+    const ini = Math.max(...[...primeros].filter(([k, t]) => t != null && t <= FIN && cmp.tiene(k)).map(x => x[1]));
     if (ini > desde) {
       desde = ini;
       if (hasta <= ini) hasta = FIN;
     }
     await ponerTramo(desde, hasta);
+    // mientras la escala se ensancha, la librería corre el comienzo y deja
+    // el borde derecho: eso se corrige. Si se movió el borde derecho, alguien
+    // movió el gráfico y el tramo queda como lo dejó
     for (let i = 0; i < 6; i++) {
       await pausa(400);
-      if (pedido) return;
+      if (pedido || yo !== poniendo) return;
       const r = tramoVisible();
-      if (r && Math.abs(r[0] - desde) > SEMANA / 2) await ponerTramo(desde, hasta);
+      if (!r || Math.abs(r[1] - hasta) > SEMANA / 2) return;
+      if (Math.abs(r[0] - desde) > SEMANA / 2) await ponerTramo(desde, hasta);
     }
   }
 
