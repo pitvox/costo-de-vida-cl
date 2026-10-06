@@ -217,11 +217,17 @@ function pruebasEscala() {
   // el final: el de la última barra a la vista (con barras de un mes, su mes
   // entero) o, si es la última, sin límite
   ok(m.fin === lunes('2008-02-04') - 1, 'el final del tramo, el de su última barra');
-  ok(e.fin === Infinity, 'con la última barra a la vista, sin límite');
-  const meses = [{ time: lunes('2008-01-07'), close: 1 }, { time: Date.UTC(2008, 1, 1), close: 2 },
-    { time: Date.UTC(2008, 2, 1), close: 3 }];
-  ok(F.escalaVisible(meses, [], 0, Date.UTC(2008, 1, 5)).fin === Date.UTC(2008, 2, 1) - 1,
-    'en 1M, el mes entero de la última barra a la vista');
+  ok(e.fin === lunes('2008-02-11') - 1, 'con la última barra a la vista, su semana');
+  // después de un hueco (una fruta de temporada) el final no pasa a la
+  // barra siguiente, meses después
+  const hueco = semanas('2023-01-02', [1, 2]).concat(semanas('2023-11-27', [3]));
+  ok(F.escalaVisible(hueco, [], 0, lunes('2023-03-06')).fin === lunes('2023-01-16') - 1,
+    'con un hueco, solo la semana de la última barra');
+  const meses = [{ time: Date.UTC(2008, 0, 1), close: 1 }, { time: Date.UTC(2008, 1, 1), close: 2 }];
+  ok(F.escalaVisible(meses, [], 0, Date.UTC(2008, 0, 5), '1M').fin === Date.UTC(2008, 1, 1) - 1 &&
+     F.escalaVisible(meses, [], 0, Date.UTC(2008, 1, 5), '1M').fin === Date.UTC(2008, 2, 1) - 1 &&
+     F.escalaVisible(meses, [], 0, Date.UTC(2008, 1, 5), '3M').fin === Date.UTC(2008, 4, 1) - 1,
+    'en 1M y 3M, el período entero de la última barra a la vista');
   ok(F.escalaVisible(P, [], lunes('2009-01-05'), lunes('2009-02-02')) === null, 'sin barras a la vista');
 }
 
@@ -281,6 +287,10 @@ function pruebasFrase() {
   igual(F.notaTramo(t5, nombres5), 'Sin precio reciente: Cereza (último dato: semana del 02-02-2026).',
     'la nota del pedido');
   ok(t5.hastaHoy, 'cuatro semanas antes de hoy aún es hoy');
+  // a mitad de la historia, el plazo se cuenta igual: desde la semana de la
+  // última barra a la vista, no desde el final de su período
+  const t5b = tramo([P, justa, cereza], lunes('2025-10-06'), lunes('2026-09-28') + 7 * DIA - 1, false);
+  ok(t5b.incluidas[1] && !t5b.incluidas[2], 'el plazo desde la semana de la última barra');
   // dos fuera y una sin precios hasta ahí
   const t6 = tramo([P, cereza, semanas('2025-11-03', [7, 7]), semanas('2027-01-04', [1, 2])],
     lunes('2025-10-06'), hoy, true);

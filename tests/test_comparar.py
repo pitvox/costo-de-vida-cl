@@ -106,8 +106,8 @@ def _constantes() -> dict:
 
 def _sugerencias(h):
     franja = h[h.index('<section class="comparar"'):h.index("</section>", h.index('<section class="comparar"'))]
-    return re.findall(r'data-cmp="([^"]+)" aria-pressed="false"><span class="dot"></span>([^<]+)</button>',
-                      franja)
+    return re.findall(r'data-cmp="([^"]+)" (?:data-medida="[^"]+" )?aria-pressed="false">'
+                      r'<span class="dot"></span>([^<]+)</button>', franja)
 
 
 # ---------- las sugerencias ----------
@@ -207,8 +207,16 @@ def test_ficha_con_sus_datos_y_el_js_comun(sitio):
     assert not re.search(r"__[A-Z_]+__", js)
     for nombre in ["T0", "V", "MIN", "MAX", "REP", "SLUG", "NOMBRE", "UNIDAD", "VER", "FECHA"]:
         assert not re.search(rf"^  const {nombre} =", js, re.M), nombre
-    # el buscador pide el catálogo al usarlo, con la versión de datos/
+    # el buscador pide el catálogo al usarlo, con la versión de datos/; el
+    # datafeed conoce las sugerencias (su unidad de medida va en el botón) y
+    # no lo pide para compararlas
     assert "catalogo = pedirJSON('catalogo.json').then(c => {" in js
+    h = _leer(sitio, "productos/palta.html")
+    assert '<button class="pchip" type="button" data-cmp="baja" data-medida="kg" aria-pressed="false">' in h
+    assert '<button class="pchip" type="button" data-cmp="asado" aria-pressed="false">' in h
+    assert ".concat([...chips.querySelectorAll('[data-medida]')]" in js
+    tv = _leer(sitio, "carestia-tv.js")
+    assert "const listo = () => catalogo || (catalogo = pedir('catalogo.json').then(cat => {" in tv
     assert "busca.addEventListener('focus', () => pedirCatalogo().catch(() => {}));" in js
 
 
@@ -253,7 +261,7 @@ def test_escala_frase_y_linea_igual_que_la_inflacion(sitio):
     # dibuja el gráfico), solo ajustado por inflación; Lightweight: una línea
     # constante, que en porcentaje queda en 0%
     assert "if (widget) lineaTV(e && u === 'real' ? e.base : null, e && e.t0);" in js
-    assert "e = escalaVisible(barras[0], barras.slice(1), rango[0], rango[1]);" in js
+    assert "e = escalaVisible(barras[0], barras.slice(1), rango[0], rango[1], res);" in js
     # la frase, solo con las semanas de precio propio de cada serie
     assert "Promise.all(todas.map(k => propiasDe(k, u).catch(() => null)))" in js
     # un solo período para todas: desde el 0% del gráfico hasta lo que
@@ -262,11 +270,14 @@ def test_escala_frase_y_linea_igual_que_la_inflacion(sitio):
     assert "const FIN = Date.parse(T0 + 'T00:00:00Z') + (V.length - 1) * SEMANA;" in js
     # las que no tienen precio reciente, en la nota aparte
     assert "ultimaNota = t ? notaTramo(t, series.map(s => s.nombre)) : '';" in js
-    # al agregar una serie que parte después, el tramo parte en su primer precio
-    assert "if (widget) cmp.tv(widget).then(() => { programarFrase(); alinear(); });" in js
-    assert "ks.forEach(k => { if (antes.indexOf(k) === -1) porAlinear.add(k); });" in js
-    assert "const tramo = { from: ini / 1000, to: r.to * 1000 > ini ? r.to : FIN / 1000 };" in js
-    assert "ts.setVisibleRange({ from: diaISO(ini), to: enMs(r.to) > ini ? r.to : diaISO(FIN) });" in js
+    # el tramo se conserva al cambiar lo elegido o la unidad y, al agregar una
+    # serie que parte después, parte en su primer precio
+    assert "if (widget) cmp.tv(widget).then(() => { programarFrase(); ponerTramoPedido(); });" in js
+    assert "pedirTramo(ks.filter(k => antes.indexOf(k) === -1));" in js
+    assert "if (u !== unidad && cmp.claves().length) pedirTramo([]);" in js
+    assert "if (widget && TV.rangoListo) await TV.rangoListo(widget);" in js
+    assert "const ini = Math.max(...primeros.filter(x => x != null && x <= FIN));" in js
+    assert "if (r && Math.abs(r[0] - desde) > SEMANA / 2) await ponerTramo(desde, hasta);" in js
     assert "shape: 'horizontal_line'" in js
     assert "if (hay && u === 'real') {" in js
     assert "lwRef.setData(lwSemanas.map(p => p.value == null ? { time: p.time } : { time: p.time, value: 1 }));" in js

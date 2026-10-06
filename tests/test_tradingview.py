@@ -620,7 +620,7 @@ def test_ficha_con_advanced_charts_despues_del_primer_pantallazo(sitio):
     # con: el producto de la ficha en la unidad elegida); la cifra grande es
     # el precio de esta semana en las dos unidades
     assert "simbolo: k => k + SUF[unidad], principal: () => SLUG + SUF[unidad] });" in js
-    assert "if (widget) cmp.tv(widget).then(() => { programarFrase(); alinear(); });" in js
+    assert "if (widget) cmp.tv(widget).then(() => { programarFrase(); ponerTramoPedido(); });" in js
     assert "opesos" not in h and "textoUF" not in js and "const UF" not in js
     assert "const SLUG = 'producto-000';" in js and 'const NOMBRE = "Producto 000";' in js
     # la serie de la página alimenta el datafeed (no se vuelve a pedir)

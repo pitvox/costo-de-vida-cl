@@ -2776,6 +2776,8 @@ __JS_CAPTURA__
   const unidadesHay = () => !feed ? ['real'] : ['real', 'epoca'];
   function ponerUnidad(u) {
     if (unidadesHay().indexOf(u) === -1) u = 'real';
+    // con algo comparado, el tramo a la vista se conserva (pedirTramo)
+    if (u !== unidad && cmp.claves().length) pedirTramo([]);
     unidad = u;
     selector.poner(u);
     dibujar();
@@ -2843,14 +2845,12 @@ __JS_CAPTURA__
     if (!b || !cmp.alternar(b.dataset.cmp)) return;   // con el máximo, uno más no entra
     cambio();
   });
-  // las series recién agregadas, hasta que el tramo se alinee con ellas
-  // (alinear); 'antes', las elegidas en el cambio anterior
-  const porAlinear = new Set();
+  // 'antes': las elegidas en el cambio anterior; las nuevas mueven el
+  // comienzo del tramo (pedirTramo)
   let antes = [];
   function cambio() {
     const ks = cmp.claves();
-    ks.forEach(k => { if (antes.indexOf(k) === -1) porAlinear.add(k); });
-    [...porAlinear].forEach(k => { if (ks.indexOf(k) === -1) porAlinear.delete(k); });
+    pedirTramo(ks.filter(k => antes.indexOf(k) === -1));
     antes = ks;
     pintarFranja();
     guardarHash();
@@ -2929,43 +2929,86 @@ __JS_CAPTURA__
   // el gráfico con lo elegido: en Advanced Charts, la comparación de la
   // librería; en Lightweight, una línea por serie
   function dibujar() {
-    if (widget) cmp.tv(widget).then(() => { programarFrase(); alinear(); });
+    if (widget) cmp.tv(widget).then(() => { programarFrase(); ponerTramoPedido(); });
     else if (lw) { if (unidad !== unidadLW) lw(unidad); else compararLW(); }
     programarFrase();
   }
-  // Al agregar una serie que parte después del comienzo del tramo a la
-  // vista, el tramo pasa a comenzar en su primer precio (el más tardío, si
-  // llegan varias juntas, como con un link): así el gráfico y la frase parten
-  // juntos en 0%. Si ese precio queda después del final del tramo, el tramo
-  // llega hasta el último dato de la ficha. En Advanced Charts, al cargar la
-  // comparación la escala porcentual se ensancha y la librería corre el
-  // comienzo: se vuelve a poner mientras se acomoda
+
+  /* ---------- el tramo a la vista ---------- */
+  // Al cambiar lo elegido o la unidad, el tramo a la vista se conserva: al
+  // pasar a porcentaje la escala se ensancha y la librería corre el
+  // comienzo, y al cambiar de unidad vuelve a toda la historia. Y al agregar
+  // una serie que parte después del comienzo, el tramo pasa a comenzar en su
+  // primer precio (el más tardío, si llegan varias juntas, como con un link):
+  // así el gráfico y la frase parten juntos en 0%. pedirTramo anota el tramo
+  // antes del cambio (si ya había otro pedido sin poner, queda el de ese) y
+  // ponerTramoPedido lo pone cuando el gráfico ya cambió, y lo vuelve a
+  // poner mientras la librería se acomoda
+  let pedido = null;    // { desde, hasta (ms; null antes del gráfico), nuevas }
   const diaISO = ms => new Date(ms).toISOString().slice(0, 10);
   const pausa = ms => new Promise(r => setTimeout(r, ms));
-  async function alinear() {
-    const ks = [...porAlinear];
-    if (!ks.length || (!widget && !lwChart)) return;
-    porAlinear.clear();
-    const u = widget ? unidad : unidadLW;
-    const primeros = await Promise.all(ks.map(k =>
-      barrasDe(k, u).then(b => cmp.tiene(k) && b.length ? b[0].time : null, () => null)));
-    const ini = Math.max(...primeros.filter(x => x != null));
-    if (!isFinite(ini) || ini > FIN) return;
+  function tramoVisible() {
     if (widget) {
-      const c = widget.activeChart(), r = c.getVisibleRange();
-      if (!r || !r.to || ini <= r.from * 1000) return;
-      const tramo = { from: ini / 1000, to: r.to * 1000 > ini ? r.to : FIN / 1000 };
-      for (let i = 0; i < 4; i++) {
-        await Promise.resolve(c.setVisibleRange(tramo,
-          { applyDefaultRightMargin: false, rejectByTimeout: 3000 })).catch(() => {});
-        await pausa(i ? 600 : 300);
-        const v = c.getVisibleRange();
-        if (!v || Math.abs(v.from - tramo.from) * 1000 < SEMANA / 2) break;
-      }
-    } else {
-      const ts = lwChart.timeScale(), r = ts.getVisibleRange();
-      if (!r || ini <= enMs(r.from)) return;
-      ts.setVisibleRange({ from: diaISO(ini), to: enMs(r.to) > ini ? r.to : diaISO(FIN) });
+      const r = widget.activeChart().getVisibleRange();
+      return r && r.to ? [r.from * 1000, r.to * 1000] : null;
+    }
+    if (lwChart) {
+      const r = lwChart.timeScale().getVisibleRange();
+      return r ? [enMs(r.from), enMs(r.to)] : null;
+    }
+    return null;
+  }
+  function pedirTramo(nuevas) {
+    if (pedido) { pedido.nuevas = pedido.nuevas.concat(nuevas); return; }
+    const r = tramoVisible();
+    pedido = { desde: r ? r[0] : null, hasta: r ? r[1] : null, nuevas };
+  }
+  function ponerTramo(desde, hasta) {
+    if (widget) {
+      return Promise.resolve(widget.activeChart().setVisibleRange({ from: desde / 1000, to: hasta / 1000 },
+        { applyDefaultRightMargin: false, rejectByTimeout: 3000 })).catch(() => {});
+    }
+    // Lightweight: por índice de semana. Su tramo a la vista (y el 0% de su
+    // escala porcentual) parte en la barra que asoma a la izquierda: con
+    // fechas quedaba la semana anterior. Aquí la primera es la de 'desde' y
+    // la última la de 'hasta'
+    if (lwChart) {
+      const d0 = diaISO(desde), d1 = diaISO(hasta);
+      const i0 = lwSemanas.findIndex(p => p.time >= d0);
+      let i1 = lwSemanas.length - 1;
+      while (i1 > 0 && lwSemanas[i1].time > d1) i1--;
+      if (i0 !== -1 && i1 > i0) lwChart.timeScale().setVisibleLogicalRange({ from: i0 + 0.05, to: i1 - 0.05 });
+    }
+    return Promise.resolve();
+  }
+  async function ponerTramoPedido() {
+    const p = pedido;
+    if (!p || (!widget && !lwChart)) return;
+    pedido = null;
+    if (!cmp.claves().length) return;   // sin comparados, la ficha vuelve a precios
+    const u = widget ? unidad : unidadLW;
+    const primeros = await Promise.all(p.nuevas.filter(k => cmp.tiene(k)).map(k =>
+      barrasDe(k, u).then(b => b.length ? b[0].time : null, () => null)));
+    // el rango que la librería pone al montar o al cambiar de unidad, antes
+    if (widget && TV.rangoListo) await TV.rangoListo(widget);
+    if (pedido) return;                 // otro cambio tomó la posta
+    let desde = p.desde, hasta = p.hasta;
+    if (desde == null) {
+      const r = tramoVisible();
+      if (!r) return;
+      [desde, hasta] = r;
+    }
+    const ini = Math.max(...primeros.filter(x => x != null && x <= FIN));
+    if (ini > desde) {
+      desde = ini;
+      if (hasta <= ini) hasta = FIN;
+    }
+    await ponerTramo(desde, hasta);
+    for (let i = 0; i < 6; i++) {
+      await pausa(400);
+      if (pedido) return;
+      const r = tramoVisible();
+      if (r && Math.abs(r[0] - desde) > SEMANA / 2) await ponerTramo(desde, hasta);
     }
   }
 
@@ -3010,7 +3053,7 @@ __JS_CAPTURA__
         Promise.all(todas.map(k => barrasDe(k, u, res).catch(() => null))),
         Promise.all(todas.map(k => propiasDe(k, u).catch(() => null)))]);
       if (gen !== fraseGen) return;
-      if (barras[0] && barras[0].length) e = escalaVisible(barras[0], barras.slice(1), rango[0], rango[1]);
+      if (barras[0] && barras[0].length) e = escalaVisible(barras[0], barras.slice(1), rango[0], rango[1], res);
       // sin las semanas propias de alguna serie (un pedido que falló), no hay
       // frase: nunca se mide con precios repetidos. Se reintenta sola (abajo).
       // La frase parte en el 0% del gráfico y llega, a lo más, al final de la
@@ -3164,7 +3207,7 @@ __JS_CAPTURA__
       alFallar: (uu, dibujada) => { if (unidad === uu) ponerUnidad(dibujada || 'real'); },
       alDibujar: programarFrase });
     programarFrase();
-    alinear();
+    ponerTramoPedido();
   }
 
   /* ---------- captura PNG ---------- */
@@ -3212,7 +3255,9 @@ __JS_CAPTURA__
         pedir: pedirJSON,
         // su Comparar superpone el producto en otras unidades: el nombre la dice
         nombreConUnidad: true,
-        productos: [{ slug: SLUG, nombre: NOMBRE, unidad: UNIDAD }],
+        // el producto de la ficha y sus sugerencias: compararlas no espera el catálogo
+        productos: [{ slug: SLUG, nombre: NOMBRE, unidad: UNIDAD }].concat([...chips.querySelectorAll('[data-medida]')]
+          .map(b => ({ slug: b.dataset.cmp, nombre: b.textContent, unidad: b.dataset.medida }))),
         precargados: { ['productos/' + SLUG + '.json']: { t0: T0, v: V, min: MIN, max: MAX } } });
       selector.limitar(unidadesHay());
       el.innerHTML = '';
@@ -4200,6 +4245,17 @@ JS_FRASE = r"""  /* ---------- Comparar con: la escala y la frase ---------- */
   const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto',
     'septiembre', 'octubre', 'noviembre', 'diciembre'];
   const mes = ms => MESES[new Date(ms).getUTCMonth()];
+  // el lunes de la semana de un instante (las barras semanales van en lunes,
+  // a las 00:00 UTC)
+  const lunesDe = ms => { const d = Math.floor(ms / 864e5); return (d - (d + 3) % 7) * 864e5; };
+  // el final del período de una barra que empieza en t, en la temporalidad
+  // res ('1W', '2W', '1M', '3M'...; sin ella, una semana)
+  function finPeriodo(t, res) {
+    const m = /^(\d*)([WM])$/.exec(String(res || '1W')), n = m ? Number(m[1] || 1) : 1;
+    if (!m || m[2] === 'W') return t + n * SEMANA;
+    const d = new Date(t);
+    return Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + n, 1);
+  }
   // "a, b y c"
   const enLista = xs => xs.length < 2 ? xs.join('') :
     xs.slice(0, -1).join(', ') + ' y ' + xs[xs.length - 1];
@@ -4210,19 +4266,21 @@ JS_FRASE = r"""  /* ---------- Comparar con: la escala y la frase ---------- */
   // hasta esa barra; la que aún no tiene precio parte en el primero que
   // tenga. 'base' es el precio de la ficha en esa barra (ahí va la línea de
   // "Igual que la inflación"); 'fin', el final del período de la última
-  // barra a la vista (en 1M, su mes entero; Infinity si es la última).
+  // barra a la vista (en 1W, su semana; en 1M, su mes), sin pasar a la
+  // barra siguiente.
   //   p      las barras del producto de la ficha: [{ time (ms), close }]
   //   otras  las de cada comparada, igual
   //   desde, hasta  el tramo a la vista (ms)
+  //   res    la temporalidad de las barras
   // Devuelve null si no hay barras de la ficha a la vista
-  function escalaVisible(p, otras, desde, hasta) {
+  function escalaVisible(p, otras, desde, hasta, res) {
     let i0 = 0, i1 = p.length - 1;
     while (i0 < p.length && p[i0].time < desde) i0++;
     while (i1 >= 0 && p[i1].time > hasta) i1--;
     if (i0 > i1) return null;
     const t0 = p[i0].time;
-    return { t0, base: p[i0].close, fin: i1 + 1 < p.length ? p[i1 + 1].time - 1 : Infinity,
-      partes: otras.map(b => {
+    const fin = Math.min(i1 + 1 < p.length ? p[i1 + 1].time : Infinity, finPeriodo(p[i1].time, res)) - 1;
+    return { t0, base: p[i0].close, fin, partes: otras.map(b => {
       b = b || [];
       if (!b.length || b[0].time <= t0) return null;
       const p0 = p.find((x, j) => j >= i0 && j <= i1 && x.time >= b[0].time);
@@ -4260,21 +4318,21 @@ JS_FRASE = r"""  /* ---------- Comparar con: la escala y la frase ---------- */
   // después de 'hasta', en que todas lo tienen. Así parte en la fecha más
   // tardía entre el comienzo del tramo y el primer precio de cada serie, y
   // nunca usa un precio repetido. Una serie sin precio propio en las
-  // SEMANAS_ULTIMO semanas antes de 'hasta' queda fuera, con su último dato
-  // ('ultimos'; null si no tiene precios hasta ahí). 'hastaHoy': el período
+  // SEMANAS_ULTIMO semanas antes de la semana de 'hasta' queda fuera, con su
+  // último dato ('ultimos'; null si no tiene precios hasta ahí). 'hastaHoy': el período
   // llega a esta semana (alDia: el tramo llega a la semana de hoy del
   // producto de la ficha). Sin dos semanas en común, t0 y t1 quedan en null.
   //   series  las semanas con precio propio de cada serie, la de la ficha
   //           primero: [{ time (ms), close }]
   //   desde, hasta  el comienzo y el final del tramo (ms)
   function tramoComun(series, desde, hasta, alDia) {
-    const plazo = SEMANAS_ULTIMO * SEMANA;
+    const plazo = SEMANAS_ULTIMO * SEMANA, semana = lunesDe(hasta);
     const ultimos = series.map(b => {
       let u = null;
       for (const x of b || []) { if (x.time > hasta) break; u = x; }
       return u;
     });
-    const dentro = series.map((b, i) => ultimos[i] && hasta - ultimos[i].time <= plazo ?
+    const dentro = series.map((b, i) => ultimos[i] && semana - ultimos[i].time <= plazo ?
       (b || []).filter(x => x.time >= desde && x.time <= hasta) : null);
     let comunes = null;
     dentro.forEach(d => {
@@ -4287,7 +4345,7 @@ JS_FRASE = r"""  /* ---------- Comparar con: la escala y la frase ---------- */
     if (!comunes || comunes.length < 2) return t;
     t.t0 = comunes[0];
     t.t1 = comunes[comunes.length - 1];
-    t.hastaHoy = !!alDia && hasta - t.t1 <= plazo;
+    t.hastaHoy = !!alDia && semana - t.t1 <= plazo;
     const precio = (d, s) => d.find(x => x.time === s).close;
     t.cambios = dentro.map(d => d ? precio(d, t.t1) / precio(d, t.t0) - 1 : null);
     return t;
@@ -4676,29 +4734,32 @@ def indices_del_producto(clave: str) -> list:
 
 
 def sugerencias_comparar(clave: str, p: dict, tabla: list) -> list:
-    """[(símbolo, nombre)] de la franja "Comparar con" de una ficha: los
+    """[(símbolo, nombre, unidad)] de la franja "Comparar con" de una ficha: los
     productos de su grupo en 'tabla' (las filas de la portada, filas_portada)
     por variación a un año, de mayor a menor en valor absoluto (sin ella, al
     final), y después sus índices; SUGERENCIAS en total, con los índices
     siempre. El símbolo es el del datafeed: el slug del producto o el código
-    del índice."""
-    indices = [(c, DATA["indices"][c]["nombre"]) for c in indices_del_producto(clave)]
+    del índice; la unidad, la del producto (None en un índice)."""
+    indices = [(c, DATA["indices"][c]["nombre"], None) for c in indices_del_producto(clave)]
     grupo = grupo_txt(p.get("grupo") or "Otros")
     prods = sorted((f for f in tabla if f["grupo"] == grupo and f["clave"] != clave),
                    key=lambda f: (f["variacion_52s_pct"] is None,
                                   -abs(f["variacion_52s_pct"] or 0), _orden(f["nombre"])))
     n = max(0, SUGERENCIAS - len(indices))
-    return [(f["slug"], f["nombre"]) for f in prods[:n]] + indices[:SUGERENCIAS]
+    return [(f["slug"], f["nombre"], f["unidad"]) for f in prods[:n]] + indices[:SUGERENCIAS]
 
 
 def franja_comparar(sugerencias: list) -> str:
     """La franja "Comparar con" de la ficha: las sugerencias como botones
-    (el JS les pone el color de su línea al elegirlas), el buscador y, con
-    algo elegido, la línea de la escala y la frase (las arma el JS)."""
+    (el JS les pone el color de su línea al elegirlas; los productos llevan
+    su unidad de medida, para el datafeed), el buscador y, con algo elegido, la línea
+    de la escala, la frase y la nota de las series sin precio reciente (las
+    arma el JS)."""
     botones = "".join(
         f'\n        <button class="pchip" type="button" data-cmp="{html.escape(s, quote=True)}" '
-        f'aria-pressed="false"><span class="dot"></span>{html.escape(n)}</button>'
-        for s, n in sugerencias)
+        + (f'data-medida="{html.escape(u, quote=True)}" ' if u else "")
+        + f'aria-pressed="false"><span class="dot"></span>{html.escape(n)}</button>'
+        for s, n, u in sugerencias)
     return (f'    <section class="comparar" aria-labelledby="cmp-h">\n'
             f'      <h2 class="otros-h" id="cmp-h">Comparar con</h2>\n'
             f'      <div class="pchips" id="cmp-chips">{botones}\n      </div>\n'
@@ -5269,9 +5330,12 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
     indices.forEach(d => agregar({ ticker: d.codigo, clase: 'indice', nombre: d.nombre,
       corto: d.nombre.replace(/^Índice /, ''), ruta: 'indices/' + d.codigo + '.json' }));
     (opciones.productos || []).forEach(agregarProducto);
-    const listo = pedir('catalogo.json').then(cat => {
+    // el catálogo, a demanda: solo para un símbolo que la página no trae, la
+    // búsqueda o la lista (una ficha que compara sus sugerencias no lo pide)
+    let catalogo = null;
+    const listo = () => catalogo || (catalogo = pedir('catalogo.json').then(cat => {
       (cat.productos || []).forEach(agregarProducto);
-    }).catch(() => {});   // sin catálogo quedan los índices
+    }).catch(() => {}));   // sin catálogo quedan los índices
 
     // Tu canasta: un símbolo por composición, fuera de la búsqueda y de la
     // lista. canasta([{ slug, cantidad }]) devuelve su ticker: la misma
@@ -5302,7 +5366,7 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
       // los que la página ya conoce (y las canastas) no esperan el catálogo
       if (canastas.has(t)) return Promise.resolve(canastas.get(t));
       return simbolos.has(t) ? Promise.resolve(simbolos.get(t)) :
-        listo.then(() => simbolos.get(t) || null);
+        listo().then(() => simbolos.get(t) || null);
     };
     const factor = () => una('factor', () =>
       Promise.all(indices.map(d => pedir('indices/' + d.codigo + '.json')))
@@ -5402,7 +5466,7 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
       // búsqueda solo entre los símbolos de Carestía: todas las palabras
       // escritas, sin tildes ni mayúsculas, en el ticker o el nombre
       searchSymbols(texto, _fuente, tipo, cb) {
-        listo.then(() => {
+        listo().then(() => {
           const palabras = sinTildes(texto || '').split(/\s+/).filter(Boolean);
           const out = [];
           simbolos.forEach(s => {
@@ -5456,7 +5520,7 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
       rango,
       simbolo,
       canasta,
-      lista: () => listo.then(() => [...simbolos.values()].map(s =>
+      lista: () => listo().then(() => [...simbolos.values()].map(s =>
         ({ ticker: s.ticker, descripcion: s.desc, corto: s.corto, clase: s.clase,
           unidad: s.unidad }))),
       info: nombre => simbolo(nombre).then(s => s && info(s)),
@@ -5704,7 +5768,17 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
   // Con la caja oculta (display:none, otro modo a la vista) la librería mide
   // cero y el rango no queda: se aplica cuando la caja vuelve a tener ancho
   const esperandoAncho = new WeakSet();
+  // la promesa del último de cada widget (al montar y en cada cambio de
+  // símbolo): rangoListo(widget) espera a que el rango quede puesto antes de
+  // poner otro
+  const rangos = new WeakMap();
+  const rangoListo = widget => rangos.get(widget) || Promise.resolve();
   function verTodo(widget, feed, caja, res) {
+    const p = verTodoAhora(widget, feed, caja, res);
+    rangos.set(widget, p);
+    return p;
+  }
+  function verTodoAhora(widget, feed, caja, res) {
     if (caja && !caja.clientWidth && typeof ResizeObserver === 'function') {
       if (esperandoAncho.has(widget)) return Promise.resolve();
       esperandoAncho.add(widget);
@@ -5842,7 +5916,7 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
 
   const api = { crearDatafeed, serieCanasta, miles, numUF, numUFEje, textoUF, fecha, almacenLocal,
     formateadores, overrides, opcionesWidget, alistarWidget, listoWidget, montar, verTodo,
-    cargarLibreria, capturaCliente, colorLinea, temporalidad, MOVIL, RESOLUCION, RESOLUCIONES,
+    rangoListo, cargarLibreria, capturaCliente, colorLinea, temporalidad, MOVIL, RESOLUCION, RESOLUCIONES,
     SUFIJO, ZONA, NOMBRE_CANASTA, PESOS };
   raiz.CarestiaTV = api;
   if (typeof module === 'object' && module.exports) module.exports = api;
