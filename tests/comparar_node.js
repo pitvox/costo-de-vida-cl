@@ -23,8 +23,8 @@ const igual = (a, b, msg) => ok(JSON.stringify(a) === JSON.stringify(b),
 const LightweightCharts = { LineStyle: { Solid: 0, Dotted: 1, Dashed: 2 } };
 const { comparador, ONOTE, fmtPct } = new Function('LightweightCharts',
   js.comparar + '\nreturn { comparador, ONOTE, fmtPct };')(LightweightCharts);
-const F = new Function(js.frase +
-  '\nreturn { tramoVisible, textoEscala, fraseTramo, cifraTramo, enSemanasDe, fechaTxt };')();
+const F = new Function(js.frase + '\nreturn { escalaVisible, textoEscala, semanasPropias, ' +
+  'tramoPropio, fraseTramo, cifraTramo, enSemanasDe, fechaTxt };')();
 
 const COLORES = ['c1', 'c2', 'c3', 'c4'];
 const esperar = () => new Promise(r => setTimeout(r, 0));
@@ -187,64 +187,117 @@ async function pruebasLW() {
   igual(fallo, ['mala', 'real'], 'sin los puntos de esa unidad, vuelve a la dibujada');
 }
 
-// ---------- el tramo, la escala y la frase ----------
+// ---------- la escala y la frase ----------
 const DIA = 864e5, SEM = 7 * DIA;
 const lunes = s => Date.parse(s + 'T00:00:00Z');
 const semanas = (ini, vals) => vals.map((v, i) => v == null ? null :
   { time: lunes(ini) + i * SEM, close: v }).filter(Boolean);
-function pruebasFrase() {
+const texto = f => f.map(x => x.texto || '').join('');
+function pruebasEscala() {
+  // la escala explica lo que dibuja la librería: cada línea parte en 0% en la
+  // primera barra a la vista, con el último precio de cada serie hasta ahí
   const P = semanas('2008-01-07', [100, 110, 120, 130, 125]);
   const pera = semanas('2008-01-07', [50, null, 55, 60, 40]);
-  const tarde = semanas('2008-01-21', [10, 12, 15]);              // parte en la 3ª semana
-  const vieja = semanas('2007-12-03', [7, 7]);                     // sin precios en el tramo
-  const t = F.tramoVisible(P, [pera, tarde, vieja, []], 0, Infinity);
-  ok(t.t0 === lunes('2008-01-07') && t.t1 === lunes('2008-02-04') && t.ultima, 'el tramo completo');
-  ok(t.base === 100 && Math.abs(t.cambio - 0.25) < 1e-12, 'la ficha: de su primera a su última barra');
-  ok(Math.abs(t.otras[0].cambio - (40 / 50 - 1)) < 1e-12 && t.otras[0].parte === null,
-     'una comparada desde la misma semana');
-  ok(t.otras[1].parte === lunes('2008-01-21') && Math.abs(t.otras[1].cambio - 0.5) < 1e-12,
-     'la que aún no tiene precio parte en el primero que tenga');
-  ok(t.otras[2] === null && t.otras[3] === null, 'sin precios en el tramo: null');
-  // un tramo a la mitad: el último precio publicado de cada una hasta ahí
-  const m = F.tramoVisible(P, [pera], lunes('2008-01-14'), lunes('2008-01-28') + 3 * DIA);
-  ok(m.t0 === lunes('2008-01-14') && m.t1 === lunes('2008-01-28') && !m.ultima, 'un tramo a la mitad');
-  ok(Math.abs(m.otras[0].cambio - (60 / 50 - 1)) < 1e-12 && m.otras[0].parte === null,
-     'parte con el último precio publicado hasta la primera barra');
-  ok(F.tramoVisible(P, [], lunes('2009-01-05'), lunes('2009-02-02')) === null, 'sin barras a la vista');
-
-  igual(F.textoEscala(F.tramoVisible(P, [pera], 0, Infinity), ['Palta', 'Pera']),
-    'Todas las líneas parten en 0% el 07-01-2008.', 'la escala');
-  igual(F.textoEscala(t, ['Palta', 'Pera', 'Aceite', 'Vieja', 'Otra']),
+  const tarde = semanas('2008-01-21', [10, 12, 15]);                // parte en la 3ª barra
+  const vieja = semanas('2007-12-03', [7, 7]);                       // de antes, plana
+  const e = F.escalaVisible(P, [pera, tarde, vieja, []], 0, Infinity);
+  ok(e.t0 === lunes('2008-01-07') && e.base === 100, 'la escala parte en la primera barra a la vista');
+  igual(e.partes, [null, lunes('2008-01-21'), null, null], 'solo parte después la que no tiene precio antes');
+  igual(F.textoEscala(e, ['Palta', 'Pera', 'Aceite', 'Vieja', 'Otra']),
     'Todas las líneas parten en 0% el 07-01-2008, menos Aceite, que parte en su primer precio, ' +
     'el 21-01-2008.', 'la escala con una que parte después');
-  const dos = F.tramoVisible(P, [tarde, semanas('2008-01-28', [3, 4])], 0, Infinity);
+  igual(F.textoEscala(F.escalaVisible(P, [pera], 0, Infinity), ['Palta', 'Pera']),
+    'Todas las líneas parten en 0% el 07-01-2008.', 'la escala del pedido');
+  const dos = F.escalaVisible(P, [tarde, semanas('2008-01-28', [3, 4])], 0, Infinity);
   igual(F.textoEscala(dos, ['Palta', 'Aceite', 'Miel']),
     'Todas las líneas parten en 0% el 07-01-2008, menos Aceite (21-01-2008) y Miel ' +
     '(28-01-2008), que parten en su primer precio.', 'la escala con dos que parten después');
+  const m = F.escalaVisible(P, [pera], lunes('2008-01-14'), lunes('2008-01-28') + 3 * DIA);
+  ok(m.t0 === lunes('2008-01-14') && m.base === 110, 'un tramo a la mitad');
+  ok(F.escalaVisible(P, [], lunes('2009-01-05'), lunes('2009-02-02')) === null, 'sin barras a la vista');
+}
 
+function pruebasFrase() {
   // la frase del pedido: "Desde [fecha], ajustado por inflación: Asado de
   // tira +38%, Palta −12%."
   const A = semanas('2008-01-07', [100, 138]), B = semanas('2008-01-07', [50, 44]);
   const series = [{ nombre: 'Asado de tira', color: 'h' }, { nombre: 'Palta', color: 'c1' }];
-  const f = F.fraseTramo(F.tramoVisible(A, [B], 0, Infinity), series, 'ajustado por inflación', true);
-  igual(f.map(x => x.texto || '').join(''),
-    'Desde 07-01-2008, ajustado por inflación: Asado de tira +38%, Palta −12%.', 'la frase');
+  const f = F.fraseTramo(F.tramoPropio(A, [B], 0, Infinity, true), series, 'ajustado por inflación');
+  igual(texto(f), 'Desde 07-01-2008, ajustado por inflación: Asado de tira +38%, Palta −12%.', 'la frase');
   igual(f.filter(x => x.clase).map(x => x.texto + ' ' + x.clase), ['+38% v-sube', '−12% v-baja'],
     'las cifras en color con criterio de consumidor');
   igual(f.filter(x => x.muestra).map(x => x.muestra), ['h', 'c1'], 'el color de cada línea');
-  const sinDia = F.fraseTramo(F.tramoVisible(A, [B], 0, Infinity), series, 'a precio de la época', false);
-  ok(sinDia[0].texto === 'Del 07-01-2008 al 14-01-2008, a precio de la época: ',
-     'sin precio esta semana: del ... al ...');
-  const ft = F.fraseTramo(t, [{ nombre: 'Palta' }, { nombre: 'Pera' }, { nombre: 'Aceite' },
-    { nombre: 'Vieja' }], 'ajustado por inflación', true).map(x => x.texto || '').join('');
-  igual(ft, 'Desde 07-01-2008, ajustado por inflación: Palta +25%, Pera −20%, Aceite +50% ' +
-    '(desde el 21-01-2008), Vieja, sin precios en este tramo.', 'la frase con los casos');
+  // sin precio esta semana (o un tramo que no llega a hoy): del ... al ...
+  igual(F.fraseTramo(F.tramoPropio(A, [B], 0, Infinity, false), series, 'a precio de la época')[0].texto,
+    'Del 07-01-2008 al 14-01-2008, a precio de la época: ', 'sin precio esta semana: del ... al ...');
+
+  // una comparada que empieza después del comienzo se mide desde su primer
+  // dato y la frase lo dice: el año ("Palta −12% desde 2019") o, si es el
+  // mismo año del comienzo, la fecha
+  const ficha = semanas('2017-01-02', Array.from({ length: 200 }, (_, i) => 100 + i));
+  const desde2019 = semanas('2019-01-07', [50].concat(Array(90).fill(47), [44]));
+  const t1 = F.tramoPropio(ficha, [desde2019, semanas('2017-03-06', [10, 12])], 0, Infinity, true);
+  igual(texto(F.fraseTramo(t1, [{ nombre: 'Asado de tira' }, { nombre: 'Palta' }, { nombre: 'Miel' }],
+    'ajustado por inflación')),
+    'Desde 02-01-2017, ajustado por inflación: Asado de tira +199%, Palta −12% desde 2019, ' +
+    'Miel +20% desde el 06-03-2017 hasta la semana del 13-03-2017.', 'desde su primer dato, con su fecha');
+
+  // si su último dato tiene más de 4 semanas, hasta ese dato, y lo dice
+  const P = semanas('2026-01-05', Array.from({ length: 10 }, (_, i) => 1000 + 10 * i));   // al 09-03
+  const hace4 = semanas('2026-01-05', [80, 81, 82, 83, 84, 88]);                           // al 09-02: 4 semanas
+  const hace5 = semanas('2026-01-05', [80, 81, 82, 83, 90]);                               // al 02-02: 5 semanas
+  const t2 = F.tramoPropio(P, [hace4, hace5], 0, Infinity, true);
+  igual(t2.otras.map(x => x.hasta), [null, lunes('2026-02-02')], 'más de 4 semanas, hasta su último dato');
+  igual(texto(F.fraseTramo(t2, [{ nombre: 'Palta' }, { nombre: 'A' }, { nombre: 'B' }], 'ajustado por inflación')),
+    'Desde 05-01-2026, ajustado por inflación: Palta +9%, A +10%, B +13% hasta la semana del 02-02-2026.',
+    'la frase dice hasta cuándo');
+
+  // nunca el precio repetido de las semanas sin dato: las semanas que
+  // indices.py completó (datos/repetidas/{slug}.json) no cuentan para nada
+  const j = { t0: '2026-01-05', v: [100, 100, 100, 120, 130, 130] };
+  const propias = F.semanasPropias(j, [1, 2, 5]);
+  igual([...propias].map(F.fechaTxt), ['05-01-2026', '26-01-2026', '02-02-2026'],
+    'las semanas propias: con precio y sin las repetidas');
+  igual([...F.semanasPropias({ t0: '2026-01-05', v: [1, null, 3] }, [])].length, 2,
+    'sin repetidas, toda semana con precio es propia');
+  const todas = semanas('2026-01-05', j.v), solo = todas.filter(x => propias.has(x.time));
+  // la ficha va del 12-01 en adelante: la semana repetida del 12-01 y la del
+  // 19-01 no son base de nada; la comparada parte en su primer precio propio
+  const t3 = F.tramoPropio(semanas('2026-01-12', [500, 505, 510, 515, 520]), [solo], lunes('2026-01-12'), Infinity, true);
+  igual({ cambio: Math.round(t3.otras[0].cambio * 1000) / 1000, desde: t3.otras[0].desde },
+    { cambio: 0.083, desde: lunes('2026-01-26') }, 'mide desde 120 (26-01), no desde el 100 repetido');
+  // y termina en su último precio propio (130 del 02-02), no en el repetido del 09-02
+  ok(Math.abs(t3.otras[0].cambio - (130 / 120 - 1)) < 1e-12, 'hasta el último precio propio');
+  // la ficha, igual: sus semanas repetidas no son base ni final
+  const fichaRep = semanas('2026-01-05', [100, 100, 100, 120, 130]);
+  const t4 = F.tramoPropio(fichaRep.filter(x => propias.has(x.time)), [], 0, Infinity, true);
+  ok(t4.t0 === lunes('2026-01-05') && t4.t1 === lunes('2026-02-02') &&
+     Math.abs(t4.principal.cambio - 0.3) < 1e-12, 'la ficha con sus precios propios');
+
+  // un tramo a la mitad: la ficha no llega a hoy y las comparadas se miden
+  // hasta su último precio del tramo
+  const t5 = F.tramoPropio(P, [hace4], lunes('2026-01-12'), lunes('2026-02-02') + 3 * DIA, true);
+  igual(texto(F.fraseTramo(t5, [{ nombre: 'Palta' }, { nombre: 'A' }], 'ajustado por inflación')),
+    'Del 12-01-2026 al 02-02-2026, ajustado por inflación: Palta +3%, A +4%.', 'un tramo a la mitad');
+  // sin precios en el tramo y un solo precio
+  const t6 = F.tramoPropio(P, [semanas('2025-01-06', [5, 6]), semanas('2026-02-16', [7])], 0, Infinity, true);
+  igual(texto(F.fraseTramo(t6, [{ nombre: 'Palta' }, { nombre: 'Vieja' }, { nombre: 'Una' }], 'ajustado por inflación')),
+    'Desde 05-01-2026, ajustado por inflación: Palta +9%, Vieja, sin precios en este tramo, ' +
+    'Una, un solo precio en este tramo, la semana del 16-02-2026.', 'sin precios y un solo precio');
+  ok(F.tramoPropio(P, [], lunes('2027-01-04'), Infinity, true) === null, 'sin precios de la ficha a la vista');
+  // con la ficha al día, una comparada con precio después del último de la
+  // ficha se mide hasta ese precio (el tramo llega a hoy)
+  const t7 = F.tramoPropio(P.slice(0, 9), [semanas('2026-01-05', Array(10).fill(10).concat([20]))], 0,
+    Infinity, true);
+  ok(t7.hastaHoy && Math.abs(t7.otras[0].cambio - 1) < 1e-12 && t7.otras[0].hasta === null,
+     'hasta hoy, con su precio más nuevo');
+
   igual([0.004, -0.004, 0.006, 12.344, -0.5].map(x => F.cifraTramo(x).texto),
     ['0%', '0%', '+1%', '+1.234%', '−50%'], 'las cifras');
   ok(!F.cifraTramo(0.004).clase, '0% sin color');
 
   // Lightweight: la comparada en las semanas de la ficha, como la dibuja
-  // Advanced Charts
+  // Advanced Charts (solo para el dibujo y la escala)
   const sem = [{ time: '2008-01-07', value: 1 }, { time: '2008-01-14' }, { time: '2008-01-21', value: 2 },
     { time: '2008-01-28', value: 3 }];
   igual(F.enSemanasDe(semanas('2008-01-14', [9, null, 8]), sem),
@@ -260,6 +313,7 @@ function pruebasFrase() {
 (async () => {
   await pruebasTV();
   await pruebasLW();
+  pruebasEscala();
   pruebasFrase();
   console.log(chequeos + ' chequeos, ' + fallas + ' fallas');
   if (fallas) process.exit(1);

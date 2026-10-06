@@ -169,7 +169,7 @@ def test_comparar_y_la_ficha_son_el_mismo_componente(sitio):
                   "function marcaDeAgua(ctx, xDer, yBase, size)", ".pchip { display:flex;"]:
         assert fuente.count(marca) == 1, marca
     # la frase y el tramo, solo en las fichas
-    assert c["JS_FRASE"] in f and "function tramoVisible(" not in g
+    assert c["JS_FRASE"] in f and "function tramoPropio(" not in g
 
 
 def test_comparar_de_graficos_sigue_igual(sitio):
@@ -206,12 +206,17 @@ def test_link_compartible(sitio):
 def test_escala_frase_y_linea_igual_que_la_inflacion(sitio):
     h = _leer(sitio, "productos/palta.html")
     js = _script(h)
-    assert "let s = 'Todas las líneas parten en 0% el ' + fechaTxt(t.t0);" in js
+    assert "let s = 'Todas las líneas parten en 0% el ' + fechaTxt(e.t0);" in js
     assert "const EN_UNIDAD = { real: 'ajustado por inflación', epoca: 'a precio de la época' };" in js
     assert "const IGUAL = 'Igual que la inflación';" in js
-    # Advanced Charts: un dibujo horizontal en el 0%, solo ajustado por
-    # inflación; Lightweight: una línea constante, que en porcentaje queda en 0%
-    assert "if (widget) lineaTV(u === 'real' ? t.base : null, t.t0);" in js
+    # Advanced Charts: un dibujo horizontal en el 0% de la escala (lo que
+    # dibuja el gráfico), solo ajustado por inflación; Lightweight: una línea
+    # constante, que en porcentaje queda en 0%
+    assert "if (widget) lineaTV(e && u === 'real' ? e.base : null, e && e.t0);" in js
+    assert "e = escalaVisible(barras[0], barras.slice(1), rango[0], rango[1]);" in js
+    # la frase, solo con las semanas de precio propio de cada serie
+    assert "Promise.all(todas.map(k => propiasDe(k, u).catch(() => null)))" in js
+    assert "t = tramoPropio(propias[0], propias.slice(1), rango[0], rango[1], AL_DIA);" in js
     assert "shape: 'horizontal_line'" in js
     assert "if (hay && u === 'real') {" in js
     assert "lwRef.setData(lwSemanas.map(p => p.value == null ? { time: p.time } : { time: p.time, value: 1 }));" in js
@@ -252,6 +257,124 @@ def test_ficha_sin_precio_esta_semana(sitio):
     # la frase dice "Del ... al ...": su última semana no es esta
     assert "const FECHA = '" in js and "AL_DIA = false" in js
     assert "AL_DIA = true" in _script(_leer(sitio, "productos/palta.html"))
+
+
+# ---------- la frase: solo precios propios ----------
+def test_plazo_del_ultimo_dato_es_el_de_las_fichas():
+    """La frase dice "hasta la semana del ..." pasado el mismo plazo con que
+    una ficha sin precio esta semana deja de llevar la frase de temporada."""
+    with open(os.path.join(RAIZ, "build_site.py"), encoding="utf-8") as fh:
+        fuente = fh.read()
+    plazo = int(re.search(r"^SEMANAS_FRASE_ULTIMO = (\d+)$", fuente, re.M).group(1))
+    assert f"const SEMANAS_ULTIMO = {plazo};" in _constantes()["JS_FRASE"]
+
+
+def _funciones(*nombres) -> dict:
+    """Funciones y constantes de build_site.py sin importarlo (construye el
+    sitio al importarse): su código, tal cual."""
+    with open(os.path.join(RAIZ, "build_site.py"), encoding="utf-8") as fh:
+        arbol = ast.parse(fh.read())
+    nodos = [n for n in arbol.body if (isinstance(n, ast.FunctionDef) and n.name in nombres) or
+             (isinstance(n, ast.Assign) and isinstance(n.targets[0], ast.Name) and
+              n.targets[0].id in ("SEMANAS_ARRASTRE", "TOLERANCIA_NOMINAL"))]
+    espacio = {"datetime": datetime}
+    exec(compile(ast.Module(body=nodos, type_ignores=[]), "build_site.py", "exec"), espacio)
+    return espacio
+
+
+def _repetida(ini, nominales, factor, rango=None):
+    """Un producto como lo escribe indices.py: el nominal de cada semana
+    (None sin dato) llevado a pesos de hoy con el factor de su mes y
+    redondeado; el rango, solo en las semanas de 'rango'."""
+    t0 = datetime.date.fromisoformat(ini)
+    meses = [(t0 + datetime.timedelta(weeks=i)).strftime("%Y-%m") for i in range(len(nominales))]
+    v = [None if n is None else int(round(n / factor[m])) for n, m in zip(nominales, meses)]
+    p = {"t0": ini, "v": v}
+    if rango is not None:
+        p["min"] = [x - 50 if x is not None and i in rango else None for i, x in enumerate(v)]
+        p["max"] = [x + 50 if x is not None and i in rango else None for i, x in enumerate(v)]
+    return p
+
+
+def test_semanas_repetidas():
+    """Las semanas que indices.py completó repitiendo el precio nominal de la
+    anterior (ffill de hasta 4): sin rango y con el mismo nominal, también
+    entre dos meses con distinto IPC; nunca una semana con rango, ni una
+    quinta seguida."""
+    f = _funciones("semanas_repetidas")
+    rep, factor = f["semanas_repetidas"], {"2026-01": 0.97, "2026-02": 0.98, "2026-03": 0.99}
+    # 05-01 a 23-03: propias con rango; la 1, la 2 (cambia de mes en la 4)
+    # y la 4 a la 6 repiten el nominal de la anterior y no tienen rango
+    nom = [1000, 1000, 1000, 1210, 1210, 1210, 1210, 1300, 1300, 1300, 1300, 1300]
+    p = _repetida("2026-01-05", nom, factor, rango={0, 3, 7})
+    assert rep(p, factor) == [1, 2, 4, 5, 6, 8, 9, 10, 11]
+    # el ajustado cambia al pasar a febrero aunque el nominal se repita
+    assert p["v"][3] != p["v"][4]
+    # una semana con rango nunca es repetida, aunque tenga el mismo precio
+    con = _repetida("2026-01-05", [1000, 1000, 1000], factor, rango={0, 1, 2})
+    assert rep(con, factor) == []
+    # a lo más 4 seguidas (el tope del ffill): la quinta es un precio propio
+    largo = _repetida("2026-01-05", [800] * 7, factor, rango={0})
+    assert rep(largo, factor) == [1, 2, 3, 4, 6]
+    # otro precio nominal (más de un peso de diferencia) es una semana propia
+    distinto = _repetida("2026-01-26", [1000, 1002], factor, rango={0})
+    assert rep(distinto, factor) == []
+    # antes de 2013 ODEPA casi no trae rango: sin rango en el archivo, el precio decide
+    viejo = _repetida("2026-01-05", [500, 510, 510, None, 520], factor)
+    assert rep(viejo, factor) == [2]
+
+
+def test_repetidas_publicadas_y_en_la_ficha(sitio):
+    """datos/repetidas/{slug}.json por cada producto (su serie en
+    datos/productos/ sigue siendo la de indices.json, tal cual) y la de la
+    ficha, inline."""
+    for slug in ["palta", "sube", "viejo", "tomate"]:
+        archivo = json.loads(_leer(sitio, f"datos/repetidas/{slug}.json"))
+        assert isinstance(archivo, list) and all(isinstance(i, int) for i in archivo)
+        js = _script(_leer(sitio, f"productos/{slug}.html"))
+        assert json.loads(re.search(r"const REP = (\[.*?\]);", js).group(1)) == archivo
+    js = _script(_leer(sitio, "productos/palta.html"))
+    assert "propio ? REP : pedirJSON('repetidas/' + k + '.json')" in js
+    assert "if (e && propias.every(Boolean) && propias[0].length) {" in js
+
+
+@pytest.mark.skipif(not os.environ.get("CARESTIA_INDICES_REAL"),
+                    reason="sin CARESTIA_INDICES_REAL (indices.json real de carestia.cl)")
+def test_semanas_repetidas_con_datos_reales():
+    """Con los datos de carestia.cl: desde 2013, casi todas las semanas sin
+    rango son repetidas (las que no, semanas propias sin rango) y ninguna
+    con rango lo es; las rachas no pasan de 4."""
+    with open(os.environ["CARESTIA_INDICES_REAL"], encoding="utf-8") as fh:
+        data = json.load(fh)
+    f = _funciones("semanas_repetidas")
+    nom, real = {}, {}
+    for d in data["indices"].values():
+        n = {p["time"]: p["value"] for p in d["nominal"]}
+        for p in d["real"]:
+            if p["time"] in n:
+                m = p["time"][:7]
+                nom[m] = nom.get(m, 0) + n[p["time"]]
+                real[m] = real.get(m, 0) + p["value"]
+    factor = {m: nom[m] / r for m, r in real.items() if r}
+    sin_rango = repetidas = con_rango_rep = 0
+    for p in data["productos"].values():
+        rep = set(f["semanas_repetidas"](p, factor))
+        t0 = datetime.date.fromisoformat(p["t0"])
+        lo, hi = p.get("min") or [], p.get("max") or []
+        for i, x in enumerate(p["v"]):
+            if x is None or (t0 + datetime.timedelta(weeks=i)).year < 2013 or len(lo) != len(p["v"]):
+                continue
+            if lo[i] is None and hi[i] is None:
+                sin_rango += 1
+                repetidas += i in rep
+            else:
+                con_rango_rep += i in rep
+        racha = 0
+        for i in range(len(p["v"])):
+            racha = racha + 1 if i in rep else 0
+            assert racha <= 4
+    assert con_rango_rep == 0
+    assert repetidas >= 0.98 * sin_rango, (repetidas, sin_rango)
 
 
 # ---------- en Node ----------

@@ -2704,6 +2704,8 @@ __PIE__
   const V = __V__;
   const MIN = __MIN__;
   const MAX = __MAX__;
+  // las semanas que indices.py completó repitiendo la anterior (semanas_repetidas)
+  const REP = __REP__;
   const SLUG = '__SLUG__';
   const NOMBRE = __NOMBRE__;
   const UNIDAD = '__UNIDAD__';
@@ -2883,6 +2885,19 @@ __JS_CAPTURA__
     return pedirJSON((ind ? 'indices/' : 'productos/') + k + '.json')
       .then(j => ind ? semanasDe(j.serie.t0, j.serie.real) : semanasDe(j.t0, j.v));
   }
+  // las semanas con precio propio de una serie en la unidad u, sin las que
+  // indices.py completó repitiendo el precio anterior (semanasPropias): con
+  // ellas se mide la frase. Un índice es la suma de su canasta: todas sus
+  // semanas cuentan
+  function propiasDe(k, u) {
+    if (INDICES.some(d => d.codigo === k)) return barrasDe(k, u);
+    const propio = k === SLUG;
+    return Promise.all([propio ? { t0: T0, v: V } : pedirJSON('productos/' + k + '.json'),
+      propio ? REP : pedirJSON('repetidas/' + k + '.json'), barrasDe(k, u)]).then(([x, rep, b]) => {
+      const propias = semanasPropias(x, rep);
+      return b.filter(s => propias.has(s.time));
+    });
+  }
 
   // el gráfico con lo elegido: en Advanced Charts, la comparación de la
   // librería; en Lightweight, una línea por serie
@@ -2894,12 +2909,15 @@ __JS_CAPTURA__
 
   /* ---------- la escala y la frase ---------- */
   // siguen al tramo a la vista (y a la temporalidad): bajo los botones, la
-  // línea que explica la escala y la frase con el cambio de cada serie en
-  // ese tramo. Ajustado por inflación, además la línea de "Igual que la
-  // inflación" en el 0%
+  // línea que explica la escala (lo que dibuja el gráfico, con las barras de
+  // su temporalidad) y la frase con el cambio de cada serie en ese tramo,
+  // medido con sus semanas de precio propio. Ajustado por inflación, además
+  // la línea de "Igual que la inflación" en el 0%
   // 'quieta': mientras se prepara la captura, la librería pasa por tramos de
   // paso al cambiar de alto; la frase y la línea del 0% esperan
   let fraseGen = 0, fraseEspera = null, ultimaFrase = null, quieta = false;
+  // si falló el pedido de alguna serie, la frase se reintenta sola (a lo más 3 veces)
+  let reintentos = 0;
   function programarFrase() {
     if (fraseEspera || quieta) return;
     fraseEspera = setTimeout(() => { fraseEspera = null; pintarFrase(); }, 120);
@@ -2920,30 +2938,39 @@ __JS_CAPTURA__
       const r = lwChart.timeScale().getVisibleRange();
       if (r) rango = [enMs(r.from), enMs(r.to)];
     }
-    let t = null;
+    let e = null, t = null, barras = [], propias = [];
     if (rango) {
-      const datos = await Promise.all([SLUG].concat(ks).map(k => barrasDe(k, u, res).catch(() => null)));
+      const todas = [SLUG].concat(ks);
+      [barras, propias] = await Promise.all([
+        Promise.all(todas.map(k => barrasDe(k, u, res).catch(() => null))),
+        Promise.all(todas.map(k => propiasDe(k, u).catch(() => null)))]);
       if (gen !== fraseGen) return;
-      if (datos[0] && datos[0].length) t = tramoVisible(datos[0], datos.slice(1), rango[0], rango[1]);
+      if (barras[0] && barras[0].length) e = escalaVisible(barras[0], barras.slice(1), rango[0], rango[1]);
+      // sin las semanas propias de alguna serie (un pedido que falló), no hay
+      // frase: nunca se mide con precios repetidos. Se reintenta sola (abajo)
+      if (e && propias.every(Boolean) && propias[0].length) {
+        t = tramoPropio(propias[0], propias.slice(1), rango[0], rango[1], AL_DIA);
+      }
     }
+    if (rango && (!e || !t) && reintentos < 3 && (!barras[0] || !propias.every(Boolean))) {
+      reintentos++;
+      setTimeout(programarFrase, 2000);
+    } else if (t) reintentos = 0;
     const escala = $('cmp-escala'), frase = $('cmp-frase');
-    if (!t) {
-      escala.hidden = frase.hidden = true;
-      ultimaFrase = null;
-      if (widget) lineaTV(null);
-      return;
-    }
     const series = [{ nombre: NOMBRE, color: tok('bone') }].concat(ks.map(k =>
       ({ nombre: nombres.get(k) || k, color: cmp.estilo(k).color })));
-    ultimaFrase = fraseTramo(t, series, EN_UNIDAD[u], AL_DIA);
-    escala.innerHTML = conFechas(esc(textoEscala(t, series.map(s => s.nombre))));
+    escala.hidden = !e;
+    if (e) escala.innerHTML = conFechas(esc(textoEscala(e, series.map(s => s.nombre))));
+    ultimaFrase = t ? fraseTramo(t, series, EN_UNIDAD[u]) : null;
+    frase.hidden = !t;
     // el punto, el nombre y la cifra de cada serie van juntos (.serie)
-    frase.innerHTML = ultimaFrase.map(x => x.muestra ?
-      '<span class="serie"><span class="dot" style="background:' + x.muestra + '" aria-hidden="true"></span>' :
-      x.clase ? '<span class="' + x.clase + '">' + esc(x.texto) + '</span>' + (x.fin ? '</span>' : '') :
-      conFechas(esc(x.texto)) + (x.fin ? '</span>' : '')).join('');
-    escala.hidden = frase.hidden = false;
-    if (widget) lineaTV(u === 'real' ? t.base : null, t.t0);
+    if (t) {
+      frase.innerHTML = ultimaFrase.map(x => x.muestra ?
+        '<span class="serie"><span class="dot" style="background:' + x.muestra + '" aria-hidden="true"></span>' :
+        x.clase ? '<span class="' + x.clase + '">' + esc(x.texto) + '</span>' + (x.fin ? '</span>' : '') :
+        conFechas(esc(x.texto)) + (x.fin ? '</span>' : '')).join('');
+    }
+    if (widget) lineaTV(e && u === 'real' ? e.base : null, e && e.t0);
   }
   // Advanced Charts: la línea de "Igual que la inflación" es un dibujo
   // horizontal en el precio de la primera barra a la vista, donde está el 0%
@@ -3673,6 +3700,50 @@ def dato_propio(p: dict) -> list:
             for x, a, b in zip(v, lo, hi)]
 
 
+# Las semanas que indices.py completó repitiendo el precio de la anterior
+# (ffill de hasta 4 semanas, sobre el precio nominal y antes de deflactar),
+# para la frase de "Comparar con" de las fichas, que nunca las usa. El rango
+# no basta para reconocerlas: ODEPA casi no trae mínimo ni máximo antes de
+# 2013. Una semana repetida no tiene rango y su precio nominal es el de la
+# anterior; el nominal sale del ajustado por inflación con factor_epoca (el
+# mismo del datafeed), y por el redondeo del ajustado a pesos enteros puede
+# diferir hasta en TOLERANCIA_NOMINAL pesos. Con los datos de carestia.cl
+# (octubre de 2026): desde 2013, 1.397 de las 1.410 semanas sin rango
+# cumplen y ninguna difiere en más de 0,996 pesos (las 13 restantes son
+# semanas propias del 07-01-2013).
+SEMANAS_ARRASTRE = 4
+TOLERANCIA_NOMINAL = 1.0
+
+
+def semanas_repetidas(p: dict, factor: dict) -> list:
+    """Los índices de v de las semanas completadas repitiendo el precio de
+    la anterior (ver arriba): sin rango, con el mismo precio nominal que la
+    semana anterior (dos semanas del mismo mes comparten factor: basta el
+    ajustado) y a lo más SEMANAS_ARRASTRE seguidas, el tope del ffill. Sin
+    rango en el archivo, solo cuenta el precio. 'factor' es factor_epoca()."""
+    v, lo, hi = p["v"], p.get("min"), p.get("max")
+    con_rango = bool(lo) and bool(hi) and len(lo) == len(v) and len(hi) == len(v)
+    t0 = datetime.date.fromisoformat(p["t0"])
+    out, racha = [], 0
+    for i in range(1, len(v)):
+        if (v[i] is None or v[i - 1] is None or
+                (con_rango and (lo[i] is not None or hi[i] is not None))):
+            racha = 0
+            continue
+        mes = (t0 + datetime.timedelta(weeks=i)).strftime("%Y-%m")
+        antes = (t0 + datetime.timedelta(weeks=i - 1)).strftime("%Y-%m")
+        if mes == antes or mes not in factor or antes not in factor:
+            igual = v[i] == v[i - 1]
+        else:
+            igual = abs(v[i] * factor[mes] - v[i - 1] * factor[antes]) <= TOLERANCIA_NOMINAL
+        if igual and racha < SEMANAS_ARRASTRE:
+            racha += 1
+            out.append(i)
+        else:
+            racha = 0
+    return out
+
+
 # lo que más subió y bajó de la portada se mide contra el promedio de estas
 # semanas anteriores, todas con precio propio (como la semana actual)
 SEMANAS_PROMEDIO = 4
@@ -4042,62 +4113,50 @@ JS_COMPARAR = r"""  /* ---------- Comparar: el componente común ---------- */
 
 # La escala y la frase de "Comparar con" en las fichas: funciones puras,
 # aparte del resto del JS de la ficha para probarlas en Node
-# (tests/comparar_node.js).
-JS_FRASE = r"""  /* ---------- Comparar con: el tramo, la escala y la frase ---------- */
-  // Lo que muestran las líneas en el tramo a la vista, con la regla de la
-  // escala porcentual de Advanced Charts (y de Lightweight con enSemanasDe):
-  // cada línea parte en 0% en la primera barra a la vista del producto de
-  // la ficha, con el último precio publicado de cada serie hasta esa barra;
-  // la que aún no tiene precio parte en el primero que tenga. Cada una llega
-  // al último precio publicado hasta la última barra a la vista.
+# (tests/comparar_node.js). La escala explica lo que dibuja el gráfico; la
+# frase mide cada serie solo con sus precios propios (nunca con los que
+# indices.py completó repitiendo el anterior) y dice sus propias fechas.
+JS_FRASE = r"""  /* ---------- Comparar con: la escala y la frase ---------- */
+  const SEMANA = 7 * 864e5;
+  // un último precio de más de estas semanas antes del final del tramo se
+  // dice en la frase ("hasta la semana del ..."): el mismo plazo de las
+  // fichas sin precio esta semana (SEMANAS_FRASE_ULTIMO en build_site.py)
+  const SEMANAS_ULTIMO = 4;
+  const fechaTxt = ms => new Date(ms).toISOString().slice(0, 10).split('-').reverse().join('-');
+  const anio = ms => new Date(ms).getUTCFullYear();
+  // "a, b y c"
+  const enLista = xs => xs.length < 2 ? xs.join('') :
+    xs.slice(0, -1).join(', ') + ' y ' + xs[xs.length - 1];
+
+  // La escala: lo que dibuja la comparación de Advanced Charts (y
+  // Lightweight con enSemanasDe). Cada línea parte en 0% en la primera barra
+  // a la vista del producto de la ficha, con el último precio de cada serie
+  // hasta esa barra; la que aún no tiene precio parte en el primero que
+  // tenga. 'base' es el precio de la ficha en esa barra (ahí va la línea de
+  // "Igual que la inflación").
   //   p      las barras del producto de la ficha: [{ time (ms), close }]
   //   otras  las de cada comparada, igual
   //   desde, hasta  el tramo a la vista (ms)
   // Devuelve null si no hay barras de la ficha a la vista
-  function tramoVisible(p, otras, desde, hasta) {
+  function escalaVisible(p, otras, desde, hasta) {
     let i0 = 0, i1 = p.length - 1;
     while (i0 < p.length && p[i0].time < desde) i0++;
     while (i1 >= 0 && p[i1].time > hasta) i1--;
     if (i0 > i1) return null;
-    const t0 = p[i0].time, t1 = p[i1].time;
-    // el último precio de b publicado hasta t
-    const hastaT = (b, t) => {
-      let r = null;
-      for (let j = 0; j < b.length && b[j].time <= t; j++) r = b[j];
-      return r;
-    };
-    return {
-      t0, t1, base: p[i0].close, ultima: i1 === p.length - 1,
-      cambio: p[i1].close / p[i0].close - 1,
-      otras: otras.map(b => {
-        b = b || [];
-        if (!b.length) return null;
-        let ini = hastaT(b, t0), parte = null;
-        if (!ini) {
-          const p0 = p.find((x, j) => j >= i0 && j <= i1 && x.time >= b[0].time);
-          if (p0) { parte = p0.time; ini = hastaT(b, parte); }
-        }
-        const fin = hastaT(b, t1);
-        // sin precios propios después de donde parte, la línea es el último
-        // precio de antes, plana: null ("sin precios en este tramo")
-        const desde = parte || t0;
-        if (!ini || !fin || !b.some(x => x.time > desde && x.time <= t1)) return null;
-        return { cambio: fin.close / ini.close - 1, parte };
-      }),
-    };
+    const t0 = p[i0].time;
+    return { t0, base: p[i0].close, partes: otras.map(b => {
+      b = b || [];
+      if (!b.length || b[0].time <= t0) return null;
+      const p0 = p.find((x, j) => j >= i0 && j <= i1 && x.time >= b[0].time);
+      return p0 ? p0.time : null;
+    }) };
   }
-  const fechaTxt = ms => new Date(ms).toISOString().slice(0, 10).split('-').reverse().join('-');
-  // "a, b y c"
-  const enLista = xs => xs.length < 2 ? xs.join('') :
-    xs.slice(0, -1).join(', ') + ' y ' + xs[xs.length - 1];
   // la línea bajo el gráfico que explica la escala. nombres: el de la ficha
   // y los de las comparadas, en orden
-  function textoEscala(t, nombres) {
+  function textoEscala(e, nombres) {
     const tarde = [];
-    t.otras.forEach((x, i) => {
-      if (x && x.parte) tarde.push({ n: nombres[i + 1], f: fechaTxt(x.parte) });
-    });
-    let s = 'Todas las líneas parten en 0% el ' + fechaTxt(t.t0);
+    e.partes.forEach((t, i) => { if (t) tarde.push({ n: nombres[i + 1], f: fechaTxt(t) }); });
+    let s = 'Todas las líneas parten en 0% el ' + fechaTxt(e.t0);
     if (tarde.length === 1) {
       s += ', menos ' + tarde[0].n + ', que parte en su primer precio, el ' + tarde[0].f;
     } else if (tarde.length) {
@@ -4105,6 +4164,45 @@ JS_FRASE = r"""  /* ---------- Comparar con: el tramo, la escala y la frase ----
         ', que parten en su primer precio';
     }
     return s + '.';
+  }
+
+  // Las semanas con precio propio de un producto: las que tienen precio
+  // (j: datos/productos/{slug}.json, t0 y v), menos las que indices.py
+  // completó repitiendo el precio anterior ('rep': sus índices en v, de
+  // datos/repetidas/{slug}.json; ver semanas_repetidas en build_site.py).
+  // Devuelve los lunes (ms) de esas semanas
+  function semanasPropias(j, rep) {
+    const base = Date.parse(j.t0 + 'T00:00:00Z'), fuera = new Set(rep || []), out = new Set();
+    (j.v || []).forEach((x, i) => { if (x != null && !fuera.has(i)) out.add(base + i * SEMANA); });
+    return out;
+  }
+  // La frase mide cada serie con sus precios propios en el tramo a la vista,
+  // nunca con un precio repetido. El producto de la ficha va de su primer a
+  // su último precio propio a la vista (t0 y t1); si t1 es su último precio
+  // y el producto tiene precio esta semana (alDia), el tramo llega a hoy.
+  // Cada comparada va de su primer a su último precio propio en ese tramo:
+  // si el primero es posterior a t0, 'desde' (la frase lo dice); si el
+  // último tiene más de SEMANAS_ULTIMO semanas antes de t1, 'hasta' (también
+  // lo dice). Con un solo precio, 'solo'; sin ninguno, null.
+  //   p, otras  las semanas con precio propio: [{ time (ms), close }]
+  //   desde, hasta  el tramo a la vista (ms)
+  function tramoPropio(p, otras, desde, hasta, alDia) {
+    const enTramo = (b, a, z) => (b || []).filter(x => x.time >= a && x.time <= z);
+    const P = enTramo(p, desde, hasta);
+    if (!P.length) return null;
+    const t0 = P[0].time, t1 = P[P.length - 1].time;
+    const hastaHoy = !!alDia && t1 === p[p.length - 1].time;
+    const medir = (b, z) => {
+      const B = enTramo(b, t0, z);
+      if (!B.length) return null;
+      if (B.length === 1) return { solo: B[0].time };
+      const a = B[0], u = B[B.length - 1];
+      return { cambio: u.close / a.close - 1,
+        desde: a.time > t0 ? a.time : null,
+        hasta: t1 - u.time > SEMANAS_ULTIMO * SEMANA ? u.time : null };
+    };
+    return { t0, t1, hastaHoy, principal: medir(P, t1),
+      otras: otras.map(b => medir(b, hastaHoy ? hasta : t1)) };
   }
   // una cifra de la frase: entera, con su signo, en color con criterio de
   // consumidor (v-sube si subió, v-baja si bajó; sin color si redondea a 0%)
@@ -4115,25 +4213,36 @@ JS_FRASE = r"""  /* ---------- Comparar con: el tramo, la escala y la frase ----
       clase: r > 0 ? 'v-sube' : 'v-baja' };
   }
   // la frase: "Desde 07-01-2008, ajustado por inflación: Asado de tira
-  // +38%, Palta −12%." Neutral: las cifras, sin causas. "Desde" si el tramo
-  // llega a la última semana (y el producto tiene precio esta semana); si
-  // no, "Del ... al ...". En tramos { texto, clase } y { muestra } (el color
-  // de cada línea, antes de su nombre), para la página y la captura; 'fin'
-  // cierra lo de cada serie que no se separa (el punto, el nombre y la cifra).
+  // +38%, Palta −12% desde 2019." Neutral: las cifras, sin causas. "Desde"
+  // si el tramo llega a hoy; si no, "Del ... al ...". Una comparada que
+  // parte después dice desde cuándo (el año, o la fecha si es el mismo año
+  // del comienzo) y una cuyo último precio es viejo, hasta cuándo ("hasta la
+  // semana del dd-mm-aaaa"). En tramos { texto, clase } y { muestra } (el
+  // color de cada línea, antes de su nombre), para la página y la captura;
+  // 'fin' cierra lo de cada serie que no se separa (el punto, el nombre y la
+  // cifra).
   //   series  [{ nombre, color }], la de la ficha primero
   //   enUnidad  "ajustado por inflación" o "a precio de la época"
-  function fraseTramo(t, series, enUnidad, alDia) {
-    const cuando = t.ultima && alDia ? 'Desde ' + fechaTxt(t.t0) :
+  function fraseTramo(t, series, enUnidad) {
+    const cuando = t.hastaHoy ? 'Desde ' + fechaTxt(t.t0) :
       'Del ' + fechaTxt(t.t0) + ' al ' + fechaTxt(t.t1);
     const out = [{ texto: cuando + ', ' + enUnidad + ': ' }];
-    const cambios = [{ cambio: t.cambio, parte: null }].concat(t.otras);
+    const medidas = [t.principal].concat(t.otras);
     series.forEach((s, i) => {
       if (i) out.push({ texto: ', ' });
       out.push({ muestra: s.color });
-      const x = cambios[i];
+      const x = medidas[i];
       if (!x) { out.push({ texto: s.nombre + ', sin precios en este tramo', fin: true }); return; }
+      if (x.solo != null) {
+        out.push({ texto: s.nombre + ', un solo precio en este tramo, la semana del ' +
+          fechaTxt(x.solo), fin: true });
+        return;
+      }
       out.push({ texto: s.nombre + ' ' }, Object.assign(cifraTramo(x.cambio), { fin: true }));
-      if (x.parte) out.push({ texto: ' (desde el ' + fechaTxt(x.parte) + ')' });
+      const notas = [];
+      if (x.desde) notas.push('desde ' + (anio(x.desde) === anio(t.t0) ? 'el ' + fechaTxt(x.desde) : anio(x.desde)));
+      if (x.hasta) notas.push('hasta la semana del ' + fechaTxt(x.hasta));
+      if (notas.length) out.push({ texto: ' ' + notas.join(' ') });
     });
     out.push({ texto: '.' });
     return out;
@@ -4141,10 +4250,10 @@ JS_FRASE = r"""  /* ---------- Comparar con: el tramo, la escala y la frase ----
   // Lightweight: una comparada en las semanas del producto de la ficha
   // (semanas: [{ time: 'aaaa-mm-dd', value }], con huecos), como la dibuja
   // la comparación de Advanced Charts: en cada semana con precio de la
-  // ficha, el último precio publicado de la otra hasta esa semana; antes de
-  // su primer precio y donde la ficha no tiene precio, un hueco. Así la
-  // escala porcentual de Lightweight parte cada línea donde la de Advanced
-  // Charts
+  // ficha, el último precio de la otra hasta esa semana; antes de su primer
+  // precio y donde la ficha no tiene precio, un hueco. Así las dos escalas
+  // porcentuales parten cada línea en el mismo punto (escalaVisible); la
+  // frase no usa estos precios, solo los propios
   function enSemanasDe(b, semanas) {
     let j = -1;
     return semanas.map(s => {
@@ -4407,7 +4516,8 @@ JS_CAPTURA = r"""  /* ---------- captura PNG: la composición común ---------- 
 
 
 def generar_datos(slugs: dict, catalogo: dict) -> dict:
-    """Escribe datos/ y devuelve lo que va inline en /graficos.html."""
+    """Escribe datos/ (con datos/repetidas/{slug}.json, las semanas que la
+    frase de las fichas no usa) y devuelve lo que va inline en /graficos.html."""
     indices = DATA["indices"]
     prods = DATA.get("productos", {})
     series = {code: compactar_indice(code, d) for code, d in indices.items()}
@@ -4415,8 +4525,13 @@ def generar_datos(slugs: dict, catalogo: dict) -> dict:
         completo = {k: v for k, v in d.items() if k not in SERIES_INDICE}
         completo["serie"] = series[code]
         escribir_json(os.path.join(DATOS, "indices", f"{code}.json"), completo)
+    # las semanas repetidas de cada producto (semanas_repetidas), aparte: el
+    # archivo de su serie es el de indices.json, tal cual
+    factor = factor_epoca()
     for clave, p in prods.items():
         escribir_json(os.path.join(DATOS, "productos", f"{slugs[clave]}.json"), p)
+        escribir_json(os.path.join(DATOS, "repetidas", f"{slugs[clave]}.json"),
+                      semanas_repetidas(p, factor))
     escribir_json(os.path.join(DATOS, "catalogo.json"), catalogo)
     primero = next(iter(indices))
     return {
@@ -4592,6 +4707,8 @@ def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
         # el rango semanal (mecha de las velas); vacío si indices.json no lo trae
         ("__MIN__", json.dumps(p.get("min") or [])),
         ("__MAX__", json.dumps(p.get("max") or [])),
+        # las semanas repetidas: la frase de "Comparar con" no las usa
+        ("__REP__", json.dumps(semanas_repetidas(p, factor_epoca()))),
         # Advanced Charts: el datafeed, sus versiones y lo que la ficha ya sabe
         ("__NOMBRE__", json.dumps(mostrar, ensure_ascii=False).replace("</", "<\\/")),
         ("__UNIDAD__", p["unidad"]),
