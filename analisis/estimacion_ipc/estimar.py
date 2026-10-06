@@ -20,7 +20,8 @@ que reproduce el índice oficial):
     entran las semanas que ODEPA publicó antes de la fecha del IPC.
   * Producto no cubierto, o cubierto sin precio ODEPA ese mes: variante
     "mes anterior", su propia variación oficial de m-1; variante "12 meses",
-    su variación mensual media (geométrica) de m-12 a m-1.
+    su variación mensual media (geométrica) de m-12 a m-1; variante "ar1",
+    un AR(1) alrededor de ese promedio (ver estimar_phi y preregistro.md).
 
 Primer mes de cada base (enero de 2019 y enero de 2024). El INE publicó la
 canasta nueva en diciembre del año anterior, pero los índices de sus
@@ -107,24 +108,64 @@ def jevons(anterior: pd.DataFrame, actual: pd.DataFrame, series: dict, claves: l
     return float(np.exp(np.mean(logs))), len(logs)
 
 
-def relativo_propio(serie: pd.Series, m: pd.Period, variante: str):
+def _ar1(x: pd.Series, m: pd.Period, phi: float) -> float:
+    """Pronóstico de x(m) con un AR(1) alrededor del promedio de los 12 meses
+    anteriores: mu + phi * (x(m-1) - mu)."""
+    previos = x[(x.index <= m - 1) & (x.index >= m - 12)].dropna()
+    mu = previos.mean()
+    return mu + phi * (x.get(m - 1) - mu)
+
+
+def relativo_propio(serie: pd.Series, m: pd.Period, variante: str, phi: float = None):
     """Relativo de reemplazo de un producto con su propia historia oficial:
     'mes_anterior' = I(m-1)/I(m-2); '12_meses' = (I(m-1)/I(m-13))^(1/12), o
-    con los meses que haya si la serie de la base es más corta."""
+    con los meses que haya si la serie de la base es más corta; 'ar1' =
+    exp(mu + phi * (x(m-1) - mu)), con x la variación logarítmica del producto
+    y mu su promedio de los 12 meses anteriores (ver estimar_phi)."""
     if variante == "mes_anterior":
         return serie.get(m - 1) / serie.get(m - 2)
+    if variante == "ar1":
+        return float(np.exp(_ar1(np.log(serie).diff(), m, phi)))
     previos = serie[(serie.index <= m - 1) & (serie.index >= m - 13)].dropna()
     k = (previos.index[-1] - previos.index[0]).n
     return (previos.iloc[-1] / previos.iloc[0]) ** (1 / k)
 
 
-def relativo_agregado(variacion: pd.Series, m: pd.Period, variante: str) -> float:
+def relativo_agregado(variacion: pd.Series, m: pd.Period, variante: str,
+                      phi: float = None) -> float:
     """El mismo reemplazo, con la variación oficial publicada de Alimentos (%)
     en vez de la del producto: para el primer mes de cada base."""
     if variante == "mes_anterior":
         return 1 + variacion[m - 1] / 100
+    if variante == "ar1":
+        return float(np.exp(_ar1(np.log1p(variacion / 100), m, phi)))
     previos = variacion[(variacion.index <= m - 1) & (variacion.index >= m - 12)]
     return float(np.prod(1 + previos / 100) ** (1 / len(previos)))
+
+
+def estimar_phi(desde: pd.Period = pd.Period("2019-01", "M"),
+                hasta: pd.Period = pd.Period("2023-12", "M")) -> float:
+    """phi del AR(1): mínimos cuadrados ponderados por la ponderación del IPC,
+    sin constante, de x(t) - mu(t) sobre x(t-1) - mu(t), con todos los
+    productos sin ODEPA de la base 2018 y t entre 'desde' y 'hasta' (el
+    período de desarrollo). mu(t) es el promedio de x en los 12 meses
+    anteriores a t."""
+    p = ine.productos(2018)
+    I = p.pivot(index="mes", columns="codigo", values="indice")
+    w = p.groupby("codigo")["ponderacion"].first()
+    cubiertos = mapa_odepa(2018)
+    num = den = 0.0
+    for cod in [c for c in I.columns if c not in cubiertos]:
+        x = np.log(I[cod]).diff()
+        for t in pd.period_range(desde, hasta, freq="M"):
+            previos = x[(x.index <= t - 1) & (x.index >= t - 12)].dropna()
+            if previos.empty or pd.isna(x.get(t)) or pd.isna(x.get(t - 1)):
+                continue
+            mu = previos.mean()
+            a, b = x[t] - mu, x[t - 1] - mu
+            num += w[cod] * a * b
+            den += w[cod] * b * b
+    return num / den
 
 
 def comprobar_agregacion() -> pd.DataFrame:
@@ -148,7 +189,7 @@ def comprobar_agregacion() -> pd.DataFrame:
 
 def estimar(odepa_semanal: pd.DataFrame, variante: str = "mes_anterior",
             oraculo: bool = False, atraso_odepa: int = 4, semanas: int = None,
-            detalle: list = None) -> pd.DataFrame:
+            detalle: list = None, phi: float = None) -> pd.DataFrame:
     """Una fila por mes con la variación estimada (%), la cobertura efectiva
     (peso con relativo ODEPA ese mes) y el detalle. oraculo=True usa para los
     productos cubiertos su relativo oficial en vez del de ODEPA (aísla el
@@ -198,8 +239,8 @@ def estimar(odepa_semanal: pd.DataFrame, variante: str = "mes_anterior",
                 if r is not None:
                     peso_odepa += wi
             if r is None:
-                r = (relativo_agregado(oficial, m, variante) if primero
-                     else relativo_propio(I[cod], m, variante))
+                r = (relativo_agregado(oficial, m, variante, phi) if primero
+                     else relativo_propio(I[cod], m, variante, phi))
             num += wi * previo[cod] * r
             den += wi * previo[cod]
             if detalle is not None and m in I.index:

@@ -13,6 +13,7 @@ python odepa_mensual.py  # precios semanales limpios de la RM a datos/
 python armar_mapa.py     # mapa_productos.csv y mapa_cba.csv
 python estimar.py        # prueba hacia atrás del IPC de alimentos, en resultados/
 python canasta.py        # canasta básica valorizada con ODEPA, en resultados/
+python evaluar.py        # prueba fuera de muestra (unos 5 minutos), en resultados/
 python graficar.py       # grafico_estimado_oficial.png
 ```
 
@@ -27,6 +28,8 @@ python graficar.py       # grafico_estimado_oficial.png
 | `odepa_mensual.py` | Precios de ODEPA en la RM por producto y unidad, con la limpieza del sitio |
 | `armar_mapa.py` | Escribe los dos mapas a partir de las glosas del INE y de la canasta |
 | `estimar.py` | Estimación mensual del IPC de alimentos y comparación con el dato oficial |
+| `evaluar.py` | Prueba fuera de muestra (2024 a 2026) con la regla de `preregistro.md`, con 1, 2 y 3 semanas |
+| `preregistro.md` | Regla, versiones y períodos, fijados antes de mirar 2024 a 2026 |
 | `canasta.py` | Canasta Básica de Alimentos con precios de ODEPA frente al valor del Ministerio |
 | `graficar.py` | Gráfico del informe |
 | `mapa_productos.csv` | Producto del IPC (código, glosa, ponderación) y sus productos ODEPA |
@@ -34,7 +37,7 @@ python graficar.py       # grafico_estimado_oficial.png
 | `calendario_ipc.csv` | Fecha de publicación de cada IPC, sacada de la portada de cada boletín del INE |
 | `cba_2024.csv` | Composición de la canasta básica, metodología 2024 (anexo 6.2) |
 | `cba_publicada.csv` | Valor mensual publicado de la canasta básica, 2019 a 2026 (cuadro 1 de cada informe) |
-| `resultados/` | Estimaciones (`estimacion_*.csv`), métricas por año (`metricas_*.csv`), variantes (`sensibilidad.csv`), error que aporta cada producto (`aporte_error_productos.csv`) y canasta mes a mes y por producto (`canasta_*.csv`) |
+| `resultados/` | Estimaciones (`estimacion_*.csv`), métricas por año (`metricas_*.csv`), variantes (`sensibilidad.csv`), error que aporta cada producto (`aporte_error_productos.csv`), canasta mes a mes y por producto (`canasta_*.csv`) y prueba fuera de muestra (`evaluacion*.csv`) |
 
 ## Fuentes y licencias
 
