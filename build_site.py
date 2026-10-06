@@ -2928,8 +2928,13 @@ __JS_CAPTURA__
 
   // el gráfico con lo elegido: en Advanced Charts, la comparación de la
   // librería; en Lightweight, una línea por serie
+  // 'dibujos' cuenta los cambios dibujados: el tramo pedido lo pone el
+  // último, cuando la librería ya terminó con él (un cambio de unidad cambia
+  // el símbolo y, mientras tanto, no hay tramo)
+  let dibujos = 0;
   function dibujar() {
-    if (widget) cmp.tv(widget).then(() => { programarFrase(); ponerTramoPedido(); });
+    const n = ++dibujos;
+    if (widget) cmp.tv(widget).then(() => { programarFrase(); ponerTramoPedido(n); });
     else if (lw) { if (unidad !== unidadLW) lw(unidad); else compararLW(); }
     programarFrase();
   }
@@ -2956,6 +2961,18 @@ __JS_CAPTURA__
       const r = lwChart.timeScale().getVisibleRange();
       return r ? [enMs(r.from), enMs(r.to)] : null;
     }
+    return null;
+  }
+  // el ancho de cada barra en pantalla: la librería lo conserva cuando corre
+  // el comienzo al ensancharse la escala; acercar o alejar lo cambia
+  function anchoBarra() {
+    try {
+      if (widget) return widget.activeChart().getTimeScale().barSpacing();
+      if (lwChart) {
+        const ts = lwChart.timeScale(), r = ts.getVisibleLogicalRange();
+        return r && r.to > r.from ? ts.width() / (r.to - r.from) : null;
+      }
+    } catch (e) {}
     return null;
   }
   function pedirTramo(nuevas) {
@@ -2985,9 +3002,10 @@ __JS_CAPTURA__
   // espera los datos, la más nueva se encarga del pedido completo (el mismo
   // objeto, con las series de los dos cambios) y esta se retira
   let poniendo = 0;
-  async function ponerTramoPedido() {
+  async function ponerTramoPedido(n) {
     const p = pedido;
-    if (!p || (!widget && !lwChart)) return;
+    // un dibujo más nuevo viene en camino: él pone el tramo, con este pedido
+    if (!p || (!widget && !lwChart) || n !== dibujos) return;
     const yo = ++poniendo;
     const primeros = new Map();         // clave -> su primer precio (ms)
     let hechas = 0;
@@ -2998,31 +3016,46 @@ __JS_CAPTURA__
       ks.forEach((k, i) => primeros.set(k, ts[i]));
       // el rango que la librería pone al montar o al cambiar de unidad, antes
       if (widget && TV.rangoListo) await TV.rangoListo(widget);
-      if (yo !== poniendo) return;
+      if (yo !== poniendo || n !== dibujos) return;
     } while (p.nuevas.length > hechas);
-    if (pedido === p) pedido = null;
-    if (!cmp.claves().length) return;   // sin comparados, la ficha vuelve a precios
+    if (!cmp.claves().length) {         // sin comparados, la ficha vuelve a precios
+      if (pedido === p) pedido = null;
+      return;
+    }
     let desde = p.desde, hasta = p.hasta;
     if (desde == null) {
-      const r = tramoVisible();
+      // mientras la librería termina de cambiar de símbolo no hay tramo: se espera
+      let r = tramoVisible();
+      for (let i = 0; !r && i < 10; i++) {
+        await pausa(300);
+        if (yo !== poniendo || n !== dibujos) return;
+        r = tramoVisible();
+      }
       if (!r) return;
       [desde, hasta] = r;
     }
+    if (pedido === p) pedido = null;
     const ini = Math.max(...[...primeros].filter(([k, t]) => t != null && t <= FIN && cmp.tiene(k)).map(x => x[1]));
     if (ini > desde) {
       desde = ini;
       if (hasta <= ini) hasta = FIN;
     }
     await ponerTramo(desde, hasta);
-    // mientras la escala se ensancha, la librería corre el comienzo y deja
-    // el borde derecho: eso se corrige. Si se movió el borde derecho, alguien
-    // movió el gráfico y el tramo queda como lo dejó
+    // mientras la escala se ensancha, la librería corre el comienzo y deja el
+    // borde derecho y el ancho de las barras: eso se corrige. Si cambió el
+    // borde derecho (mover) o el ancho de las barras (acercar o alejar),
+    // fue la persona y el tramo queda como lo dejó
+    let ancho = anchoBarra();
     for (let i = 0; i < 6; i++) {
       await pausa(400);
       if (pedido || yo !== poniendo) return;
-      const r = tramoVisible();
+      const r = tramoVisible(), a = anchoBarra();
       if (!r || Math.abs(r[1] - hasta) > SEMANA / 2) return;
-      if (Math.abs(r[0] - desde) > SEMANA / 2) await ponerTramo(desde, hasta);
+      if (ancho && a && Math.abs(a - ancho) > ancho * 0.01) return;
+      if (Math.abs(r[0] - desde) > SEMANA / 2) {
+        await ponerTramo(desde, hasta);
+        ancho = anchoBarra();
+      }
     }
   }
 
@@ -3221,7 +3254,7 @@ __JS_CAPTURA__
       alFallar: (uu, dibujada) => { if (unidad === uu) ponerUnidad(dibujada || 'real'); },
       alDibujar: programarFrase });
     programarFrase();
-    ponerTramoPedido();
+    ponerTramoPedido(dibujos);
   }
 
   /* ---------- captura PNG ---------- */
