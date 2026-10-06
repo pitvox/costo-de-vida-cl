@@ -161,7 +161,8 @@ def _paginas(sitio):
 
 
 def test_html_del_build_sin_rayas_ni_muletillas(sitio):
-    paginas = _paginas(sitio)
+    # las páginas y el JS común de las fichas, que arma sus textos
+    paginas = _paginas(sitio) + [os.path.join(sitio, "carestia-ficha.js")]
     assert len(paginas) > 25
     malos = [(os.path.relpath(p, sitio), inf) for p in paginas
              for inf in infracciones(_leer(sitio, p))]
@@ -312,7 +313,8 @@ def test_precio_de_la_epoca_reemplaza_a_nominal(sitio):
     texto de las páginas ni en los textos que arma el JS."""
     for p in _paginas(sitio):
         assert not re.search(r"nominal", _visible(_leer(sitio, p)), re.I), p
-    for p in ["graficos.html", "productos/producto-0.html", "prueba-graficos.html", "carestia-tv.js"]:
+    for p in ["graficos.html", "productos/producto-0.html", "prueba-graficos.html", "carestia-tv.js",
+              "carestia-ficha.js"]:
         h = _leer(sitio, p)
         for viejo in ["' nominal'", "', nominal'", "+ nominal", "NOMINAL", "'-nominal'"]:
             assert viejo not in h, (p, viejo)

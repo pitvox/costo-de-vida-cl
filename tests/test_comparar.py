@@ -11,7 +11,9 @@ siempre, la captura PNG con la leyenda y la frase, y el componente y la
 frase en Node (tests/comparar_node.js, si hay Node)."""
 import ast
 import datetime
+import hashlib
 import json
+import math
 import os
 import re
 import shutil
@@ -86,6 +88,12 @@ def _script(h):
     return re.findall(r"<script>\n(.*?)</script>", h, re.S)[-1]
 
 
+def _ficha(d, slug):
+    """El JS de una ficha: sus datos, inline, y el JS común de las fichas
+    (carestia-ficha.js)."""
+    return _script(_leer(d, f"productos/{slug}.html")) + _leer(d, "carestia-ficha.js")
+
+
 def _constantes() -> dict:
     """Los strings de nivel superior de build_site.py (los componentes)."""
     with open(os.path.join(RAIZ, "build_site.py"), encoding="utf-8") as fh:
@@ -136,6 +144,8 @@ def test_franja_bajo_el_grafico(sitio):
     # la línea de la escala y la frase: las arma el JS con algo elegido
     assert '<p class="cmp-escala" id="cmp-escala" hidden></p>' in franja
     assert '<p class="cmp-frase" id="cmp-frase" hidden></p>' in franja
+    # aparte, las que no tienen precio reciente
+    assert '<p class="cmp-sin" id="cmp-sin" hidden></p>' in franja
     # bajo el gráfico y su fecha, antes de los otros productos del grupo
     assert (h.index('<div id="grafico">') < h.index('<div class="fecha">') <
             h.index('<section class="comparar"') < h.index('<section class="otros"'))
@@ -145,7 +155,7 @@ def test_franja_bajo_el_grafico(sitio):
 
 
 def test_max_cuatro_ademas_del_producto(sitio):
-    js = _script(_leer(sitio, "productos/palta.html"))
+    js = _ficha(sitio, "palta")
     assert ("const cmp = comparador({ colores: [1, 2, 3, 4].map(i => tok('cmp' + i)), max: 4,\n"
             "    simbolo: k => k + SUF[unidad], principal: () => SLUG + SUF[unidad] });") in js
 
@@ -153,7 +163,8 @@ def test_max_cuatro_ademas_del_producto(sitio):
 # ---------- el mismo componente en las dos páginas ----------
 def test_comparar_y_la_ficha_son_el_mismo_componente(sitio):
     c = _constantes()
-    g, f = _leer(sitio, "graficos.html"), _leer(sitio, "productos/palta.html")
+    g = _leer(sitio, "graficos.html")
+    f = _leer(sitio, "productos/palta.html") + _leer(sitio, "carestia-ficha.js")
     for nombre in ["JS_COMPARAR", "JS_CAPTURA", "CSS_COMPARAR"]:
         assert c[nombre] in g, nombre
         assert c[nombre] in f, nombre
@@ -169,7 +180,35 @@ def test_comparar_y_la_ficha_son_el_mismo_componente(sitio):
                   "function marcaDeAgua(ctx, xDer, yBase, size)", ".pchip { display:flex;"]:
         assert fuente.count(marca) == 1, marca
     # la frase y el tramo, solo en las fichas
-    assert c["JS_FRASE"] in f and "function tramoPropio(" not in g
+    assert c["JS_FRASE"] in f and "function tramoComun(" not in g
+
+
+# ---------- el peso: cada ficha lleva sus datos; el JS, común y en caché ----------
+def test_ficha_con_sus_datos_y_el_js_comun(sitio):
+    ver = None
+    for slug in ["palta", "sube", "viejo", "tomate"]:
+        h = _leer(sitio, f"productos/{slug}.html")
+        # inline, solo los datos de la ficha: ninguna función
+        datos = _script(h)
+        assert "function" not in datos and "=>" not in datos, slug
+        assert re.findall(r"^  const (\w+)", datos, re.M) == [
+            "T0", "V", "MIN", "MAX", "REP", "SLUG", "NOMBRE", "UNIDAD", "VER", "FECHA"], slug
+        # el JS común, después de los datos, con su versión en la URL
+        m = re.search(r'<script defer src="/carestia-ficha\.js\?v=([0-9a-f]{10})"></script>\n</body>', h)
+        assert m and h.index(datos) < m.start(), slug
+        assert ver in (None, m.group(1)), slug
+        ver = m.group(1)
+        # las sugerencias van en el HTML; el catálogo, a demanda
+        assert "catalogo" not in h and "ultimas_52" not in h, slug
+    js = _leer(sitio, "carestia-ficha.js")
+    assert hashlib.sha1(js.encode("utf-8")).hexdigest()[:10] == ver
+    # nada de una ficha en particular ni marcadores sin reemplazar
+    assert not re.search(r"__[A-Z_]+__", js)
+    for nombre in ["T0", "V", "MIN", "MAX", "REP", "SLUG", "NOMBRE", "UNIDAD", "VER", "FECHA"]:
+        assert not re.search(rf"^  const {nombre} =", js, re.M), nombre
+    # el buscador pide el catálogo al usarlo, con la versión de datos/
+    assert "catalogo = pedirJSON('catalogo.json').then(c => {" in js
+    assert "busca.addEventListener('focus', () => pedirCatalogo().catch(() => {}));" in js
 
 
 def test_comparar_de_graficos_sigue_igual(sitio):
@@ -190,7 +229,7 @@ def test_comparar_de_graficos_sigue_igual(sitio):
 
 # ---------- el link compartible ----------
 def test_link_compartible(sitio):
-    js = _script(_leer(sitio, "productos/palta.html"))
+    js = _ficha(sitio, "palta")
     # se escribe al elegir, en el orden de los colores, y se lee al abrir (y
     # si cambia con la página abierta); lo que no es sugerencia ni índice se
     # busca en el catálogo
@@ -205,7 +244,7 @@ def test_link_compartible(sitio):
 # ---------- la escala, la frase y la línea de 0% ----------
 def test_escala_frase_y_linea_igual_que_la_inflacion(sitio):
     h = _leer(sitio, "productos/palta.html")
-    js = _script(h)
+    js = _ficha(sitio, "palta")
     assert "let s = 'Todas las líneas parten en 0% el ' + fechaTxt(e.t0);" in js
     assert "const EN_UNIDAD = { real: 'ajustado por inflación', epoca: 'a precio de la época' };" in js
     assert "const IGUAL = 'Igual que la inflación';" in js
@@ -216,7 +255,17 @@ def test_escala_frase_y_linea_igual_que_la_inflacion(sitio):
     assert "e = escalaVisible(barras[0], barras.slice(1), rango[0], rango[1]);" in js
     # la frase, solo con las semanas de precio propio de cada serie
     assert "Promise.all(todas.map(k => propiasDe(k, u).catch(() => null)))" in js
-    assert "t = tramoPropio(propias[0], propias.slice(1), rango[0], rango[1], AL_DIA);" in js
+    # un solo período para todas: desde el 0% del gráfico hasta lo que
+    # muestra (a lo más, el último dato de la ficha)
+    assert "t = tramoComun(propias, e.t0, Math.min(rango[1], FIN), AL_DIA && rango[1] >= FIN);" in js
+    assert "const FIN = Date.parse(T0 + 'T00:00:00Z') + (V.length - 1) * SEMANA;" in js
+    # las que no tienen precio reciente, en la nota aparte
+    assert "ultimaNota = t ? notaTramo(t, series.map(s => s.nombre)) : '';" in js
+    # al agregar una serie que parte después, el tramo parte en su primer precio
+    assert "if (widget) cmp.tv(widget).then(() => { programarFrase(); alinear(); });" in js
+    assert "ks.forEach(k => { if (antes.indexOf(k) === -1) porAlinear.add(k); });" in js
+    assert "const tramo = { from: ini / 1000, to: r.to * 1000 > ini ? r.to : FIN / 1000 };" in js
+    assert "ts.setVisibleRange({ from: diaISO(ini), to: enMs(r.to) > ini ? r.to : diaISO(FIN) });" in js
     assert "shape: 'horizontal_line'" in js
     assert "if (hay && u === 'real') {" in js
     assert "lwRef.setData(lwSemanas.map(p => p.value == null ? { time: p.time } : { time: p.time, value: 1 }));" in js
@@ -231,10 +280,14 @@ def test_escala_frase_y_linea_igual_que_la_inflacion(sitio):
 
 # ---------- la captura PNG ----------
 def test_captura_con_las_lineas_la_leyenda_y_la_frase(sitio):
-    js = _script(_leer(sitio, "productos/palta.html"))
+    js = _ficha(sitio, "palta")
     cap = js[js.index("async function capturar()"):js.index("$('shot').onclick")]
     assert "o.lineas = [{ texto: NOMBRE, color: tok('bone'), punteada: false }]" in cap
     assert "o.frase = (ultimaFrase || []).filter(x => !x.muestra);" in cap
+    # la nota de las que no tienen precio reciente, en su propia línea y en gris
+    assert ("if (ultimaNota) o.frase = o.frase.concat(o.frase.length ? [{ salto: true }] : [],\n"
+            "        [{ texto: ultimaNota, clase: 'nota' }]);") in cap
+    assert "const COLOR_CIFRA = { 'v-sube': tok('sube'), 'v-baja': tok('baja'), nota: tok('ash') };" in js
     assert "o.precio = ONOTE[u];" in cap
     assert "await componerCaptura(o);" in cap
     # Advanced Charts: la captura del cliente, con el tramo de la pantalla
@@ -251,12 +304,12 @@ def test_captura_con_las_lineas_la_leyenda_y_la_frase(sitio):
 
 
 def test_ficha_sin_precio_esta_semana(sitio):
-    js = _script(_leer(sitio, "productos/viejo.html"))
+    js = _ficha(sitio, "viejo")
     captura = json.loads(re.search(r"CAPTURA = (\{.*?\});\n", js).group(1))
     assert captura["chico"] and captura["precio"].startswith("Sin precio de ODEPA esta semana. Último dato: $")
     # la frase dice "Del ... al ...": su última semana no es esta
     assert "const FECHA = '" in js and "AL_DIA = false" in js
-    assert "AL_DIA = true" in _script(_leer(sitio, "productos/palta.html"))
+    assert "AL_DIA = true" in _ficha(sitio, "palta")
 
 
 # ---------- la frase: solo precios propios ----------
@@ -331,11 +384,11 @@ def test_repetidas_publicadas_y_en_la_ficha(sitio):
     for slug in ["palta", "sube", "viejo", "tomate"]:
         archivo = json.loads(_leer(sitio, f"datos/repetidas/{slug}.json"))
         assert isinstance(archivo, list) and all(isinstance(i, int) for i in archivo)
-        js = _script(_leer(sitio, f"productos/{slug}.html"))
+        js = _ficha(sitio, slug)
         assert json.loads(re.search(r"const REP = (\[.*?\]);", js).group(1)) == archivo
-    js = _script(_leer(sitio, "productos/palta.html"))
+    js = _ficha(sitio, "palta")
     assert "propio ? REP : pedirJSON('repetidas/' + k + '.json')" in js
-    assert "if (e && propias.every(Boolean) && propias[0].length) {" in js
+    assert "if (e && propias.every(Boolean)) {" in js
 
 
 @pytest.mark.skipif(not os.environ.get("CARESTIA_INDICES_REAL"),
@@ -375,6 +428,68 @@ def test_semanas_repetidas_con_datos_reales():
             assert racha <= 4
     assert con_rango_rep == 0
     assert repetidas >= 0.98 * sin_rango, (repetidas, sin_rango)
+
+
+# ---------- el tercer color ----------
+_MACHADO = {
+    "protan": [[0.152286, 1.052583, -0.204868], [0.114503, 0.786281, 0.099216],
+               [-0.003882, -0.048116, 1.051998]],
+    "deutan": [[0.367322, 0.860646, -0.227968], [0.280085, 0.672501, 0.047413],
+               [-0.011820, 0.042940, 0.968881]],
+    "tritan": [[1.255528, -0.076749, -0.178779], [-0.078411, 0.930809, 0.147602],
+               [0.004733, 0.691367, 0.303900]],
+}
+
+
+def _lineal(h):
+    c = [int(h[i:i + 2], 16) / 255 for i in (1, 3, 5)]
+    return [x / 12.92 if x <= 0.04045 else ((x + 0.055) / 1.055) ** 2.4 for x in c]
+
+
+def _oklab(rgb):
+    r, g, b = rgb
+    lms = [0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b,
+           0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b,
+           0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b]
+    l, m, s = [math.copysign(abs(x) ** (1 / 3), x) for x in lms]
+    return (0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+            1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+            0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s)
+
+
+def _distancia(a, b, vision="normal"):
+    """OKLab x100 entre dos colores, con daltonismo simulado (Machado 2009,
+    severidad 1)."""
+    def ver(h):
+        rgb = _lineal(h)
+        if vision != "normal":
+            rgb = [min(1, max(0, sum(f * x for f, x in zip(fila, rgb)))) for fila in _MACHADO[vision]]
+        return _oklab(rgb)
+    return 100 * math.dist(ver(a), ver(b))
+
+
+def _contraste(a, b):
+    lum = lambda h: sum(k * x for k, x in zip((0.2126, 0.7152, 0.0722), _lineal(h)))
+    x, y = sorted([lum(a), lum(b)])
+    return (y + 0.05) / (x + 0.05)
+
+
+def test_tercer_color_distinto_del_hueso_y_de_los_otros():
+    """--cmp3 (mostaza): lejos del hueso de la ficha y de los otros tres con
+    visión normal y con protanopía y deuteranopía simuladas (18 o más; con
+    tritanopía, 8 o más), legible sobre el fondo y el panel, y fuera de los
+    azules, verdes, naranjos y rojos (tono OKLCH de los amarillos)."""
+    base = _constantes()["CSS_BASE"]
+    t = dict(re.findall(r"--([a-z0-9]+):(#[0-9a-f]{6})", base))
+    cmp3 = t["cmp3"]
+    assert cmp3 == "#9d8519"
+    for otro in ["bone", "cmp1", "cmp2", "cmp4"]:
+        for vision in ["normal", "protan", "deutan"]:
+            assert _distancia(cmp3, t[otro], vision) >= (28 if otro == "bone" else 18), (otro, vision)
+        assert _distancia(cmp3, t[otro], "tritan") >= 8, otro
+    assert _contraste(cmp3, t["bg"]) >= 4.5 and _contraste(cmp3, t["panel"]) >= 4.5
+    _L, a, b = _oklab(_lineal(cmp3))
+    assert 85 <= math.degrees(math.atan2(b, a)) % 360 <= 100
 
 
 # ---------- en Node ----------

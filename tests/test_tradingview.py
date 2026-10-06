@@ -328,7 +328,7 @@ def test_paso_libreria_corta_si_github_no_responde(tmp_path):
 
 def test_workflow_publica_la_pagina_de_prueba_y_el_datafeed():
     generar = _paso(_wf(), "Generar sitio")
-    for archivo in ["prueba-graficos.html", "carestia-tv.js", "carestia-tv.css"]:
+    for archivo in ["prueba-graficos.html", "carestia-tv.js", "carestia-tv.css", "carestia-ficha.js"]:
         assert f"cp {archivo} public/{archivo}" in generar
     # nunca se commitea nada desde el workflow
     assert not re.search(r"git (add|commit|push)", _wf())
@@ -601,7 +601,10 @@ def test_ficha_con_advanced_charts_despues_del_primer_pantallazo(sitio):
     # ningún motor de gráficos en el <head>: la cifra y el texto no esperan
     assert not re.search(r"lightweight-charts|charting_library|carestia-tv", cab)
     assert '<div id="grafico"><div class="nochart cargando">Cargando el gráfico...</div></div>' in h
-    js = _script(h)
+    # la ficha lleva sus datos; el JS, común a todas, va en carestia-ficha.js
+    # (diferido, al final del <body>)
+    assert re.search(r'<script defer src="/carestia-ficha\.js\?v=[0-9a-f]{10}"></script>\n</body>', h)
+    js = _script(h) + _leer(sitio, "carestia-ficha.js")
     assert "window.addEventListener('load', () => {" in js
     assert re.search(r"cargarScript\('/carestia-tv\.js\?v=[0-9a-f]{10}'\)", js)
     assert ("TV.montar({ contenedor: el, libreria: '/charting_library/', simbolo: SLUG + SUF[unidad],"
@@ -617,7 +620,7 @@ def test_ficha_con_advanced_charts_despues_del_primer_pantallazo(sitio):
     # con: el producto de la ficha en la unidad elegida); la cifra grande es
     # el precio de esta semana en las dos unidades
     assert "simbolo: k => k + SUF[unidad], principal: () => SLUG + SUF[unidad] });" in js
-    assert "if (widget) cmp.tv(widget).then(programarFrase);" in js
+    assert "if (widget) cmp.tv(widget).then(() => { programarFrase(); alinear(); });" in js
     assert "opesos" not in h and "textoUF" not in js and "const UF" not in js
     assert "const SLUG = 'producto-000';" in js and 'const NOMBRE = "Producto 000";' in js
     # la serie de la página alimenta el datafeed (no se vuelve a pedir)
@@ -657,7 +660,7 @@ def test_configuracion_comun_en_una_funcion(sitio):
     assert tvjs.count("'mainSeriesProperties.lineStyle.colorType': 'solid'") == 2
     assert "const MOVIL = '(max-width: 640px)';" in tvjs
     # las tres páginas con Advanced Charts usan la misma configuración
-    for pagina in ["graficos.html", "productos/producto-000.html"]:
+    for pagina in ["graficos.html", "carestia-ficha.js"]:
         assert "TV.montar(" in _leer(sitio, pagina), pagina
     assert "TV.opcionesWidget({" in _leer(sitio, "prueba-graficos.html")
 

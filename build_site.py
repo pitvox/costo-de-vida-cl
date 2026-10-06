@@ -2283,12 +2283,13 @@ CSS_BASE = r"""
        rojo si el precio subió y en verde si bajó (ver .v-sube y .v-baja).
        Sobre --bg, rojo 5,0:1 y verde 8,4:1; sobre --panel, 4,7 y 7,8 (AA) */
     --sube:var(--rojo); --baja:var(--verde);
-    /* Comparar productos: cuatro tonos muy distintos, sin azules ni
-       violetas azulados, sin verde, naranjo ni rojo (rosa, magenta, blanco
-       cálido y amarillo); del 5º al 8º producto se repiten punteados. Los
-       tres primeros, los que Comparar muestra al entrar, quedan a 18 o más
-       entre sí (OKLab x100) aun con daltonismo simulado */
-    --cmp1:#f28cc0; --cmp2:#b04fb5; --cmp3:#f4f1ea; --cmp4:#f2d74e;
+    /* Comparar: cuatro tonos muy distintos, sin azules ni violetas
+       azulados, sin verde, naranjo ni rojo (rosa, magenta, mostaza y
+       amarillo); del 5º al 8º producto se repiten punteados. Entre sí quedan
+       a 18 o más (OKLab x100) con visión normal y con protanopía y
+       deuteranopía simuladas (con tritanopía, a 8 o más), y la mostaza a 28
+       o más del hueso de las fichas. Sobre --bg, 4,2:1 o más */
+    --cmp1:#f28cc0; --cmp2:#b04fb5; --cmp3:#9d8519; --cmp4:#f2d74e;
     /* crosshair de los gráficos: hueso tenue */
     --cruz:rgba(228,218,204,.35);
     --sans:"IBM Plex Sans","IBM Plex Sans Fallback",system-ui,sans-serif;
@@ -2629,7 +2630,10 @@ __CSS_COMPARAR__
   .cmp-frase .dot { display:inline-block; width:8px; height:8px; border-radius:50%;
     margin:0 6px 0 2px; vertical-align:middle; background:var(--bone); }
   .cmp-frase .serie { white-space:nowrap; }
-  .cmp-nota[hidden], .cmp-escala[hidden], .cmp-frase[hidden] { display:none; }
+  /* las series sin precio reciente, aparte de la frase */
+  .cmp-sin { font:400 13px/1.6 var(--sans); color:var(--ash); margin-top:4px;
+    text-wrap:pretty; }
+  .cmp-nota[hidden], .cmp-escala[hidden], .cmp-frase[hidden], .cmp-sin[hidden] { display:none; }
   /* otros productos del grupo: interlinking sobrio al pie, misma paleta
      del sitio (panel/línea/hueso, hover con borde hueso como .links) */
   .otros { margin-top:26px; }
@@ -2693,27 +2697,42 @@ __COMPARAR__
 __PIE__
 
 <script>
-  // serie compacta del producto: t0 + valores semanales consecutivos, null en
-  // semanas sin dato (estacionales), y el rango de cada semana (la mecha de
-  // las velas). La cifra y el texto ya están en el HTML: el gráfico se arma
-  // después del primer pantallazo, en Advanced Charts (en línea, en hueso;
-  // las velas a un clic) o, si la librería no está o no inicia en 8
-  // segundos, en Lightweight como siempre. En los dos, la unidad del selector
-  // y lo que se elija en "Comparar con"
+  // los datos de esta ficha: la serie compacta del producto (t0 + valores
+  // semanales consecutivos, null en semanas sin dato, y el rango de cada
+  // semana, la mecha de las velas), las semanas que indices.py completó
+  // repitiendo la anterior (semanas_repetidas), la semana del último dato,
+  // si es la de esta semana, y lo que dice arriba la captura sin comparados
+  // (el precio de esta semana o el último dato). El JS, el mismo en todas
+  // las fichas, va en /__FICHA_JS__, que el navegador guarda entre fichas
   const T0 = '__T0__';
   const V = __V__;
   const MIN = __MIN__;
   const MAX = __MAX__;
-  // las semanas que indices.py completó repitiendo la anterior (semanas_repetidas)
   const REP = __REP__;
   const SLUG = '__SLUG__';
   const NOMBRE = __NOMBRE__;
   const UNIDAD = '__UNIDAD__';
-  const INDICES = __INDICES__;
   const VER = '__VER__';
-  // la semana del último dato, si es la de esta semana y lo que dice arriba
-  // la captura sin comparados (el precio de esta semana o el último dato)
   const FECHA = '__FECHA__', AL_DIA = __AL_DIA__, CAPTURA = __CAPTURA__;
+</script>
+<script defer src="/__FICHA_JS__?v=__VER_FICHA__"></script>
+</body>
+</html>
+"""
+
+# El JS de las fichas, el mismo en todas: va en FICHA_JS (carestia-ficha.js,
+# con su versión en la URL) para que el navegador lo guarde entre fichas y
+# cada ficha lleve solo sus datos (PRODUCT_HTML). Lo arma ficha_js().
+FICHA_JS_TPL = r"""// carestia-ficha.js: el JS de las fichas de producto (productos/{slug}.html),
+// el mismo en todas, para que el navegador lo guarde entre fichas. Los datos
+// de cada ficha van en su página, antes de este archivo: T0, V, MIN, MAX,
+// REP, SLUG, NOMBRE, UNIDAD, VER, FECHA, AL_DIA y CAPTURA. La cifra y el
+// texto ya están en el HTML: el gráfico se arma después del primer
+// pantallazo, en Advanced Charts (en línea, en hueso; las velas a un clic) o,
+// si la librería no está o no inicia en 8 segundos, en Lightweight como
+// siempre. En los dos, la unidad del selector y lo que se elija en "Comparar
+// con"
+  const INDICES = __INDICES__;
   const LIGHTWEIGHT = 'https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js';
   const fmt = v => '$' + Math.round(v).toLocaleString('es-CL');
   // colores desde los tokens de :root
@@ -2824,7 +2843,15 @@ __JS_CAPTURA__
     if (!b || !cmp.alternar(b.dataset.cmp)) return;   // con el máximo, uno más no entra
     cambio();
   });
+  // las series recién agregadas, hasta que el tramo se alinee con ellas
+  // (alinear); 'antes', las elegidas en el cambio anterior
+  const porAlinear = new Set();
+  let antes = [];
   function cambio() {
+    const ks = cmp.claves();
+    ks.forEach(k => { if (antes.indexOf(k) === -1) porAlinear.add(k); });
+    [...porAlinear].forEach(k => { if (ks.indexOf(k) === -1) porAlinear.delete(k); });
+    antes = ks;
     pintarFranja();
     guardarHash();
     dibujar();
@@ -2902,9 +2929,44 @@ __JS_CAPTURA__
   // el gráfico con lo elegido: en Advanced Charts, la comparación de la
   // librería; en Lightweight, una línea por serie
   function dibujar() {
-    if (widget) cmp.tv(widget).then(programarFrase);
+    if (widget) cmp.tv(widget).then(() => { programarFrase(); alinear(); });
     else if (lw) { if (unidad !== unidadLW) lw(unidad); else compararLW(); }
     programarFrase();
+  }
+  // Al agregar una serie que parte después del comienzo del tramo a la
+  // vista, el tramo pasa a comenzar en su primer precio (el más tardío, si
+  // llegan varias juntas, como con un link): así el gráfico y la frase parten
+  // juntos en 0%. Si ese precio queda después del final del tramo, el tramo
+  // llega hasta el último dato de la ficha. En Advanced Charts, al cargar la
+  // comparación la escala porcentual se ensancha y la librería corre el
+  // comienzo: se vuelve a poner mientras se acomoda
+  const diaISO = ms => new Date(ms).toISOString().slice(0, 10);
+  const pausa = ms => new Promise(r => setTimeout(r, ms));
+  async function alinear() {
+    const ks = [...porAlinear];
+    if (!ks.length || (!widget && !lwChart)) return;
+    porAlinear.clear();
+    const u = widget ? unidad : unidadLW;
+    const primeros = await Promise.all(ks.map(k =>
+      barrasDe(k, u).then(b => cmp.tiene(k) && b.length ? b[0].time : null, () => null)));
+    const ini = Math.max(...primeros.filter(x => x != null));
+    if (!isFinite(ini) || ini > FIN) return;
+    if (widget) {
+      const c = widget.activeChart(), r = c.getVisibleRange();
+      if (!r || !r.to || ini <= r.from * 1000) return;
+      const tramo = { from: ini / 1000, to: r.to * 1000 > ini ? r.to : FIN / 1000 };
+      for (let i = 0; i < 4; i++) {
+        await Promise.resolve(c.setVisibleRange(tramo,
+          { applyDefaultRightMargin: false, rejectByTimeout: 3000 })).catch(() => {});
+        await pausa(i ? 600 : 300);
+        const v = c.getVisibleRange();
+        if (!v || Math.abs(v.from - tramo.from) * 1000 < SEMANA / 2) break;
+      }
+    } else {
+      const ts = lwChart.timeScale(), r = ts.getVisibleRange();
+      if (!r || ini <= enMs(r.from)) return;
+      ts.setVisibleRange({ from: diaISO(ini), to: enMs(r.to) > ini ? r.to : diaISO(FIN) });
+    }
   }
 
   /* ---------- la escala y la frase ---------- */
@@ -2915,13 +2977,16 @@ __JS_CAPTURA__
   // la línea de "Igual que la inflación" en el 0%
   // 'quieta': mientras se prepara la captura, la librería pasa por tramos de
   // paso al cambiar de alto; la frase y la línea del 0% esperan
-  let fraseGen = 0, fraseEspera = null, ultimaFrase = null, quieta = false;
+  let fraseGen = 0, fraseEspera = null, ultimaFrase = null, ultimaNota = '', quieta = false;
   // si falló el pedido de alguna serie, la frase se reintenta sola (a lo más 3 veces)
   let reintentos = 0;
   function programarFrase() {
     if (fraseEspera || quieta) return;
     fraseEspera = setTimeout(() => { fraseEspera = null; pintarFrase(); }, 120);
   }
+  // la semana del último dato de la ficha: lo que el gráfico alcanza a
+  // mostrar (las comparadas se dibujan en sus semanas)
+  const FIN = Date.parse(T0 + 'T00:00:00Z') + (V.length - 1) * SEMANA;
   // una fecha de Lightweight en milisegundos
   const enMs = t => typeof t === 'string' ? Date.parse(t + 'T00:00:00Z') :
     typeof t === 'number' ? t * 1000 : Date.UTC(t.year, t.month - 1, t.day);
@@ -2947,29 +3012,35 @@ __JS_CAPTURA__
       if (gen !== fraseGen) return;
       if (barras[0] && barras[0].length) e = escalaVisible(barras[0], barras.slice(1), rango[0], rango[1]);
       // sin las semanas propias de alguna serie (un pedido que falló), no hay
-      // frase: nunca se mide con precios repetidos. Se reintenta sola (abajo)
-      if (e && propias.every(Boolean) && propias[0].length) {
-        t = tramoPropio(propias[0], propias.slice(1), rango[0], rango[1], AL_DIA);
+      // frase: nunca se mide con precios repetidos. Se reintenta sola (abajo).
+      // La frase parte en el 0% del gráfico y llega, a lo más, a lo que el
+      // gráfico muestra
+      if (e && propias.every(Boolean)) {
+        t = tramoComun(propias, e.t0, Math.min(rango[1], FIN), AL_DIA && rango[1] >= FIN);
       }
     }
     if (rango && (!e || !t) && reintentos < 3 && (!barras[0] || !propias.every(Boolean))) {
       reintentos++;
       setTimeout(programarFrase, 2000);
     } else if (t) reintentos = 0;
-    const escala = $('cmp-escala'), frase = $('cmp-frase');
+    const escala = $('cmp-escala'), frase = $('cmp-frase'), nota = $('cmp-sin');
     const series = [{ nombre: NOMBRE, color: tok('bone') }].concat(ks.map(k =>
       ({ nombre: nombres.get(k) || k, color: cmp.estilo(k).color })));
     escala.hidden = !e;
     if (e) escala.innerHTML = conFechas(esc(textoEscala(e, series.map(s => s.nombre))));
     ultimaFrase = t ? fraseTramo(t, series, EN_UNIDAD[u]) : null;
-    frase.hidden = !t;
+    ultimaNota = t ? notaTramo(t, series.map(s => s.nombre)) : '';
+    frase.hidden = !ultimaFrase;
     // el punto, el nombre y la cifra de cada serie van juntos (.serie)
-    if (t) {
+    if (ultimaFrase) {
       frase.innerHTML = ultimaFrase.map(x => x.muestra ?
         '<span class="serie"><span class="dot" style="background:' + x.muestra + '" aria-hidden="true"></span>' :
         x.clase ? '<span class="' + x.clase + '">' + esc(x.texto) + '</span>' + (x.fin ? '</span>' : '') :
         conFechas(esc(x.texto)) + (x.fin ? '</span>' : '')).join('');
     }
+    // las que no tienen precio reciente, aparte
+    nota.hidden = !ultimaNota;
+    nota.innerHTML = conFechas(esc(ultimaNota));
     if (widget) lineaTV(e && u === 'real' ? e.base : null, e && e.t0);
   }
   // Advanced Charts: la línea de "Igual que la inflación" es un dibujo
@@ -3093,6 +3164,7 @@ __JS_CAPTURA__
       alFallar: (uu, dibujada) => { if (unidad === uu) ponerUnidad(dibujada || 'real'); },
       alDibujar: programarFrase });
     programarFrase();
+    alinear();
   }
 
   /* ---------- captura PNG ---------- */
@@ -3117,7 +3189,10 @@ __JS_CAPTURA__
       o.chico = true;
       o.lineas = [{ texto: NOMBRE, color: tok('bone'), punteada: false }].concat(ks.map(k =>
         Object.assign({ texto: nombres.get(k) || k }, cmp.estilo(k))));
+      // la frase y, en otra línea, la nota de las que no tienen precio reciente
       o.frase = (ultimaFrase || []).filter(x => !x.muestra);
+      if (ultimaNota) o.frase = o.frase.concat(o.frase.length ? [{ salto: true }] : [],
+        [{ texto: ultimaNota, clase: 'nota' }]);
     } else if (TITULO_UNIDAD[u]) o.titulo += TITULO_UNIDAD[u];
     await componerCaptura(o);
   }
@@ -3172,9 +3247,6 @@ __JS_CAPTURA__
       ponerUnidad(unidad);
     }, () => { selector.limitar(unidadesHay()); lightweight(); });
   });
-</script>
-</body>
-</html>
 """
 
 UNI_TXT = {"kg": "kilo", "un": "unidad", "l": "litro"}
@@ -4114,16 +4186,20 @@ JS_COMPARAR = r"""  /* ---------- Comparar: el componente común ---------- */
 # La escala y la frase de "Comparar con" en las fichas: funciones puras,
 # aparte del resto del JS de la ficha para probarlas en Node
 # (tests/comparar_node.js). La escala explica lo que dibuja el gráfico; la
-# frase mide cada serie solo con sus precios propios (nunca con los que
-# indices.py completó repitiendo el anterior) y dice sus propias fechas.
+# frase mide todas las series en un mismo período, solo con sus precios
+# propios (nunca con los que indices.py completó repitiendo el anterior), y
+# deja aparte las que no tienen precio reciente.
 JS_FRASE = r"""  /* ---------- Comparar con: la escala y la frase ---------- */
   const SEMANA = 7 * 864e5;
-  // un último precio de más de estas semanas antes del final del tramo se
-  // dice en la frase ("hasta la semana del ..."): el mismo plazo de las
-  // fichas sin precio esta semana (SEMANAS_FRASE_ULTIMO en build_site.py)
+  // una serie sin precio propio en estas semanas antes del final del tramo
+  // queda fuera de la frase ("Sin precio reciente: ..."): el mismo plazo de
+  // las fichas sin precio esta semana (SEMANAS_FRASE_ULTIMO en build_site.py)
   const SEMANAS_ULTIMO = 4;
   const fechaTxt = ms => new Date(ms).toISOString().slice(0, 10).split('-').reverse().join('-');
   const anio = ms => new Date(ms).getUTCFullYear();
+  const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto',
+    'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  const mes = ms => MESES[new Date(ms).getUTCMonth()];
   // "a, b y c"
   const enLista = xs => xs.length < 2 ? xs.join('') :
     xs.slice(0, -1).join(', ') + ' y ' + xs[xs.length - 1];
@@ -4176,33 +4252,43 @@ JS_FRASE = r"""  /* ---------- Comparar con: la escala y la frase ---------- */
     (j.v || []).forEach((x, i) => { if (x != null && !fuera.has(i)) out.add(base + i * SEMANA); });
     return out;
   }
-  // La frase mide cada serie con sus precios propios en el tramo a la vista,
-  // nunca con un precio repetido. El producto de la ficha va de su primer a
-  // su último precio propio a la vista (t0 y t1); si t1 es su último precio
-  // y el producto tiene precio esta semana (alDia), el tramo llega a hoy.
-  // Cada comparada va de su primer a su último precio propio en ese tramo:
-  // si el primero es posterior a t0, 'desde' (la frase lo dice); si el
-  // último tiene más de SEMANAS_ULTIMO semanas antes de t1, 'hasta' (también
-  // lo dice). Con un solo precio, 'solo'; sin ninguno, null.
-  //   p, otras  las semanas con precio propio: [{ time (ms), close }]
-  //   desde, hasta  el tramo a la vista (ms)
-  function tramoPropio(p, otras, desde, hasta, alDia) {
-    const enTramo = (b, a, z) => (b || []).filter(x => x.time >= a && x.time <= z);
-    const P = enTramo(p, desde, hasta);
-    if (!P.length) return null;
-    const t0 = P[0].time, t1 = P[P.length - 1].time;
-    const hastaHoy = !!alDia && t1 === p[p.length - 1].time;
-    const medir = (b, z) => {
-      const B = enTramo(b, t0, z);
-      if (!B.length) return null;
-      if (B.length === 1) return { solo: B[0].time };
-      const a = B[0], u = B[B.length - 1];
-      return { cambio: u.close / a.close - 1,
-        desde: a.time > t0 ? a.time : null,
-        hasta: t1 - u.time > SEMANAS_ULTIMO * SEMANA ? u.time : null };
-    };
-    return { t0, t1, hastaHoy, principal: medir(P, t1),
-      otras: otras.map(b => medir(b, hastaHoy ? hasta : t1)) };
+  // La frase mide todas las series en el mismo período, con sus precios
+  // propios: desde la primera semana, a partir de 'desde' (el 0% del
+  // gráfico), en que todas tienen precio propio, hasta la última semana, no
+  // después de 'hasta', en que todas lo tienen. Así parte en la fecha más
+  // tardía entre el comienzo del tramo y el primer precio de cada serie, y
+  // nunca usa un precio repetido. Una serie sin precio propio en las
+  // SEMANAS_ULTIMO semanas antes de 'hasta' queda fuera, con su último dato
+  // ('ultimos'; null si no tiene precios hasta ahí). 'hastaHoy': el período
+  // llega a esta semana (alDia: el tramo llega a la semana de hoy del
+  // producto de la ficha). Sin dos semanas en común, t0 y t1 quedan en null.
+  //   series  las semanas con precio propio de cada serie, la de la ficha
+  //           primero: [{ time (ms), close }]
+  //   desde, hasta  el comienzo y el final del tramo (ms)
+  function tramoComun(series, desde, hasta, alDia) {
+    const plazo = SEMANAS_ULTIMO * SEMANA;
+    const ultimos = series.map(b => {
+      let u = null;
+      for (const x of b || []) { if (x.time > hasta) break; u = x; }
+      return u;
+    });
+    const dentro = series.map((b, i) => ultimos[i] && hasta - ultimos[i].time <= plazo ?
+      (b || []).filter(x => x.time >= desde && x.time <= hasta) : null);
+    let comunes = null;
+    dentro.forEach(d => {
+      if (!d) return;
+      const hay = new Set(d.map(x => x.time));
+      comunes = comunes ? comunes.filter(t => hay.has(t)) : d.map(x => x.time);
+    });
+    const t = { incluidas: dentro.map(Boolean), ultimos, t0: null, t1: null, hastaHoy: false,
+      cambios: series.map(() => null) };
+    if (!comunes || comunes.length < 2) return t;
+    t.t0 = comunes[0];
+    t.t1 = comunes[comunes.length - 1];
+    t.hastaHoy = !!alDia && hasta - t.t1 <= plazo;
+    const precio = (d, s) => d.find(x => x.time === s).close;
+    t.cambios = dentro.map(d => d ? precio(d, t.t1) / precio(d, t.t0) - 1 : null);
+    return t;
   }
   // una cifra de la frase: entera, con su signo, en color con criterio de
   // consumidor (v-sube si subió, v-baja si bajó; sin color si redondea a 0%)
@@ -4212,40 +4298,51 @@ JS_FRASE = r"""  /* ---------- Comparar con: la escala y la frase ---------- */
     return { texto: (r > 0 ? '+' : '−') + Math.abs(r).toLocaleString('es-CL') + '%',
       clase: r > 0 ? 'v-sube' : 'v-baja' };
   }
-  // la frase: "Desde 07-01-2008, ajustado por inflación: Asado de tira
-  // +38%, Palta −12% desde 2019." Neutral: las cifras, sin causas. "Desde"
-  // si el tramo llega a hoy; si no, "Del ... al ...". Una comparada que
-  // parte después dice desde cuándo (el año, o la fecha si es el mismo año
-  // del comienzo) y una cuyo último precio es viejo, hasta cuándo ("hasta la
-  // semana del dd-mm-aaaa"). En tramos { texto, clase } y { muestra } (el
-  // color de cada línea, antes de su nombre), para la página y la captura;
-  // 'fin' cierra lo de cada serie que no se separa (el punto, el nombre y la
-  // cifra).
+  // el período, en meses: "Desde mayo de 2008" si llega a hoy; si no, "De
+  // mayo de 2008 a diciembre de 2019" o "De mayo a diciembre de 2019"; dentro
+  // de un mismo mes, con las fechas
+  function periodoTxt(t) {
+    const a0 = anio(t.t0), a1 = anio(t.t1), m0 = mes(t.t0), m1 = mes(t.t1);
+    if (t.hastaHoy) return 'Desde ' + m0 + ' de ' + a0;
+    if (a0 === a1 && m0 === m1) return 'Del ' + fechaTxt(t.t0) + ' al ' + fechaTxt(t.t1);
+    if (a0 === a1) return 'De ' + m0 + ' a ' + m1 + ' de ' + a1;
+    return 'De ' + m0 + ' de ' + a0 + ' a ' + m1 + ' de ' + a1;
+  }
+  // la frase: "Desde mayo de 2008, ajustado por inflación: Palta +40%,
+  // Índice Asado +43%." Neutral: las cifras, sin causas, todas del mismo
+  // período y solo las series incluidas. null si no queda ninguna. En
+  // tramos { texto, clase } y { muestra } (el color de cada línea, antes de
+  // su nombre), para la página y la captura; 'fin' cierra lo de cada serie
+  // que no se separa (el punto, el nombre y la cifra).
   //   series  [{ nombre, color }], la de la ficha primero
   //   enUnidad  "ajustado por inflación" o "a precio de la época"
   function fraseTramo(t, series, enUnidad) {
-    const cuando = t.hastaHoy ? 'Desde ' + fechaTxt(t.t0) :
-      'Del ' + fechaTxt(t.t0) + ' al ' + fechaTxt(t.t1);
-    const out = [{ texto: cuando + ', ' + enUnidad + ': ' }];
-    const medidas = [t.principal].concat(t.otras);
+    if (!t.incluidas.some(Boolean)) return null;
+    if (t.t0 == null) return [{ texto: 'En este tramo no hay semanas con precio de todas a la vez.' }];
+    const out = [{ texto: periodoTxt(t) + ', ' + enUnidad + ': ' }];
     series.forEach((s, i) => {
-      if (i) out.push({ texto: ', ' });
-      out.push({ muestra: s.color });
-      const x = medidas[i];
-      if (!x) { out.push({ texto: s.nombre + ', sin precios en este tramo', fin: true }); return; }
-      if (x.solo != null) {
-        out.push({ texto: s.nombre + ', un solo precio en este tramo, la semana del ' +
-          fechaTxt(x.solo), fin: true });
-        return;
-      }
-      out.push({ texto: s.nombre + ' ' }, Object.assign(cifraTramo(x.cambio), { fin: true }));
-      const notas = [];
-      if (x.desde) notas.push('desde ' + (anio(x.desde) === anio(t.t0) ? 'el ' + fechaTxt(x.desde) : anio(x.desde)));
-      if (x.hasta) notas.push('hasta la semana del ' + fechaTxt(x.hasta));
-      if (notas.length) out.push({ texto: ' ' + notas.join(' ') });
+      if (t.cambios[i] == null) return;
+      if (out.length > 1) out.push({ texto: ', ' });
+      out.push({ muestra: s.color }, { texto: s.nombre + ' ' },
+        Object.assign(cifraTramo(t.cambios[i]), { fin: true }));
     });
     out.push({ texto: '.' });
     return out;
+  }
+  // la nota aparte con las series que quedaron fuera: "Sin precio reciente:
+  // Cereza (último dato: semana del 02-02-2026)." Vacía si no hay
+  //   nombres  el de la ficha y los de las comparadas, en orden
+  function notaTramo(t, nombres) {
+    const viejas = [], sin = [];
+    t.incluidas.forEach((si, i) => {
+      if (si) return;
+      if (t.ultimos[i]) viejas.push(nombres[i] + ' (último dato: semana del ' + fechaTxt(t.ultimos[i].time) + ')');
+      else sin.push(nombres[i]);
+    });
+    const out = [];
+    if (viejas.length) out.push('Sin precio reciente: ' + enLista(viejas) + '.');
+    if (sin.length) out.push('Sin precios en este tramo: ' + enLista(sin) + '.');
+    return out.join(' ');
   }
   // Lightweight: una comparada en las semanas del producto de la ficha
   // (semanas: [{ time: 'aaaa-mm-dd', value }], con huecos), como la dibuja
@@ -4358,7 +4455,8 @@ JS_CAPTURA = r"""  /* ---------- captura PNG: la composición común ---------- 
   // (chico: un texto en vez de la cifra grande), lineas: la leyenda, cada
   // una { texto, color, punteada } con la muestra de su línea, partes: la
   // composición de la canasta, frase: [{ texto, clase }] (las cifras con
-  // v-sube o v-baja), fecha, foto: prop => la foto del gráfico, nombre }
+  // v-sube o v-baja, una nota con 'nota') y { salto: true } para pasar a la
+  // línea siguiente, fecha, foto: prop => la foto del gráfico, nombre }
   async function componerCaptura(o) {
     // el canvas no dispara la carga perezosa de webfonts: si un peso aún
     // no se usó en el DOM, fillText caería a la fuente del sistema.
@@ -4409,22 +4507,31 @@ JS_CAPTURA = r"""  /* ---------- captura PNG: la composición común ---------- 
       }
     }
     // la frase en las líneas que quepan: palabra por palabra, cada trozo
-    // con su color (las cifras en rojo si subieron y en verde si bajaron)
-    const COLOR_CIFRA = { 'v-sube': tok('sube'), 'v-baja': tok('baja') };
+    // con su color (las cifras en rojo si subieron y en verde si bajaron; una
+    // nota, en gris). { salto: true } pasa a la línea siguiente
+    const COLOR_CIFRA = { 'v-sube': tok('sube'), 'v-baja': tok('baja'), nota: tok('ash') };
     const espacio = mctx.measureText(' ').width;
     if (o.frase && o.frase.length) {
       const palabras = [];
       let actual = null;
-      o.frase.forEach(t => String(t.texto || '').split(/( )/).forEach(p => {
-        if (p === ' ') { actual = null; return; }
-        if (!p) return;
-        if (!actual) { actual = { trozos: [], ancho: 0 }; palabras.push(actual); }
-        const a = mctx.measureText(p).width;
-        actual.trozos.push({ texto: p, color: COLOR_CIFRA[t.clase] || tok('bone'), ancho: a });
-        actual.ancho += a;
-      }));
+      o.frase.forEach(t => {
+        if (t.salto) { actual = null; palabras.push({ salto: true }); return; }
+        String(t.texto || '').split(/( )/).forEach(p => {
+          if (p === ' ') { actual = null; return; }
+          if (!p) return;
+          if (!actual) { actual = { trozos: [], ancho: 0 }; palabras.push(actual); }
+          const a = mctx.measureText(p).width;
+          actual.trozos.push({ texto: p, color: COLOR_CIFRA[t.clase] || tok('bone'), ancho: a });
+          actual.ancho += a;
+        });
+      });
       let linea = [], usado = 0;
       palabras.forEach(p => {
+        if (p.salto) {
+          if (linea.length) fraseLineas.push(linea);
+          linea = []; usado = 0;
+          return;
+        }
         if (linea.length && usado + espacio + p.ancho > chartW) {
           fraseLineas.push(linea); linea = []; usado = 0;
         }
@@ -4601,6 +4708,7 @@ def franja_comparar(sugerencias: list) -> str:
             f'{MAX_COMPARADOS} a la vez.</p>\n'
             f'      <p class="cmp-escala" id="cmp-escala" hidden></p>\n'
             f'      <p class="cmp-frase" id="cmp-frase" hidden></p>\n'
+            f'      <p class="cmp-sin" id="cmp-sin" hidden></p>\n'
             f'    </section>')
 
 
@@ -4697,9 +4805,8 @@ def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
         ("__FECHA__", fecha_txt),
         ("__ANIO__", anio),
         ("__CANASTA__", f"{key}:{QDEF.get(p['unidad'], '1')}"),
-        # Comparar con: la franja, el máximo y lo que la captura dice sin comparados
+        # Comparar con: la franja y lo que la captura dice sin comparados
         ("__COMPARAR__", franja_comparar(sugerencias)),
-        ("__MAX_COMPARADOS__", str(MAX_COMPARADOS)),
         ("__AL_DIA__", "false" if antiguo else "true"),
         ("__CAPTURA__", _json(captura).replace("</", "<\\/")),
         ("__T0__", p["t0"]),
@@ -4709,26 +4816,17 @@ def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
         ("__MAX__", json.dumps(p.get("max") or [])),
         # las semanas repetidas: la frase de "Comparar con" no las usa
         ("__REP__", json.dumps(semanas_repetidas(p, factor_epoca()))),
-        # Advanced Charts: el datafeed, sus versiones y lo que la ficha ya sabe
+        # lo que el JS común (FICHA_JS) sabe de la ficha, y su versión
         ("__NOMBRE__", json.dumps(mostrar, ensure_ascii=False).replace("</", "<\\/")),
         ("__UNIDAD__", p["unidad"]),
-        ("__INDICES__", indices_tv()),
-        ("__TV_JS__", TV_JS),
-        ("__VER_TV__", _ver(feed_js())),
-        ("__TV_CSS__", TV_CSS),
-        ("__VER_CSS__", _ver(tv_css())),
         ("__VER__", APP["ver"]),
-        # la unidad: el selector, su línea y su JS
+        ("__FICHA_JS__", FICHA_JS),
+        ("__VER_FICHA__", _ver(ficha_js())),
+        # la unidad: el selector y su línea (su JS va en FICHA_JS)
         ("__SELECTOR_UNIDAD__", selector_unidad()),
         ("__UNIDAD_REAL__", unidad_txt()["real"]),
-        ("__JS_UNIDAD__", JS_UNIDAD),
-        ("__UNIDAD_TXT__", _json(unidad_txt())),
-        # Comparar y la captura: los componentes comunes con /graficos.html
+        # el CSS de Comparar, común con /graficos.html
         ("__CSS_COMPARAR__", CSS_COMPARAR),
-        ("__JS_COMPARAR__", JS_COMPARAR),
-        ("__JS_FRASE__", JS_FRASE),
-        ("__JS_CAPTURA__", JS_CAPTURA),
-        ("__EN_PESOS__", ", en " + pesos(corto=True)),
         # HTML ya renderizado (seccion_otros escapa labels y grupo), no
         # se vuelve a escapar aquí
         ("__OTROS__", otros_html),
@@ -4771,8 +4869,11 @@ def asignar_fichas(prods: dict) -> dict:
 
 def generar_productos(slugs: dict, catalogo: dict) -> None:
     """Escribe productos/{slug}.html por cada ficha de asignar_fichas, con
-    las sugerencias de su franja "Comparar con" (del catálogo)."""
+    las sugerencias de su franja "Comparar con" (del catálogo), y el JS común
+    de todas, FICHA_JS."""
     prods = DATA.get("productos", {})
+    with open(FICHA_JS, "w", encoding="utf-8") as fh:
+        fh.write(ficha_js())
     # interlinking: rueda alfabética de slugs por grupo ODEPA (determinista)
     por_grupo = {}
     for slug, (key, _label) in slugs.items():
@@ -4854,6 +4955,8 @@ def tarjeta_producto(p: dict, slug: str, semana: datetime.date = None) -> str:
 # y 12M); en CLP sin decimales (la UF con decimales) y en America/Santiago.
 TV_JS = "carestia-tv.js"
 TV_CSS = "carestia-tv.css"
+# el JS común de las fichas (ficha_js)
+FICHA_JS = "carestia-ficha.js"
 TV_PRUEBA = "prueba-graficos.html"
 FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de datos/.
    Lo genera build_site.py; lo usan las páginas con gráficos. */
@@ -6027,6 +6130,30 @@ TV_COLORES = """.theme-dark:root {{
   --tv-color-popup-element-toolbox-background-active-hover: {hover};
 }}
 """
+
+
+def ficha_js() -> str:
+    """carestia-ficha.js: el JS de las fichas (FICHA_JS_TPL) con los
+    componentes comunes con /graficos.html (la unidad, Comparar, la frase y
+    la captura) y lo que es igual en todas: los índices, el máximo de
+    "Comparar con" y las versiones del datafeed y su tema."""
+    out = FICHA_JS_TPL
+    for token, valor in [
+        ("__JS_UNIDAD__", JS_UNIDAD),
+        ("__UNIDAD_TXT__", _json(unidad_txt())),
+        ("__JS_COMPARAR__", JS_COMPARAR),
+        ("__JS_FRASE__", JS_FRASE),
+        ("__JS_CAPTURA__", JS_CAPTURA),
+        ("__MAX_COMPARADOS__", str(MAX_COMPARADOS)),
+        ("__INDICES__", indices_tv()),
+        ("__TV_JS__", TV_JS),
+        ("__VER_TV__", _ver(feed_js())),
+        ("__TV_CSS__", TV_CSS),
+        ("__VER_CSS__", _ver(tv_css())),
+        ("__EN_PESOS__", ", en " + pesos(corto=True)),
+    ]:
+        out = out.replace(token, valor)
+    return out
 
 
 def feed_js() -> str:
