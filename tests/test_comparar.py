@@ -272,12 +272,24 @@ def test_escala_frase_y_linea_igual_que_la_inflacion(sitio):
     assert "ultimaNota = t ? notaTramo(t, series.map(s => s.nombre)) : '';" in js
     # el tramo se conserva al cambiar lo elegido o la unidad y, al agregar una
     # serie que parte después, parte en su primer precio
-    assert "if (widget) cmp.tv(widget).then(() => { programarFrase(); ponerTramoPedido(); });" in js
+    assert "if (widget) cmp.tv(widget).then(() => { programarFrase(); ponerTramoPedido(n); });" in js
+    # el tramo pedido lo pone el último dibujo (un cambio de unidad cambia el
+    # símbolo y, mientras tanto, no hay tramo)
+    assert "if (!p || (!widget && !lwChart) || n !== dibujos) return;" in js
     assert "pedirTramo(ks.filter(k => antes.indexOf(k) === -1));" in js
     assert "if (u !== unidad && cmp.claves().length) pedirTramo([]);" in js
     assert "if (widget && TV.rangoListo) await TV.rangoListo(widget);" in js
-    assert "const ini = Math.max(...primeros.filter(x => x != null && x <= FIN));" in js
-    assert "if (r && Math.abs(r[0] - desde) > SEMANA / 2) await ponerTramo(desde, hasta);" in js
+    assert ("const ini = Math.max(...[...primeros].filter(([k, t]) => t != null && t <= FIN && cmp.tiene(k))"
+            ".map(x => x[1]));") in js
+    # un cambio mientras otro espera los datos (la unidad, con el gráfico
+    # cargando): la llamada más nueva se encarga de las series de los dos
+    assert "if (yo !== poniendo || n !== dibujos) return;\n    } while (p.nuevas.length > hechas);" in js
+    # se corrige solo el corrimiento de la librería (el borde derecho queda);
+    # si alguien movió el gráfico, el tramo queda como lo dejó
+    assert "if (!r || Math.abs(r[1] - hasta) > SEMANA / 2) return;" in js
+    assert "if (ancho && a && Math.abs(a - ancho) > ancho * 0.01) return;" in js
+    assert "if (widget) return widget.activeChart().getTimeScale().barSpacing();" in js
+    assert "if (Math.abs(r[0] - desde) > SEMANA / 2) {\n        await ponerTramo(desde, hasta);" in js
     assert "shape: 'horizontal_line'" in js
     assert "if (hay && u === 'real') {" in js
     assert "lwRef.setData(lwSemanas.map(p => p.value == null ? { time: p.time } : { time: p.time, value: 1 }));" in js
