@@ -63,6 +63,12 @@ def _app(d):
 PAGINAS = ["graficos.html", "productos/producto-000.html"]
 
 
+def _con_js(d, p):
+    """La página y, en una ficha, su JS común (carestia-ficha.js)."""
+    h = _leer(d, p)
+    return h + _leer(d, "carestia-ficha.js") if p.startswith("productos/") else h
+
+
 def test_sin_uf_dos_unidades(sin_uf):
     d, log = sin_uf
     assert "AVISO UF" not in log
@@ -83,6 +89,8 @@ def test_con_uf_la_interfaz_no_la_ofrece_y_se_publica_igual(con_uf, sin_uf):
         assert ">UF<" not in h and "en UF" not in h and "asado-uf" not in h, p
         # ningún datafeed de las páginas pide los símbolos en UF
         assert "uf: " not in _script(h), p
+        if p.startswith("productos/"):
+            assert "uf: " not in _leer(d, "carestia-ficha.js"), p
     for p in PAGINAS:
         assert re.findall(r'data-unidad="(\w+)"', _leer(d, p)) == ["real", "epoca"], p
     # datos/uf.json queda tal cual en datos/, que se publica entero
@@ -142,7 +150,7 @@ def test_unidad_y_tipo_por_defecto(con_uf):
     solo = re.search(r"const SOLO_ESCRITORIO = \[(.*?)\];", tv, re.S).group(1)
     assert "header_resolutions" not in solo
     for p in PAGINAS:
-        h = _leer(d, p)
+        h = _con_js(d, p)
         assert ('<button class="vbtn ubtn active" type="button" data-unidad="real" '
                 'aria-pressed="true">Ajustado por inflación</button>') in h, p
         # el desplegable, si los dos botones no caben en su fila
@@ -174,7 +182,7 @@ UNIDAD_TXT = {
 def test_textos_de_la_unidad_literales(con_uf):
     d, _ = con_uf
     for p in PAGINAS:
-        h = _leer(d, p)
+        h = _con_js(d, p)
         unidad_txt = json.loads(re.search(r"const UNIDAD_TXT = (\{.*?\});", h).group(1))
         assert unidad_txt == UNIDAD_TXT, p
         # la de ajustado por inflación ya va en el HTML, antes del JS

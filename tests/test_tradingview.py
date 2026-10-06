@@ -328,7 +328,7 @@ def test_paso_libreria_corta_si_github_no_responde(tmp_path):
 
 def test_workflow_publica_la_pagina_de_prueba_y_el_datafeed():
     generar = _paso(_wf(), "Generar sitio")
-    for archivo in ["prueba-graficos.html", "carestia-tv.js", "carestia-tv.css"]:
+    for archivo in ["prueba-graficos.html", "carestia-tv.js", "carestia-tv.css", "carestia-ficha.js"]:
         assert f"cp {archivo} public/{archivo}" in generar
     # nunca se commitea nada desde el workflow
     assert not re.search(r"git (add|commit|push)", _wf())
@@ -462,8 +462,13 @@ def test_graficos_indices_y_comparar_en_advanced_charts(sitio):
     assert "opesos" not in js and "textoUF" not in js and "numUFEje" not in js
     assert "priceFormatter: fmt } }));" in js
     # Comparar: comparación de la librería en escala porcentual, colores por
-    # puesto, en la unidad elegida (al cambiarla, se rehacen las comparaciones)
-    assert "const sim = k => PRODS[k].slug + SUF[unidad];" in js
+    # puesto, en la unidad elegida (al cambiarla, se rehacen las comparaciones).
+    # Es el componente común con las fichas (comparador): aquí sin serie
+    # principal fija, la primera elegida lo es
+    assert ("const cmp = comparador({ colores: PALETTE, max: PMAX,\n"
+            "    simbolo: k => PRODS[k].slug + SUF[unidad] });") in js
+    assert "if (tvListo('productos')) cmp.tv(tv.productos.w).then(pintarCarga);" in js
+    assert "const sim = o.simbolo;" in js
     assert "if (keep.includes(k) && x.sim === sim(k)) return;" in js
     assert "{ source: 'close', symbol: s }," in js
     assert "c.createStudy('Compare', false, false," in js
@@ -520,14 +525,20 @@ def test_graficos_altos_y_captura_cuadrada(sitio):
             "      max-height:75svh; } }") in h
     assert "100vh - " not in h and "100svh - " not in h
     ficha = _leer(sitio, "productos/producto-000.html")
-    assert ("#grafico { position:relative; max-width:none; aspect-ratio:5 / 3;\n"
-            "    min-height:520px; max-height:760px; margin-top:16px; }") in ficha
+    # el gráfico va en un marco con el ancho de la página (la captura fija su
+    # alto mientras la librería se redibuja)
+    assert ".marco { position:relative; max-width:none; margin-top:16px; }" in ficha
+    assert ("#grafico { position:relative; aspect-ratio:5 / 3;\n"
+            "    min-height:520px; max-height:760px; }") in ficha
     assert "#grafico { aspect-ratio:1 / 1; min-height:0; max-height:75vh;" in ficha
     js = _script(h)
     assert "const W = 1080, H = 1080;" in js
     assert "const chartH = H - headH - footH;" in js
-    assert ("const shot = w ? await fotoTV(w, chartW / chartH).catch(() => null) :\n"
-            "      fotoLW(ch, chartW / chartH);") in js
+    # la composición es la común (componerCaptura, también de las fichas):
+    # el gráfico se fotografía con la proporción de su recuadro
+    assert "const shot = await o.foto(chartW / chartH);" in js
+    assert ("foto: prop => w ? fotoTV(w, prop, caja, document.getElementById('hero'), veloTV(caja))\n"
+            "        .catch(() => null) : fotoLW(ch, prop),") in js
     # Advanced Charts: siempre la captura del cliente
     foto = js[js.index("async function fotoTV("):js.index("async function capturarPNG()")]
     assert foto.count("TV.capturaCliente(w, tok, caja)") == 2
@@ -590,7 +601,10 @@ def test_ficha_con_advanced_charts_despues_del_primer_pantallazo(sitio):
     # ningún motor de gráficos en el <head>: la cifra y el texto no esperan
     assert not re.search(r"lightweight-charts|charting_library|carestia-tv", cab)
     assert '<div id="grafico"><div class="nochart cargando">Cargando el gráfico...</div></div>' in h
-    js = _script(h)
+    # la ficha lleva sus datos; el JS, común a todas, va en carestia-ficha.js
+    # (async, al final del <body>)
+    assert re.search(r'<script async src="/carestia-ficha\.js\?v=[0-9a-f]{10}"></script>\n</body>', h)
+    js = _script(h) + _leer(sitio, "carestia-ficha.js")
     assert "window.addEventListener('load', () => {" in js
     assert re.search(r"cargarScript\('/carestia-tv\.js\?v=[0-9a-f]{10}'\)", js)
     assert ("TV.montar({ contenedor: el, libreria: '/charting_library/', simbolo: SLUG + SUF[unidad],"
@@ -602,9 +616,11 @@ def test_ficha_con_advanced_charts_despues_del_primer_pantallazo(sitio):
     # su Comparar superpone el producto en otras unidades: el nombre la dice
     assert "nombreConUnidad: true," in js
     assert "nombreConUnidad" not in _script(_leer(sitio, "graficos.html"))
-    # el selector de unidad cambia el símbolo; la cifra grande es el precio
-    # de esta semana en las dos unidades
-    assert "Promise.resolve(c.setSymbol(SLUG + SUF[u])).catch(() => {});" in js
+    # el selector de unidad cambia el símbolo (la serie principal de Comparar
+    # con: el producto de la ficha en la unidad elegida); la cifra grande es
+    # el precio de esta semana en las dos unidades
+    assert "simbolo: k => k + SUF[unidad], principal: () => SLUG + SUF[unidad] });" in js
+    assert "if (widget) cmp.tv(widget).then(() => { programarFrase(); ponerTramoPedido(); });" in js
     assert "opesos" not in h and "textoUF" not in js and "const UF" not in js
     assert "const SLUG = 'producto-000';" in js and 'const NOMBRE = "Producto 000";' in js
     # la serie de la página alimenta el datafeed (no se vuelve a pedir)
@@ -619,7 +635,7 @@ def test_ficha_con_advanced_charts_despues_del_primer_pantallazo(sitio):
     # la referencia de las velas se muestra mientras estén a la vista
     assert "c.onChartTypeChanged().subscribe(null, ver);" in js
     assert "chart.addLineSeries({ color: tok('bone'), lineWidth: 2, priceLineVisible: false })" in js
-    assert "localization: { locale: 'es-CL', priceFormatter: fmt }," in js
+    assert "localization: { locale: 'es-CL', priceFormatter: fmt, percentageFormatter: fmtPct }," in js
 
 
 def test_configuracion_comun_en_una_funcion(sitio):
@@ -644,7 +660,7 @@ def test_configuracion_comun_en_una_funcion(sitio):
     assert tvjs.count("'mainSeriesProperties.lineStyle.colorType': 'solid'") == 2
     assert "const MOVIL = '(max-width: 640px)';" in tvjs
     # las tres páginas con Advanced Charts usan la misma configuración
-    for pagina in ["graficos.html", "productos/producto-000.html"]:
+    for pagina in ["graficos.html", "carestia-ficha.js"]:
         assert "TV.montar(" in _leer(sitio, pagina), pagina
     assert "TV.opcionesWidget({" in _leer(sitio, "prueba-graficos.html")
 

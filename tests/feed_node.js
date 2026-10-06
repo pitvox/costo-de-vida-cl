@@ -583,7 +583,17 @@ async function temporalidades(info, semanales, t, completo) {
     firstDataRequest: true }, b => res(b), rej));
   ok(i2.ticker === p0.slug && b2.length === j0.v.filter(x => x != null).length &&
      b2[b2.length - 1].close === p0.precio_pesos_hoy, 'ficha: su producto sin esperar el catálogo');
-  ok(JSON.stringify(pedidos2) === '["catalogo.json"]', 'ficha: la serie precargada no se pide');
+  ok(JSON.stringify(pedidos2) === '[]', 'ficha: ni su serie precargada ni el catálogo se piden');
+  // el catálogo, a demanda: para un producto que la página no trae, una vez
+  const pedidos4 = [];
+  const feed4 = TV.crearDatafeed({ indices: INDICES,
+    productos: [{ slug: p0.slug, nombre: p0.nombre, unidad: p0.unidad }],
+    pedir: r => { pedidos4.push(r); return Promise.resolve(leer(path.join('datos', r))); } });
+  const otro = CAT.productos[1];
+  const i4 = await llamar((res, rej) => feed4.resolveSymbol(otro.slug, res, rej));
+  await llamar((res, rej) => feed4.resolveSymbol(CAT.productos[2].slug, res, rej));
+  ok(i4.ticker === otro.slug && JSON.stringify(pedidos4) === '["catalogo.json"]',
+     'el catálogo se pide al resolver un producto que la página no trae, una sola vez');
   // la ficha en UF: pide la UF y los índices (el factor de la época), nunca su serie
   if (UFJ) {
     const feed3 = TV.crearDatafeed({ indices: INDICES, uf: true, nombreConUnidad: true,

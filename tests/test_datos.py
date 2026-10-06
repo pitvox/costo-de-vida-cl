@@ -277,9 +277,10 @@ def test_tokens_en_un_solo_lugar_y_brasa_solo_en_su_token(sitio):
 def test_comparar_cuatro_tonos_por_orden_de_seleccion_y_locale(sitio):
     d, _data = sitio
     h = (d / "graficos.html").read_text(encoding="utf-8")
-    assert "--cmp1:#f28cc0; --cmp2:#b04fb5; --cmp3:#f4f1ea; --cmp4:#f2d74e;" in h
+    assert "--cmp1:#f28cc0; --cmp2:#b04fb5; --cmp3:#9d8519; --cmp4:#f2d74e;" in h
     assert "--cmp5" not in h
-    for viejo in ["#717c16", "#b897f0", "#d1e25a", "#9977e4"]:   # paleta de 8 anterior
+    # paleta de 8 anterior y el blanco cálido que se confundía con el hueso
+    for viejo in ["#717c16", "#b897f0", "#d1e25a", "#9977e4", "#f4f1ea"]:
         assert viejo not in h
     # estilo por puesto de selección (no por posición en el catálogo) y
     # repetición punteada del 5º al 8º
@@ -288,5 +289,6 @@ def test_comparar_cuatro_tonos_por_orden_de_seleccion_y_locale(sitio):
     assert "const PMAX = PALETTE.length * 2;" in h
     # fechas de los gráficos en es-CL, en la portada y en las fichas
     assert "localization: Object.assign({ locale: 'es-CL' }" in h
-    ficha = (d / "productos" / "producto-000.html").read_text(encoding="utf-8")
+    # en las fichas, en su JS común
+    ficha = (d / "carestia-ficha.js").read_text(encoding="utf-8")
     assert "locale: 'es-CL'" in ficha

@@ -136,6 +136,7 @@ jobs:
           cp prueba-graficos.html public/prueba-graficos.html
           cp carestia-tv.js public/carestia-tv.js
           cp carestia-tv.css public/carestia-tv.css
+          cp carestia-ficha.js public/carestia-ficha.js
           cp indices.json public/indices.json
           cp resumen.json public/resumen.json
           cp og.png public/og.png

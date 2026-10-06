@@ -61,6 +61,9 @@ import unicodedata
 # cálculo (nunca escritas a mano); el veredicto por temporada, de la misma
 # regla que usa indices.py para los índices (aquí, para los productos)
 from indices import BASKETS, COLORES, comparar_temporada, resumen_temporada, zona_historia
+# la clave de cada producto en indices.json (la de los componentes de los
+# índices sale de su label): las sugerencias de "Comparar con" de las fichas
+from indices import _slug as clave_producto
 # las og:image de 1200 x 630 (Pillow): fichas, índices y portada
 import tarjetas
 
@@ -358,12 +361,8 @@ __CSS_CABECERA__
   /* ---- franja de contexto: productos y canasta ---- */
   .ctx-solo { border-top:1px solid var(--line); min-height:190px;
     padding:clamp(16px,3vw,24px) clamp(16px,3vw,32px) clamp(20px,3vw,28px); }
-  /* selector de catálogo: búsqueda + grupos ODEPA colapsables */
-  .psearch { width:100%; font:400 14px var(--sans); color:var(--bone);
-    background:var(--panel); border:1px solid var(--line); padding:10px 14px;
-    margin-bottom:10px; border-radius:0; outline:none; -webkit-appearance:none; }
-  .psearch::placeholder { color:var(--dim); }
-  .psearch:focus { border-color:var(--dim); }
+  /* selector de catálogo: búsqueda (CSS_COMPARAR) + grupos ODEPA colapsables */
+__CSS_COMPARAR__
   .pgroup { border-top:1px solid var(--line); }
   .pg-head { display:flex; align-items:center; gap:8px; width:100%; text-align:left;
     font:600 11px var(--mono); letter-spacing:.14em; color:var(--ash);
@@ -378,12 +377,6 @@ __CSS_CABECERA__
      lleva ambas clases); buscando: los grupos con resultados se abren solos
      y al borrar la búsqueda vuelve el colapso que dejó el usuario */
   .pgroup:not(.abierto):not(.buscando) .pg-body { display:none; }
-  .pchips { display:flex; flex-wrap:wrap; gap:8px; }
-  .pchip { display:flex; align-items:center; gap:8px; font:500 13px var(--sans);
-    padding:7px 12px; min-height:34px; cursor:pointer; background:transparent;
-    border:1px solid var(--line); color:var(--ash); }
-  .pchip .dot { width:8px; height:8px; border-radius:50%; background:var(--dim); flex:none; }
-  .pchip.active { background:var(--panel); color:var(--bone); }
   .can-reg { font:400 12px/1.6 var(--sans); color:var(--ash); margin-top:10px; }
   /* acción principal de la vista: pill como los tabs, en hueso para que
      se lea como botón protagonista */
@@ -647,6 +640,8 @@ __PIE__
   }
   const fmt = v => '$' + Math.round(v).toLocaleString('es-CL');
 __JS_UNIDAD__
+__JS_COMPARAR__
+__JS_CAPTURA__
   const MESES = ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   // dentro de una frase, el mes con su nombre completo; las abreviaturas
   // quedan solo como etiquetas de las barras
@@ -787,9 +782,6 @@ __JS_UNIDAD__
   let unidadLW = 'real';
   const dia = ms => new Date(ms).toISOString().slice(0, 10);
   const SEMANA_MS = 7 * DIA;
-  // en Comparar, el cambio del precio en la unidad elegida
-  const ONOTE = { real: 'Cambio del precio ajustado por inflación, en porcentaje',
-    epoca: 'Cambio del precio de la época, en porcentaje' };
 
   // variación de las dos últimas semanas: viene calculada en el resumen,
   // así el ticker no necesita las series
@@ -1178,7 +1170,7 @@ __JS_UNIDAD__
     }
     if (!usaLW(modo) && !tvListo(modo)) return ['tv'];
     if (modo === 'productos' && !usaLW(modo)) return [];
-    const keys = modo === 'productos' ? [...psel] : [...canasta.keys()];
+    const keys = modo === 'productos' ? cmp.claves() : [...canasta.keys()];
     return keys.filter(k => PRODS[k] && !PRODS[k].real).map(k => 'p:' + k);
   }
   function pintarCarga() {
@@ -1207,18 +1199,15 @@ __JS_UNIDAD__
 
   /* ---------- vista Productos ---------- */
   // C3: cuatro tonos propios (tokens --cmp1 a --cmp4); del 5º al 8º
-  // producto se repiten con línea punteada. El estilo va por orden de
-  // selección: cada producto toma el primer puesto libre y lo conserva
-  // mientras siga elegido, así dos productos nunca comparten estilo y los
-  // que ya están no cambian de color. Máximo 8 a la vez
+  // producto se repiten con línea punteada. La elección, los colores por
+  // orden de selección y el dibujo son los del componente común
+  // (comparador), el mismo de la franja "Comparar con" de las fichas.
+  // Máximo 8 a la vez
   const PALETTE = [1, 2, 3, 4].map(i => tok('cmp' + i));
   const PMAX = PALETTE.length * 2;
   const PKEYS = Object.keys(PRODS);
-  const puestos = new Map();          // clave -> puesto 0..7
-  const estiloDe = k => {
-    const i = puestos.get(k);
-    return { color: PALETTE[i % PALETTE.length], punteada: i >= PALETTE.length };
-  };
+  const cmp = comparador({ colores: PALETTE, max: PMAX,
+    simbolo: k => PRODS[k].slug + SUF[unidad] });
 
   /* ---------- selector de catálogo: búsqueda + grupos colapsables ---------- */
   const sinTildes = s =>
@@ -1274,22 +1263,12 @@ __JS_UNIDAD__
       });
     };
   }
-  const psel = new Set();
-  function elegir(k) {
-    const usados = new Set(puestos.values());
-    let i = 0;
-    while (usados.has(i)) i++;
-    puestos.set(k, i);
-    psel.add(k);
-  }
-  function soltar(k) { psel.delete(k); puestos.delete(k); }
   ['asado_de_tira', 'palta', 'huevo_color'].forEach(w => {
-    if (PRODS[w]) { elegir(w); return; }
+    if (PRODS[w]) { cmp.elegir(w); return; }
     const alt = PKEYS.find(k => k.indexOf(w.split('_')[0]) === 0);
-    if (alt) elegir(alt);
+    if (alt) cmp.elegir(alt);
   });
   const ppaints = [];
-  const pseries = new Map();
 
   function initPChart() {
     const el = document.getElementById('pchart');
@@ -1302,110 +1281,31 @@ __JS_UNIDAD__
     pchart = LightweightCharts.createChart(el, opcionesChart({
       rightPriceScale: { mode: LightweightCharts.PriceScaleMode.Percentage,
         borderColor: COL.line },
+      localization: { percentageFormatter: fmtPct },
     }));
   }
 
   // los elegidos en el orden de sus puestos (color 1, color 2, ...)
-  const elegidosEnOrden = () => [...psel].filter(k => PRODS[k])
-    .sort((a, b) => puestos.get(a) - puestos.get(b));
+  const elegidosEnOrden = () => cmp.claves().filter(k => PRODS[k]);
 
   // Comparar en Advanced Charts: el primer elegido es la serie principal y el
   // resto va con la comparación de la librería, en escala porcentual, con los
   // colores de cada puesto (del 5º al 8º, punteados), todos en la unidad
-  // elegida. Los cambios van en fila para que dos clics rápidos no se crucen
-  const comparados = new Map();       // clave -> { id del estudio Compare, símbolo }
-  let filaComparar = Promise.resolve();
-  function compararTV() {
-    filaComparar = filaComparar.then(compararAhora, compararAhora);
-    return filaComparar;
-  }
-  async function compararAhora() {
-    const w = tv.productos.w, c = w.activeChart(), serie = c.getSeries();
-    const elegidos = elegidosEnOrden();
-    // el símbolo de un producto en la unidad elegida
-    const sim = k => PRODS[k].slug + SUF[unidad];
-    // fuera los que ya no están y los que quedaron en otra unidad
-    const quitar = keep => [...comparados].forEach(([k, x]) => {
-      if (keep.includes(k) && x.sim === sim(k)) return;
-      try { c.removeEntity(x.id); } catch (e) {}
-      comparados.delete(k);
-    });
-    if (!elegidos.length) { quitar([]); serie.setVisible(false); return; }
-    const [primero, ...resto] = elegidos;
-    quitar(resto);
-    if (sinFuente(c.symbol()) !== sim(primero)) {
-      await Promise.resolve(c.setSymbol(sim(primero))).catch(() => {});
-    }
-    serie.setVisible(true);
-    const e0 = estiloDe(primero);
-    w.applyOverrides({ 'mainSeriesProperties.lineStyle.colorType': 'solid',
-      'mainSeriesProperties.lineStyle.color': e0.color,
-      'mainSeriesProperties.lineStyle.linestyle': e0.punteada ? 1 : 0,
-      'mainSeriesProperties.lineStyle.linewidth': 2 });
-    if (c.chartType() !== 2) await Promise.resolve(c.setChartType(2)).catch(() => {});
-    for (const k of resto) {
-      if (comparados.has(k)) continue;
-      const e = estiloDe(k);
-      try {
-        const s = sim(k);
-        const id = await c.createStudy('Compare', false, false,
-          { source: 'close', symbol: s },
-          { 'plot.color': e.color, 'plot.linestyle': e.punteada ? 1 : 0, 'plot.linewidth': 2 });
-        if (id) comparados.set(k, { id, sim: s });
-      } catch (err) {}
-    }
-    // cambio del precio en porcentaje, como siempre en Comparar
-    const escala = c.getPanes()[0].getMainSourcePriceScale();
-    if (escala && escala.getMode() !== 2) escala.setMode(2);
-  }
-
+  // elegida (ver comparador). En Lightweight, una línea por producto
   function syncProductos() {
     if (!usaLW('productos')) {
-      if (tvListo('productos')) compararTV().then(pintarCarga);
+      if (tvListo('productos')) cmp.tv(tv.productos.w).then(pintarCarga);
       pintarCarga();
       return;
     }
     if (!pchart) return;
     // las series que falten se piden solo con Comparar a la vista; al
     // llegar todas, vuelve a sincronizar
-    if (modo === 'productos') pedirProductos([...psel], syncProductos);
-    PKEYS.forEach(k => {
-      const on = psel.has(k);
-      if (on && !PRODS[k].real) return;   // aún no llega: se agrega al llegar
-      const x = pseries.get(k);
-      if (on && (!x || x.unidad !== unidad)) {
-        let s = x && x.s;
-        if (!s) {
-          const e = estiloDe(k);
-          s = pchart.addLineSeries({ color: e.color, lineWidth: 2,
-            lineStyle: e.punteada ? LightweightCharts.LineStyle.Dotted
-              : LightweightCharts.LineStyle.Solid,
-            priceLineVisible: false, lastValueVisible: false });
-        }
-        // unidad: la pedida; dibujada: la de las semanas que ya tiene
-        const u = unidad, dibujada = x ? x.dibujada : null;
-        pseries.set(k, { s, unidad: u, dibujada });
-        puntosProducto(k, u).then(datos => {
-          const y = pseries.get(k);
-          if (!y || y.s !== s || y.unidad !== u) return;
-          y.dibujada = u;
-          s.setData(datos);   // con huecos donde no hubo precio
-          pchart.timeScale().fitContent();
-        }, () => {
-          // sin las semanas de esa unidad: la serie sigue en la que tenía y el
-          // selector vuelve a ella (ajustado por inflación, si recién se agregó)
-          const y = pseries.get(k);
-          if (!y || y.s !== s || y.unidad !== u) return;
-          y.unidad = y.dibujada;
-          if (unidad === u) ponerUnidad(y.dibujada || 'real');
-        });
-      } else if (!on && x) {
-        pchart.removeSeries(x.s);
-        pseries.delete(k);
-      }
-    });
-    pchart.priceScale('right').applyOptions({ autoScale: true });
-    pchart.timeScale().fitContent();
+    if (modo === 'productos') pedirProductos(cmp.claves(), syncProductos);
+    cmp.lw(pchart, { unidad, listo: k => !!PRODS[k].real, puntos: puntosProducto,
+      // sin las semanas de esa unidad, el selector vuelve a la dibujada
+      alFallar: (u, dibujada) => { if (unidad === u) ponerUnidad(dibujada || 'real'); },
+      ajustar: true });
     pintarCarga();
   }
 
@@ -1430,29 +1330,15 @@ __JS_UNIDAD__
       '(' + DATA.rango[0] + ' a ' + DATA.rango[1] + ')';
     buildSelector('pgroups', 'psearch', k => {
       const b = document.createElement('button');
-      b.className = 'pchip' + (psel.has(k) ? ' active' : '');
+      b.className = 'pchip';
       b.innerHTML = '<span class="dot"></span>' + PRODS[k].label;
-      const dot = b.querySelector('.dot');
-      // el chip muestra el estilo de su línea: punto lleno si es continua,
-      // anillo y borde de guiones si es punteada
-      const paint = () => {
-        const on = psel.has(k);
-        const e = on ? estiloDe(k) : null;
-        b.classList.toggle('active', on);
-        dot.style.background = !on ? 'var(--dim)' : e.punteada ? 'transparent' : e.color;
-        dot.style.boxShadow = on && e.punteada ? 'inset 0 0 0 2px ' + e.color : '';
-        b.style.borderColor = on ? e.color : 'var(--line)';
-        b.style.borderStyle = on && e.punteada ? 'dashed' : '';
-        b.style.opacity = (!on && psel.size >= PMAX) ? '.4' : '';
-      };
+      // el chip muestra el estilo de su línea (ver comparador)
+      const paint = () => cmp.pintar(b, k);
       ppaints.push(paint);
       paint();
       b.onclick = () => {
-        if (psel.has(k)) soltar(k);
-        else {
-          if (psel.size >= PMAX) return;   // máximo 8: nunca dos iguales
-          elegir(k);
-        }
+        // máximo 8: nunca dos iguales
+        if (!cmp.alternar(k)) return;
         ppaints.forEach(f => f()); syncProductos();
       };
       return b;
@@ -1729,86 +1615,24 @@ __JS_UNIDAD__
   }
 
   /* ---------- captura PNG compartible (estilo TradingView) ---------- */
-  const TITULO_UNIDAD = { epoca: ', PRECIO DE LA ÉPOCA' };
-  // la marca va en tres segmentos medidos para pintar SOLO la í en brasa,
-  // en la tipografía del wordmark
-  function marcaDeAgua(ctx, xDer, yBase, size) {
-    ctx.font = '700 ' + size + 'px "Space Grotesk", sans-serif';
-    ctx.textBaseline = 'alphabetic';
-    const seg = ['carest', 'í', 'a.cl'];
-    const w = seg.map(s => ctx.measureText(s).width);
-    let x = xDer - (w[0] + w[1] + w[2]);
-    ctx.globalAlpha = 0.4; ctx.fillStyle = COL.bone;  ctx.fillText(seg[0], x, yBase);
-    ctx.globalAlpha = 1;   ctx.fillStyle = COL.ember; ctx.fillText(seg[1], x + w[0], yBase);
-    ctx.globalAlpha = 0.4; ctx.fillStyle = COL.bone;  ctx.fillText(seg[2], x + w[0] + w[1], yBase);
-    ctx.globalAlpha = 1;
-  }
+  // la composición, las fotos de los dos motores y la marca son las comunes
+  // (ver componerCaptura); aquí, lo que dice cada modo
 
   // las series del modo activo: si alguna aún viene en camino, la captura
   // la espera (y se omite si el pedido falla)
   function datosDelModo() {
     if (modo === 'indices') return cargarIndice(cur);
-    const keys = modo === 'productos' ? [...psel] : [...canasta.keys()];
+    const keys = modo === 'productos' ? cmp.claves() : [...canasta.keys()];
     return Promise.all(keys.filter(k => PRODS[k]).map(cargarProducto));
   }
 
-  // el gráfico fotografiado con la proporción de su recuadro en la captura
-  // (prop = ancho / alto). Solo cambia el alto, así el rango a la vista no
-  // se mueve. Lightweight se redimensiona, se fotografía y vuelve a su
-  // tamaño en el mismo cuadro, sin que se alcance a ver
-  function fotoLW(ch, prop) {
-    const caja = ch.chartElement().parentElement;
-    const ancho = caja.clientWidth, alto = caja.clientHeight;
-    const prueba = ch.takeScreenshot();
-    if (!prueba.width) return prueba;
-    const k = prueba.width / ancho;   // píxeles de la foto por píxel de pantalla
-    ch.applyOptions({ autoSize: false });
-    ch.resize(ancho, Math.max(160, Math.round(alto + (prueba.width / prop - prueba.height) / k)), true);
-    const shot = ch.takeScreenshot();
-    ch.resize(ancho, alto, true);
-    ch.applyOptions({ autoSize: true });
-    return shot;
-  }
-  // Advanced Charts: la librería se redibuja con el alto nuevo (hasta tres
-  // intentos, midiendo cada foto) y mientras tanto un velo tapa el gráfico;
-  // el hero conserva su alto para que la página no se mueva
-  const dosCuadros = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-  async function fotoTV(w, prop) {
-    const caja = document.getElementById(tv[modo].caja), hero = document.getElementById('hero');
-    let shot = await TV.capturaCliente(w, tok, caja);
-    if (!shot || !shot.width) return shot;
-    const meta = () => shot.width / prop;   // el alto de foto que se busca
-    if (Math.abs(shot.height - meta()) < 2) return shot;
-    capturando = true;
-    cargaEl.style.top = caja.offsetTop + 'px';
+  // Advanced Charts: mientras la librería se redibuja con el alto de la
+  // captura, el velo del estado de carga tapa el gráfico
+  const veloTV = caja => on => {
+    capturando = on;
+    cargaEl.style.top = on ? caja.offsetTop + 'px' : '';
     pintarCarga();
-    hero.style.height = hero.offsetHeight + 'px';
-    hero.style.overflow = 'hidden';
-    let alto = caja.clientHeight, k = shot.width / caja.clientWidth;
-    try {
-      for (let i = 0; i < 3 && Math.abs(shot.height - meta()) >= 2; i++) {
-        const nuevo = Math.max(160, Math.round(alto + (meta() - shot.height) / k));
-        Object.assign(caja.style, { aspectRatio: 'auto', minHeight: '0', maxHeight: 'none',
-          height: nuevo + 'px' });
-        await dosCuadros();
-        await new Promise(r => setTimeout(r, 250));
-        const s = await TV.capturaCliente(w, tok, caja);
-        if (!s || !s.width) break;
-        if (nuevo !== alto && s.height !== shot.height) k = (s.height - shot.height) / (nuevo - alto);
-        alto = nuevo;
-        shot = s;
-      }
-    } finally {
-      Object.assign(caja.style, { aspectRatio: '', minHeight: '', maxHeight: '', height: '' });
-      hero.style.height = hero.style.overflow = '';
-      await dosCuadros();
-      await new Promise(r => setTimeout(r, 250));
-      capturando = false;
-      cargaEl.style.top = '';
-      pintarCarga();
-    }
-    return shot;
-  }
+  };
 
   async function capturarPNG() {
     // Advanced Charts: su captura del lado del cliente (nunca la del servidor
@@ -1820,76 +1644,28 @@ __JS_UNIDAD__
       // dos cuadros: el lienzo alcanza a dibujar lo que acaba de llegar
       await dosCuadros();
     }
-    // el canvas no dispara la carga perezosa de webfonts: si un peso aún
-    // no se usó en el DOM, fillText caería a la fuente del sistema.
-    // Cargar explícitamente cada peso que dibuja el snapshot (título,
-    // costo, fecha y marca de agua) antes de componer
-    try {
-      await Promise.all([
-        document.fonts.load('400 16px "IBM Plex Sans"'),
-        document.fonts.load('500 16px "IBM Plex Mono"'),
-        document.fonts.load('700 16px "Space Grotesk"'),
-      ]);
-      await document.fonts.ready;
-    } catch (e) {}
-    // la captura es cuadrada, de 1080 × 1080: arriba qué es, cuánto vale y
-    // de qué semana; al medio el gráfico y abajo la marca
-    const W = 1080, H = 1080;
-    const pad = Math.round(W * 0.04);
-    const chartW = W - pad * 2;
     // bajo el costo, la composición: en canasta "{label} {cantidad} {unidad}"
     // en una línea o dos si no cabe; en productos, los elegidos por orden de
-    // puesto, cada uno con la muestra de su línea (color y trazo del
-    // gráfico). El encabezado crece lo que ellas ocupen
-    const compSize = Math.round(W * 0.013), compAlto = Math.round(compSize * 1.5);
-    const compLineas = [], prodLineas = [];
-    const muestra = Math.round(compSize * 1.8), hueco = Math.round(compSize * 0.5),
-      entre = Math.round(compSize * 1.4);
-    const mctx = document.createElement('canvas').getContext('2d');
-    mctx.font = '400 ' + compSize + 'px "IBM Plex Sans", sans-serif';
-    let partes = [];
+    // puesto (color 1, color 2, ... como en el gráfico), cada uno con la
+    // muestra de su línea
+    let partes = [], lineas = [];
     if (modo === 'canasta' && canasta.size) {
       partes = [...canasta.entries()].filter(([k]) => PRODS[k])
         .map(([k, q]) => PRODS[k].label + ' ' + fmtCant(q, PRODS[k].unidad));
     } else if (modo === 'productos') {
-      let fila = [], ancho = 0;
-      // en el orden de sus puestos: color 1, color 2, ... como en el gráfico
-      [...psel].filter(k => PRODS[k]).sort((a, b) => puestos.get(a) - puestos.get(b)).forEach(k => {
-        const it = Object.assign({ texto: PRODS[k].label }, estiloDe(k));
-        const w = muestra + hueco + mctx.measureText(it.texto).width;
-        if (fila.length && ancho + entre + w > chartW) { prodLineas.push(fila); fila = []; ancho = 0; }
-        ancho += (fila.length ? entre : 0) + w;
-        fila.push(it);
-      });
-      if (fila.length) prodLineas.push(fila);
-    }
-    if (partes.length) {
-      let linea = '';
-      partes.forEach(p => {
-        const cand = linea ? linea + ', ' + p : p;
-        if (!linea || mctx.measureText(cand).width <= chartW) linea = cand;
-        else { compLineas.push(linea); linea = p; }
-      });
-      if (linea) compLineas.push(linea);
-      if (compLineas.length > 2) {   // nunca más de dos: recorte con …
-        let l2 = compLineas.slice(1).join(', ');
-        while (l2 && mctx.measureText(l2 + ' …').width > chartW) l2 = l2.slice(0, -1);
-        compLineas.length = 1;
-        compLineas.push(l2 + ' …');
-      }
+      lineas = elegidosEnOrden().map(k => Object.assign({ texto: PRODS[k].label }, cmp.estilo(k)));
     }
     // contexto arriba a la izquierda: qué es, cuánto vale, de cuándo;
     // productos no tiene un costo único y lleva su etiqueta en vez del monto.
     // Un índice a precio de la época dice su unidad
-    let titulo, precio,
-      precioFont = '700 ' + Math.round(W * 0.037) + 'px "Space Grotesk", sans-serif';
+    let titulo, precio, chico = false;
     if (modo === 'canasta') {
       titulo = 'TU CANASTA';
       precio = document.getElementById('ccosto').textContent || '·';
     } else if (modo === 'productos') {
       titulo = 'PRODUCTOS';
       precio = ONOTE[unidad];
-      precioFont = '400 ' + Math.round(W * 0.02) + 'px "IBM Plex Sans", sans-serif';
+      chico = true;
     } else {
       const d = INDICES[cur];
       titulo = d.nombre.replace(/^Índice /i, '').toUpperCase();
@@ -1900,75 +1676,13 @@ __JS_UNIDAD__
         if (x != null) precio = fmt(x);
       }
     }
-    const compH = (compLineas.length + prodLineas.length) * compAlto;
-    const headH = Math.round(W * 0.13) + compH, footH = Math.round(W * 0.07);
-    const chartH = H - headH - footH;
-    const shot = w ? await fotoTV(w, chartW / chartH).catch(() => null) :
-      fotoLW(ch, chartW / chartH);
-    if (!shot || !shot.width) return;
-    const cv = document.createElement('canvas');
-    cv.width = W; cv.height = H;
-    const ctx = cv.getContext('2d');
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
-    ctx.fillStyle = COL.bg;
-    ctx.fillRect(0, 0, W, H);
-    const fecha = document.getElementById('fecha').textContent;
-    ctx.textBaseline = 'top';
-    ctx.fillStyle = COL.ash;
-    ctx.font = '500 ' + Math.round(W * 0.014) + 'px "IBM Plex Mono", monospace';
-    ctx.fillText(titulo, pad, Math.round(W * 0.028));
-    ctx.fillStyle = COL.bone;
-    ctx.font = precioFont;
-    ctx.fillText(precio, pad, Math.round(W * 0.05));
-    ctx.fillStyle = COL.ash;
-    ctx.font = '400 ' + compSize + 'px "IBM Plex Sans", sans-serif';
-    compLineas.forEach((l, i) =>
-      ctx.fillText(l, pad, Math.round(W * 0.098) + i * compAlto));
-    const grosor = Math.max(2, Math.round(compSize * 0.16));
-    prodLineas.forEach((fila, i) => {
-      const y = Math.round(W * 0.098) + i * compAlto;
-      let x = pad;
-      fila.forEach(it => {
-        ctx.save();
-        ctx.strokeStyle = it.color;
-        ctx.lineWidth = grosor;
-        ctx.setLineDash(it.punteada ? [grosor, grosor * 1.5] : []);
-        ctx.beginPath();
-        ctx.moveTo(x, y + compSize * 0.6);
-        ctx.lineTo(x + muestra, y + compSize * 0.6);
-        ctx.stroke();
-        ctx.restore();
-        ctx.fillText(it.texto, x + muestra + hueco, y);
-        x += muestra + hueco + ctx.measureText(it.texto).width + entre;
-      });
-    });
-    ctx.font = '400 ' + Math.round(W * 0.012) + 'px "IBM Plex Sans", sans-serif';
-    ctx.fillText('semana del ' + fecha, pad, Math.round(W * 0.098) + compH);
-    // el gráfico entero en su recuadro, centrado si la proporción no quedó exacta
-    const esc = Math.min(chartW / shot.width, chartH / shot.height);
-    const dw = Math.round(shot.width * esc), dh = Math.round(shot.height * esc);
-    ctx.drawImage(shot, pad + Math.round((chartW - dw) / 2), headH + Math.round((chartH - dh) / 2),
-      dw, dh);
-    marcaDeAgua(ctx, W - pad, H - Math.round(footH * 0.35), Math.round(W * 0.02));
-    const nombre = 'carestia_' + (modo === 'indices' ? simboloIndice(cur) : modo) + '_' +
-      new Date().toISOString().slice(0, 10) + '.png';
-    cv.toBlob(async blob => {
-      if (!blob) return;
-      // en móvil el share sheet nativo (ideal para WhatsApp); si no está
-      // disponible o el archivo no se puede compartir, descarga directa
-      const file = new File([blob], nombre, { type: 'image/png' });
-      if (matchMedia('(pointer:coarse)').matches &&
-          navigator.canShare && navigator.canShare({ files: [file] })) {
-        try { await navigator.share({ files: [file] }); return; }
-        catch (e) { if (e.name === 'AbortError') return; }
-      }
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = nombre;
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-    }, 'image/png');
+    const caja = w ? document.getElementById(tv[modo].caja) : null;
+    await componerCaptura({ titulo, precio, chico, lineas, partes,
+      fecha: document.getElementById('fecha').textContent,
+      foto: prop => w ? fotoTV(w, prop, caja, document.getElementById('hero'), veloTV(caja))
+        .catch(() => null) : fotoLW(ch, prop),
+      nombre: 'carestia_' + (modo === 'indices' ? simboloIndice(cur) : modo) + '_' +
+        new Date().toISOString().slice(0, 10) + '.png' });
   }
   document.getElementById('shot').onclick = () => capturarPNG();
 
@@ -2569,12 +2283,13 @@ CSS_BASE = r"""
        rojo si el precio subió y en verde si bajó (ver .v-sube y .v-baja).
        Sobre --bg, rojo 5,0:1 y verde 8,4:1; sobre --panel, 4,7 y 7,8 (AA) */
     --sube:var(--rojo); --baja:var(--verde);
-    /* Comparar productos: cuatro tonos muy distintos, sin azules ni
-       violetas azulados, sin verde, naranjo ni rojo (rosa, magenta, blanco
-       cálido y amarillo); del 5º al 8º producto se repiten punteados. Los
-       tres primeros, los que Comparar muestra al entrar, quedan a 18 o más
-       entre sí (OKLab x100) aun con daltonismo simulado */
-    --cmp1:#f28cc0; --cmp2:#b04fb5; --cmp3:#f4f1ea; --cmp4:#f2d74e;
+    /* Comparar: cuatro tonos muy distintos, sin azules ni violetas
+       azulados, sin verde, naranjo ni rojo (rosa, magenta, mostaza y
+       amarillo); del 5º al 8º producto se repiten punteados. Entre sí quedan
+       a 18 o más (OKLab x100) con visión normal y con protanopía y
+       deuteranopía simuladas (con tritanopía, a 8 o más), y la mostaza a 28
+       o más del hueso de las fichas. Sobre --bg, 4,2:1 o más */
+    --cmp1:#f28cc0; --cmp2:#b04fb5; --cmp3:#9d8519; --cmp4:#f2d74e;
     /* crosshair de los gráficos: hueso tenue */
     --cruz:rgba(228,218,204,.35);
     --sans:"IBM Plex Sans","IBM Plex Sans Fallback",system-ui,sans-serif;
@@ -2861,13 +2576,18 @@ __CSS_BASE__
   .pct2 { font:400 13px/1.6 var(--sans); color:var(--ash); margin-top:4px;
     text-wrap:pretty; }
   /* la unidad del gráfico: ajustado por inflación o precio de la época, en
-     dos botones o, si no caben, en un desplegable (JS_UNIDAD), y su línea */
-  .unidad { margin-top:18px; }
+     dos botones o, si no caben, en un desplegable (JS_UNIDAD), y su línea.
+     A su lado la captura PNG, que baja a su propia fila si no cabe */
+  .fctrl { display:flex; flex-wrap:wrap; align-items:flex-start; gap:10px 16px;
+    margin-top:18px; max-width:none; }
+  .unidad { flex:1 1 320px; min-width:0; max-width:916px; }
+  .fctrl #shot { margin-left:auto; }
   .vtoggle { display:inline-flex; border:1px solid var(--line); background:var(--bg); }
   .vbtn { font:500 13px var(--sans); padding:8px 14px; border:none; cursor:pointer;
     background:transparent; color:var(--ash); min-height:34px; white-space:nowrap; }
   .vbtn + .vbtn { border-left:1px solid var(--line); }
   .vbtn.active { background:var(--bone); color:var(--bg); }
+  .nomtoggle { border:1px solid var(--line); background:var(--bg); }
   .usel { display:none; font:500 13px var(--sans); color:var(--bone);
     background:var(--bg); border:1px solid var(--line); border-radius:0;
     min-height:34px; padding:0 6px; color-scheme:dark; cursor:pointer; }
@@ -2879,13 +2599,41 @@ __CSS_BASE__
      motores: la página no salta al renderizar. Escritorio: 0,6 veces el
      ancho, entre 520 y 760px. Celular (bajo 760px): el ancho, sin pasar del
      75% de la pantalla (svh: estable frente a la barra del navegador) */
-  #grafico { position:relative; max-width:none; aspect-ratio:5 / 3;
-    min-height:520px; max-height:760px; margin-top:16px; }
+  .marco { position:relative; max-width:none; margin-top:16px; }
+  #grafico { position:relative; aspect-ratio:5 / 3;
+    min-height:520px; max-height:760px; }
   @media (max-width:759px) {
     #grafico { aspect-ratio:1 / 1; min-height:0; max-height:75vh;
       max-height:75svh; } }
+  /* mientras se prepara la captura PNG, un velo tapa el gráfico */
+  .velo { position:absolute; inset:0; z-index:6; display:flex; align-items:center;
+    justify-content:center; padding:20px; background:var(--bg);
+    font:400 12px/1.5 var(--sans); color:var(--ash); }
+  .velo[hidden] { display:none; }
   .fecha { font:500 12px var(--sans); color:var(--ash); margin-top:14px; }
   .ref-velas { font:400 12px/1.5 var(--sans); color:var(--dim); margin-top:10px; }
+  /* Comparar con: el componente de Comparar de /graficos.html (CSS_COMPARAR)
+     con las sugerencias del build, el buscador y, con algo elegido, la
+     línea de la escala y la frase */
+__CSS_COMPARAR__
+  .comparar { margin-top:26px; }
+  .comparar .pchips { margin-top:12px; }
+  .comparar #cmp-res:empty { display:none; }
+  .comparar .psearch { max-width:420px; margin:12px 0 0; display:block; }
+  .cmp-vacio { font:400 13px var(--sans); color:var(--ash); }
+  .cmp-nota { font:400 12px/1.5 var(--sans); color:var(--ash); margin-top:10px; }
+  .cmp-escala { font:400 12px/1.5 var(--sans); color:var(--ash); margin-top:16px;
+    text-wrap:pretty; }
+  .cmp-frase { font:400 15px/1.6 var(--sans); color:var(--bone); margin-top:6px;
+    text-wrap:pretty; }
+  /* el color de cada línea antes de su nombre: el punto de los botones */
+  .cmp-frase .dot { display:inline-block; width:8px; height:8px; border-radius:50%;
+    margin:0 6px 0 2px; vertical-align:middle; background:var(--bone); }
+  .cmp-frase .serie { white-space:nowrap; }
+  /* las series sin precio reciente, aparte de la frase */
+  .cmp-sin { font:400 13px/1.6 var(--sans); color:var(--ash); margin-top:4px;
+    text-wrap:pretty; }
+  .cmp-nota[hidden], .cmp-escala[hidden], .cmp-frase[hidden], .cmp-sin[hidden] { display:none; }
   /* otros productos del grupo: interlinking sobrio al pie, misma paleta
      del sitio (panel/línea/hueso, hover con borde hueso como .links) */
   .otros { margin-top:26px; }
@@ -2925,13 +2673,20 @@ __CSS_SITIO__
     <h1>__LABEL__</h1>
 __OROW__    <p class="pct">__FRASE__</p>
     __HISTORIA__
-    <div class="unidad" id="unidad">
-      __SELECTOR_UNIDAD__
-      <p class="utxt" id="utxt">__UNIDAD_REAL__</p>
+    <div class="fctrl">
+      <div class="unidad" id="unidad">
+        __SELECTOR_UNIDAD__
+        <p class="utxt" id="utxt">__UNIDAD_REAL__</p>
+      </div>
+      <button class="vbtn nomtoggle" id="shot" type="button">captura PNG</button>
     </div>
-    <div id="grafico"><div class="nochart cargando">Cargando el gráfico...</div></div>
+    <div class="marco" id="marco">
+      <div id="grafico"><div class="nochart cargando">Cargando el gráfico...</div></div>
+      <div class="velo" id="velo" role="status" hidden>Preparando la captura...</div>
+    </div>
     <p class="ref-velas" id="ref-velas" hidden>Velas semanales. La mecha va del precio más bajo al más alto que ODEPA encontró entre los locales encuestados.</p>
     <div class="fecha">Semana del __FECHA__. Serie desde __ANIO__. Se actualiza los viernes.</div>
+__COMPARAR__
     __OTROS__
     <nav class="links">
       <a href="https://carestia.cl/">← todos los índices</a>
@@ -2942,26 +2697,49 @@ __OROW__    <p class="pct">__FRASE__</p>
 __PIE__
 
 <script>
-  // serie compacta del producto: t0 + valores semanales consecutivos, null en
-  // semanas sin dato (estacionales), y el rango de cada semana (la mecha de
-  // las velas). La cifra y el texto ya están en el HTML: el gráfico se arma
-  // después del primer pantallazo, en Advanced Charts (en línea, en hueso;
-  // las velas a un clic) o, si la librería no está o no inicia en 8
-  // segundos, en Lightweight como siempre. En los dos, la unidad del selector
+  // los datos de esta ficha: la serie compacta del producto (t0 + valores
+  // semanales consecutivos, null en semanas sin dato, y el rango de cada
+  // semana, la mecha de las velas), las semanas que indices.py completó
+  // repitiendo la anterior (semanas_repetidas), la semana del último dato,
+  // si es la de esta semana, y lo que dice arriba la captura sin comparados
+  // (el precio de esta semana o el último dato). El JS, el mismo en todas
+  // las fichas, va en /__FICHA_JS__, que el navegador guarda entre fichas
   const T0 = '__T0__';
   const V = __V__;
   const MIN = __MIN__;
   const MAX = __MAX__;
+  const REP = __REP__;
   const SLUG = '__SLUG__';
   const NOMBRE = __NOMBRE__;
   const UNIDAD = '__UNIDAD__';
+  const VER = '__VER__';
+  const FECHA = '__FECHA__', AL_DIA = __AL_DIA__, CAPTURA = __CAPTURA__;
+</script>
+<script async src="/__FICHA_JS__?v=__VER_FICHA__"></script>
+</body>
+</html>
+"""
+
+# El JS de las fichas, el mismo en todas: va en FICHA_JS (carestia-ficha.js,
+# con su versión en la URL) para que el navegador lo guarde entre fichas y
+# cada ficha lleve solo sus datos (PRODUCT_HTML). Lo arma ficha_js().
+FICHA_JS_TPL = r"""// carestia-ficha.js: el JS de las fichas de producto (productos/{slug}.html),
+// el mismo en todas, para que el navegador lo guarde entre fichas. Los datos
+// de cada ficha van en su página, antes de este archivo: T0, V, MIN, MAX,
+// REP, SLUG, NOMBRE, UNIDAD, VER, FECHA, AL_DIA y CAPTURA. La cifra y el
+// texto ya están en el HTML: el gráfico se arma después del primer
+// pantallazo, en Advanced Charts (en línea, en hueso; las velas a un clic) o,
+// si la librería no está o no inicia en 8 segundos, en Lightweight como
+// siempre. En los dos, la unidad del selector y lo que se elija en "Comparar
+// con"
   const INDICES = __INDICES__;
   const LIGHTWEIGHT = 'https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js';
   const fmt = v => '$' + Math.round(v).toLocaleString('es-CL');
   // colores desde los tokens de :root
   const vars = getComputedStyle(document.documentElement);
   const tok = n => vars.getPropertyValue('--' + n).trim();
-  const el = document.getElementById('grafico');
+  const $ = id => document.getElementById(id);
+  const el = $('grafico');
   function cargarScript(src) {
     return new Promise((ok, mal) => {
       const s = document.createElement('script');
@@ -2971,7 +2749,25 @@ __PIE__
       document.head.appendChild(s);
     });
   }
+  // los archivos de datos/, un pedido por archivo, con la versión del build
+  // en la URL; el datafeed pide los mismos. Si un pedido falla no queda
+  // guardado y se puede repetir
+  const pedidos = new Map();
+  function pedirJSON(ruta) {
+    if (!pedidos.has(ruta)) {
+      const p = fetch('/datos/' + ruta + '?v=' + VER).then(r => {
+        if (!r.ok) throw new Error(ruta + ': ' + r.status);
+        return r.json();
+      });
+      p.catch(() => pedidos.delete(ruta));
+      pedidos.set(ruta, p);
+    }
+    return pedidos.get(ruta);
+  }
 __JS_UNIDAD__
+__JS_COMPARAR__
+__JS_FRASE__
+__JS_CAPTURA__
   // la unidad: en Advanced Charts es otro símbolo; en Lightweight, otra
   // serie. Sin carestia-tv.js (que calcula la época), solo ajustado por
   // inflación (unidadLW: la que está dibujada en Lightweight, que cambia al
@@ -2980,17 +2776,350 @@ __JS_UNIDAD__
   const unidadesHay = () => !feed ? ['real'] : ['real', 'epoca'];
   function ponerUnidad(u) {
     if (unidadesHay().indexOf(u) === -1) u = 'real';
+    // con algo comparado, el tramo a la vista se conserva (pedirTramo)
+    if (u !== unidad && cmp.claves().length) pedirTramo([]);
     unidad = u;
     selector.poner(u);
-    if (widget) {
-      const c = widget.activeChart();
-      if (c.symbol().split(':').pop().toLowerCase() !== SLUG + SUF[u]) {
-        Promise.resolve(c.setSymbol(SLUG + SUF[u])).catch(() => {});
-      }
-    } else if (lw) lw(u);
+    dibujar();
   }
   const selector = selectorUnidad(ponerUnidad);
 
+  /* ---------- Comparar con ---------- */
+  // hasta 4 series sobre el producto de la ficha, que sigue en hueso: las
+  // sugerencias del build (productos de su grupo e índices que lo llevan),
+  // lo que se busque en el catálogo y lo que traiga el link
+  // (#comparar=pera,asado). Es el componente de Comparar de /graficos.html
+  // (comparador): cada serie con el color de su orden de selección
+  const cmp = comparador({ colores: [1, 2, 3, 4].map(i => tok('cmp' + i)), max: __MAX_COMPARADOS__,
+    simbolo: k => k + SUF[unidad], principal: () => SLUG + SUF[unidad] });
+  const EN_UNIDAD = { real: 'ajustado por inflación', epoca: 'a precio de la época' };
+  const IGUAL = 'Igual que la inflación';
+  const sinTildes = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+  // las fechas (dd-mm-aaaa) no se cortan en el guion
+  const conFechas = s => s.replace(/\d\d-\d\d-\d{4}/g, '<span class="nw">$&</span>');
+  const franja = document.querySelector('.comparar');
+  const chips = $('cmp-chips'), busca = $('cmp-busca'), res = $('cmp-res');
+  // el nombre de cada serie: el de su botón, el del índice o el del catálogo
+  const nombres = new Map(INDICES.map(d => [d.codigo, d.nombre]));
+  const sugeridas = new Set();
+  [...chips.children].forEach(b => { sugeridas.add(b.dataset.cmp); nombres.set(b.dataset.cmp, b.textContent); });
+  // el catálogo (datos/catalogo.json), solo al buscar o si el link trae algo
+  // que no es sugerencia
+  let catalogo = null;
+  function pedirCatalogo() {
+    if (!catalogo) {
+      catalogo = pedirJSON('catalogo.json').then(c => {
+        const lista = (c.productos || []).filter(p => p.slug !== SLUG);
+        lista.forEach(p => nombres.set(p.slug, p.nombre));
+        return lista;
+      });
+      catalogo.catch(() => { catalogo = null; });
+    }
+    return catalogo;
+  }
+  function boton(k) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'pchip';
+    b.dataset.cmp = k;
+    b.innerHTML = '<span class="dot"></span>';
+    b.appendChild(document.createTextNode(nombres.get(k) || k));
+    return b;
+  }
+  // los elegidos que no son sugerencias van como botones al final de la fila
+  function pintarFranja() {
+    chips.querySelectorAll('.cmp-extra').forEach(b => { if (!cmp.tiene(b.dataset.cmp)) b.remove(); });
+    cmp.claves().forEach(k => {
+      if (sugeridas.has(k) || chips.querySelector('.cmp-extra[data-cmp="' + k + '"]')) return;
+      const b = boton(k);
+      b.classList.add('cmp-extra');
+      chips.appendChild(b);
+    });
+    franja.querySelectorAll('[data-cmp]').forEach(b => cmp.pintar(b, b.dataset.cmp));
+    $('cmp-nota').hidden = !cmp.lleno();
+  }
+  franja.addEventListener('click', e => {
+    const b = e.target.closest('[data-cmp]');
+    if (!b || !cmp.alternar(b.dataset.cmp)) return;   // con el máximo, uno más no entra
+    cambio();
+  });
+  // 'antes': las elegidas en el cambio anterior; las nuevas mueven el
+  // comienzo del tramo (pedirTramo)
+  let antes = [];
+  function cambio() {
+    const ks = cmp.claves();
+    pedirTramo(ks.filter(k => antes.indexOf(k) === -1));
+    antes = ks;
+    pintarFranja();
+    guardarHash();
+    dibujar();
+  }
+  // el link compartible: #comparar=pera,asado, en el orden de los colores
+  function guardarHash() {
+    const k = cmp.claves();
+    history.replaceState(null, '', location.pathname + location.search +
+      (k.length ? '#comparar=' + k.join(',') : ''));
+  }
+  // al abrir un link (o si cambia con la página abierta): los que existan,
+  // en su orden y hasta el máximo; lo que no es sugerencia ni índice se
+  // busca en el catálogo
+  function leerHash() {
+    const m = location.hash.match(/^#comparar=([^&]*)/);
+    let pedido = [];
+    try { pedido = m ? decodeURIComponent(m[1]).split(',') : []; } catch (e) {}
+    pedido = pedido.map(s => s.trim().toLowerCase())
+      .filter((s, i, a) => s && s !== SLUG && a.indexOf(s) === i);
+    const poner = () => {
+      cmp.vaciar();
+      pedido.filter(k => nombres.has(k)).forEach(k => cmp.elegir(k));
+      cambio();
+    };
+    if (pedido.every(k => nombres.has(k))) poner();
+    else pedirCatalogo().then(poner, poner);
+  }
+  // el buscador: cualquier otro producto del catálogo, por todas las
+  // palabras escritas, sin tildes ni mayúsculas
+  busca.addEventListener('focus', () => pedirCatalogo().catch(() => {}));
+  busca.addEventListener('input', buscar);
+  function buscar() {
+    const q = sinTildes(busca.value.trim());
+    if (!q) { res.innerHTML = ''; return; }
+    pedirCatalogo().then(lista => {
+      if (sinTildes(busca.value.trim()) !== q) return;
+      const palabras = q.split(/\s+/);
+      const hallados = lista.filter(p => palabras.every(w => sinTildes(p.nombre).indexOf(w) !== -1));
+      res.innerHTML = hallados.length ? '' : '<span class="cmp-vacio">Ningún producto con ese nombre.</span>';
+      hallados.slice(0, 8).forEach(p => res.appendChild(boton(p.slug)));
+      pintarFranja();
+    }, () => { res.innerHTML = '<span class="cmp-vacio">No se pudo cargar el catálogo.</span>'; });
+  }
+
+  // las barras de una serie en una unidad y una temporalidad (para la
+  // frase y Lightweight): del datafeed o, sin él, ajustadas por inflación
+  // desde datos/
+  const semanasDe = (t0, v) => {
+    const base = Date.parse(t0 + 'T00:00:00Z'), out = [];
+    v.forEach((x, i) => { if (x != null) out.push({ time: base + i * 7 * 864e5, close: x }); });
+    return out;
+  };
+  function barrasDe(k, u, res) {
+    if (feed) return feed.barras(k + SUF[u], res).then(b => b || Promise.reject(new Error(k)));
+    if (u !== 'real') return Promise.reject(new Error('sin datafeed'));
+    if (k === SLUG) return Promise.resolve(semanasDe(T0, V));
+    const ind = INDICES.some(d => d.codigo === k);
+    return pedirJSON((ind ? 'indices/' : 'productos/') + k + '.json')
+      .then(j => ind ? semanasDe(j.serie.t0, j.serie.real) : semanasDe(j.t0, j.v));
+  }
+  // las semanas con precio propio de una serie en la unidad u, sin las que
+  // indices.py completó repitiendo el precio anterior (semanasPropias): con
+  // ellas se mide la frase. Un índice es la suma de su canasta: todas sus
+  // semanas cuentan
+  function propiasDe(k, u) {
+    if (INDICES.some(d => d.codigo === k)) return barrasDe(k, u);
+    const propio = k === SLUG;
+    return Promise.all([propio ? { t0: T0, v: V } : pedirJSON('productos/' + k + '.json'),
+      propio ? REP : pedirJSON('repetidas/' + k + '.json'), barrasDe(k, u)]).then(([x, rep, b]) => {
+      const propias = semanasPropias(x, rep);
+      return b.filter(s => propias.has(s.time));
+    });
+  }
+
+  // el gráfico con lo elegido: en Advanced Charts, la comparación de la
+  // librería; en Lightweight, una línea por serie
+  function dibujar() {
+    if (widget) cmp.tv(widget).then(() => { programarFrase(); ponerTramoPedido(); });
+    else if (lw) { if (unidad !== unidadLW) lw(unidad); else compararLW(); }
+    programarFrase();
+  }
+
+  /* ---------- el tramo a la vista ---------- */
+  // Al cambiar lo elegido o la unidad, el tramo a la vista se conserva: al
+  // pasar a porcentaje la escala se ensancha y la librería corre el
+  // comienzo, y al cambiar de unidad vuelve a toda la historia. Y al agregar
+  // una serie que parte después del comienzo, el tramo pasa a comenzar en su
+  // primer precio (el más tardío, si llegan varias juntas, como con un link):
+  // así el gráfico y la frase parten juntos en 0%. pedirTramo anota el tramo
+  // antes del cambio (si ya había otro pedido sin poner, queda el de ese) y
+  // ponerTramoPedido lo pone cuando el gráfico ya cambió, y lo vuelve a
+  // poner mientras la librería se acomoda
+  let pedido = null;    // { desde, hasta (ms; null antes del gráfico), nuevas }
+  const diaISO = ms => new Date(ms).toISOString().slice(0, 10);
+  const pausa = ms => new Promise(r => setTimeout(r, ms));
+  function tramoVisible() {
+    if (widget) {
+      const r = widget.activeChart().getVisibleRange();
+      return r && r.to ? [r.from * 1000, r.to * 1000] : null;
+    }
+    if (lwChart) {
+      const r = lwChart.timeScale().getVisibleRange();
+      return r ? [enMs(r.from), enMs(r.to)] : null;
+    }
+    return null;
+  }
+  function pedirTramo(nuevas) {
+    if (pedido) { pedido.nuevas = pedido.nuevas.concat(nuevas); return; }
+    const r = tramoVisible();
+    pedido = { desde: r ? r[0] : null, hasta: r ? r[1] : null, nuevas };
+  }
+  function ponerTramo(desde, hasta) {
+    if (widget) {
+      return Promise.resolve(widget.activeChart().setVisibleRange({ from: desde / 1000, to: hasta / 1000 },
+        { applyDefaultRightMargin: false, rejectByTimeout: 3000 })).catch(() => {});
+    }
+    // Lightweight: por índice de semana. Su tramo a la vista (y el 0% de su
+    // escala porcentual) parte en la barra que asoma a la izquierda: con
+    // fechas quedaba la semana anterior. Aquí la primera es la de 'desde' y
+    // la última la de 'hasta'
+    if (lwChart) {
+      const d0 = diaISO(desde), d1 = diaISO(hasta);
+      const i0 = lwSemanas.findIndex(p => p.time >= d0);
+      let i1 = lwSemanas.length - 1;
+      while (i1 > 0 && lwSemanas[i1].time > d1) i1--;
+      if (i0 !== -1 && i1 > i0) lwChart.timeScale().setVisibleLogicalRange({ from: i0 + 0.05, to: i1 - 0.05 });
+    }
+    return Promise.resolve();
+  }
+  async function ponerTramoPedido() {
+    const p = pedido;
+    if (!p || (!widget && !lwChart)) return;
+    pedido = null;
+    if (!cmp.claves().length) return;   // sin comparados, la ficha vuelve a precios
+    const u = widget ? unidad : unidadLW;
+    const primeros = await Promise.all(p.nuevas.filter(k => cmp.tiene(k)).map(k =>
+      barrasDe(k, u).then(b => b.length ? b[0].time : null, () => null)));
+    // el rango que la librería pone al montar o al cambiar de unidad, antes
+    if (widget && TV.rangoListo) await TV.rangoListo(widget);
+    if (pedido) return;                 // otro cambio tomó la posta
+    let desde = p.desde, hasta = p.hasta;
+    if (desde == null) {
+      const r = tramoVisible();
+      if (!r) return;
+      [desde, hasta] = r;
+    }
+    const ini = Math.max(...primeros.filter(x => x != null && x <= FIN));
+    if (ini > desde) {
+      desde = ini;
+      if (hasta <= ini) hasta = FIN;
+    }
+    await ponerTramo(desde, hasta);
+    for (let i = 0; i < 6; i++) {
+      await pausa(400);
+      if (pedido) return;
+      const r = tramoVisible();
+      if (r && Math.abs(r[0] - desde) > SEMANA / 2) await ponerTramo(desde, hasta);
+    }
+  }
+
+  /* ---------- la escala y la frase ---------- */
+  // siguen al tramo a la vista (y a la temporalidad): bajo los botones, la
+  // línea que explica la escala (lo que dibuja el gráfico, con las barras de
+  // su temporalidad) y la frase con el cambio de cada serie en ese tramo,
+  // medido con sus semanas de precio propio. Ajustado por inflación, además
+  // la línea de "Igual que la inflación" en el 0%
+  // 'quieta': mientras se prepara la captura, la librería pasa por tramos de
+  // paso al cambiar de alto; la frase y la línea del 0% esperan
+  let fraseGen = 0, fraseEspera = null, ultimaFrase = null, ultimaNota = '', quieta = false;
+  // si falló el pedido de alguna serie, la frase se reintenta sola (a lo más 3 veces)
+  let reintentos = 0;
+  function programarFrase() {
+    if (fraseEspera || quieta) return;
+    fraseEspera = setTimeout(() => { fraseEspera = null; pintarFrase(); }, 120);
+  }
+  // la semana del último dato de la ficha: lo que el gráfico alcanza a
+  // mostrar (las comparadas se dibujan en sus semanas)
+  const FIN = Date.parse(T0 + 'T00:00:00Z') + (V.length - 1) * SEMANA;
+  // una fecha de Lightweight en milisegundos
+  const enMs = t => typeof t === 'string' ? Date.parse(t + 'T00:00:00Z') :
+    typeof t === 'number' ? t * 1000 : Date.UTC(t.year, t.month - 1, t.day);
+  async function pintarFrase() {
+    if (quieta) return;
+    const gen = ++fraseGen, ks = cmp.claves();
+    let rango = null, res = '1W', u = unidadLW;
+    if (ks.length && widget) {
+      const c = widget.activeChart(), r = c.getVisibleRange();
+      if (r && r.to) rango = [r.from * 1000, r.to * 1000];
+      res = c.resolution();
+      u = unidad;
+    } else if (ks.length && lwChart) {
+      const r = lwChart.timeScale().getVisibleRange();
+      if (r) rango = [enMs(r.from), enMs(r.to)];
+    }
+    let e = null, t = null, barras = [], propias = [];
+    if (rango) {
+      const todas = [SLUG].concat(ks);
+      [barras, propias] = await Promise.all([
+        Promise.all(todas.map(k => barrasDe(k, u, res).catch(() => null))),
+        Promise.all(todas.map(k => propiasDe(k, u).catch(() => null)))]);
+      if (gen !== fraseGen) return;
+      if (barras[0] && barras[0].length) e = escalaVisible(barras[0], barras.slice(1), rango[0], rango[1], res);
+      // sin las semanas propias de alguna serie (un pedido que falló), no hay
+      // frase: nunca se mide con precios repetidos. Se reintenta sola (abajo).
+      // La frase parte en el 0% del gráfico y llega, a lo más, al final de la
+      // última barra a la vista y al último dato de la ficha
+      if (e && propias.every(Boolean)) {
+        t = tramoComun(propias, e.t0, Math.min(e.fin, FIN), AL_DIA && e.fin >= FIN);
+      }
+    }
+    if (rango && (!e || !t) && reintentos < 3 && (!barras[0] || !propias.every(Boolean))) {
+      reintentos++;
+      setTimeout(programarFrase, 2000);
+    } else if (t) reintentos = 0;
+    const escala = $('cmp-escala'), frase = $('cmp-frase'), nota = $('cmp-sin');
+    const series = [{ nombre: NOMBRE, color: tok('bone') }].concat(ks.map(k =>
+      ({ nombre: nombres.get(k) || k, color: cmp.estilo(k).color })));
+    escala.hidden = !e;
+    if (e) escala.innerHTML = conFechas(esc(textoEscala(e, series.map(s => s.nombre))));
+    ultimaFrase = t ? fraseTramo(t, series, EN_UNIDAD[u]) : null;
+    ultimaNota = t ? notaTramo(t, series.map(s => s.nombre)) : '';
+    frase.hidden = !ultimaFrase;
+    // el punto, el nombre y la cifra de cada serie van juntos (.serie)
+    if (ultimaFrase) {
+      frase.innerHTML = ultimaFrase.map(x => x.muestra ?
+        '<span class="serie"><span class="dot" style="background:' + x.muestra + '" aria-hidden="true"></span>' :
+        x.clase ? '<span class="' + x.clase + '">' + esc(x.texto) + '</span>' + (x.fin ? '</span>' : '') :
+        conFechas(esc(x.texto)) + (x.fin ? '</span>' : '')).join('');
+    }
+    // las que no tienen precio reciente, aparte
+    nota.hidden = !ultimaNota;
+    nota.innerHTML = conFechas(esc(ultimaNota));
+    if (widget) lineaTV(e && u === 'real' ? e.base : null, e && e.t0);
+  }
+  // Advanced Charts: la línea de "Igual que la inflación" es un dibujo
+  // horizontal en el precio de la primera barra a la vista, donde está el 0%
+  // de la escala, y se mueve con el tramo. Su texto va al centro: a la
+  // izquierda todas las líneas parten justo ahí y a la derecha están sus
+  // etiquetas. La librería guarda los dibujos con su símbolo (al volver a la
+  // unidad reaparece el de antes): se reconoce por su texto, queda una sola
+  // y los cambios van en fila
+  let filaLinea = Promise.resolve();
+  function lineaTV(precio, t0) {
+    const hacer = () => lineaAhora(precio, t0);
+    filaLinea = filaLinea.then(hacer, hacer);
+  }
+  async function lineaAhora(precio, t0) {
+    const c = widget.activeChart();
+    const propias = c.getAllShapes().filter(s => s.name === 'horizontal_line').map(s => {
+      try {
+        const x = c.getShapeById(s.id);
+        return x.getProperties().text === IGUAL ? { id: s.id, x } : null;
+      } catch (e) { return null; }
+    }).filter(Boolean);
+    const una = precio == null ? null : propias.shift();
+    propias.forEach(s => { try { c.removeEntity(s.id); } catch (e) {} });
+    if (precio == null) return;
+    const punto = { time: Math.floor(t0 / 1000), price: precio };
+    if (una) { try { una.x.setPoints([punto]); return; } catch (e) {} }
+    await Promise.resolve(c.createShape(punto, { shape: 'horizontal_line', lock: true,
+      disableSelection: true, disableSave: true, disableUndo: true, showInObjectsTree: false,
+      text: IGUAL, overrides: { linecolor: tok('dim'), linestyle: 2, linewidth: 1,
+        showLabel: true, textcolor: tok('ash'), fontsize: 12, horzLabelsAlign: 'center',
+        vertLabelsAlign: 'bottom' } })).catch(() => null);
+  }
+
+  /* ---------- Lightweight ---------- */
+  let lwChart = null, lwRef = null, lwSemanas = [];
   function lightweight() {
     el.dataset.motor = 'lightweight';
     cargarScript(LIGHTWEIGHT).then(() => {
@@ -3009,8 +3138,9 @@ __JS_UNIDAD__
         grid: { vertLines: { color: tok('grid') }, horzLines: { color: tok('grid') } },
         rightPriceScale: { borderColor: tok('line') },
         timeScale: { borderColor: tok('line') },
-        // fechas en castellano de Chile, como en la portada
-        localization: { locale: 'es-CL', priceFormatter: fmt },
+        // fechas en castellano de Chile, como en la portada; con comparados,
+        // la escala en porcentaje como la de Advanced Charts
+        localization: { locale: 'es-CL', priceFormatter: fmt, percentageFormatter: fmtPct },
         // misma política de gestos del sitio: la rueda acerca y mueve el
         // gráfico; el swipe vertical en táctil queda para la página
         handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: true },
@@ -3025,6 +3155,9 @@ __JS_UNIDAD__
       const linea = chart.addLineSeries({ color: tok('bone'), lineWidth: 2, priceLineVisible: false });
       linea.setData(serie);
       chart.timeScale().fitContent();
+      lwChart = chart;
+      lwSemanas = serie;
+      chart.timeScale().subscribeVisibleTimeRangeChange(programarFrase);
       // otra unidad: las semanas del datafeed, con huecos donde no hubo precio
       lw = u => {
         const datos = u === 'real' || !feed ? Promise.resolve(serie) :
@@ -3039,25 +3172,92 @@ __JS_UNIDAD__
         datos.then(d => {
           if (unidad !== u) return;
           unidadLW = u;
+          lwSemanas = d;
           linea.setData(d);
           chart.timeScale().fitContent();
+          compararLW();
         }, () => { if (unidad === u && u !== unidadLW) ponerUnidad(unidadLW); });
       };
       if (unidad !== 'real') lw(unidad);
+      else compararLW();
     }).catch(() => {
       el.innerHTML = '<div class="nochart">No se pudo cargar el motor de gráficos (revisa la conexión).</div>';
     });
   }
+  // lo mismo que en Advanced Charts: con algo elegido, la escala en
+  // porcentaje, cada comparada en las semanas del producto de la ficha
+  // (enSemanasDe) y, ajustado por inflación, una línea constante: en
+  // porcentaje queda siempre en 0%, la de "Igual que la inflación"
+  function compararLW() {
+    const hay = cmp.claves().length > 0, u = unidadLW;
+    lwChart.priceScale('right').applyOptions({ mode: hay ? LightweightCharts.PriceScaleMode.Percentage :
+      LightweightCharts.PriceScaleMode.Normal });
+    if (hay && u === 'real') {
+      if (!lwRef) {
+        lwRef = lwChart.addLineSeries({ color: tok('dim'), lineWidth: 1,
+          lineStyle: LightweightCharts.LineStyle.Dashed, title: IGUAL, priceLineVisible: false,
+          crosshairMarkerVisible: false });
+      }
+      lwRef.setData(lwSemanas.map(p => p.value == null ? { time: p.time } : { time: p.time, value: 1 }));
+    } else if (lwRef) {
+      lwChart.removeSeries(lwRef);
+      lwRef = null;
+    }
+    cmp.lw(lwChart, { unidad: u, puntos: (k, uu) => barrasDe(k, uu).then(b => enSemanasDe(b, lwSemanas)),
+      alFallar: (uu, dibujada) => { if (unidad === uu) ponerUnidad(dibujada || 'real'); },
+      alDibujar: programarFrase });
+    programarFrase();
+    ponerTramoPedido();
+  }
+
+  /* ---------- captura PNG ---------- */
+  // la composición común (componerCaptura): el producto y su precio de esta
+  // semana o, con comparados, el cambio en porcentaje con la leyenda de las
+  // líneas y la frase del tramo a la vista
+  async function capturar() {
+    const w = widget, ch = w ? null : lwChart;
+    if (!w && !ch) return;
+    const ks = cmp.claves(), u = w ? unidad : unidadLW;
+    const o = { titulo: CAPTURA.titulo, precio: CAPTURA.precio, chico: CAPTURA.chico, fecha: FECHA,
+      foto: prop => w ? fotoTV(w, prop, el, $('marco'), on => {
+        $('velo').hidden = !on;
+        quieta = on;
+        if (!on) programarFrase();
+      }).catch(() => null) : fotoLW(ch, prop),
+      nombre: 'carestia_' + SLUG + '_' + new Date().toISOString().slice(0, 10) + '.png' };
+    if (ks.length) {
+      await pintarFrase();
+      o.titulo = NOMBRE.toUpperCase();
+      o.precio = ONOTE[u];
+      o.chico = true;
+      o.lineas = [{ texto: NOMBRE, color: tok('bone'), punteada: false }].concat(ks.map(k =>
+        Object.assign({ texto: nombres.get(k) || k }, cmp.estilo(k))));
+      // la frase y, en otra línea, la nota de las que no tienen precio reciente
+      o.frase = (ultimaFrase || []).filter(x => !x.muestra);
+      if (ultimaNota) o.frase = o.frase.concat(o.frase.length ? [{ salto: true }] : [],
+        [{ texto: ultimaNota, clase: 'nota' }]);
+    } else if (TITULO_UNIDAD[u]) o.titulo += TITULO_UNIDAD[u];
+    await componerCaptura(o);
+  }
+  $('shot').onclick = () => capturar();
+
+  // lo que traiga el link, ya con todo declarado
+  window.addEventListener('hashchange', leerHash);
+  leerHash();
 
   window.addEventListener('load', () => {
     cargarScript('/__TV_JS__?v=__VER_TV__').then(() => {
       TV = window.CarestiaTV;
       if (!TV) throw new Error('sin carestia-tv.js');
       // la serie ya viene en la página: el datafeed no la vuelve a pedir
-      feed = TV.crearDatafeed({ base: '/datos/', ver: '__VER__', indices: INDICES,
+      feed = TV.crearDatafeed({ base: '/datos/', ver: VER, indices: INDICES,
+        // los mismos pedidos de la franja: un archivo de datos/ se baja una vez
+        pedir: pedirJSON,
         // su Comparar superpone el producto en otras unidades: el nombre la dice
         nombreConUnidad: true,
-        productos: [{ slug: SLUG, nombre: NOMBRE, unidad: UNIDAD }],
+        // el producto de la ficha y sus sugerencias: compararlas no espera el catálogo
+        productos: [{ slug: SLUG, nombre: NOMBRE, unidad: UNIDAD }].concat([...chips.querySelectorAll('[data-medida]')]
+          .map(b => ({ slug: b.dataset.cmp, nombre: b.textContent, unidad: b.dataset.medida }))),
         precargados: { ['productos/' + SLUG + '.json']: { t0: T0, v: V, min: MIN, max: MAX } } });
       selector.limitar(unidadesHay());
       el.innerHTML = '';
@@ -3072,7 +3272,7 @@ __JS_UNIDAD__
       el.dataset.motor = 'advanced';
       // la referencia de las velas, mientras estén a la vista: en semanas, la
       // frase completa; en temporalidades largas cada vela junta semanas
-      const ref = document.getElementById('ref-velas'), REF = ref.textContent;
+      const ref = $('ref-velas'), REF = ref.textContent;
       const c = w.activeChart();
       const ver = t => {
         ref.hidden = t !== 1;
@@ -3081,14 +3281,17 @@ __JS_UNIDAD__
       };
       ver(c.chartType());
       c.onChartTypeChanged().subscribe(null, ver);
-      c.onIntervalChanged().subscribe(null, () => setTimeout(() => ver(c.chartType()), 0));
-      // la unidad elegida mientras el gráfico cargaba
+      c.onIntervalChanged().subscribe(null, () => setTimeout(() => { ver(c.chartType()); programarFrase(); }, 0));
+      // la escala, la frase y la línea del 0% siguen al tramo a la vista, a
+      // la temporalidad y a la unidad (otro símbolo)
+      c.onVisibleRangeChanged().subscribe(null, programarFrase);
+      c.onDataLoaded().subscribe(null, programarFrase);
+      c.onSymbolChanged().subscribe(null, programarFrase);
+      // la unidad elegida mientras el gráfico cargaba, con lo que se haya
+      // elegido para comparar
       ponerUnidad(unidad);
     }, () => { selector.limitar(unidadesHay()); lightweight(); });
   });
-</script>
-</body>
-</html>
 """
 
 UNI_TXT = {"kg": "kilo", "un": "unidad", "l": "litro"}
@@ -3614,6 +3817,50 @@ def dato_propio(p: dict) -> list:
             for x, a, b in zip(v, lo, hi)]
 
 
+# Las semanas que indices.py completó repitiendo el precio de la anterior
+# (ffill de hasta 4 semanas, sobre el precio nominal y antes de deflactar),
+# para la frase de "Comparar con" de las fichas, que nunca las usa. El rango
+# no basta para reconocerlas: ODEPA casi no trae mínimo ni máximo antes de
+# 2013. Una semana repetida no tiene rango y su precio nominal es el de la
+# anterior; el nominal sale del ajustado por inflación con factor_epoca (el
+# mismo del datafeed), y por el redondeo del ajustado a pesos enteros puede
+# diferir hasta en TOLERANCIA_NOMINAL pesos. Con los datos de carestia.cl
+# (octubre de 2026): desde 2013, 1.397 de las 1.410 semanas sin rango
+# cumplen y ninguna difiere en más de 0,996 pesos (las 13 restantes son
+# semanas propias del 07-01-2013).
+SEMANAS_ARRASTRE = 4
+TOLERANCIA_NOMINAL = 1.0
+
+
+def semanas_repetidas(p: dict, factor: dict) -> list:
+    """Los índices de v de las semanas completadas repitiendo el precio de
+    la anterior (ver arriba): sin rango, con el mismo precio nominal que la
+    semana anterior (dos semanas del mismo mes comparten factor: basta el
+    ajustado) y a lo más SEMANAS_ARRASTRE seguidas, el tope del ffill. Sin
+    rango en el archivo, solo cuenta el precio. 'factor' es factor_epoca()."""
+    v, lo, hi = p["v"], p.get("min"), p.get("max")
+    con_rango = bool(lo) and bool(hi) and len(lo) == len(v) and len(hi) == len(v)
+    t0 = datetime.date.fromisoformat(p["t0"])
+    out, racha = [], 0
+    for i in range(1, len(v)):
+        if (v[i] is None or v[i - 1] is None or
+                (con_rango and (lo[i] is not None or hi[i] is not None))):
+            racha = 0
+            continue
+        mes = (t0 + datetime.timedelta(weeks=i)).strftime("%Y-%m")
+        antes = (t0 + datetime.timedelta(weeks=i - 1)).strftime("%Y-%m")
+        if mes == antes or mes not in factor or antes not in factor:
+            igual = v[i] == v[i - 1]
+        else:
+            igual = abs(v[i] * factor[mes] - v[i - 1] * factor[antes]) <= TOLERANCIA_NOMINAL
+        if igual and racha < SEMANAS_ARRASTRE:
+            racha += 1
+            out.append(i)
+        else:
+            racha = 0
+    return out
+
+
 # lo que más subió y bajó de la portada se mide contra el promedio de estas
 # semanas anteriores, todas con precio propio (como la semana actual)
 SEMANAS_PROMEDIO = 4
@@ -3791,8 +4038,653 @@ JS_UNIDAD = r"""  /* ---------- selector de unidad ---------- */
 """
 
 
+# ---------------- Comparar: el componente común ----------------
+# Comparar productos de /graficos.html y la franja "Comparar con" de cada
+# ficha son el mismo componente: su CSS (la búsqueda y los botones) y su JS
+# (la elección con los colores por orden de selección, los botones y el
+# dibujo en escala porcentual en los dos motores) viven solo aquí y van en
+# las dos páginas, como el selector de unidad.
+CSS_COMPARAR = r"""  .psearch { width:100%; font:400 14px var(--sans); color:var(--bone);
+    background:var(--panel); border:1px solid var(--line); padding:10px 14px;
+    margin-bottom:10px; border-radius:0; outline:none; -webkit-appearance:none; }
+  .psearch::placeholder { color:var(--dim); }
+  .psearch:focus { border-color:var(--dim); }
+  .pchips { display:flex; flex-wrap:wrap; gap:8px; }
+  .pchip { display:flex; align-items:center; gap:8px; font:500 13px var(--sans);
+    padding:7px 12px; min-height:34px; cursor:pointer; background:transparent;
+    border:1px solid var(--line); color:var(--ash); }
+  .pchip .dot { width:8px; height:8px; border-radius:50%; background:var(--dim); flex:none; }
+  .pchip.active { background:var(--panel); color:var(--bone); }"""
+
+JS_COMPARAR = r"""  /* ---------- Comparar: el componente común ---------- */
+  // Comparar productos de /graficos.html y la franja "Comparar con" de las
+  // fichas usan este mismo componente: la elección, sus botones y el dibujo
+  // en escala porcentual, con la comparación de Advanced Charts o, de
+  // respaldo, una línea de Lightweight por serie. Cada serie elegida toma el
+  // primer puesto libre y lo conserva mientras siga elegida: dos series
+  // nunca comparten estilo y las que ya están no cambian de color. Del
+  // puesto que pasa la cantidad de tonos en adelante, los mismos tonos van
+  // punteados.
+  //   o.colores    los tonos, en orden (tokens --cmp1 a --cmp4)
+  //   o.max        cuántas series a la vez
+  //   o.simbolo    k => el símbolo de k en el datafeed, en la unidad elegida
+  //   o.principal  () => el símbolo de la serie principal, que no se elige
+  //                (el producto de la ficha); sin él, la principal es la
+  //                primera elegida (Comparar productos)
+  function comparador(o) {
+    const puestos = new Map();          // clave -> puesto 0, 1, 2...
+    const claves = () => [...puestos.keys()].sort((a, b) => puestos.get(a) - puestos.get(b));
+    const lleno = () => puestos.size >= o.max;
+    const estilo = k => {
+      const i = puestos.get(k);
+      return { color: o.colores[i % o.colores.length], punteada: i >= o.colores.length };
+    };
+    function elegir(k) {
+      if (puestos.has(k) || lleno()) return false;
+      const usados = new Set(puestos.values());
+      let i = 0;
+      while (usados.has(i)) i++;
+      puestos.set(k, i);
+      return true;
+    }
+    const soltar = k => puestos.delete(k);
+    // con el máximo elegido, una más no entra: nunca dos con el mismo estilo
+    const alternar = k => puestos.has(k) ? soltar(k) : elegir(k);
+
+    // el botón de una serie muestra el estilo de su línea: punto lleno si es
+    // continua, anillo y borde de guiones si es punteada; con el máximo
+    // elegido, los demás quedan atenuados
+    function pintar(b, k) {
+      const on = puestos.has(k), e = on ? estilo(k) : null;
+      const dot = b.querySelector('.dot');
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      dot.style.background = !on ? 'var(--dim)' : e.punteada ? 'transparent' : e.color;
+      dot.style.boxShadow = on && e.punteada ? 'inset 0 0 0 2px ' + e.color : '';
+      b.style.borderColor = on ? e.color : 'var(--line)';
+      b.style.borderStyle = on && e.punteada ? 'dashed' : '';
+      b.style.opacity = (!on && lleno()) ? '.4' : '';
+    }
+
+    // Advanced Charts: la serie principal y el resto con la comparación de
+    // la librería, en escala porcentual, con el color de cada puesto, todos
+    // en la unidad elegida (al cambiarla, se rehacen las comparaciones). Sin
+    // comparados, la serie principal de la ficha queda en precios: la
+    // librería vuelve sola a la escala de precios al quitar la última
+    // comparación. Los cambios van en fila para que dos clics rápidos no se
+    // crucen
+    const comparados = new Map();       // clave -> { id del estudio Compare, símbolo }
+    const ticker = t => String(t || '').split(':').pop().toLowerCase();
+    let fila = Promise.resolve();
+    function tv(w) {
+      fila = fila.then(() => tvAhora(w), () => tvAhora(w));
+      return fila;
+    }
+    async function tvAhora(w) {
+      const c = w.activeChart(), serie = c.getSeries();
+      const sim = o.simbolo;
+      // fuera los que ya no están y los que quedaron en otra unidad
+      const quitar = keep => [...comparados].forEach(([k, x]) => {
+        if (keep.includes(k) && x.sim === sim(k)) return;
+        try { c.removeEntity(x.id); } catch (e) {}
+        comparados.delete(k);
+      });
+      const resto = claves();
+      let principal = o.principal ? o.principal() : null, primero = null;
+      if (!principal) {
+        if (!resto.length) { quitar([]); serie.setVisible(false); return; }
+        primero = resto.shift();
+        principal = sim(primero);
+      }
+      quitar(resto);
+      if (ticker(c.symbol()) !== principal) {
+        await Promise.resolve(c.setSymbol(principal)).catch(() => {});
+      }
+      serie.setVisible(true);
+      if (primero) {
+        const e0 = estilo(primero);
+        w.applyOverrides({ 'mainSeriesProperties.lineStyle.colorType': 'solid',
+          'mainSeriesProperties.lineStyle.color': e0.color,
+          'mainSeriesProperties.lineStyle.linestyle': e0.punteada ? 1 : 0,
+          'mainSeriesProperties.lineStyle.linewidth': 2 });
+      } else if (!resto.length) return;
+      if (c.chartType() !== 2) await Promise.resolve(c.setChartType(2)).catch(() => {});
+      for (const k of resto) {
+        if (comparados.has(k)) continue;
+        const e = estilo(k);
+        try {
+          const s = sim(k);
+          const id = await c.createStudy('Compare', false, false,
+            { source: 'close', symbol: s },
+            { 'plot.color': e.color, 'plot.linestyle': e.punteada ? 1 : 0, 'plot.linewidth': 2 });
+          if (id) comparados.set(k, { id, sim: s });
+        } catch (err) {}
+      }
+      // cambio del precio en porcentaje, como siempre en Comparar
+      const escala = c.getPanes()[0].getMainSourcePriceScale();
+      if (escala && escala.getMode() !== 2) escala.setMode(2);
+    }
+
+    // Lightweight: una línea por serie elegida, con el estilo de su puesto,
+    // sobre un gráfico en escala porcentual.
+    //   x.unidad     la unidad que se pide
+    //   x.puntos     (k, u) => promesa con los puntos de k en u
+    //   x.listo      k => si los datos de k ya llegaron (si no, espera)
+    //   x.alFallar   (u, dibujada) => sin los puntos de esa unidad (la línea
+    //                sigue en la que tenía)
+    //   x.ajustar    toda la historia a la vista en cada cambio
+    //   x.alDibujar  () => después de dibujar una línea
+    const lineas = new Map();           // clave -> { s, unidad, dibujada }
+    function lw(ch, x) {
+      const vivas = claves();
+      lineas.forEach((y, k) => {
+        if (vivas.includes(k)) return;
+        ch.removeSeries(y.s);
+        lineas.delete(k);
+      });
+      vivas.forEach(k => {
+        if (x.listo && !x.listo(k)) return;   // aún no llega: se agrega al llegar
+        const y0 = lineas.get(k);
+        if (y0 && y0.unidad === x.unidad) return;
+        let s = y0 && y0.s;
+        if (!s) {
+          const e = estilo(k);
+          s = ch.addLineSeries({ color: e.color, lineWidth: 2,
+            lineStyle: e.punteada ? LightweightCharts.LineStyle.Dotted
+              : LightweightCharts.LineStyle.Solid,
+            priceLineVisible: false, lastValueVisible: false });
+        }
+        // unidad: la pedida; dibujada: la de los puntos que ya tiene
+        const u = x.unidad, dibujada = y0 ? y0.dibujada : null;
+        lineas.set(k, { s, unidad: u, dibujada });
+        x.puntos(k, u).then(datos => {
+          const y = lineas.get(k);
+          if (!y || y.s !== s || y.unidad !== u) return;
+          y.dibujada = u;
+          s.setData(datos);   // con huecos donde no hubo precio
+          if (x.ajustar) ch.timeScale().fitContent();
+          if (x.alDibujar) x.alDibujar();
+        }, () => {
+          const y = lineas.get(k);
+          if (!y || y.s !== s || y.unidad !== u) return;
+          y.unidad = y.dibujada;
+          if (x.alFallar) x.alFallar(u, y.dibujada);
+        });
+      });
+      // recuperar la autoescala si el usuario arrastró el eje de precios
+      ch.priceScale('right').applyOptions({ autoScale: true });
+      if (x.ajustar) ch.timeScale().fitContent();
+    }
+
+    return { elegir, soltar, alternar, tiene: k => puestos.has(k), lleno, claves, estilo,
+      vaciar: () => puestos.clear(), pintar, tv, lw };
+  }
+  // en Comparar, el cambio del precio en la unidad elegida
+  const ONOTE = { real: 'Cambio del precio ajustado por inflación, en porcentaje',
+    epoca: 'Cambio del precio de la época, en porcentaje' };
+  // la escala porcentual de Lightweight como la de Advanced Charts: coma
+  // decimal y signo menos (39,98%; −12,50%)
+  const fmtPct = x => (x < 0 ? '−' : '') +
+    Math.abs(x).toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
+"""
+
+# La escala y la frase de "Comparar con" en las fichas: funciones puras,
+# aparte del resto del JS de la ficha para probarlas en Node
+# (tests/comparar_node.js). La escala explica lo que dibuja el gráfico; la
+# frase mide todas las series en un mismo período, solo con sus precios
+# propios (nunca con los que indices.py completó repitiendo el anterior), y
+# deja aparte las que no tienen precio reciente.
+JS_FRASE = r"""  /* ---------- Comparar con: la escala y la frase ---------- */
+  const SEMANA = 7 * 864e5;
+  // una serie sin precio propio en estas semanas antes del final del tramo
+  // queda fuera de la frase ("Sin precio reciente: ..."): el mismo plazo de
+  // las fichas sin precio esta semana (SEMANAS_FRASE_ULTIMO en build_site.py)
+  const SEMANAS_ULTIMO = 4;
+  const fechaTxt = ms => new Date(ms).toISOString().slice(0, 10).split('-').reverse().join('-');
+  const anio = ms => new Date(ms).getUTCFullYear();
+  const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto',
+    'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  const mes = ms => MESES[new Date(ms).getUTCMonth()];
+  // el lunes de la semana de un instante (las barras semanales van en lunes,
+  // a las 00:00 UTC)
+  const lunesDe = ms => { const d = Math.floor(ms / 864e5); return (d - (d + 3) % 7) * 864e5; };
+  // el final del período de una barra que empieza en t, en la temporalidad
+  // res ('1W', '2W', '1M', '3M'...; sin ella, una semana)
+  function finPeriodo(t, res) {
+    const m = /^(\d*)([WM])$/.exec(String(res || '1W')), n = m ? Number(m[1] || 1) : 1;
+    if (!m || m[2] === 'W') return t + n * SEMANA;
+    const d = new Date(t);
+    return Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + n, 1);
+  }
+  // "a, b y c"
+  const enLista = xs => xs.length < 2 ? xs.join('') :
+    xs.slice(0, -1).join(', ') + ' y ' + xs[xs.length - 1];
+
+  // La escala: lo que dibuja la comparación de Advanced Charts (y
+  // Lightweight con enSemanasDe). Cada línea parte en 0% en la primera barra
+  // a la vista del producto de la ficha, con el último precio de cada serie
+  // hasta esa barra; la que aún no tiene precio parte en el primero que
+  // tenga. 'base' es el precio de la ficha en esa barra (ahí va la línea de
+  // "Igual que la inflación"); 'fin', el final del período de la última
+  // barra a la vista (en 1W, su semana; en 1M, su mes), sin pasar a la
+  // barra siguiente.
+  //   p      las barras del producto de la ficha: [{ time (ms), close }]
+  //   otras  las de cada comparada, igual
+  //   desde, hasta  el tramo a la vista (ms)
+  //   res    la temporalidad de las barras
+  // Devuelve null si no hay barras de la ficha a la vista
+  function escalaVisible(p, otras, desde, hasta, res) {
+    let i0 = 0, i1 = p.length - 1;
+    while (i0 < p.length && p[i0].time < desde) i0++;
+    while (i1 >= 0 && p[i1].time > hasta) i1--;
+    if (i0 > i1) return null;
+    const t0 = p[i0].time;
+    const fin = Math.min(i1 + 1 < p.length ? p[i1 + 1].time : Infinity, finPeriodo(p[i1].time, res)) - 1;
+    return { t0, base: p[i0].close, fin, partes: otras.map(b => {
+      b = b || [];
+      if (!b.length || b[0].time <= t0) return null;
+      const p0 = p.find((x, j) => j >= i0 && j <= i1 && x.time >= b[0].time);
+      return p0 ? p0.time : null;
+    }) };
+  }
+  // la línea bajo el gráfico que explica la escala. nombres: el de la ficha
+  // y los de las comparadas, en orden
+  function textoEscala(e, nombres) {
+    const tarde = [];
+    e.partes.forEach((t, i) => { if (t) tarde.push({ n: nombres[i + 1], f: fechaTxt(t) }); });
+    let s = 'Todas las líneas parten en 0% el ' + fechaTxt(e.t0);
+    if (tarde.length === 1) {
+      s += ', menos ' + tarde[0].n + ', que parte en su primer precio, el ' + tarde[0].f;
+    } else if (tarde.length) {
+      s += ', menos ' + enLista(tarde.map(x => x.n + ' (' + x.f + ')')) +
+        ', que parten en su primer precio';
+    }
+    return s + '.';
+  }
+
+  // Las semanas con precio propio de un producto: las que tienen precio
+  // (j: datos/productos/{slug}.json, t0 y v), menos las que indices.py
+  // completó repitiendo el precio anterior ('rep': sus índices en v, de
+  // datos/repetidas/{slug}.json; ver semanas_repetidas en build_site.py).
+  // Devuelve los lunes (ms) de esas semanas
+  function semanasPropias(j, rep) {
+    const base = Date.parse(j.t0 + 'T00:00:00Z'), fuera = new Set(rep || []), out = new Set();
+    (j.v || []).forEach((x, i) => { if (x != null && !fuera.has(i)) out.add(base + i * SEMANA); });
+    return out;
+  }
+  // La frase mide todas las series en el mismo período, con sus precios
+  // propios: desde la primera semana, a partir de 'desde' (el 0% del
+  // gráfico), en que todas tienen precio propio, hasta la última semana, no
+  // después de 'hasta', en que todas lo tienen. Así parte en la fecha más
+  // tardía entre el comienzo del tramo y el primer precio de cada serie, y
+  // nunca usa un precio repetido. Una serie sin precio propio en las
+  // SEMANAS_ULTIMO semanas antes de la semana de 'hasta' queda fuera, con su
+  // último dato ('ultimos'; null si no tiene precios hasta ahí). 'hastaHoy': el período
+  // llega a esta semana (alDia: el tramo llega a la semana de hoy del
+  // producto de la ficha). Sin dos semanas en común, t0 y t1 quedan en null.
+  //   series  las semanas con precio propio de cada serie, la de la ficha
+  //           primero: [{ time (ms), close }]
+  //   desde, hasta  el comienzo y el final del tramo (ms)
+  function tramoComun(series, desde, hasta, alDia) {
+    const plazo = SEMANAS_ULTIMO * SEMANA, semana = lunesDe(hasta);
+    const ultimos = series.map(b => {
+      let u = null;
+      for (const x of b || []) { if (x.time > hasta) break; u = x; }
+      return u;
+    });
+    const dentro = series.map((b, i) => ultimos[i] && semana - ultimos[i].time <= plazo ?
+      (b || []).filter(x => x.time >= desde && x.time <= hasta) : null);
+    let comunes = null;
+    dentro.forEach(d => {
+      if (!d) return;
+      const hay = new Set(d.map(x => x.time));
+      comunes = comunes ? comunes.filter(t => hay.has(t)) : d.map(x => x.time);
+    });
+    const t = { incluidas: dentro.map(Boolean), ultimos, t0: null, t1: null, hastaHoy: false,
+      cambios: series.map(() => null) };
+    if (!comunes || comunes.length < 2) return t;
+    t.t0 = comunes[0];
+    t.t1 = comunes[comunes.length - 1];
+    t.hastaHoy = !!alDia && semana - t.t1 <= plazo;
+    const precio = (d, s) => d.find(x => x.time === s).close;
+    t.cambios = dentro.map(d => d ? precio(d, t.t1) / precio(d, t.t0) - 1 : null);
+    return t;
+  }
+  // una cifra de la frase: entera, con su signo, en color con criterio de
+  // consumidor (v-sube si subió, v-baja si bajó; sin color si redondea a 0%)
+  function cifraTramo(x) {
+    const r = Math.round(x * 100);
+    if (!r) return { texto: '0%' };
+    return { texto: (r > 0 ? '+' : '−') + Math.abs(r).toLocaleString('es-CL') + '%',
+      clase: r > 0 ? 'v-sube' : 'v-baja' };
+  }
+  // el período, en meses: "Desde mayo de 2008" si llega a hoy; si no, "De
+  // mayo de 2008 a diciembre de 2019" o "De mayo a diciembre de 2019"; dentro
+  // de un mismo mes, con las fechas
+  function periodoTxt(t) {
+    const a0 = anio(t.t0), a1 = anio(t.t1), m0 = mes(t.t0), m1 = mes(t.t1);
+    if (t.hastaHoy) return 'Desde ' + m0 + ' de ' + a0;
+    if (a0 === a1 && m0 === m1) return 'Del ' + fechaTxt(t.t0) + ' al ' + fechaTxt(t.t1);
+    if (a0 === a1) return 'De ' + m0 + ' a ' + m1 + ' de ' + a1;
+    return 'De ' + m0 + ' de ' + a0 + ' a ' + m1 + ' de ' + a1;
+  }
+  // la frase: "Desde mayo de 2008, ajustado por inflación: Palta +40%,
+  // Índice Asado +43%." Neutral: las cifras, sin causas, todas del mismo
+  // período y solo las series incluidas. null si no queda ninguna. En
+  // tramos { texto, clase } y { muestra } (el color de cada línea, antes de
+  // su nombre), para la página y la captura; 'fin' cierra lo de cada serie
+  // que no se separa (el punto, el nombre y la cifra).
+  //   series  [{ nombre, color }], la de la ficha primero
+  //   enUnidad  "ajustado por inflación" o "a precio de la época"
+  function fraseTramo(t, series, enUnidad) {
+    if (!t.incluidas.some(Boolean)) return null;
+    if (t.t0 == null) return [{ texto: 'En este tramo no hay semanas con precio de todas a la vez.' }];
+    const out = [{ texto: periodoTxt(t) + ', ' + enUnidad + ': ' }];
+    series.forEach((s, i) => {
+      if (t.cambios[i] == null) return;
+      if (out.length > 1) out.push({ texto: ', ' });
+      out.push({ muestra: s.color }, { texto: s.nombre + ' ' },
+        Object.assign(cifraTramo(t.cambios[i]), { fin: true }));
+    });
+    out.push({ texto: '.' });
+    return out;
+  }
+  // la nota aparte con las series que quedaron fuera: "Sin precio reciente:
+  // Cereza (último dato: semana del 02-02-2026)." Vacía si no hay
+  //   nombres  el de la ficha y los de las comparadas, en orden
+  function notaTramo(t, nombres) {
+    const viejas = [], sin = [];
+    t.incluidas.forEach((si, i) => {
+      if (si) return;
+      if (t.ultimos[i]) viejas.push(nombres[i] + ' (último dato: semana del ' + fechaTxt(t.ultimos[i].time) + ')');
+      else sin.push(nombres[i]);
+    });
+    const out = [];
+    if (viejas.length) out.push('Sin precio reciente: ' + enLista(viejas) + '.');
+    if (sin.length) out.push('Sin precios en este tramo: ' + enLista(sin) + '.');
+    return out.join(' ');
+  }
+  // Lightweight: una comparada en las semanas del producto de la ficha
+  // (semanas: [{ time: 'aaaa-mm-dd', value }], con huecos), como la dibuja
+  // la comparación de Advanced Charts: en cada semana con precio de la
+  // ficha, el último precio de la otra hasta esa semana; antes de su primer
+  // precio y donde la ficha no tiene precio, un hueco. Así las dos escalas
+  // porcentuales parten cada línea en el mismo punto (escalaVisible); la
+  // frase no usa estos precios, solo los propios
+  function enSemanasDe(b, semanas) {
+    let j = -1;
+    return semanas.map(s => {
+      if (s.value == null) return { time: s.time };
+      const t = Date.parse(s.time + 'T00:00:00Z');
+      while (j + 1 < b.length && b[j + 1].time <= t) j++;
+      return j < 0 ? { time: s.time } : { time: s.time, value: b[j].close };
+    });
+  }
+"""
+
+# ---------------- Captura PNG: la composición común ----------------
+# /graficos.html y las fichas componen la misma captura: aquí la foto de
+# cada motor, la marca y el dibujo; cada página dice qué va arriba.
+JS_CAPTURA = r"""  /* ---------- captura PNG: la composición común ---------- */
+  // cuadrada, de 1080 × 1080: arriba qué es, cuánto vale y de qué semana,
+  // con la leyenda de las líneas y la frase si las hay; al medio el gráfico
+  // y abajo la marca
+  const TITULO_UNIDAD = { epoca: ', PRECIO DE LA ÉPOCA' };
+  // la marca va en tres segmentos medidos para pintar SOLO la í en brasa,
+  // en la tipografía del wordmark
+  function marcaDeAgua(ctx, xDer, yBase, size) {
+    ctx.font = '700 ' + size + 'px "Space Grotesk", sans-serif';
+    ctx.textBaseline = 'alphabetic';
+    const seg = ['carest', 'í', 'a.cl'];
+    const w = seg.map(s => ctx.measureText(s).width);
+    let x = xDer - (w[0] + w[1] + w[2]);
+    ctx.globalAlpha = 0.4; ctx.fillStyle = tok('bone');  ctx.fillText(seg[0], x, yBase);
+    ctx.globalAlpha = 1;   ctx.fillStyle = tok('ember'); ctx.fillText(seg[1], x + w[0], yBase);
+    ctx.globalAlpha = 0.4; ctx.fillStyle = tok('bone');  ctx.fillText(seg[2], x + w[0] + w[1], yBase);
+    ctx.globalAlpha = 1;
+  }
+
+  // el gráfico fotografiado con la proporción de su recuadro en la captura
+  // (prop = ancho / alto). Solo cambia el alto y el tramo a la vista es el
+  // de la pantalla: con otro alto, la escala de precios puede cambiar de
+  // ancho y correr el comienzo del tramo, así que se vuelve a poner (la
+  // frase de las fichas habla de ese tramo). Lightweight se redimensiona, se
+  // fotografía y vuelve a su tamaño en el mismo cuadro, sin que se alcance a
+  // ver
+  function fotoLW(ch, prop) {
+    const caja = ch.chartElement().parentElement;
+    const ancho = caja.clientWidth, alto = caja.clientHeight;
+    const prueba = ch.takeScreenshot();
+    if (!prueba.width) return prueba;
+    const k = prueba.width / ancho;   // píxeles de la foto por píxel de pantalla
+    const tramo = ch.timeScale().getVisibleLogicalRange();
+    const volver = () => { if (tramo) ch.timeScale().setVisibleLogicalRange(tramo); };
+    ch.applyOptions({ autoSize: false });
+    ch.resize(ancho, Math.max(160, Math.round(alto + (prueba.width / prop - prueba.height) / k)), true);
+    volver();
+    const shot = ch.takeScreenshot();
+    ch.resize(ancho, alto, true);
+    volver();
+    ch.applyOptions({ autoSize: true });
+    return shot;
+  }
+  // Advanced Charts: la librería se redibuja con el alto nuevo (hasta tres
+  // intentos, midiendo cada foto) y mientras tanto 'velo' tapa el gráfico;
+  // 'marco', que contiene la caja del widget, conserva su alto para que la
+  // página no se mueva. Antes de cada foto y al terminar, el tramo de la
+  // pantalla
+  const dosCuadros = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+  async function fotoTV(w, prop, caja, marco, velo) {
+    let shot = await TV.capturaCliente(w, tok, caja);
+    if (!shot || !shot.width) return shot;
+    const meta = () => shot.width / prop;   // el alto de foto que se busca
+    if (Math.abs(shot.height - meta()) < 2) return shot;
+    velo(true);
+    marco.style.height = marco.offsetHeight + 'px';
+    marco.style.overflow = 'hidden';
+    const c = w.activeChart(), tramo = c.getVisibleRange();
+    const volver = () => Promise.resolve(c.setVisibleRange(tramo,
+      { applyDefaultRightMargin: false, rejectByTimeout: 3000 })).catch(() => {});
+    let alto = caja.clientHeight, k = shot.width / caja.clientWidth;
+    try {
+      for (let i = 0; i < 3 && Math.abs(shot.height - meta()) >= 2; i++) {
+        const nuevo = Math.max(160, Math.round(alto + (meta() - shot.height) / k));
+        Object.assign(caja.style, { aspectRatio: 'auto', minHeight: '0', maxHeight: 'none',
+          height: nuevo + 'px' });
+        await dosCuadros();
+        await new Promise(r => setTimeout(r, 250));
+        await volver();
+        const s = await TV.capturaCliente(w, tok, caja);
+        if (!s || !s.width) break;
+        if (nuevo !== alto && s.height !== shot.height) k = (s.height - shot.height) / (nuevo - alto);
+        alto = nuevo;
+        shot = s;
+      }
+    } finally {
+      Object.assign(caja.style, { aspectRatio: '', minHeight: '', maxHeight: '', height: '' });
+      marco.style.height = marco.style.overflow = '';
+      await dosCuadros();
+      await new Promise(r => setTimeout(r, 250));
+      await volver();
+      velo(false);
+    }
+    return shot;
+  }
+
+  // compone la captura y la comparte (o la descarga). o: { titulo, precio
+  // (chico: un texto en vez de la cifra grande), lineas: la leyenda, cada
+  // una { texto, color, punteada } con la muestra de su línea, partes: la
+  // composición de la canasta, frase: [{ texto, clase }] (las cifras con
+  // v-sube o v-baja, una nota con 'nota') y { salto: true } para pasar a la
+  // línea siguiente, fecha, foto: prop => la foto del gráfico, nombre }
+  async function componerCaptura(o) {
+    // el canvas no dispara la carga perezosa de webfonts: si un peso aún
+    // no se usó en el DOM, fillText caería a la fuente del sistema.
+    // Cargar explícitamente cada peso que dibuja el snapshot (título,
+    // costo, fecha y marca de agua) antes de componer
+    try {
+      await Promise.all([
+        document.fonts.load('400 16px "IBM Plex Sans"'),
+        document.fonts.load('500 16px "IBM Plex Mono"'),
+        document.fonts.load('700 16px "Space Grotesk"'),
+      ]);
+      await document.fonts.ready;
+    } catch (e) {}
+    const W = 1080, H = 1080;
+    const pad = Math.round(W * 0.04);
+    const chartW = W - pad * 2;
+    // bajo el costo, la composición de la canasta en una línea o dos si no
+    // cabe, la leyenda (cada línea con su muestra: color y trazo del
+    // gráfico) y la frase. El encabezado crece lo que ellas ocupen
+    const compSize = Math.round(W * 0.013), compAlto = Math.round(compSize * 1.5);
+    const compLineas = [], prodLineas = [], fraseLineas = [];
+    const muestra = Math.round(compSize * 1.8), hueco = Math.round(compSize * 0.5),
+      entre = Math.round(compSize * 1.4);
+    const mctx = document.createElement('canvas').getContext('2d');
+    mctx.font = '400 ' + compSize + 'px "IBM Plex Sans", sans-serif';
+    let fila = [], ancho = 0;
+    (o.lineas || []).forEach(it => {
+      const w = muestra + hueco + mctx.measureText(it.texto).width;
+      if (fila.length && ancho + entre + w > chartW) { prodLineas.push(fila); fila = []; ancho = 0; }
+      ancho += (fila.length ? entre : 0) + w;
+      fila.push(it);
+    });
+    if (fila.length) prodLineas.push(fila);
+    const partes = o.partes || [];
+    if (partes.length) {
+      let linea = '';
+      partes.forEach(p => {
+        const cand = linea ? linea + ', ' + p : p;
+        if (!linea || mctx.measureText(cand).width <= chartW) linea = cand;
+        else { compLineas.push(linea); linea = p; }
+      });
+      if (linea) compLineas.push(linea);
+      if (compLineas.length > 2) {   // nunca más de dos: recorte con …
+        let l2 = compLineas.slice(1).join(', ');
+        while (l2 && mctx.measureText(l2 + ' …').width > chartW) l2 = l2.slice(0, -1);
+        compLineas.length = 1;
+        compLineas.push(l2 + ' …');
+      }
+    }
+    // la frase en las líneas que quepan: palabra por palabra, cada trozo
+    // con su color (las cifras en rojo si subieron y en verde si bajaron; una
+    // nota, en gris). { salto: true } pasa a la línea siguiente
+    const COLOR_CIFRA = { 'v-sube': tok('sube'), 'v-baja': tok('baja'), nota: tok('ash') };
+    const espacio = mctx.measureText(' ').width;
+    if (o.frase && o.frase.length) {
+      const palabras = [];
+      let actual = null;
+      o.frase.forEach(t => {
+        if (t.salto) { actual = null; palabras.push({ salto: true }); return; }
+        String(t.texto || '').split(/( )/).forEach(p => {
+          if (p === ' ') { actual = null; return; }
+          if (!p) return;
+          if (!actual) { actual = { trozos: [], ancho: 0 }; palabras.push(actual); }
+          const a = mctx.measureText(p).width;
+          actual.trozos.push({ texto: p, color: COLOR_CIFRA[t.clase] || tok('bone'), ancho: a });
+          actual.ancho += a;
+        });
+      });
+      let linea = [], usado = 0;
+      palabras.forEach(p => {
+        if (p.salto) {
+          if (linea.length) fraseLineas.push(linea);
+          linea = []; usado = 0;
+          return;
+        }
+        if (linea.length && usado + espacio + p.ancho > chartW) {
+          fraseLineas.push(linea); linea = []; usado = 0;
+        }
+        usado += (linea.length ? espacio : 0) + p.ancho;
+        linea.push(p);
+      });
+      if (linea.length) fraseLineas.push(linea);
+    }
+    // contexto arriba a la izquierda: qué es, cuánto vale (o un texto en vez
+    // del monto), de cuándo
+    const precioFont = o.chico ? '400 ' + Math.round(W * 0.02) + 'px "IBM Plex Sans", sans-serif' :
+      '700 ' + Math.round(W * 0.037) + 'px "Space Grotesk", sans-serif';
+    const compH = (compLineas.length + prodLineas.length + fraseLineas.length) * compAlto;
+    const headH = Math.round(W * 0.13) + compH, footH = Math.round(W * 0.07);
+    const chartH = H - headH - footH;
+    const shot = await o.foto(chartW / chartH);
+    if (!shot || !shot.width) return;
+    const cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    const ctx = cv.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.fillStyle = tok('bg');
+    ctx.fillRect(0, 0, W, H);
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = tok('ash');
+    ctx.font = '500 ' + Math.round(W * 0.014) + 'px "IBM Plex Mono", monospace';
+    ctx.fillText(o.titulo, pad, Math.round(W * 0.028));
+    ctx.fillStyle = tok('bone');
+    ctx.font = precioFont;
+    ctx.fillText(o.precio, pad, Math.round(W * 0.05));
+    ctx.fillStyle = tok('ash');
+    ctx.font = '400 ' + compSize + 'px "IBM Plex Sans", sans-serif';
+    const yLinea = i => Math.round(W * 0.098) + i * compAlto;
+    compLineas.forEach((l, i) => ctx.fillText(l, pad, yLinea(i)));
+    const grosor = Math.max(2, Math.round(compSize * 0.16));
+    prodLineas.forEach((fila, i) => {
+      const y = yLinea(compLineas.length + i);
+      let x = pad;
+      fila.forEach(it => {
+        ctx.save();
+        ctx.strokeStyle = it.color;
+        ctx.lineWidth = grosor;
+        ctx.setLineDash(it.punteada ? [grosor, grosor * 1.5] : []);
+        ctx.beginPath();
+        ctx.moveTo(x, y + compSize * 0.6);
+        ctx.lineTo(x + muestra, y + compSize * 0.6);
+        ctx.stroke();
+        ctx.restore();
+        ctx.fillText(it.texto, x + muestra + hueco, y);
+        x += muestra + hueco + ctx.measureText(it.texto).width + entre;
+      });
+    });
+    fraseLineas.forEach((linea, i) => {
+      const y = yLinea(compLineas.length + prodLineas.length + i);
+      let x = pad;
+      linea.forEach((p, j) => {
+        if (j) x += espacio;
+        p.trozos.forEach(t => { ctx.fillStyle = t.color; ctx.fillText(t.texto, x, y); x += t.ancho; });
+      });
+    });
+    ctx.fillStyle = tok('ash');
+    ctx.font = '400 ' + Math.round(W * 0.012) + 'px "IBM Plex Sans", sans-serif';
+    ctx.fillText('semana del ' + o.fecha, pad, Math.round(W * 0.098) + compH);
+    // el gráfico entero en su recuadro, centrado si la proporción no quedó exacta
+    const esc = Math.min(chartW / shot.width, chartH / shot.height);
+    const dw = Math.round(shot.width * esc), dh = Math.round(shot.height * esc);
+    ctx.drawImage(shot, pad + Math.round((chartW - dw) / 2), headH + Math.round((chartH - dh) / 2),
+      dw, dh);
+    marcaDeAgua(ctx, W - pad, H - Math.round(footH * 0.35), Math.round(W * 0.02));
+    cv.toBlob(async blob => {
+      if (!blob) return;
+      // en móvil el share sheet nativo (ideal para WhatsApp); si no está
+      // disponible o el archivo no se puede compartir, descarga directa
+      const file = new File([blob], o.nombre, { type: 'image/png' });
+      if (matchMedia('(pointer:coarse)').matches &&
+          navigator.canShare && navigator.canShare({ files: [file] })) {
+        try { await navigator.share({ files: [file] }); return; }
+        catch (e) { if (e.name === 'AbortError') return; }
+      }
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = o.nombre;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    }, 'image/png');
+  }
+"""
+
+
 def generar_datos(slugs: dict, catalogo: dict) -> dict:
-    """Escribe datos/ y devuelve lo que va inline en /graficos.html."""
+    """Escribe datos/ (con datos/repetidas/{slug}.json, las semanas que la
+    frase de las fichas no usa) y devuelve lo que va inline en /graficos.html."""
     indices = DATA["indices"]
     prods = DATA.get("productos", {})
     series = {code: compactar_indice(code, d) for code, d in indices.items()}
@@ -3800,8 +4692,13 @@ def generar_datos(slugs: dict, catalogo: dict) -> dict:
         completo = {k: v for k, v in d.items() if k not in SERIES_INDICE}
         completo["serie"] = series[code]
         escribir_json(os.path.join(DATOS, "indices", f"{code}.json"), completo)
+    # las semanas repetidas de cada producto (semanas_repetidas), aparte: el
+    # archivo de su serie es el de indices.json, tal cual
+    factor = factor_epoca()
     for clave, p in prods.items():
         escribir_json(os.path.join(DATOS, "productos", f"{slugs[clave]}.json"), p)
+        escribir_json(os.path.join(DATOS, "repetidas", f"{slugs[clave]}.json"),
+                      semanas_repetidas(p, factor))
     escribir_json(os.path.join(DATOS, "catalogo.json"), catalogo)
     primero = next(iter(indices))
     return {
@@ -3817,8 +4714,70 @@ def generar_datos(slugs: dict, catalogo: dict) -> dict:
     }
 
 
+# ---- "Comparar con" de las fichas ----
+# Bajo el gráfico de cada ficha, hasta SUGERENCIAS botones calculados en el
+# build: los productos de su grupo con precio en las últimas SEMANAS_TABLA
+# semanas (los de la tabla de la portada), primero los de mayor variación
+# ajustada por inflación a un año (en valor absoluto), y los índices cuya
+# canasta lo lleva. El buscador agrega cualquier otro producto del catálogo;
+# a lo más MAX_COMPARADOS a la vez, además del producto de la ficha.
+SUGERENCIAS = 6
+MAX_COMPARADOS = 4
+
+
+def indices_del_producto(clave: str) -> list:
+    """Los códigos de los índices cuya canasta lleva el producto (la clave de
+    cada componente sale de su label, como en indices.py)."""
+    return [code for code, d in DATA["indices"].items()
+            if any(clave_producto(c.get("label") or "") == clave
+                   for c in d.get("componentes") or [])]
+
+
+def sugerencias_comparar(clave: str, p: dict, tabla: list) -> list:
+    """[(símbolo, nombre, unidad)] de la franja "Comparar con" de una ficha: los
+    productos de su grupo en 'tabla' (las filas de la portada, filas_portada)
+    por variación a un año, de mayor a menor en valor absoluto (sin ella, al
+    final), y después sus índices; SUGERENCIAS en total, con los índices
+    siempre. El símbolo es el del datafeed: el slug del producto o el código
+    del índice; la unidad, la del producto (None en un índice)."""
+    indices = [(c, DATA["indices"][c]["nombre"], None) for c in indices_del_producto(clave)]
+    grupo = grupo_txt(p.get("grupo") or "Otros")
+    prods = sorted((f for f in tabla if f["grupo"] == grupo and f["clave"] != clave),
+                   key=lambda f: (f["variacion_52s_pct"] is None,
+                                  -abs(f["variacion_52s_pct"] or 0), _orden(f["nombre"])))
+    n = max(0, SUGERENCIAS - len(indices))
+    return [(f["slug"], f["nombre"], f["unidad"]) for f in prods[:n]] + indices[:SUGERENCIAS]
+
+
+def franja_comparar(sugerencias: list) -> str:
+    """La franja "Comparar con" de la ficha: las sugerencias como botones
+    (el JS les pone el color de su línea al elegirlas; los productos llevan
+    su unidad de medida, para el datafeed), el buscador y, con algo elegido, la línea
+    de la escala, la frase y la nota de las series sin precio reciente (las
+    arma el JS)."""
+    botones = "".join(
+        f'\n        <button class="pchip" type="button" data-cmp="{html.escape(s, quote=True)}" '
+        + (f'data-medida="{html.escape(u, quote=True)}" ' if u else "")
+        + f'aria-pressed="false"><span class="dot"></span>{html.escape(n)}</button>'
+        for s, n, u in sugerencias)
+    return (f'    <section class="comparar" aria-labelledby="cmp-h">\n'
+            f'      <h2 class="otros-h" id="cmp-h">Comparar con</h2>\n'
+            f'      <div class="pchips" id="cmp-chips">{botones}\n      </div>\n'
+            f'      <input class="psearch" id="cmp-busca" type="search" '
+            f'placeholder="busca otro producto..." autocomplete="off" '
+            f'aria-label="Busca otro producto para comparar">\n'
+            f'      <div class="pchips" id="cmp-res"></div>\n'
+            f'      <p class="cmp-nota" id="cmp-nota" hidden>Puedes comparar hasta '
+            f'{MAX_COMPARADOS} a la vez.</p>\n'
+            f'      <p class="cmp-escala" id="cmp-escala" hidden></p>\n'
+            f'      <p class="cmp-frase" id="cmp-frase" hidden></p>\n'
+            f'      <p class="cmp-sin" id="cmp-sin" hidden></p>\n'
+            f'    </section>')
+
+
 def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
-                    semana: datetime.date = None, og: str = None) -> str:
+                    semana: datetime.date = None, og: str = None,
+                    sugerencias: list = ()) -> str:
     """Renderiza la página estática de UN producto con sus datos inline.
     'semana' es la semana vigente del catálogo. El número grande es el precio
     de esta semana, sin etiqueta (en su semana, ajustado y de la época son el
@@ -3830,7 +4789,8 @@ def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
     no hay número grande: la frase es la de ultimo_dato ("Sin precio de ODEPA
     esta semana. Último dato: …") más la de temporada si el dato es reciente,
     y nada dice "Hoy". 'og' son las etiquetas de su og:image (og_meta); sin
-    ellas, la genérica."""
+    ellas, la genérica. 'sugerencias' son las de su franja "Comparar con"
+    (sugerencias_comparar)."""
     vals = [v for v in p["v"] if v is not None]
     ult = vals[-1]
     n = len(vals)
@@ -3866,6 +4826,9 @@ def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
         texto, frase = u["texto"], " ".join(x for x in (u["texto"], u["temporada"]) if x)
         historia = f"Frente a toda su historia, {en_historia}, {ajustado(c['o'])}."
         miga, orow = "Último precio publicado en Santiago", ""
+        # la captura sin comparados: el último dato, en texto
+        captura = {"titulo": f"{mostrar} por {uni_txt}".upper(), "precio": texto,
+                   "chico": True}
         desc = (f"{texto} Precio por {uni_txt} {c['de']} {label_frase} en la Región "
                 f"Metropolitana: serie semanal desde {anio} con datos ODEPA (promedio de "
                 f"ferias, supermercados y carnicerías).")
@@ -3876,6 +4839,8 @@ def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
         else:
             frase, historia = f"{cuando} {en_historia}, {ajustado(c['o'])}.", ""
         miga = "Precio de esta semana en Santiago"
+        captura = {"titulo": f"{mostrar} por {uni_txt}".upper(), "precio": precio,
+                   "chico": False}
         orow = (f'    <div class="orow">\n'
                 f'      <div class="oprice">{precio}</div>\n'
                 f'      <div class="ouni">{html.escape(f"por {uni_txt}")}</div>\n'
@@ -3903,26 +4868,28 @@ def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
         ("__FECHA__", fecha_txt),
         ("__ANIO__", anio),
         ("__CANASTA__", f"{key}:{QDEF.get(p['unidad'], '1')}"),
+        # Comparar con: la franja y lo que la captura dice sin comparados
+        ("__COMPARAR__", franja_comparar(sugerencias)),
+        ("__AL_DIA__", "false" if antiguo else "true"),
+        ("__CAPTURA__", _json(captura).replace("</", "<\\/")),
         ("__T0__", p["t0"]),
         ("__V__", json.dumps(p["v"])),
         # el rango semanal (mecha de las velas); vacío si indices.json no lo trae
         ("__MIN__", json.dumps(p.get("min") or [])),
         ("__MAX__", json.dumps(p.get("max") or [])),
-        # Advanced Charts: el datafeed, sus versiones y lo que la ficha ya sabe
+        # las semanas repetidas: la frase de "Comparar con" no las usa
+        ("__REP__", json.dumps(semanas_repetidas(p, factor_epoca()))),
+        # lo que el JS común (FICHA_JS) sabe de la ficha, y su versión
         ("__NOMBRE__", json.dumps(mostrar, ensure_ascii=False).replace("</", "<\\/")),
         ("__UNIDAD__", p["unidad"]),
-        ("__INDICES__", indices_tv()),
-        ("__TV_JS__", TV_JS),
-        ("__VER_TV__", _ver(feed_js())),
-        ("__TV_CSS__", TV_CSS),
-        ("__VER_CSS__", _ver(tv_css())),
         ("__VER__", APP["ver"]),
-        # la unidad: el selector, su línea y su JS
+        ("__FICHA_JS__", FICHA_JS),
+        ("__VER_FICHA__", _ver(ficha_js())),
+        # la unidad: el selector y su línea (su JS va en FICHA_JS)
         ("__SELECTOR_UNIDAD__", selector_unidad()),
         ("__UNIDAD_REAL__", unidad_txt()["real"]),
-        ("__JS_UNIDAD__", JS_UNIDAD),
-        ("__UNIDAD_TXT__", _json(unidad_txt())),
-        ("__EN_PESOS__", ", en " + pesos(corto=True)),
+        # el CSS de Comparar, común con /graficos.html
+        ("__CSS_COMPARAR__", CSS_COMPARAR),
         # HTML ya renderizado (seccion_otros escapa labels y grupo), no
         # se vuelve a escapar aquí
         ("__OTROS__", otros_html),
@@ -3963,9 +4930,13 @@ def asignar_fichas(prods: dict) -> dict:
     return slugs
 
 
-def generar_productos(slugs: dict) -> None:
-    """Escribe productos/{slug}.html por cada ficha de asignar_fichas."""
+def generar_productos(slugs: dict, catalogo: dict) -> None:
+    """Escribe productos/{slug}.html por cada ficha de asignar_fichas, con
+    las sugerencias de su franja "Comparar con" (del catálogo), y el JS común
+    de todas, FICHA_JS."""
     prods = DATA.get("productos", {})
+    with open(FICHA_JS, "w", encoding="utf-8") as fh:
+        fh.write(ficha_js())
     # interlinking: rueda alfabética de slugs por grupo ODEPA (determinista)
     por_grupo = {}
     for slug, (key, _label) in slugs.items():
@@ -3975,14 +4946,17 @@ def generar_productos(slugs: dict) -> None:
         lst.sort()
     labels = {s: nombre(lab) for s, (_k, lab) in slugs.items()}
     semana = semana_vigente(prods[k] for k, _l in slugs.values())
+    # las sugerencias de "Comparar con": entre los productos de la portada
+    tabla, _vigentes = filas_portada(catalogo, slugs)
     os.makedirs("productos", exist_ok=True)
     for slug, (key, _label) in slugs.items():
         grupo = prods[key].get("grupo") or "Otros"
         otros = seccion_otros(slug, grupo, por_grupo[grupo], labels)
         og = tarjeta_producto(prods[key], slug, semana)
+        sug = sugerencias_comparar(key, prods[key], tabla)
         with open(os.path.join("productos", f"{slug}.html"), "w",
                   encoding="utf-8") as fh:
-            fh.write(pagina_producto(key, prods[key], slug, otros, semana, og))
+            fh.write(pagina_producto(key, prods[key], slug, otros, semana, og, sug))
 
 
 def tarjeta_producto(p: dict, slug: str, semana: datetime.date = None) -> str:
@@ -4044,6 +5018,8 @@ def tarjeta_producto(p: dict, slug: str, semana: datetime.date = None) -> str:
 # y 12M); en CLP sin decimales (la UF con decimales) y en America/Santiago.
 TV_JS = "carestia-tv.js"
 TV_CSS = "carestia-tv.css"
+# el JS común de las fichas (ficha_js)
+FICHA_JS = "carestia-ficha.js"
 TV_PRUEBA = "prueba-graficos.html"
 FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de datos/.
    Lo genera build_site.py; lo usan las páginas con gráficos. */
@@ -4354,9 +5330,12 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
     indices.forEach(d => agregar({ ticker: d.codigo, clase: 'indice', nombre: d.nombre,
       corto: d.nombre.replace(/^Índice /, ''), ruta: 'indices/' + d.codigo + '.json' }));
     (opciones.productos || []).forEach(agregarProducto);
-    const listo = pedir('catalogo.json').then(cat => {
+    // el catálogo, a demanda: solo para un símbolo que la página no trae, la
+    // búsqueda o la lista (una ficha que compara sus sugerencias no lo pide)
+    let catalogo = null;
+    const listo = () => catalogo || (catalogo = pedir('catalogo.json').then(cat => {
       (cat.productos || []).forEach(agregarProducto);
-    }).catch(() => {});   // sin catálogo quedan los índices
+    }).catch(() => {}));   // sin catálogo quedan los índices
 
     // Tu canasta: un símbolo por composición, fuera de la búsqueda y de la
     // lista. canasta([{ slug, cantidad }]) devuelve su ticker: la misma
@@ -4387,7 +5366,7 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
       // los que la página ya conoce (y las canastas) no esperan el catálogo
       if (canastas.has(t)) return Promise.resolve(canastas.get(t));
       return simbolos.has(t) ? Promise.resolve(simbolos.get(t)) :
-        listo.then(() => simbolos.get(t) || null);
+        listo().then(() => simbolos.get(t) || null);
     };
     const factor = () => una('factor', () =>
       Promise.all(indices.map(d => pedir('indices/' + d.codigo + '.json')))
@@ -4487,7 +5466,7 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
       // búsqueda solo entre los símbolos de Carestía: todas las palabras
       // escritas, sin tildes ni mayúsculas, en el ticker o el nombre
       searchSymbols(texto, _fuente, tipo, cb) {
-        listo.then(() => {
+        listo().then(() => {
           const palabras = sinTildes(texto || '').split(/\s+/).filter(Boolean);
           const out = [];
           simbolos.forEach(s => {
@@ -4541,7 +5520,7 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
       rango,
       simbolo,
       canasta,
-      lista: () => listo.then(() => [...simbolos.values()].map(s =>
+      lista: () => listo().then(() => [...simbolos.values()].map(s =>
         ({ ticker: s.ticker, descripcion: s.desc, corto: s.corto, clase: s.clase,
           unidad: s.unidad }))),
       info: nombre => simbolo(nombre).then(s => s && info(s)),
@@ -4789,7 +5768,17 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
   // Con la caja oculta (display:none, otro modo a la vista) la librería mide
   // cero y el rango no queda: se aplica cuando la caja vuelve a tener ancho
   const esperandoAncho = new WeakSet();
+  // la promesa del último de cada widget (al montar y en cada cambio de
+  // símbolo): rangoListo(widget) espera a que el rango quede puesto antes de
+  // poner otro
+  const rangos = new WeakMap();
+  const rangoListo = widget => rangos.get(widget) || Promise.resolve();
   function verTodo(widget, feed, caja, res) {
+    const p = verTodoAhora(widget, feed, caja, res);
+    rangos.set(widget, p);
+    return p;
+  }
+  function verTodoAhora(widget, feed, caja, res) {
     if (caja && !caja.clientWidth && typeof ResizeObserver === 'function') {
       if (esperandoAncho.has(widget)) return Promise.resolve();
       esperandoAncho.add(widget);
@@ -4927,7 +5916,7 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
 
   const api = { crearDatafeed, serieCanasta, miles, numUF, numUFEje, textoUF, fecha, almacenLocal,
     formateadores, overrides, opcionesWidget, alistarWidget, listoWidget, montar, verTodo,
-    cargarLibreria, capturaCliente, colorLinea, temporalidad, MOVIL, RESOLUCION, RESOLUCIONES,
+    rangoListo, cargarLibreria, capturaCliente, colorLinea, temporalidad, MOVIL, RESOLUCION, RESOLUCIONES,
     SUFIJO, ZONA, NOMBRE_CANASTA, PESOS };
   raiz.CarestiaTV = api;
   if (typeof module === 'object' && module.exports) module.exports = api;
@@ -5217,6 +6206,30 @@ TV_COLORES = """.theme-dark:root {{
   --tv-color-popup-element-toolbox-background-active-hover: {hover};
 }}
 """
+
+
+def ficha_js() -> str:
+    """carestia-ficha.js: el JS de las fichas (FICHA_JS_TPL) con los
+    componentes comunes con /graficos.html (la unidad, Comparar, la frase y
+    la captura) y lo que es igual en todas: los índices, el máximo de
+    "Comparar con" y las versiones del datafeed y su tema."""
+    out = FICHA_JS_TPL
+    for token, valor in [
+        ("__JS_UNIDAD__", JS_UNIDAD),
+        ("__UNIDAD_TXT__", _json(unidad_txt())),
+        ("__JS_COMPARAR__", JS_COMPARAR),
+        ("__JS_FRASE__", JS_FRASE),
+        ("__JS_CAPTURA__", JS_CAPTURA),
+        ("__MAX_COMPARADOS__", str(MAX_COMPARADOS)),
+        ("__INDICES__", indices_tv()),
+        ("__TV_JS__", TV_JS),
+        ("__VER_TV__", _ver(feed_js())),
+        ("__TV_CSS__", TV_CSS),
+        ("__VER_CSS__", _ver(tv_css())),
+        ("__EN_PESOS__", ", en " + pesos(corto=True)),
+    ]:
+        out = out.replace(token, valor)
+    return out
 
 
 def feed_js() -> str:
@@ -6371,6 +7384,10 @@ with open("graficos.html", "w", encoding="utf-8") as fh:
                           .replace("__UNIDAD_REAL__", unidad_txt()["real"])
                           .replace("__JS_UNIDAD__", JS_UNIDAD)
                           .replace("__UNIDAD_TXT__", _json(unidad_txt()))
+                          # Comparar y la captura: los componentes comunes
+                          .replace("__CSS_COMPARAR__", CSS_COMPARAR)
+                          .replace("__JS_COMPARAR__", JS_COMPARAR)
+                          .replace("__JS_CAPTURA__", JS_CAPTURA)
                           # el mes del último IPC
                           .replace("__AJUSTADOS__", ajustado("os"))
                           .replace("__PESOS_CORTO__", pesos(corto=True))
@@ -6382,7 +7399,7 @@ generar_portada(CATALOGO, FICHAS)
 with open("robots.txt", "w", encoding="utf-8") as fh:
     fh.write(ROBOTS)
 
-generar_productos(FICHAS)
+generar_productos(FICHAS, CATALOGO)
 generar_indice_productos(FICHAS)
 generar_metodologia()
 generar_paginas_texto()
