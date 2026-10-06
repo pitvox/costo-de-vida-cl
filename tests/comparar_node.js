@@ -214,6 +214,14 @@ function pruebasEscala() {
     '(28-01-2008), que parten en su primer precio.', 'la escala con dos que parten después');
   const m = F.escalaVisible(P, [pera], lunes('2008-01-14'), lunes('2008-01-28') + 3 * DIA);
   ok(m.t0 === lunes('2008-01-14') && m.base === 110, 'un tramo a la mitad');
+  // el final: el de la última barra a la vista (con barras de un mes, su mes
+  // entero) o, si es la última, sin límite
+  ok(m.fin === lunes('2008-02-04') - 1, 'el final del tramo, el de su última barra');
+  ok(e.fin === Infinity, 'con la última barra a la vista, sin límite');
+  const meses = [{ time: lunes('2008-01-07'), close: 1 }, { time: Date.UTC(2008, 1, 1), close: 2 },
+    { time: Date.UTC(2008, 2, 1), close: 3 }];
+  ok(F.escalaVisible(meses, [], 0, Date.UTC(2008, 1, 5)).fin === Date.UTC(2008, 2, 1) - 1,
+    'en 1M, el mes entero de la última barra a la vista');
   ok(F.escalaVisible(P, [], lunes('2009-01-05'), lunes('2009-02-02')) === null, 'sin barras a la vista');
 }
 

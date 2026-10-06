@@ -602,8 +602,8 @@ def test_ficha_con_advanced_charts_despues_del_primer_pantallazo(sitio):
     assert not re.search(r"lightweight-charts|charting_library|carestia-tv", cab)
     assert '<div id="grafico"><div class="nochart cargando">Cargando el gráfico...</div></div>' in h
     # la ficha lleva sus datos; el JS, común a todas, va en carestia-ficha.js
-    # (diferido, al final del <body>)
-    assert re.search(r'<script defer src="/carestia-ficha\.js\?v=[0-9a-f]{10}"></script>\n</body>', h)
+    # (async, al final del <body>)
+    assert re.search(r'<script async src="/carestia-ficha\.js\?v=[0-9a-f]{10}"></script>\n</body>', h)
     js = _script(h) + _leer(sitio, "carestia-ficha.js")
     assert "window.addEventListener('load', () => {" in js
     assert re.search(r"cargarScript\('/carestia-tv\.js\?v=[0-9a-f]{10}'\)", js)

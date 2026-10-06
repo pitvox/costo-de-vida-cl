@@ -193,8 +193,9 @@ def test_ficha_con_sus_datos_y_el_js_comun(sitio):
         assert "function" not in datos and "=>" not in datos, slug
         assert re.findall(r"^  const (\w+)", datos, re.M) == [
             "T0", "V", "MIN", "MAX", "REP", "SLUG", "NOMBRE", "UNIDAD", "VER", "FECHA"], slug
-        # el JS común, después de los datos, con su versión en la URL
-        m = re.search(r'<script defer src="/carestia-ficha\.js\?v=([0-9a-f]{10})"></script>\n</body>', h)
+        # el JS común, después de los datos, con su versión en la URL; async:
+        # no espera a otros scripts (el de Cloudflare, en el <head>)
+        m = re.search(r'<script async src="/carestia-ficha\.js\?v=([0-9a-f]{10})"></script>\n</body>', h)
         assert m and h.index(datos) < m.start(), slug
         assert ver in (None, m.group(1)), slug
         ver = m.group(1)
@@ -257,7 +258,7 @@ def test_escala_frase_y_linea_igual_que_la_inflacion(sitio):
     assert "Promise.all(todas.map(k => propiasDe(k, u).catch(() => null)))" in js
     # un solo período para todas: desde el 0% del gráfico hasta lo que
     # muestra (a lo más, el último dato de la ficha)
-    assert "t = tramoComun(propias, e.t0, Math.min(rango[1], FIN), AL_DIA && rango[1] >= FIN);" in js
+    assert "t = tramoComun(propias, e.t0, Math.min(e.fin, FIN), AL_DIA && e.fin >= FIN);" in js
     assert "const FIN = Date.parse(T0 + 'T00:00:00Z') + (V.length - 1) * SEMANA;" in js
     # las que no tienen precio reciente, en la nota aparte
     assert "ultimaNota = t ? notaTramo(t, series.map(s => s.nombre)) : '';" in js

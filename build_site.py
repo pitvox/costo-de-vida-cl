@@ -2715,7 +2715,7 @@ __PIE__
   const VER = '__VER__';
   const FECHA = '__FECHA__', AL_DIA = __AL_DIA__, CAPTURA = __CAPTURA__;
 </script>
-<script defer src="/__FICHA_JS__?v=__VER_FICHA__"></script>
+<script async src="/__FICHA_JS__?v=__VER_FICHA__"></script>
 </body>
 </html>
 """
@@ -3013,10 +3013,10 @@ __JS_CAPTURA__
       if (barras[0] && barras[0].length) e = escalaVisible(barras[0], barras.slice(1), rango[0], rango[1]);
       // sin las semanas propias de alguna serie (un pedido que falló), no hay
       // frase: nunca se mide con precios repetidos. Se reintenta sola (abajo).
-      // La frase parte en el 0% del gráfico y llega, a lo más, a lo que el
-      // gráfico muestra
+      // La frase parte en el 0% del gráfico y llega, a lo más, al final de la
+      // última barra a la vista y al último dato de la ficha
       if (e && propias.every(Boolean)) {
-        t = tramoComun(propias, e.t0, Math.min(rango[1], FIN), AL_DIA && rango[1] >= FIN);
+        t = tramoComun(propias, e.t0, Math.min(e.fin, FIN), AL_DIA && e.fin >= FIN);
       }
     }
     if (rango && (!e || !t) && reintentos < 3 && (!barras[0] || !propias.every(Boolean))) {
@@ -4209,7 +4209,8 @@ JS_FRASE = r"""  /* ---------- Comparar con: la escala y la frase ---------- */
   // a la vista del producto de la ficha, con el último precio de cada serie
   // hasta esa barra; la que aún no tiene precio parte en el primero que
   // tenga. 'base' es el precio de la ficha en esa barra (ahí va la línea de
-  // "Igual que la inflación").
+  // "Igual que la inflación"); 'fin', el final del período de la última
+  // barra a la vista (en 1M, su mes entero; Infinity si es la última).
   //   p      las barras del producto de la ficha: [{ time (ms), close }]
   //   otras  las de cada comparada, igual
   //   desde, hasta  el tramo a la vista (ms)
@@ -4220,7 +4221,8 @@ JS_FRASE = r"""  /* ---------- Comparar con: la escala y la frase ---------- */
     while (i1 >= 0 && p[i1].time > hasta) i1--;
     if (i0 > i1) return null;
     const t0 = p[i0].time;
-    return { t0, base: p[i0].close, partes: otras.map(b => {
+    return { t0, base: p[i0].close, fin: i1 + 1 < p.length ? p[i1 + 1].time - 1 : Infinity,
+      partes: otras.map(b => {
       b = b || [];
       if (!b.length || b[0].time <= t0) return null;
       const p0 = p.find((x, j) => j >= i0 && j <= i1 && x.time >= b[0].time);
