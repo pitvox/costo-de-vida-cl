@@ -2227,6 +2227,7 @@ NAV = [   # (clave, texto, href, modo de /graficos.html que abre en el lugar)
 PIE_LINKS = [
     ("metodologia", "Metodología", f"{SITIO}/metodologia.html"),
     ("acerca", "Acerca de", f"{SITIO}/acerca.html"),
+    ("novedades", "Novedades", f"{SITIO}/novedades.html"),
     ("prensa", "Prensa", f"{SITIO}/prensa.html"),
     ("contacto", "Contacto", f"{SITIO}/contacto.html"),
     ("terminos", "Términos de uso", f"{SITIO}/terminos.html"),
@@ -5676,6 +5677,10 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
   function overrides(tok) {
     const verde = tok('verde'), rojo = tok('rojo');
     const o = {
+      // la leyenda sin los parámetros de comparaciones e indicadores: el
+      // "close" de cada comparada (la librería no lo traduce) y el largo de
+      // cada indicador. Quedan el nombre y el valor
+      'paneProperties.legendProperties.showStudyArguments': false,
       'paneProperties.backgroundType': 'solid',
       'paneProperties.background': tok('bg'),
       'paneProperties.vertGridProperties.color': tok('grid'),
@@ -6417,6 +6422,11 @@ __CSS_BASE__
     text-decoration-color:var(--dim); text-underline-offset:3px; }
   .doc a:hover, .doc a:focus-visible { text-decoration-color:var(--bone); }
   .doc .meta { font-size:13px; color:var(--ash); }
+  /* novedades: el título de cada nota como titular, no como etiqueta, y su
+     fecha justo debajo */
+  .novedades h2 { font:600 20px/1.3 var(--sans); letter-spacing:0; color:var(--bone);
+    text-transform:none; text-wrap:balance; }
+  .novedades h2 + .meta { margin-top:6px; }
   .doc .sub { padding-left:3ch; }   /* sub-cláusulas: 4.1., 4.2., ... */
   .doc .pendiente { border:1px dashed var(--dim); padding:12px 16px;
     color:var(--ash); }
@@ -7135,6 +7145,11 @@ def md_en_linea(s: str) -> str:
     return "".join(partes)
 
 
+# una línea que es solo una fecha larga ("7 de octubre de 2026"): la fecha
+# de una nota de textos/novedades.md
+FECHA_LARGA = re.compile(r"(\d{1,2}) de (" + "|".join(MESES) + r") de (\d{4})")
+
+
 def md_a_html(texto: str) -> str:
     bloques, lista = [], []
 
@@ -7160,6 +7175,11 @@ def md_a_html(texto: str) -> str:
             bloques.append(f'<p class="pendiente">{md_en_linea(s)}</p>')
         elif s.startswith("Última actualización"):
             bloques.append(f'<p class="meta">{md_en_linea(s)}</p>')
+        elif FECHA_LARGA.fullmatch(s):
+            # la fecha de una nota (novedades), con la fecha en la etiqueta
+            d, m, a = FECHA_LARGA.fullmatch(s).groups()
+            bloques.append(f'<p class="meta"><time datetime="{a}-{MESES.index(m) + 1:02d}-'
+                           f'{int(d):02d}">{s}</time></p>')
         elif re.match(r"\d+\.\d+\.\s", s):
             bloques.append(f'<p class="sub">{md_en_linea(s)}</p>')
         else:
@@ -7172,7 +7192,7 @@ def md_a_html(texto: str) -> str:
 # con "PENDIENTE" marca un texto que aún no llega completo: el build se niega
 # a publicar (ver más abajo) salvo en una vista previa local con
 # CARESTIA_BORRADOR=1.
-TEXTOS = ["terminos", "privacidad", "acerca", "contacto",
+TEXTOS = ["terminos", "privacidad", "acerca", "contacto", "novedades",
           "metodologia", "notas_metodologicas", "404"]
 
 
@@ -7297,6 +7317,8 @@ PAGINAS_TEXTO = [
     ("privacidad", "privacidad.html", f"{SITIO}/privacidad.html", "privacidad",
      "Política de privacidad", "Política de privacidad | Carestía",
      "Política de privacidad de carestia.cl."),
+    ("novedades", "novedades.html", f"{SITIO}/novedades.html", "novedades", "Novedades",
+     "Novedades | Carestía", "Novedades de Carestía."),
     ("404", "404.html", None, "", "Página no encontrada",
      "Página no encontrada | Carestía", "Esta página no existe en carestia.cl."),
 ]
@@ -7307,7 +7329,7 @@ def generar_paginas_texto() -> None:
         titulo, cuerpo = cargar_texto(nombre)
         escribir_pagina(archivo, url, title, desc,
                         f"    <h1>{html.escape(titulo or titulo_def)}</h1>\n{cuerpo}",
-                        actual=clave)
+                        actual=clave, clase="doc novedades" if nombre == "novedades" else "doc")
 
 
 SITEMAP_URL = """  <url>
@@ -7369,7 +7391,8 @@ def generar_resumen() -> None:
 # salud.yml chequea la primera URL con /productos/ del sitemap y así sigue
 # siendo una ficha
 PAGINAS_SITEMAP = ["graficos.html", "productos/", "metodologia.html", "acerca.html",
-                   "prensa.html", "contacto.html", "terminos.html", "privacidad.html"]
+                   "novedades.html", "prensa.html", "contacto.html", "terminos.html",
+                   "privacidad.html"]
 
 
 def generar_sitemap(slugs: list, indices: list = ()) -> None:

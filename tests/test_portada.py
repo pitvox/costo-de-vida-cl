@@ -353,7 +353,7 @@ def test_paginas_de_texto_con_el_ancho_del_pie(sitio):
     pie = re.search(r"\.sitefoot \{[^}]*padding:18px (clamp\([^)]*\)) 24px;",
                     _leer(sitio, "index.html")).group(1)
     for pagina in ["metodologia.html", "acerca.html", "contacto.html", "terminos.html",
-                   "privacidad.html", "productos/index.html", "404.html"]:
+                   "privacidad.html", "novedades.html", "productos/index.html", "404.html"]:
         h = _leer(sitio, pagina)
         css = h[h.index("<style>"):h.index("</style>")]
         assert f"  main {{ padding:clamp(20px,4vw,36px) {pie} clamp(28px,4vw,44px); }}" in css, pagina

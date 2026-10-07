@@ -684,7 +684,7 @@ def test_atribucion_en_las_paginas_con_graficos(sitio):
 
 def test_links_a_tradingview_sin_rel(sitio):
     for pagina in ["prueba-graficos.html", "graficos.html", "productos/producto-000.html",
-                   "acerca.html", "index.html"]:
+                   "acerca.html", "index.html", "novedades.html"]:
         links = _links_tv(_leer(sitio, pagina))
         assert links, pagina
         for a in links:
