@@ -441,7 +441,7 @@ __CSS_SITIO__
       <a class="wordmark" href="https://carestia.cl/"><span>CAREST<span class="i">Í</span>A</span></a>
       <div class="tagline">Índices del costo de vida en Chile</div>
     </div>
-    <div class="semana">Semana del <span id="fecha"></span>. <span>Se actualiza los viernes.</span></div>
+    <div class="semana">__SEMANA__</div>
     __NAV__
   </header>
 
@@ -1076,10 +1076,12 @@ __JS_CAPTURA__
     return Promise.resolve(u === 'real' ? INDICES[code].costo_real : null);
   }
   const fmtQty = q => String(q).replace('.', ',');
+  // la semana del índice a la vista, para la captura PNG ("semana del ...")
+  let fechaSemana = '';
   function aplicar(code) {
     const d = INDICES[code];
     document.documentElement.style.setProperty('--verdict', d.color);
-    document.getElementById('fecha').textContent = d.fecha;
+    fechaSemana = d.fecha;
     document.getElementById('oname').textContent = d.nombre.replace(/^Índice /i, '');
     document.getElementById('osub').textContent = d.subtitulo;
     // la cifra grande: el precio de esta semana (en su semana, ajustado y de
@@ -1678,7 +1680,7 @@ __JS_CAPTURA__
     }
     const caja = w ? document.getElementById(tv[modo].caja) : null;
     await componerCaptura({ titulo, precio, chico, lineas, partes,
-      fecha: document.getElementById('fecha').textContent,
+      fecha: fechaSemana,
       foto: prop => w ? fotoTV(w, prop, caja, document.getElementById('hero'), veloTV(caja))
         .catch(() => null) : fotoLW(ch, prop),
       nombre: 'carestia_' + (modo === 'indices' ? simboloIndice(cur) : modo) + '_' +
@@ -2037,7 +2039,7 @@ __CINTA__
       <div class="wordmark"><span>CAREST<span class="i">Í</span>A</span></div>
       <div class="tagline">Índices del costo de vida en Chile</div>
     </div>
-    <div class="semana">Semana del <span class="nw">__FECHA__</span>. __AVISO_SEMANA__</div>
+    <div class="semana">__SEMANA__</div>
     __NAV__
   </header>
 
@@ -2239,6 +2241,12 @@ PIE_LINKS = [
 # unidades) está en metodología. El deslinde (no es asesoría de inversión)
 # va una sola vez en el sitio: en la sección Deslinde de metodología, el
 # texto del dueño
+# las atribuciones de TradingView en el pie, en una línea (texto del dueño):
+# Advanced Charts, con link sin rel, y el aviso de Lightweight Charts, el
+# gráfico de respaldo, literal mientras esa librería siga en el sitio
+PIE_TV = ('Gráficos de <a href="https://www.tradingview.com/">TradingView</a> (Advanced Charts). '
+          'Gráfico de respaldo: TradingView Lightweight Charts™, Copyright (c) 2023 '
+          'TradingView, Inc.')
 PIE_ATTR = ('Fuente: precios al consumidor de ODEPA (<a href="https://datos.odepa.gob.cl">'
             'datos.odepa.gob.cl</a>, licencia CC-BY), deflactados con el IPC.')
 
@@ -2486,12 +2494,12 @@ def nav_sitio(actual: str = "", exacto: bool = True) -> str:
             f'    </nav>')
 
 
-def pie_sitio(actual: str = "", graficos: bool = False) -> str:
+def pie_sitio(actual: str = "") -> str:
     """Pie común: links institucionales y legales, atribución ODEPA CC-BY,
-    razón social y el aviso de atribución de Lightweight Charts
-    tal cual su NOTICE, con link directo a tradingview.com (sin rel). En las
-    páginas con gráficos ('graficos'), además la atribución de Advanced
-    Charts: "Gráficos de TradingView", también con link sin rel."""
+    razón social y, en una línea, las atribuciones de TradingView: la de
+    Advanced Charts, con link directo a tradingview.com (sin rel), y el aviso
+    de Lightweight Charts, el gráfico de respaldo, literal mientras esa
+    librería siga en el sitio (PIE_TV)."""
     items = []
     for clave, texto, href in PIE_LINKS:
         cur = ' aria-current="page"' if clave == actual else ""
@@ -2506,11 +2514,7 @@ def pie_sitio(actual: str = "", graficos: bool = False) -> str:
             f'    <p class="pie-legal">© 2026 Carestía SpA, '
             f'<span class="nw">RUT 78.521.796-9</span>. '
             f'Contacto: <a href="mailto:pedro@carestia.cl">pedro@carestia.cl</a></p>\n'
-            + (f'    <p class="pie-tv"><a href="https://www.tradingview.com/">'
-               f'Gráficos de TradingView</a></p>\n' if graficos else '') +
-            f'    <p class="pie-tv"><a href="https://www.tradingview.com/">'
-            f'TradingView Lightweight Charts™. Copyright (c) 2023 TradingView, Inc.'
-            f'</a></p>\n'
+            f'    <p class="pie-tv">{PIE_TV}</p>\n'
             f'  </footer>\n'
             f'{JS_MENU}')
 
@@ -2611,7 +2615,8 @@ __CSS_BASE__
     justify-content:center; padding:20px; background:var(--bg);
     font:400 12px/1.5 var(--sans); color:var(--ash); }
   .velo[hidden] { display:none; }
-  .fecha { font:500 12px var(--sans); color:var(--ash); margin-top:14px; }
+  .fecha { font:500 12px/1.6 var(--sans); color:var(--ash); margin-top:14px; text-wrap:pretty; }
+  .fecha .sin-nuevos { color:var(--bone); }
   .ref-velas { font:400 12px/1.5 var(--sans); color:var(--dim); margin-top:10px; }
   /* Comparar con: el componente de Comparar de /graficos.html (CSS_COMPARAR)
      con las sugerencias del build, el buscador y, con algo elegido, la
@@ -2686,7 +2691,7 @@ __OROW__    <p class="pct">__FRASE__</p>
       <div class="velo" id="velo" role="status" hidden>Preparando la captura...</div>
     </div>
     <p class="ref-velas" id="ref-velas" hidden>Velas semanales. La mecha va del precio más bajo al más alto que ODEPA encontró entre los locales encuestados.</p>
-    <div class="fecha">Semana del __FECHA__. Serie desde __ANIO__. Se actualiza los viernes.</div>
+    <div class="fecha">__SEMANA__ Serie desde __ANIO__.</div>
 __COMPARAR__
     __OTROS__
     <nav class="links">
@@ -4914,6 +4919,9 @@ def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
         # el percentil de toda la historia, como dato secundario
         ("__HISTORIA__", f'<p class="pct2">{html.escape(historia)}</p>' if historia else ""),
         ("__FECHA__", fecha_txt),
+        # la semana de sus precios (o de su último dato), cuándo los publicó
+        # ODEPA y la próxima actualización del sitio
+        ("__SEMANA__", linea_semana(fecha_fin, semana)),
         ("__ANIO__", anio),
         ("__CANASTA__", f"{key}:{QDEF.get(p['unidad'], '1')}"),
         # Comparar con: la franja y lo que la captura dice sin comparados
@@ -4947,7 +4955,7 @@ def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
         ("__CSS_BASE__", CSS_BASE),
         ("__CSS_SITIO__", CSS_SITIO),
         ("__NAV__", nav_sitio("productos", exacto=False)),
-        ("__PIE__", pie_sitio(graficos=True)),
+        ("__PIE__", pie_sitio()),
     ]:
         out = out.replace(token, valor)
     return out
@@ -6353,7 +6361,7 @@ def generar_tradingview(app: dict, catalogo: dict) -> None:
         ("__CSS_BASE__", CSS_BASE),
         ("__CSS_SITIO__", CSS_SITIO),
         ("__NAV__", nav_sitio()),
-        ("__PIE__", pie_sitio(graficos=True)),
+        ("__PIE__", pie_sitio()),
         ("__N_PRODUCTOS__", str(len(catalogo["productos"]))),
         ("__SIMBOLO__", simbolo),
         ("__VER__", app["ver"]),
@@ -6895,6 +6903,36 @@ def sin_datos_nuevos(ultima: datetime.date, ahora: datetime.datetime) -> bool:
     return ultima < semana_esperada(ahora)
 
 
+def fecha_larga(d: datetime.date, anio: bool = True) -> str:
+    """"28 de septiembre de 2026" (sin el año: "2 de octubre")."""
+    return f"{d.day} de {MESES[d.month - 1]}" + (f" de {d.year}" if anio else "")
+
+
+def linea_semana(precios: datetime.date, ultima: datetime.date = None,
+                 ahora: datetime.datetime = None) -> str:
+    """La línea de la semana de la portada, /graficos.html y las fichas (HTML):
+    "Precios de la semana del 28 de septiembre de 2026, publicados por ODEPA
+    el viernes 2 de octubre. Próxima actualización: viernes 9 de octubre en
+    la tarde." 'precios' es el lunes de la semana de los precios (en una
+    ficha sin precio esta semana, la de su último dato) y ODEPA la publicó el
+    viernes de esa misma semana. 'ultima' es la semana más reciente del
+    sitio: si ODEPA no publicó la que tocaba (sin_datos_nuevos), va el aviso
+    de siempre. La próxima actualización es el viernes siguiente al de la
+    última semana que ODEPA ya debía publicar. Un viernes de otro año que el
+    de los precios lleva su año."""
+    ahora = ahora or ahora_chile()
+    ultima = ultima or precios
+    publicado = precios + datetime.timedelta(days=ODEPA_DIA)
+    proxima = max(ultima, semana_esperada(ahora)) + datetime.timedelta(days=ODEPA_DIA + 7)
+    partes = [f"Precios de la semana del {fecha_larga(precios)}, publicados por ODEPA el "
+              f"viernes {fecha_larga(publicado, publicado.year != precios.year)}."]
+    if sin_datos_nuevos(ultima, ahora):
+        partes.append('<span class="sin-nuevos">Sin datos nuevos de ODEPA esta semana.</span>')
+    partes.append(f"Próxima actualización: viernes "
+                  f"{fecha_larga(proxima, proxima.year != precios.year)} en la tarde.")
+    return " ".join(partes)
+
+
 def semana_de_los_datos(catalogo: dict):
     """La semana más reciente entre los índices y el catálogo."""
     fechas = [d["real"][-1]["time"] for d in DATA["indices"].values() if d.get("real")]
@@ -7096,17 +7134,15 @@ def generar_portada(catalogo: dict, fichas: dict) -> None:
     # hashes de la app que redirigen a /graficos.html
     hashes = "|".join(["canasta(?:=.*)?", "comparar", "productos"] +
                       [re.escape(c) for c in indices])
-    fecha = next(iter(indices.values()))["fecha"] if indices else "·"
     ultima = semana_de_los_datos(catalogo)
-    if ultima and sin_datos_nuevos(ultima, ahora_chile()):
-        aviso = '<span class="sin-nuevos">Sin datos nuevos de ODEPA esta semana.</span>'
-    else:
-        aviso = "<span>Se actualiza los viernes.</span>"
+    # de qué semana son los precios, cuándo los publicó ODEPA y cuándo es la
+    # próxima actualización (o el aviso si ODEPA no publicó la que tocaba)
+    semana = linea_semana(ultima) if ultima else ""
     out = PORTADA_HTML
     for token, valor in [
         ("__HASHES__", hashes),
         ("__OG__", tarjeta_portada(ultima)),
-        ("__AVISO_SEMANA__", aviso),
+        ("__SEMANA__", semana),
         ("__ICONO__", ICONO),
         ("__FUENTES__", FUENTES),
         ("__CSS_BASE__", CSS_BASE),
@@ -7114,7 +7150,6 @@ def generar_portada(catalogo: dict, fichas: dict) -> None:
         ("__CSS_SITIO__", CSS_SITIO),
         ("__NAV__", nav_sitio()),
         ("__PIE__", pie_sitio()),
-        ("__FECHA__", html.escape(fecha)),
         ("__CINTA__", html_cinta(indices)),
         ("__TARJETAS__", html_tarjetas(indices)),
         ("__LISTAS__", html_listas(vigentes)),
@@ -7450,7 +7485,9 @@ with open("graficos.html", "w", encoding="utf-8") as fh:
                           .replace("__CSS_SITIO__", CSS_SITIO)
                           .replace("__GRUPOS__", json.dumps(GRUPO_TXT, ensure_ascii=False))
                           .replace("__NAV__", nav_sitio("indices"))
-                          .replace("__PIE__", pie_sitio(graficos=True))
+                          .replace("__PIE__", pie_sitio())
+                          # de qué semana son los precios y la próxima actualización
+                          .replace("__SEMANA__", linea_semana(semana_de_los_datos(CATALOGO)))
                           .replace("__TV_JS__", TV_JS)
                           .replace("__VER_TV__", _ver(feed_js()))
                           .replace("__TV_CSS__", TV_CSS)

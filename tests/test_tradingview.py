@@ -671,15 +671,21 @@ def _links_tv(h):
 
 
 def test_atribucion_en_las_paginas_con_graficos(sitio):
-    for pagina in ["prueba-graficos.html", "graficos.html", "productos/producto-000.html"]:
+    """Las dos atribuciones de TradingView en una línea del pie, en todas las
+    páginas (texto del dueño): Advanced Charts, con link sin rel, y el aviso
+    de Lightweight Charts, el gráfico de respaldo, literal."""
+    linea = (f'<p class="pie-tv">Gráficos de <a href="{TV}">TradingView</a> (Advanced Charts). '
+             'Gráfico de respaldo: TradingView Lightweight Charts™, Copyright (c) 2023 '
+             'TradingView, Inc.</p>')
+    for pagina in ["prueba-graficos.html", "graficos.html", "productos/producto-000.html",
+                   "index.html", "metodologia.html", "acerca.html", "novedades.html",
+                   "productos/index.html", "404.html"]:
         h = _leer(sitio, pagina)
         pie = h[h.index('<footer class="sitefoot">'):h.index("</footer>")]
-        assert f'<p class="pie-tv"><a href="{TV}">Gráficos de TradingView</a></p>' in pie, pagina
-        # el aviso de Lightweight Charts sigue
-        assert ("TradingView Lightweight Charts™. Copyright (c) 2023 TradingView, Inc."
-                in pie), pagina
-    for pagina in ["index.html", "metodologia.html", "acerca.html"]:
-        assert "Gráficos de TradingView" not in _leer(sitio, pagina), pagina
+        assert pie.count('class="pie-tv"') == 1 and linea in pie, pagina
+        # ya no van en dos líneas
+        assert "Gráficos de TradingView</a>" not in pie, pagina
+        assert "Lightweight Charts™. Copyright" not in pie, pagina
 
 
 def test_links_a_tradingview_sin_rel(sitio):
