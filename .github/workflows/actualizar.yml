@@ -1,10 +1,18 @@
 name: Actualizar indices costo de vida
 
-# Corre todos los viernes 16:30 UTC (~12:30 Chile) y permite ejecucion manual.
-# ODEPA publica los viernes 12:00, dejamos margen.
+# Corre los viernes a las 15:30, 17:00 y 19:00 UTC (en Chile, entre las 11:30
+# y las 16:00 según el horario de verano), para que la publicación no dependa de
+# un solo horario, y el sábado a las 13:00 UTC de respaldo. También a mano.
+# Cada corrida es idempotente: arma el sitio entero desde los datos de ODEPA y
+# si ODEPA no publicó semana nueva publica lo mismo (build_site.py da por
+# hecho que no publicó recién desde el viernes a las 17:00 de Chile, después
+# de la última corrida del viernes: ODEPA_HORA).
 on:
   schedule:
-    - cron: "30 16 * * 5"
+    - cron: "30 15 * * 5"
+    - cron: "0 17 * * 5"
+    - cron: "0 19 * * 5"
+    - cron: "0 13 * * 6"
   workflow_dispatch: {}
 
 permissions:
@@ -12,6 +20,12 @@ permissions:
   pages: write
   id-token: write
 
+# Una corrida nueva cancela la que esté en curso. Nunca queda una
+# publicación a medias: nada se commitea al repo y lo único que publica es el
+# job deploy (actions/deploy-pages), que despliega el artefacto completo de
+# su build. GitHub Pages cambia de versión de una vez: si se cancela antes del
+# deploy queda la versión anterior, y si se cancela durante el deploy, la
+# acción cancela ese despliegue y también queda la anterior.
 concurrency:
   group: "pages"
   cancel-in-progress: true

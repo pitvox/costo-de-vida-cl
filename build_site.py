@@ -6870,11 +6870,15 @@ def html_productos(tabla: list, vigente: str) -> tuple:
 
 
 # ---- semana sin datos nuevos ----
-# ODEPA publica los viernes a mediodía la semana que empezó ese lunes. Si a
-# la hora del build ya pasó el último viernes a las 12:00 (hora de Chile) y
-# los datos no llegan a esa semana, la portada lo dice junto a la fecha.
-# CARESTIA_AHORA (aaaa-mm-ddThh:mm, hora de Chile) fija la hora: solo tests.
-ODEPA_DIA, ODEPA_HORA = 4, 12          # viernes, 12:00
+# ODEPA publica los viernes en la tarde la semana que empezó ese lunes, y
+# actualizar.yml corre los viernes a las 15:30, 17:00 y 19:00 UTC (en Chile,
+# a lo más a las 16:00) y el sábado de respaldo. Si a la hora del build ya
+# pasó el último viernes a las 17:00 (hora de Chile, después de la última
+# corrida del viernes) y los datos no llegan a esa semana, la línea de la
+# semana lo dice. Antes de esa hora, una corrida sin semana nueva publica lo
+# mismo que la anterior. CARESTIA_AHORA (aaaa-mm-ddThh:mm, hora de Chile) fija
+# la hora: solo tests.
+ODEPA_DIA, ODEPA_HORA = 4, 17          # viernes, 17:00
 
 
 def ahora_chile() -> datetime.datetime:
@@ -7105,7 +7109,7 @@ def generar_prensa(paginas_indices: list) -> None:
     <p><strong>{html.escape(FUENTE_CITA)}</strong></p>
     <p>Las cifras van {ajustado("as")}: cada precio pasado se lleva a ese mes con el IPC. El precio de esta semana es el que se pagó esta semana. Si citas un precio, indica la semana a la que corresponde.</p>
     <h2>Calendario</h2>
-    <p>El sitio se actualiza los viernes después de las 14:00, cuando ODEPA ya publicó los precios de la semana. Si una semana ODEPA no publica, la portada lo dice junto a la fecha.</p>
+    <p>El sitio se actualiza los viernes en la tarde, cuando ODEPA ya publicó los precios de la semana. Si una semana ODEPA no publica, la portada lo dice junto a la fecha.</p>
     <h2>Tarjetas y gráficos</h2>
     <p>Cada índice y cada producto tiene una tarjeta lista para compartir, con su precio de la semana y su comparación con la historia. Las de los índices:</p>
     <ul>
