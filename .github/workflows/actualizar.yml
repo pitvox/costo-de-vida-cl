@@ -144,6 +144,7 @@ jobs:
           cp sitemap.xml public/sitemap.xml
           cp metodologia.html public/metodologia.html
           cp acerca.html public/acerca.html
+          cp novedades.html public/novedades.html
           cp contacto.html public/contacto.html
           cp terminos.html public/terminos.html
           cp privacidad.html public/privacidad.html
