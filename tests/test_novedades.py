@@ -93,9 +93,17 @@ def test_leyenda_sin_parametros_de_comparaciones_e_indicadores(sitio):
     cada indicador no van en la leyenda: en /graficos.html, las fichas y
     /prueba-graficos.html, que usan los mismos overrides."""
     tv = _leer(sitio, "carestia-tv.js")
-    assert tv.count("'paneProperties.legendProperties.showStudyArguments': false,") == 1
+    assert ("const SIN_PARAMETROS = { 'paneProperties.legendProperties.showStudyArguments': "
+            "false };") in tv
     ov = tv[tv.index("function overrides(tok)"):tv.index("const colorLinea")]
-    assert "'paneProperties.legendProperties.showStudyArguments': false," in ov
+    assert "const o = Object.assign({}, SIN_PARAMETROS, {" in ov
+    # lo que la librería guarda en el navegador manda sobre 'overrides': se
+    # vuelve a aplicar al quedar listo el widget (montar y alistarWidget)
+    assert "try { widget.applyOverrides(SIN_PARAMETROS); } catch (e) {}" in tv
+    montar = tv[tv.index("function montar(o)"):tv.index("function capturaCliente(")]
+    assert "if (hecho) return;\n          sinParametros(widget);" in montar
+    alistar = tv[tv.index("function alistarWidget(widget, feed, tok) {"):tv.index("function estiloPorSimbolo(")]
+    assert "sinParametros(widget);" in alistar
     # las tres páginas arman el widget con opcionesWidget, que usa overrides
     assert "const ov = overrides(o.tok);" in tv
     for p in ["graficos.html", "prueba-graficos.html"]:

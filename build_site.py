@@ -5674,13 +5674,19 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
   // colores de la librería con los tokens del sitio: velas verde y rojo; la
   // línea en brasa para los índices oficiales y en hueso para los productos.
   // Todos los gráficos parten en línea; las velas quedan a un clic
+  // la leyenda sin los parámetros de comparaciones e indicadores: el "close"
+  // de cada comparada (la librería no lo traduce) y el largo de cada
+  // indicador. Quedan el nombre y el valor. Va en 'overrides' y, como lo que
+  // la librería guarda en el navegador (tradingview.chartproperties) manda
+  // sobre 'overrides', se vuelve a aplicar al quedar listo el widget
+  // (sinParametros): así le llega también a quien ya abrió un gráfico
+  const SIN_PARAMETROS = { 'paneProperties.legendProperties.showStudyArguments': false };
+  function sinParametros(widget) {
+    try { widget.applyOverrides(SIN_PARAMETROS); } catch (e) {}
+  }
   function overrides(tok) {
     const verde = tok('verde'), rojo = tok('rojo');
-    const o = {
-      // la leyenda sin los parámetros de comparaciones e indicadores: el
-      // "close" de cada comparada (la librería no lo traduce) y el largo de
-      // cada indicador. Quedan el nombre y el valor
-      'paneProperties.legendProperties.showStudyArguments': false,
+    const o = Object.assign({}, SIN_PARAMETROS, {
       'paneProperties.backgroundType': 'solid',
       'paneProperties.background': tok('bg'),
       'paneProperties.vertGridProperties.color': tok('grid'),
@@ -5694,7 +5700,7 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
       'mainSeriesProperties.lineStyle.colorType': 'solid',
       'mainSeriesProperties.lineStyle.color': tok('ember'),
       'mainSeriesProperties.lineStyle.linewidth': 2,
-    };
+    });
     ['candleStyle', 'hollowCandleStyle', 'haStyle'].forEach(e => {
       o['mainSeriesProperties.' + e + '.upColor'] = verde;
       o['mainSeriesProperties.' + e + '.downColor'] = rojo;
@@ -5795,6 +5801,7 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
   // índices y en hueso para los productos) y guardado automático en el
   // navegador
   function alistarWidget(widget, feed, tok) {
+    sinParametros(widget);
     estiloPorSimbolo(widget, feed, tok);
     widget.subscribe('onAutoSaveNeeded', () => {
       Promise.resolve(widget.saveChartToServer({ defaultChartName: 'Mi gráfico' }))
@@ -5911,6 +5918,7 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
         catch (e) { fin('error'); return; }
         listoWidget(widget).then(() => {
           if (hecho) return;
+          sinParametros(widget);
           if (o.estilo !== false) estiloPorSimbolo(widget, o.datafeed, o.tok);
           const caja = typeof o.contenedor === 'string' ? document.getElementById(o.contenedor) : o.contenedor;
           const c = widget.activeChart();
