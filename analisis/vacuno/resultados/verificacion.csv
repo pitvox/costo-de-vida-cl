@@ -98,6 +98,7 @@ odepa,Tapapecho,primera semana,2010-01-25,2010-01-25,1,
 odepa,Tapapecho,semanas con precio en una serie y no en la otra,0,0,1,
 odepa,Tapapecho,"semana a semana, dentro del redondeo del factor",todas,todas,1,771 de 861 semanas idénticas; diferencia máxima 2 pesos
 odepa,Tapapecho,precio de esta semana: promedio simple de las filas de ODEPA,10202,10202,1,"11 filas de ODEPA (cada una, el promedio de un sector y tipo de local: Centro | Carnicería, Centro | Supermercado, Internet | Supermercado en Línea, Norte | Carnicería, Norte | Supermercado, Oriente | Carnicería, Oriente | Supermercado, Poniente | Carnicería, Poniente | Supermercado, Sur | Carnicería, Sur | Supermercado), factor 1.000000"
+odepa,Asado de tira,variación a un año con las filas que están en las dos semanas,,"2,9",,"Centro | Carnicería, Oriente | Carnicería, Poniente | Carnicería, Sur | Carnicería"
 ipc,,último mes con IPC,2026-08,2026-08,1,el sitio y el cuadro del Banco Central
 ipc,,"variación a 12 meses del factor del sitio frente al empalme BCCh (G073.IPC.V12.2023.M), diferencia máxima en puntos","hasta 0,07","0,061",1,208 meses
 ipc,,"desde enero de 2024, factor del sitio frente al empalme del INE, diferencia máxima (%)","hasta 0,01","0,0070",1,32 meses
@@ -116,6 +117,9 @@ robustez,,C con empalme del INE desde diciembre de 2009,"12922, 6.3","12922, 6.3
 robustez,,"A con IPC del INE por bases desde 2019, empalme del INE antes",20,19,,"fuera: Asado de tira, Filete, Ganso, Malaya, Pollo Ganso"
 robustez,,"B con IPC del INE por bases desde 2019, empalme del INE antes",ninguno,ninguno,,"máximo por menos de 1%: ninguno; con el promedio del mes: Punta de Ganso (+1,8% sobre octubre de 2021)"
 robustez,,"C con IPC del INE por bases desde 2019, empalme del INE antes","12922, 6.3","12922, 6.3",,
+robustez,,"A con IPC de septiembre de -0,5%",20,20,,"fuera: Asado de tira, Filete, Malaya, Pollo Ganso"
+robustez,,"B con IPC de septiembre de -0,5%",ninguno,ninguno,,"máximo por menos de 1%: Estomaguillo (Tapabarriga); con el promedio del mes: Punta de Ganso (+2,9% sobre octubre de 2021)"
+robustez,,"C con IPC de septiembre de -0,5%","12922, 6.3","12922, 6.8",,
 robustez,,"A con IPC de septiembre de 0,1%",20,19,,"fuera: Asado de tira, Filete, Ganso, Malaya, Pollo Ganso"
 robustez,,"B con IPC de septiembre de 0,1%",ninguno,ninguno,,"máximo por menos de 1%: ninguno; con el promedio del mes: Punta de Ganso (+2,3% sobre octubre de 2021)"
 robustez,,"C con IPC de septiembre de 0,1%","12922, 6.3","12922, 6.2",,
@@ -376,27 +380,27 @@ sitio,Tapapecho,ficha: mismo mes de los últimos 10 años,10 de 10 septiembres,1
 sitio,Tapapecho,ficha: frente a toda su historia,"100% desde 2010, pesos de agosto de 2026","100% desde 2010, pesos de agosto de 2026",1,"Frente a toda su historia, está más caro que en el 100% de las semanas desde 2010, ajustado por inflación, en pesos de agosto de 2026."
 sitio,Tapapecho,ficha: semana de los precios,28 de septiembre de 2026,28 de septiembre de 2026,1,
 sitio,Tapapecho,"portada: precio, a un año y percentil","10202, 5.5, 100","10202, 5.5, 100",1,
-limpieza,Abastero,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
-limpieza,Asado carnicero,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
-limpieza,Asado de tira,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
-limpieza,Asiento,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
-limpieza,Choclillo,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
-limpieza,Estomaguillo (Tapabarriga),semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
-limpieza,Filete,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
-limpieza,Ganso,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
-limpieza,Huachalomo,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
-limpieza,Lomo Liso,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
-limpieza,Lomo Vetado,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
-limpieza,Malaya,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,1 descartadas; sobre el precio de esta semana: 2024-09-16 $10.271
-limpieza,Osobuco,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
-limpieza,Palanca,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
-limpieza,Plateada,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
-limpieza,Pollo Ganso,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
-limpieza,Posta Negra,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
-limpieza,Posta Paleta,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
-limpieza,Posta Rosada,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
-limpieza,Punta de Ganso,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
-limpieza,Punta paleta,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
-limpieza,Punta picana,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
-limpieza,Sobrecostilla,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
-limpieza,Tapapecho,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Abastero,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Asado carnicero,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Asado de tira,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Asiento,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Choclillo,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Estomaguillo (Tapabarriga),semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Filete,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Ganso,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Huachalomo,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Lomo Liso,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Lomo Vetado,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Malaya,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,1,,1 descartadas; sobre el precio de esta semana: 2024-09-16 $10.271
+limpieza,Osobuco,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Palanca,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Plateada,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Pollo Ganso,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Posta Negra,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Posta Paleta,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Posta Rosada,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Punta de Ganso,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Punta paleta,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Punta picana,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Sobrecostilla,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Tapapecho,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,,0 descartadas; sobre el precio de esta semana: ninguna

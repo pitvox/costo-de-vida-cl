@@ -57,10 +57,12 @@ ajustado por inflación, en pesos del último IPC):
 | `imprimir.py` | `informe.pdf`, el informe en una página carta, con la huella de `informe.md` en su título |
 | `resultados/series_vacuno.json` | Las 24 series usadas (del indices.json del 7 de octubre de 2026) |
 | `resultados/cortes.csv` | Las cifras de cada corte |
-| `resultados/resumen.json` | Las tres cifras de la nota y el sha256 del indices.json |
+| `resultados/resumen.json` | Las tres cifras de la nota, las de contexto que cita el informe y el sha256 del indices.json |
 | `resultados/verificacion.csv` | Cada comparación, con su fuente y si coincide (las filas de robustez van con "ok" vacío) |
 | `resultados/deflactor.csv` | El factor de inflación del sitio, mes a mes, frente al Banco Central y al INE |
 | `resultados/robustez.csv` | A, B y C con cada escenario |
+| `resultados/asado_de_tira.json` | Las filas de ODEPA del asado de tira esta semana, hace un año y en su máximo, y la variación con las mismas filas |
+| `resultados/informe_pdf.json` | El sha256 de `informe.md` y de `informe.pdf` (lo escribe `imprimir.py`; los tests lo revisan) |
 
 ## Fuentes y licencias
 

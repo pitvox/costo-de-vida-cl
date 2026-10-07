@@ -3,11 +3,14 @@ imprimir.py - informe.md a informe.pdf, en una página carta
 ===========================================================
 Último paso (ver README.md). Convierte informe.md a HTML con pandoc y lo
 imprime a PDF con Chromium sin interfaz, con la tipografía del sitio
-(fuentes/, licencia OFL). Revisa que el PDF quede en una sola página.
+(fuentes/, licencia OFL). Revisa que el PDF quede en una sola página y
+anota en resultados/informe_pdf.json el sha256 de informe.md y del PDF, para
+que los tests sepan si el PDF salió del informe de hoy.
 
 Uso: python imprimir.py   (necesita pandoc y Chromium; CHROMIUM fija la ruta)
 """
 import hashlib
+import json
 import os
 import re
 import shutil
@@ -35,7 +38,7 @@ li { margin: 1pt 0; }
 table { border-collapse: collapse; width: 100%%; font-size: 7.8pt; margin: 4pt 0; }
 th, td { border-bottom: 0.5pt solid #ccc; padding: 0.6pt 4pt; text-align: left; }
 th { font-weight: 600; }
-td:nth-child(n+2) { white-space: nowrap; }
+td { white-space: nowrap; }
 #lo-que-no-podemos-afirmar + ul { columns: 2; column-gap: 14pt; }
 #lo-que-no-podemos-afirmar + ul li { break-inside: avoid; }
 """ % {"f": FUENTES}
@@ -45,11 +48,9 @@ def paginas(pdf: bytes) -> int:
     return len(re.findall(rb"/Type\s*/Page[^s]", pdf))
 
 
-def huella(ruta: str = None) -> str:
-    """Los primeros 12 del sha256 de informe.md: van en el título del PDF,
-    para que los tests sepan si el PDF salió de este informe."""
-    with open(ruta or os.path.join(AQUI, "informe.md"), "rb") as fh:
-        return hashlib.sha256(fh.read()).hexdigest()[:12]
+def sha256(ruta: str) -> str:
+    with open(ruta, "rb") as fh:
+        return hashlib.sha256(fh.read()).hexdigest()
 
 
 def imprimir(salida: str = None) -> str:
@@ -62,7 +63,7 @@ def imprimir(salida: str = None) -> str:
             fh.write(ESTILO)
         pagina = os.path.join(tmp, "informe.html")
         subprocess.run(["pandoc", os.path.join(AQUI, "informe.md"), "-s", "--metadata",
-                        f"pagetitle=Carne de vacuno {huella()}", "-c", css, "-o", pagina],
+                        "pagetitle=Carne de vacuno", "-c", css, "-o", pagina],
                        check=True)
         subprocess.run([CHROMIUM, "--headless", "--no-sandbox", "--disable-gpu",
                         "--allow-file-access-from-files", "--no-pdf-header-footer",
@@ -72,6 +73,9 @@ def imprimir(salida: str = None) -> str:
         n = paginas(fh.read())
     if n != 1:
         sys.exit(f"imprimir.py: el informe ocupa {n} páginas; tiene que caber en una")
+    with open(os.path.join(AQUI, "resultados", "informe_pdf.json"), "w", encoding="utf-8") as fh:
+        json.dump({"informe.md": sha256(os.path.join(AQUI, "informe.md")),
+                   "informe.pdf": sha256(salida), "paginas": n}, fh, indent=1)
     return salida
 
 

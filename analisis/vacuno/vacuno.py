@@ -258,6 +258,66 @@ def fila(k: str, p: dict, c: dict) -> dict:
     }
 
 
+def margen_mismo_mes(fs: list, v: list, i: int):
+    """Cuánto (%) supera el precio de la semana i al promedio más alto de su
+    mes en los 10 años anteriores (los que usa comparar_temporada); None sin
+    temporada."""
+    prom = promedios_mes(fs, v)
+    f = fs[i]
+    antes = [prom[(a, f.month)] for a in range(f.year - 10, f.year) if (a, f.month) in prom]
+    return (v[i] / max(antes) - 1) * 100 if len(antes) >= 5 else None
+
+
+def contexto(prods: dict, cs: dict) -> dict:
+    """Las cifras de contexto que cita el informe, para que no salgan de una
+    cuenta a mano: el conteo de A en las últimas 4 semanas (cada una con su
+    historia hasta ella), cuántos bajaron esta semana (como la portada:
+    variación semanal redondeada a un decimal bajo 0), los cortes a menos de
+    1% de su máximo de 10 años, si todos tuvieron una semana más cara en el
+    año de esta semana, el corte que entra más justo al "10 de 10" del mismo
+    mes y, del asado de tira, el promedio de su mes frente al mismo mes del
+    año anterior."""
+    semanas = []
+    for atras in range(3, -1, -1):
+        n, fecha = 0, None
+        for p in prods.values():
+            i = ultima(p["v"]) - atras
+            if p["v"][i] is None:
+                continue
+            n += en_top(historia(p["v"][:i + 1], i))
+            fecha = fechas(p)[i]
+        semanas.append({"semana": fecha.isoformat(), "top5": n})
+    bajaron, cerca, mas_cara, justo = 0, [], True, None
+    for k, p in prods.items():
+        fs, v, i = fechas(p), p["v"], ultima(p["v"])
+        if v[i - 1] and round((v[i] / v[i - 1] - 1) * 100, 1) < 0:
+            bajaron += 1
+        m = cs[k]["maximo"]["margen_pct"]
+        if -1 < m <= 0:
+            cerca.append((round(m, 2), p["label"]))
+        anio = fs[i].year
+        mas_cara &= any(x is not None and x > v[i] and fs[j].year == anio
+                        for j, x in enumerate(v[:i]))
+        t = cs[k]["temporada"]
+        if t and t["debajo"] == t["anios"]:
+            mm = margen_mismo_mes(fs, v, i)
+            if justo is None or mm < justo[0]:
+                justo = (mm, p["label"])
+    a = prods["asado_de_tira"]
+    fs, v, i = fechas(a), a["v"], ultima(a["v"])
+    prom = promedios_mes(fs, v)
+    mes = (fs[i].year, fs[i].month)
+    return {
+        "top5_por_semana": semanas,
+        "bajaron_esta_semana": bajaron,
+        "a_menos_de_1_de_su_maximo": [lab for _, lab in sorted(cerca, reverse=True)],
+        "todos_con_una_semana_mas_cara_este_anio": mas_cara,
+        "mismo_mes_entra_mas_justo": {"corte": justo[1], "margen_pct": round(justo[0], 3)},
+        "asado_de_tira_mes_sobre_mes_del_anio_anterior_pct":
+            round((prom[mes] / prom[(mes[0] - 1, mes[1])] - 1) * 100, 1),
+    }
+
+
 def resumen(data: dict, sha: str, prods: dict) -> dict:
     cs = {k: cifras(p) for k, p in prods.items()}
     semanas = {c["semana"] for c in cs.values()}
@@ -284,6 +344,7 @@ def resumen(data: dict, sha: str, prods: dict) -> dict:
         "mes_del_maximo_de_10_anios": dict(sorted(meses_max.items())),
         "mismo_mes_10_de_10": sum(1 for c in cs.values()
                                   if c["temporada"] and c["temporada"]["debajo"] == 10),
+        "contexto": contexto(prods, cs),
     }
 
 

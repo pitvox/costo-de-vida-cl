@@ -1,0 +1,40 @@
+{
+ "semana": "2026-09-28",
+ "filas": {
+  "Centro | Carnicería": 13279.0,
+  "Oriente | Carnicería": 12398.2,
+  "Poniente | Carnicería": 13114.833333,
+  "Sur | Carnicería": 11830.0,
+  "Sur | Supermercado": 13990.0
+ },
+ "semana_anio_antes": "2025-09-29",
+ "filas_anio_antes": {
+  "Centro | Carnicería": 11595.0,
+  "Norte | Carnicería": 11329.0,
+  "Oriente | Carnicería": 12396.4,
+  "Poniente | Carnicería": 11331.333333,
+  "Poniente | Supermercado": 11590.0,
+  "Sur | Carnicería": 12122.0
+ },
+ "filas_en_las_dos": [
+  "Centro | Carnicería",
+  "Oriente | Carnicería",
+  "Poniente | Carnicería",
+  "Sur | Carnicería"
+ ],
+ "variacion_anual_en_las_dos_pct": 2.92,
+ "semana_del_maximo": "2026-03-30",
+ "filas_del_maximo": {
+  "Centro | Carnicería": 13326.333333,
+  "Norte | Carnicería": 11749.0,
+  "Oriente | Carnicería": 11997.0,
+  "Oriente | Supermercado": 21990.0,
+  "Poniente | Carnicería": 11878.0,
+  "Poniente | Supermercado": 19990.0,
+  "Sur | Carnicería": 11992.75
+ },
+ "sobre_todas_las_carnicerias": {
+  "Oriente | Supermercado": 21990.0,
+  "Poniente | Supermercado": 19990.0
+ }
+}

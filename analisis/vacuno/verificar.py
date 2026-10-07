@@ -19,7 +19,7 @@ pruebas, todas sobre datos_crudos/:
    el IPC del INE encadenado por bases se apartan del del Banco Central en
    los años de cambio de base: eso va a la robustez.
 3. Robustez. A, B y C con esos otros deflactores, con el IPC de septiembre
-   que el INE publica el 8 de octubre (si fuera 0,1%, 0,3%, 0,5% o 1%), con
+   que el INE publica el 8 de octubre (si fuera -0,5%, 0,1%, 0,3%, 0,5% o 1%), con
    la serie cruda de ODEPA sin la limpieza del sitio y sin los supermercados
    en línea (que ODEPA suma desde 2020), y B también con el promedio de cada
    mes en vez de la semana. Es informativa: dice qué tan firme es cada
@@ -262,6 +262,43 @@ def probar_odepa(df: pd.DataFrame, prods: dict, fsitio: dict, cota: dict) -> tup
             for k in prods if k in rehecho}, crudas
 
 
+def probar_asado_de_tira(df: pd.DataFrame, prods: dict, fsitio: dict) -> dict:
+    """Lo que cita el informe sobre el asado de tira y que sale de las filas
+    crudas de ODEPA: las filas de esta semana y de 52 semanas antes, la
+    variación ajustada por inflación con solo las filas (sector y tipo de
+    local) que están en las dos, y las filas de la semana de su máximo de 10
+    años. Escribe resultados/asado_de_tira.json."""
+    k = "asado_de_tira"
+    p = prods[k]
+    sub = filas_del_corte(df, k, p)
+    meses = set(fsitio)
+    c = vacuno.cifras(p)
+
+    def filas(f):
+        x = sub[sub["fecha"] == pd.Timestamp(f)]
+        return {r["Punto"]: float(r["Precio promedio"]) for _, r in x.iterrows()}
+    hoy, antes = filas(c["semana"]), filas(c["semana_anio_antes"])
+    comunes = sorted(set(hoy) & set(antes))
+    f_antes = fsitio[mes_ipc(c["semana_anio_antes"], meses)]
+    f_hoy = fsitio[mes_ipc(c["semana"], meses)]
+    var = (sum(hoy[x] for x in comunes) * f_hoy /
+           (sum(antes[x] for x in comunes) * f_antes) - 1) * 100
+    maxima = filas(c["maximo"]["semana_max_anterior"])
+    carnicerias = [x for n, x in maxima.items() if n.endswith("Carnicería")]
+    sobre = {n: x for n, x in maxima.items() if not n.endswith("Carnicería")
+             and x > max(carnicerias)}
+    out = {"semana": c["semana"].isoformat(), "filas": hoy,
+           "semana_anio_antes": c["semana_anio_antes"].isoformat(), "filas_anio_antes": antes,
+           "filas_en_las_dos": comunes, "variacion_anual_en_las_dos_pct": round(var, 2),
+           "semana_del_maximo": c["maximo"]["semana_max_anterior"].isoformat(),
+           "filas_del_maximo": maxima, "sobre_todas_las_carnicerias": sobre}
+    with open(os.path.join(RESULTADOS, "asado_de_tira.json"), "w", encoding="utf-8") as fh:
+        json.dump(out, fh, ensure_ascii=False, indent=1)
+    anotar("odepa", p["label"], "variación a un año con las filas que están en las dos semanas",
+           "", f"{var:.1f}".replace(".", ","), INFORMATIVA, ", ".join(comunes))
+    return out
+
+
 # ---------------- 2. IPC ----------------
 def probar_ipc(data: dict, fsitio: dict, v12: dict, fine_emp: dict, fine: dict) -> None:
     filas = []
@@ -376,7 +413,7 @@ def probar_robustez(prods, fsitio, fine_emp, fine, rehecho, crudas, sin_linea, b
     ]
     # con el IPC del mes siguiente todo pasa a pesos de ese mes: las semanas
     # de ese mes quedan en su precio de la época y las anteriores suben x%
-    for x in (0.1, 0.3, 0.5, 1.0):
+    for x in (-0.5, 0.1, 0.3, 0.5, 1.0):
         escenarios.append((
             "ipc_siguiente", f"IPC de {nombre_sig} de {x:g}%".replace(".", ","),
             {k: reescalar(p, fsitio, fsitio,
@@ -492,9 +529,13 @@ def probar_descartes(data: dict, prods: dict, fsitio: dict) -> None:
         reales = [(d["semana"], d["precio"] * fsitio[mes_ipc(
             datetime.date.fromisoformat(d["semana"]), meses)]) for d in fuera]
         sobre = [(s, x) for s, x in reales if x > c["precio"]]
+        # devolver una semana descartada solo puede bajar el margen: importa
+        # solo si el corte se afirma como máximo, y entonces lo da vuelta
+        # una semana a menos de 1% bajo el precio de esta semana
+        quita = [(s, x) for s, x in reales if x * (100 + vacuno.MARGEN) >= c["precio"] * 100]
         anotar("limpieza", p["label"], "semanas descartadas en la ventana de 10 años que "
-               "darían vuelta B", "ninguna",
-               "ninguna" if not (sobre and mx["es_maximo"]) else f"{len(sobre)}",
+               "darían vuelta B", "ninguna", "ninguna" if not quita else f"{len(quita)}",
+               None if mx["se_afirma"] else INFORMATIVA,
                nota=f"{len(fuera)} descartadas; sobre el precio de esta semana: " +
                     (", ".join(f"{s} {vacuno.clp(x)}" for s, x in sobre) or "ninguna"))
 
@@ -520,6 +561,7 @@ def main() -> None:
     print("1. ODEPA: armando las series desde los CSV crudos...")
     df = odepa_rm()
     rehecho, crudas = probar_odepa(df, prods, fsitio, cota)
+    probar_asado_de_tira(df, prods, fsitio)
     with contextlib.redirect_stdout(io.StringIO()):
         sin_linea = indices.series_productos(
             df[~df["Punto"].str.endswith("Supermercado en Línea")], ipc_desde_factor(fsitio))

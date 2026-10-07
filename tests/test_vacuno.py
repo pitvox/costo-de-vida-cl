@@ -28,6 +28,17 @@ def serie(valores, t0=LUNES):
             "t0": t0.isoformat(), "v": list(valores)}
 
 
+def cargar_modulo(nombre):
+    """Un script de analisis/vacuno por su ruta y con nombre propio: otros
+    análisis tienen scripts con el mismo nombre (graficar.py) y el orden de
+    sys.path depende del orden de los tests."""
+    spec = importlib.util.spec_from_file_location(f"vacuno_{nombre}",
+                                                  os.path.join(ANALISIS, f"{nombre}.py"))
+    modulo = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(modulo)
+    return modulo
+
+
 def semanas(desde, hasta):
     """Los lunes de desde a hasta, los dos incluidos."""
     return [desde + datetime.timedelta(weeks=j) for j in range((hasta - desde).days // 7 + 1)]
@@ -128,6 +139,24 @@ def test_maximo_mensual_promedia_el_mes_contra_los_120_anteriores():
     assert m["se_afirma"] and m["margen_pct"] == pytest.approx(2.0)
 
 
+def test_maximo_mensual_ventana_de_120_meses_y_margen():
+    fs = semanas(datetime.date(2014, 1, 6), datetime.date(2026, 9, 28))
+    i = len(fs) - 1
+
+    def con(ahora, meses=None):
+        """Serie plana en 100, el mes de la última semana en 'ahora' y los
+        meses pedidos {(año, mes): precio}."""
+        meses = meses or {}
+        return [ahora if (f.year, f.month) == (2026, 9) else meses.get((f.year, f.month), 100)
+                for f in fs]
+    # septiembre de 2016 (120 meses antes) entra y bloquea; agosto de 2016, no
+    assert not vacuno.maximo_mensual(fs, con(102, {(2016, 9): 103}), i)["se_afirma"]
+    assert vacuno.maximo_mensual(fs, con(102, {(2016, 8): 103}), i)["se_afirma"]
+    # exactamente 1% sobre el mes más caro no basta; un poco más, sí
+    assert not vacuno.maximo_mensual(fs, con(101), i)["se_afirma"]
+    assert vacuno.maximo_mensual(fs, con(101.01), i)["se_afirma"]
+
+
 def test_variacion_anual_contra_52_semanas_y_sin_precio_es_none():
     v = [100.0] + [None] * 51 + [106.3]
     assert vacuno.variacion_anual(v, 52) == pytest.approx(6.3)
@@ -212,6 +241,82 @@ def test_informe_dice_las_tres_cifras():
     assert "$12.922 el kilo, +6,3% sobre la semana del 29 de septiembre de 2025" in t
 
 
+def _robustez() -> dict:
+    with open(resultado("robustez.csv"), encoding="utf-8") as fh:
+        return {f["escenario"]: f for f in csv.DictReader(fh)}
+
+
+def _miles(xs: list) -> str:
+    """'20, 11, 22 y 20'."""
+    xs = [str(x) for x in xs]
+    return ", ".join(xs[:-1]) + " y " + xs[-1]
+
+
+def test_informe_cita_el_contexto_que_calcula_vacuno(guardado):
+    _, _, r = guardado
+    t, c = informe(), r["contexto"]
+    assert f"en septiembre el conteo fue {_miles([s['top5'] for s in c['top5_por_semana']])}" in t
+    assert f"{c['bajaron_esta_semana']} de los 24 bajaron esta semana" in t
+    assert c["todos_con_una_semana_mas_cara_este_anio"]
+    assert "Todos tuvieron una semana más cara en 2026" in t
+    nombres = [n.split(" (")[0].lower() for n in c["a_menos_de_1_de_su_maximo"]]
+    assert len(nombres) == 4
+    assert ("cuatro quedan a menos de 1%: estomaguillo (a un peso), "
+            + ", ".join(nombres[1:-1]) + " y " + nombres[-1]) in t
+    justo = c["mismo_mes_entra_mas_justo"]
+    assert f"el {justo['corte'].lower()} entra por {justo['margen_pct']:.2f}%".replace(".", ",") in t
+    assert (f"septiembre sobre septiembre, "
+            f"{vacuno.pct(c['asado_de_tira_mes_sobre_mes_del_anio_anterior_pct'])}") in t
+
+
+def test_informe_cita_lo_que_verificar_calcula_del_asado_de_tira():
+    ruta = resultado("asado_de_tira.json")
+    if not os.path.exists(ruta):
+        pytest.skip("todavía no hay verificación")
+    with open(ruta, encoding="utf-8") as fh:
+        a = json.load(fh)
+    t = informe()
+    assert f"({len(a['filas'])} promedios de ODEPA por sector y tipo de local)" in t
+    comunes = a["filas_en_las_dos"]
+    assert len(comunes) == 4 and all(x.endswith("Carnicería") for x in comunes)
+    assert f"Con las mismas 4 carnicerías es {vacuno.pct(a['variacion_anual_en_las_dos_pct'])}" in t
+    assert a["semana_del_maximo"][5:7] == "03" and len(a["sobre_todas_las_carnicerias"]) == 2
+    assert all("Supermercado" in x for x in a["sobre_todas_las_carnicerias"])
+    assert "Su máximo de marzo lo empujaron dos supermercados" in t
+
+
+def test_informe_cita_la_robustez_de_robustez_csv():
+    r, t = _robustez(), informe()
+    a = {k: int(f["A_top5"]) for k, f in r.items()}
+    assert f"Con el IPC empalmado por el INE son {a['empalme del INE desde diciembre de 2009']}" in t
+    assert f"sin los supermercados en línea (desde 2020), {a['ODEPA sin los supermercados en línea (desde 2020)']}" in t
+    ipc = {x: r[f"IPC de septiembre de {x}%"] for x in ("-0,5", "0,1", "0,3", "1")}
+    assert (f"darían {ipc['0,1']['A_top5']} con un IPC de 0,1% (sale el ganso), "
+            f"{ipc['0,3']['A_top5']} con 0,3% (la posta negra) y {ipc['1']['A_top5']} con 1%") in t
+    assert "Ganso" in ipc["0,1"]["fuera_del_5"] and "Posta Negra" in ipc["0,3"]["fuera_del_5"]
+    assert (f"entre {vacuno.pct(float(ipc['0,1']['C_variacion_anual']))} y "
+            f"{vacuno.pct(float(ipc['1']['C_variacion_anual']))}") in t
+    # B: ninguno con la regla del 1% en todos los escenarios; con IPC
+    # negativo el estomaguillo pasa su máximo, pero por menos de 1%
+    assert all(f["B_se_afirman"] == "ninguno" for f in r.values())
+    assert "Estomaguillo" in ipc["-0,5"]["B_maximo_sin_margen"]
+    assert "con un IPC de septiembre de -0,5% a 1%" in t
+    sitio = r["las series del sitio (empalme BCCh, indices.py)"]["B_con_el_promedio_del_mes"]
+    m = re.match(r"Punta de Ganso \(\+([\d,]+)% sobre", sitio)
+    assert m and f"la punta de ganso queda {m.group(1)}% sobre su mes más caro" in t
+
+
+def test_informe_cita_los_porcentajes_al_borde(guardado):
+    prods, _, _ = guardado
+    t = informe()
+    pct = {p["label"]: vacuno.historia(p["v"], vacuno.ultima(p["v"])) for p in prods.values()}
+    for corte, como in (("Ganso", "Ganso"), ("Posta Negra", "posta negra")):
+        assert f"{como} ({pct[corte]['pct_debajo']:.1f}%)".replace(".", ",") in t, corte
+    redondeos = sorted({f"{h['pct_debajo']:.1f}".replace(".", ",") for h in pct.values()
+                        if h["ficha"] == 100})
+    assert f"Redondeo de {' y '.join(x + '%' for x in redondeos)}" in t
+
+
 def test_informe_cita_las_comparaciones_de_verificacion_csv():
     with open(resultado("verificacion.csv"), encoding="utf-8") as fh:
         filas = [f for f in csv.DictReader(fh) if f["ok"] != ""]
@@ -236,15 +341,15 @@ def test_informe_pdf_de_una_pagina_y_al_dia():
     ruta = os.path.join(ANALISIS, "informe.pdf")
     if not os.path.exists(ruta):
         pytest.skip("todavía no hay PDF")
-    spec = importlib.util.spec_from_file_location("vacuno_imprimir",
-                                                  os.path.join(ANALISIS, "imprimir.py"))
-    imprimir = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(imprimir)
+    imprimir = cargar_modulo("imprimir")
     with open(ruta, "rb") as fh:
-        pdf = fh.read()
-    assert imprimir.paginas(pdf) == 1
-    # el título del PDF lleva la huella del informe.md del que salió
-    assert imprimir.huella().encode() in pdf, "informe.pdf no salió de este informe.md"
+        assert imprimir.paginas(fh.read()) == 1
+    # imprimir.py anota de qué informe.md salió el PDF
+    with open(resultado("informe_pdf.json"), encoding="utf-8") as fh:
+        anotado = json.load(fh)
+    assert anotado["informe.md"] == imprimir.sha256(os.path.join(ANALISIS, "informe.md")), \
+        "informe.pdf no salió de este informe.md: correr imprimir.py"
+    assert anotado["informe.pdf"] == imprimir.sha256(ruta)
 
 
 def test_informe_sin_rayas_ni_muletillas():
@@ -260,6 +365,47 @@ def test_informe_meses_en_minuscula_dentro_de_la_frase():
              if not re.search(r"(^|\n|[.|*#]\s*)$", t[:m.start()])]
     assert malos == []
     assert not re.search(r"\b(Ene|Feb|Abr|Ago|Sept?|Dic)\.?\s*\d", informe())
+
+
+# ---------- verificar.py, sin red ----------
+@pytest.fixture(scope="module")
+def verificar():
+    return cargar_modulo("verificar")
+
+
+def test_reescalar_sin_escalon_antes_del_primer_mes(verificar):
+    p = serie([100.0] * 10, datetime.date(2009, 10, 5))
+    fsitio = {m: 1.0 for m in ("2009-10", "2009-11", "2009-12")}
+    nuevo = {"2009-12": 1.1}                 # el otro deflactor parte en diciembre
+    v = verificar.reescalar(p, fsitio, nuevo)
+    assert v == pytest.approx([110.0] * 10)  # octubre y noviembre, encadenados
+
+
+def test_alinear_con_t0_distintos(verificar):
+    p = serie([1, 2, 3, 4], datetime.date(2020, 1, 13))
+    q = {"t0": "2020-01-06", "v": [0, 10, 20, 30]}
+    assert verificar.alinear(q, p) == [10, 20, 30, None]
+
+
+def test_descartes_cuentan_solo_si_dan_vuelta_un_maximo(verificar):
+    n = 11 * 52 + 1
+    p = serie([100.0] * (n - 1) + [103.0])
+    fs = vacuno.fechas(p)
+    data = {"descartes": [{"slug": "corte", "semana": fs[-5].isoformat(), "precio": 102.5}]}
+    fsitio = {f.strftime("%Y-%m"): 1.0 for f in fs}
+    verificar.FILAS.clear()
+    verificar.probar_descartes(data, {"corte": p}, fsitio)
+    fila = verificar.FILAS[-1]
+    assert fila["ok"] == 0                   # 102,5 queda a menos de 1% de 103
+    verificar.FILAS.clear()
+    data["descartes"][0]["precio"] = 101.0
+    verificar.probar_descartes(data, {"corte": p}, fsitio)
+    assert verificar.FILAS[-1]["ok"] == 1
+    verificar.FILAS.clear()
+    p = serie([100.0] * n)                   # sin máximo: la fila es informativa
+    verificar.probar_descartes(data, {"corte": p}, fsitio)
+    assert verificar.FILAS[-1]["ok"] == ""
+    verificar.FILAS.clear()
 
 
 # ---------- el gráfico ----------
@@ -292,12 +438,7 @@ def test_grafico_de_1080_por_1080():
 
 def test_grafico_dibujado_respeta_las_reglas(tmp_path, guardado):
     pytest.importorskip("matplotlib")
-    # por ruta y con nombre propio: analisis/estimacion_ipc también tiene un
-    # graficar.py y el orden de sys.path depende del orden de los tests
-    spec = importlib.util.spec_from_file_location("vacuno_graficar",
-                                                  os.path.join(ANALISIS, "graficar.py"))
-    graficar = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(graficar)
+    graficar = cargar_modulo("graficar")
     _, series, _ = guardado
     salida = graficar.graficar(series, str(tmp_path / "g.png"))
     from PIL import Image

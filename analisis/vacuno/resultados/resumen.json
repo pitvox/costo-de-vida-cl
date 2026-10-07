@@ -55,5 +55,38 @@
   "2026-08": 9,
   "2026-09": 2
  },
- "mismo_mes_10_de_10": 21
+ "mismo_mes_10_de_10": 21,
+ "contexto": {
+  "top5_por_semana": [
+   {
+    "semana": "2026-09-07",
+    "top5": 20
+   },
+   {
+    "semana": "2026-09-14",
+    "top5": 11
+   },
+   {
+    "semana": "2026-09-21",
+    "top5": 22
+   },
+   {
+    "semana": "2026-09-28",
+    "top5": 20
+   }
+  ],
+  "bajaron_esta_semana": 17,
+  "a_menos_de_1_de_su_maximo": [
+   "Estomaguillo (Tapabarriga)",
+   "Posta Rosada",
+   "Sobrecostilla",
+   "Asado carnicero"
+  ],
+  "todos_con_una_semana_mas_cara_este_anio": true,
+  "mismo_mes_entra_mas_justo": {
+   "corte": "Lomo Vetado",
+   "margen_pct": 0.033
+  },
+  "asado_de_tira_mes_sobre_mes_del_anio_anterior_pct": 1.4
+ }
 }
