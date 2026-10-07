@@ -1,0 +1,59 @@
+{
+ "fuente": "https://carestia.cl/indices.json",
+ "sha256": "b73103d0639c1250244977d0698a462cc6207d3e6173f3b1884e6d6ac1f2e7f1",
+ "generado": "2026-10-07",
+ "ipc_mes": "2026-08",
+ "semana": "2026-09-28",
+ "todas_en_la_semana": true,
+ "cortes": 24,
+ "A": {
+  "top5": 20,
+  "de": 24,
+  "cortes": [
+   "Abastero",
+   "Asado carnicero",
+   "Asiento",
+   "Choclillo",
+   "Estomaguillo (Tapabarriga)",
+   "Ganso",
+   "Huachalomo",
+   "Lomo Liso",
+   "Lomo Vetado",
+   "Osobuco",
+   "Palanca",
+   "Plateada",
+   "Posta Negra",
+   "Posta Paleta",
+   "Posta Rosada",
+   "Punta de Ganso",
+   "Punta paleta",
+   "Punta picana",
+   "Sobrecostilla",
+   "Tapapecho"
+  ]
+ },
+ "B": {
+  "se_afirman": [],
+  "maximo_sin_margen": []
+ },
+ "C": {
+  "precio": 12922,
+  "variacion_anual": 6.3,
+  "semana": "2026-09-28",
+  "semana_anio_antes": "2025-09-29",
+  "anio_antes_propio": true
+ },
+ "mes_del_maximo_de_10_anios": {
+  "2021-10": 1,
+  "2022-01": 1,
+  "2022-08": 1,
+  "2025-08": 1,
+  "2026-01": 3,
+  "2026-02": 3,
+  "2026-03": 2,
+  "2026-06": 1,
+  "2026-08": 9,
+  "2026-09": 2
+ },
+ "mismo_mes_10_de_10": 21
+}

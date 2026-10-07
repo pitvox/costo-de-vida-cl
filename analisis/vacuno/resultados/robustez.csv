@@ -1,0 +1,8 @@
+escenario,A_top5,de,fuera_del_5,B_se_afirman,B_maximo_sin_margen,C_precio,C_variacion_anual
+"el del sitio (empalme BCCh, indices.py)",20,24,Asado de tira; Filete; Malaya; Pollo Ganso,ninguno,ninguno,12922,6.3
+serie rehecha desde los CSV crudos de ODEPA,20,24,Asado de tira; Filete; Malaya; Pollo Ganso,ninguno,ninguno,12922,6.3
+empalme del INE desde diciembre de 2009,19,24,Asado de tira; Filete; Ganso; Malaya; Pollo Ganso,ninguno,ninguno,12922,6.3
+"IPC del INE por bases desde 2019, empalme del INE antes",19,24,Asado de tira; Filete; Ganso; Malaya; Pollo Ganso,ninguno,ninguno,12922,6.3
+"IPC de septiembre de 0,5%",18,24,Asado de tira; Filete; Ganso; Malaya; Pollo Ganso; Posta Negra,ninguno,ninguno,12922,5.8
+IPC de septiembre de 1%,14,24,Asado de tira; Asiento; Filete; Ganso; Lomo Vetado; Malaya; Palanca; Plateada; Pollo Ganso; Posta Negra,ninguno,ninguno,12922,5.2
+ODEPA sin la limpieza del sitio,20,24,Asado de tira; Filete; Malaya; Pollo Ganso,ninguno,ninguno,12922,6.3
