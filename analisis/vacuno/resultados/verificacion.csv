@@ -5,126 +5,135 @@ ipc,,"primer mes con factor del sitio, antes de la primera semana de vacuno",sí
 odepa,Abastero,primera semana,2008-12-15,2008-12-15,1,
 odepa,Abastero,semanas con precio en una serie y no en la otra,0,0,1,
 odepa,Abastero,"semana a semana, dentro del redondeo del factor",todas,todas,1,784 de 929 semanas idénticas; diferencia máxima 2 pesos
-odepa,Abastero,precio de esta semana: promedio simple de las filas de ODEPA,10675,10675,1,"11 filas, 11 puntos de venta, factor 1.000000"
+odepa,Abastero,precio de esta semana: promedio simple de las filas de ODEPA,10675,10675,1,"11 filas de ODEPA (cada una, el promedio de un sector y tipo de local: Centro | Carnicería, Centro | Supermercado, Internet | Supermercado en Línea, Norte | Carnicería, Norte | Supermercado, Oriente | Carnicería, Oriente | Supermercado, Poniente | Carnicería, Poniente | Supermercado, Sur | Carnicería, Sur | Supermercado), factor 1.000000"
 odepa,Asado carnicero,primera semana,2008-08-11,2008-08-11,1,
 odepa,Asado carnicero,semanas con precio en una serie y no en la otra,0,0,1,
 odepa,Asado carnicero,"semana a semana, dentro del redondeo del factor",todas,todas,1,803 de 947 semanas idénticas; diferencia máxima 2 pesos
-odepa,Asado carnicero,precio de esta semana: promedio simple de las filas de ODEPA,10617,10617,1,"11 filas, 11 puntos de venta, factor 1.000000"
+odepa,Asado carnicero,precio de esta semana: promedio simple de las filas de ODEPA,10617,10617,1,"11 filas de ODEPA (cada una, el promedio de un sector y tipo de local: Centro | Carnicería, Centro | Supermercado, Internet | Supermercado en Línea, Norte | Carnicería, Norte | Supermercado, Oriente | Carnicería, Oriente | Supermercado, Poniente | Carnicería, Poniente | Supermercado, Sur | Carnicería, Sur | Supermercado), factor 1.000000"
 odepa,Asado de tira,primera semana,2015-12-14,2015-12-14,1,
 odepa,Asado de tira,semanas con precio en una serie y no en la otra,0,0,1,
 odepa,Asado de tira,"semana a semana, dentro del redondeo del factor",todas,todas,1,520 de 564 semanas idénticas; diferencia máxima 1 pesos
-odepa,Asado de tira,precio de esta semana: promedio simple de las filas de ODEPA,12922,12922,1,"5 filas, 5 puntos de venta, factor 1.000000"
+odepa,Asado de tira,precio de esta semana: promedio simple de las filas de ODEPA,12922,12922,1,"5 filas de ODEPA (cada una, el promedio de un sector y tipo de local: Centro | Carnicería, Oriente | Carnicería, Poniente | Carnicería, Sur | Carnicería, Sur | Supermercado), factor 1.000000"
 odepa,Asiento,primera semana,2008-08-11,2008-08-11,1,
 odepa,Asiento,semanas con precio en una serie y no en la otra,0,0,1,
 odepa,Asiento,"semana a semana, dentro del redondeo del factor",todas,todas,1,771 de 947 semanas idénticas; diferencia máxima 2 pesos
-odepa,Asiento,precio de esta semana: promedio simple de las filas de ODEPA,14220,14220,1,"11 filas, 11 puntos de venta, factor 1.000000"
+odepa,Asiento,precio de esta semana: promedio simple de las filas de ODEPA,14220,14220,1,"11 filas de ODEPA (cada una, el promedio de un sector y tipo de local: Centro | Carnicería, Centro | Supermercado, Internet | Supermercado en Línea, Norte | Carnicería, Norte | Supermercado, Oriente | Carnicería, Oriente | Supermercado, Poniente | Carnicería, Poniente | Supermercado, Sur | Carnicería, Sur | Supermercado), factor 1.000000"
 odepa,Choclillo,primera semana,2015-09-28,2015-09-28,1,
 odepa,Choclillo,semanas con precio en una serie y no en la otra,0,0,1,
 odepa,Choclillo,"semana a semana, dentro del redondeo del factor",todas,todas,1,517 de 575 semanas idénticas; diferencia máxima 1 pesos
-odepa,Choclillo,precio de esta semana: promedio simple de las filas de ODEPA,11762,11762,1,"11 filas, 11 puntos de venta, factor 1.000000"
+odepa,Choclillo,precio de esta semana: promedio simple de las filas de ODEPA,11762,11762,1,"11 filas de ODEPA (cada una, el promedio de un sector y tipo de local: Centro | Carnicería, Centro | Supermercado, Internet | Supermercado en Línea, Norte | Carnicería, Norte | Supermercado, Oriente | Carnicería, Oriente | Supermercado, Poniente | Carnicería, Poniente | Supermercado, Sur | Carnicería, Sur | Supermercado), factor 1.000000"
 odepa,Estomaguillo (Tapabarriga),primera semana,2015-09-28,2015-09-28,1,
 odepa,Estomaguillo (Tapabarriga),semanas con precio en una serie y no en la otra,0,0,1,
 odepa,Estomaguillo (Tapabarriga),"semana a semana, dentro del redondeo del factor",todas,todas,1,539 de 575 semanas idénticas; diferencia máxima 1 pesos
-odepa,Estomaguillo (Tapabarriga),precio de esta semana: promedio simple de las filas de ODEPA,12294,12294,1,"10 filas, 10 puntos de venta, factor 1.000000"
+odepa,Estomaguillo (Tapabarriga),precio de esta semana: promedio simple de las filas de ODEPA,12294,12294,1,"10 filas de ODEPA (cada una, el promedio de un sector y tipo de local: Centro | Carnicería, Centro | Supermercado, Internet | Supermercado en Línea, Norte | Supermercado, Oriente | Carnicería, Oriente | Supermercado, Poniente | Carnicería, Poniente | Supermercado, Sur | Carnicería, Sur | Supermercado), factor 1.000000"
 odepa,Filete,primera semana,2012-12-31,2012-12-31,1,
 odepa,Filete,semanas con precio en una serie y no en la otra,0,0,1,
 odepa,Filete,"semana a semana, dentro del redondeo del factor",todas,todas,1,584 de 718 semanas idénticas; diferencia máxima 1 pesos
-odepa,Filete,precio de esta semana: promedio simple de las filas de ODEPA,18570,18570,1,"11 filas, 11 puntos de venta, factor 1.000000"
+odepa,Filete,precio de esta semana: promedio simple de las filas de ODEPA,18570,18570,1,"11 filas de ODEPA (cada una, el promedio de un sector y tipo de local: Centro | Carnicería, Centro | Supermercado, Internet | Supermercado en Línea, Norte | Carnicería, Norte | Supermercado, Oriente | Carnicería, Oriente | Supermercado, Poniente | Carnicería, Poniente | Supermercado, Sur | Carnicería, Sur | Supermercado), factor 1.000000"
 odepa,Ganso,primera semana,2015-09-28,2015-09-28,1,
 odepa,Ganso,semanas con precio en una serie y no en la otra,0,0,1,
 odepa,Ganso,"semana a semana, dentro del redondeo del factor",todas,todas,1,531 de 575 semanas idénticas; diferencia máxima 1 pesos
-odepa,Ganso,precio de esta semana: promedio simple de las filas de ODEPA,10534,10534,1,"10 filas, 10 puntos de venta, factor 1.000000"
+odepa,Ganso,precio de esta semana: promedio simple de las filas de ODEPA,10534,10534,1,"10 filas de ODEPA (cada una, el promedio de un sector y tipo de local: Centro | Carnicería, Centro | Supermercado, Internet | Supermercado en Línea, Norte | Supermercado, Oriente | Carnicería, Oriente | Supermercado, Poniente | Carnicería, Poniente | Supermercado, Sur | Carnicería, Sur | Supermercado), factor 1.000000"
 odepa,Huachalomo,primera semana,2008-09-01,2008-09-01,1,
 odepa,Huachalomo,semanas con precio en una serie y no en la otra,0,0,1,
 odepa,Huachalomo,"semana a semana, dentro del redondeo del factor",todas,todas,1,733 de 856 semanas idénticas; diferencia máxima 1 pesos
-odepa,Huachalomo,precio de esta semana: promedio simple de las filas de ODEPA,10444,10444,1,"11 filas, 11 puntos de venta, factor 1.000000"
+odepa,Huachalomo,precio de esta semana: promedio simple de las filas de ODEPA,10444,10444,1,"11 filas de ODEPA (cada una, el promedio de un sector y tipo de local: Centro | Carnicería, Centro | Supermercado, Internet | Supermercado en Línea, Norte | Carnicería, Norte | Supermercado, Oriente | Carnicería, Oriente | Supermercado, Poniente | Carnicería, Poniente | Supermercado, Sur | Carnicería, Sur | Supermercado), factor 1.000000"
 odepa,Lomo Liso,primera semana,2008-08-11,2008-08-11,1,
 odepa,Lomo Liso,semanas con precio en una serie y no en la otra,0,0,1,
 odepa,Lomo Liso,"semana a semana, dentro del redondeo del factor",todas,todas,1,694 de 947 semanas idénticas; diferencia máxima 3 pesos
-odepa,Lomo Liso,precio de esta semana: promedio simple de las filas de ODEPA,16683,16683,1,"11 filas, 11 puntos de venta, factor 1.000000"
+odepa,Lomo Liso,precio de esta semana: promedio simple de las filas de ODEPA,16683,16683,1,"11 filas de ODEPA (cada una, el promedio de un sector y tipo de local: Centro | Carnicería, Centro | Supermercado, Internet | Supermercado en Línea, Norte | Carnicería, Norte | Supermercado, Oriente | Carnicería, Oriente | Supermercado, Poniente | Carnicería, Poniente | Supermercado, Sur | Carnicería, Sur | Supermercado), factor 1.000000"
 odepa,Lomo Vetado,primera semana,2008-08-11,2008-08-11,1,
 odepa,Lomo Vetado,semanas con precio en una serie y no en la otra,0,0,1,
 odepa,Lomo Vetado,"semana a semana, dentro del redondeo del factor",todas,todas,1,727 de 947 semanas idénticas; diferencia máxima 3 pesos
-odepa,Lomo Vetado,precio de esta semana: promedio simple de las filas de ODEPA,17327,17327,1,"11 filas, 11 puntos de venta, factor 1.000000"
+odepa,Lomo Vetado,precio de esta semana: promedio simple de las filas de ODEPA,17327,17327,1,"11 filas de ODEPA (cada una, el promedio de un sector y tipo de local: Centro | Carnicería, Centro | Supermercado, Internet | Supermercado en Línea, Norte | Carnicería, Norte | Supermercado, Oriente | Carnicería, Oriente | Supermercado, Poniente | Carnicería, Poniente | Supermercado, Sur | Carnicería, Sur | Supermercado), factor 1.000000"
 odepa,Malaya,primera semana,2015-12-14,2015-12-14,1,
 odepa,Malaya,semanas con precio en una serie y no en la otra,0,0,1,
 odepa,Malaya,"semana a semana, dentro del redondeo del factor",todas,todas,1,523 de 564 semanas idénticas; diferencia máxima 1 pesos
-odepa,Malaya,precio de esta semana: promedio simple de las filas de ODEPA,10056,10056,1,"8 filas, 8 puntos de venta, factor 1.000000"
+odepa,Malaya,precio de esta semana: promedio simple de las filas de ODEPA,10056,10056,1,"8 filas de ODEPA (cada una, el promedio de un sector y tipo de local: Centro | Carnicería, Internet | Supermercado en Línea, Norte | Supermercado, Oriente | Supermercado, Poniente | Carnicería, Poniente | Supermercado, Sur | Carnicería, Sur | Supermercado), factor 1.000000"
 odepa,Osobuco,primera semana,2014-08-25,2014-08-25,1,
 odepa,Osobuco,semanas con precio en una serie y no en la otra,0,0,1,
 odepa,Osobuco,"semana a semana, dentro del redondeo del factor",todas,todas,1,591 de 632 semanas idénticas; diferencia máxima 1 pesos
-odepa,Osobuco,precio de esta semana: promedio simple de las filas de ODEPA,11486,11486,1,"4 filas, 4 puntos de venta, factor 1.000000"
+odepa,Osobuco,precio de esta semana: promedio simple de las filas de ODEPA,11486,11486,1,"4 filas de ODEPA (cada una, el promedio de un sector y tipo de local: Centro | Carnicería, Oriente | Carnicería, Poniente | Carnicería, Sur | Carnicería), factor 1.000000"
 odepa,Palanca,primera semana,2015-12-14,2015-12-14,1,
 odepa,Palanca,semanas con precio en una serie y no en la otra,0,0,1,
 odepa,Palanca,"semana a semana, dentro del redondeo del factor",todas,todas,1,523 de 564 semanas idénticas; diferencia máxima 1 pesos
-odepa,Palanca,precio de esta semana: promedio simple de las filas de ODEPA,14257,14257,1,"10 filas, 10 puntos de venta, factor 1.000000"
+odepa,Palanca,precio de esta semana: promedio simple de las filas de ODEPA,14257,14257,1,"10 filas de ODEPA (cada una, el promedio de un sector y tipo de local: Centro | Carnicería, Internet | Supermercado en Línea, Norte | Carnicería, Norte | Supermercado, Oriente | Carnicería, Oriente | Supermercado, Poniente | Carnicería, Poniente | Supermercado, Sur | Carnicería, Sur | Supermercado), factor 1.000000"
 odepa,Plateada,primera semana,2014-08-25,2014-08-25,1,
 odepa,Plateada,semanas con precio en una serie y no en la otra,0,0,1,
 odepa,Plateada,"semana a semana, dentro del redondeo del factor",todas,todas,1,589 de 632 semanas idénticas; diferencia máxima 1 pesos
-odepa,Plateada,precio de esta semana: promedio simple de las filas de ODEPA,11063,11063,1,"11 filas, 11 puntos de venta, factor 1.000000"
+odepa,Plateada,precio de esta semana: promedio simple de las filas de ODEPA,11063,11063,1,"11 filas de ODEPA (cada una, el promedio de un sector y tipo de local: Centro | Carnicería, Centro | Supermercado, Internet | Supermercado en Línea, Norte | Carnicería, Norte | Supermercado, Oriente | Carnicería, Oriente | Supermercado, Poniente | Carnicería, Poniente | Supermercado, Sur | Carnicería, Sur | Supermercado), factor 1.000000"
 odepa,Pollo Ganso,primera semana,2010-01-25,2010-01-25,1,
 odepa,Pollo Ganso,semanas con precio en una serie y no en la otra,0,0,1,
 odepa,Pollo Ganso,"semana a semana, dentro del redondeo del factor",todas,todas,1,690 de 779 semanas idénticas; diferencia máxima 1 pesos
-odepa,Pollo Ganso,precio de esta semana: promedio simple de las filas de ODEPA,11971,11971,1,"11 filas, 11 puntos de venta, factor 1.000000"
+odepa,Pollo Ganso,precio de esta semana: promedio simple de las filas de ODEPA,11971,11971,1,"11 filas de ODEPA (cada una, el promedio de un sector y tipo de local: Centro | Carnicería, Centro | Supermercado, Internet | Supermercado en Línea, Norte | Carnicería, Norte | Supermercado, Oriente | Carnicería, Oriente | Supermercado, Poniente | Carnicería, Poniente | Supermercado, Sur | Carnicería, Sur | Supermercado), factor 1.000000"
 odepa,Posta Negra,primera semana,2008-08-11,2008-08-11,1,
 odepa,Posta Negra,semanas con precio en una serie y no en la otra,0,0,1,
 odepa,Posta Negra,"semana a semana, dentro del redondeo del factor",todas,todas,1,769 de 946 semanas idénticas; diferencia máxima 2 pesos
-odepa,Posta Negra,precio de esta semana: promedio simple de las filas de ODEPA,11852,11852,1,"11 filas, 11 puntos de venta, factor 1.000000"
+odepa,Posta Negra,precio de esta semana: promedio simple de las filas de ODEPA,11852,11852,1,"11 filas de ODEPA (cada una, el promedio de un sector y tipo de local: Centro | Carnicería, Centro | Supermercado, Internet | Supermercado en Línea, Norte | Carnicería, Norte | Supermercado, Oriente | Carnicería, Oriente | Supermercado, Poniente | Carnicería, Poniente | Supermercado, Sur | Carnicería, Sur | Supermercado), factor 1.000000"
 odepa,Posta Paleta,primera semana,2008-09-01,2008-09-01,1,
 odepa,Posta Paleta,semanas con precio en una serie y no en la otra,0,0,1,
 odepa,Posta Paleta,"semana a semana, dentro del redondeo del factor",todas,todas,1,726 de 852 semanas idénticas; diferencia máxima 2 pesos
-odepa,Posta Paleta,precio de esta semana: promedio simple de las filas de ODEPA,11444,11444,1,"11 filas, 11 puntos de venta, factor 1.000000"
+odepa,Posta Paleta,precio de esta semana: promedio simple de las filas de ODEPA,11444,11444,1,"11 filas de ODEPA (cada una, el promedio de un sector y tipo de local: Centro | Carnicería, Centro | Supermercado, Internet | Supermercado en Línea, Norte | Carnicería, Norte | Supermercado, Oriente | Carnicería, Oriente | Supermercado, Poniente | Carnicería, Poniente | Supermercado, Sur | Carnicería, Sur | Supermercado), factor 1.000000"
 odepa,Posta Rosada,primera semana,2008-08-11,2008-08-11,1,
 odepa,Posta Rosada,semanas con precio en una serie y no en la otra,0,0,1,
 odepa,Posta Rosada,"semana a semana, dentro del redondeo del factor",todas,todas,1,728 de 857 semanas idénticas; diferencia máxima 1 pesos
-odepa,Posta Rosada,precio de esta semana: promedio simple de las filas de ODEPA,12400,12400,1,"11 filas, 11 puntos de venta, factor 1.000000"
+odepa,Posta Rosada,precio de esta semana: promedio simple de las filas de ODEPA,12400,12400,1,"11 filas de ODEPA (cada una, el promedio de un sector y tipo de local: Centro | Carnicería, Centro | Supermercado, Internet | Supermercado en Línea, Norte | Carnicería, Norte | Supermercado, Oriente | Carnicería, Oriente | Supermercado, Poniente | Carnicería, Poniente | Supermercado, Sur | Carnicería, Sur | Supermercado), factor 1.000000"
 odepa,Punta de Ganso,primera semana,2015-12-07,2015-12-07,1,
 odepa,Punta de Ganso,semanas con precio en una serie y no en la otra,0,0,1,
 odepa,Punta de Ganso,"semana a semana, dentro del redondeo del factor",todas,todas,1,513 de 565 semanas idénticas; diferencia máxima 1 pesos
-odepa,Punta de Ganso,precio de esta semana: promedio simple de las filas de ODEPA,15891,15891,1,"10 filas, 10 puntos de venta, factor 1.000000"
+odepa,Punta de Ganso,precio de esta semana: promedio simple de las filas de ODEPA,15891,15891,1,"10 filas de ODEPA (cada una, el promedio de un sector y tipo de local: Centro | Carnicería, Centro | Supermercado, Internet | Supermercado en Línea, Norte | Supermercado, Oriente | Carnicería, Oriente | Supermercado, Poniente | Carnicería, Poniente | Supermercado, Sur | Carnicería, Sur | Supermercado), factor 1.000000"
 odepa,Punta paleta,primera semana,2015-09-28,2015-09-28,1,
 odepa,Punta paleta,semanas con precio en una serie y no en la otra,0,0,1,
 odepa,Punta paleta,"semana a semana, dentro del redondeo del factor",todas,todas,1,534 de 575 semanas idénticas; diferencia máxima 1 pesos
-odepa,Punta paleta,precio de esta semana: promedio simple de las filas de ODEPA,11549,11549,1,"11 filas, 11 puntos de venta, factor 1.000000"
+odepa,Punta paleta,precio de esta semana: promedio simple de las filas de ODEPA,11549,11549,1,"11 filas de ODEPA (cada una, el promedio de un sector y tipo de local: Centro | Carnicería, Centro | Supermercado, Internet | Supermercado en Línea, Norte | Carnicería, Norte | Supermercado, Oriente | Carnicería, Oriente | Supermercado, Poniente | Carnicería, Poniente | Supermercado, Sur | Carnicería, Sur | Supermercado), factor 1.000000"
 odepa,Punta picana,primera semana,2015-09-28,2015-09-28,1,
 odepa,Punta picana,semanas con precio en una serie y no en la otra,0,0,1,
 odepa,Punta picana,"semana a semana, dentro del redondeo del factor",todas,todas,1,521 de 575 semanas idénticas; diferencia máxima 1 pesos
-odepa,Punta picana,precio de esta semana: promedio simple de las filas de ODEPA,14058,14058,1,"10 filas, 10 puntos de venta, factor 1.000000"
+odepa,Punta picana,precio de esta semana: promedio simple de las filas de ODEPA,14058,14058,1,"10 filas de ODEPA (cada una, el promedio de un sector y tipo de local: Centro | Carnicería, Centro | Supermercado, Internet | Supermercado en Línea, Norte | Supermercado, Oriente | Carnicería, Oriente | Supermercado, Poniente | Carnicería, Poniente | Supermercado, Sur | Carnicería, Sur | Supermercado), factor 1.000000"
 odepa,Sobrecostilla,primera semana,2008-09-01,2008-09-01,1,
 odepa,Sobrecostilla,semanas con precio en una serie y no en la otra,0,0,1,
 odepa,Sobrecostilla,"semana a semana, dentro del redondeo del factor",todas,todas,1,809 de 944 semanas idénticas; diferencia máxima 2 pesos
-odepa,Sobrecostilla,precio de esta semana: promedio simple de las filas de ODEPA,10557,10557,1,"11 filas, 11 puntos de venta, factor 1.000000"
+odepa,Sobrecostilla,precio de esta semana: promedio simple de las filas de ODEPA,10557,10557,1,"11 filas de ODEPA (cada una, el promedio de un sector y tipo de local: Centro | Carnicería, Centro | Supermercado, Internet | Supermercado en Línea, Norte | Carnicería, Norte | Supermercado, Oriente | Carnicería, Oriente | Supermercado, Poniente | Carnicería, Poniente | Supermercado, Sur | Carnicería, Sur | Supermercado), factor 1.000000"
 odepa,Tapapecho,primera semana,2010-01-25,2010-01-25,1,
 odepa,Tapapecho,semanas con precio en una serie y no en la otra,0,0,1,
 odepa,Tapapecho,"semana a semana, dentro del redondeo del factor",todas,todas,1,771 de 861 semanas idénticas; diferencia máxima 2 pesos
-odepa,Tapapecho,precio de esta semana: promedio simple de las filas de ODEPA,10202,10202,1,"11 filas, 11 puntos de venta, factor 1.000000"
+odepa,Tapapecho,precio de esta semana: promedio simple de las filas de ODEPA,10202,10202,1,"11 filas de ODEPA (cada una, el promedio de un sector y tipo de local: Centro | Carnicería, Centro | Supermercado, Internet | Supermercado en Línea, Norte | Carnicería, Norte | Supermercado, Oriente | Carnicería, Oriente | Supermercado, Poniente | Carnicería, Poniente | Supermercado, Sur | Carnicería, Sur | Supermercado), factor 1.000000"
 ipc,,último mes con IPC,2026-08,2026-08,1,el sitio y el cuadro del Banco Central
 ipc,,"variación a 12 meses del factor del sitio frente al empalme BCCh (G073.IPC.V12.2023.M), diferencia máxima en puntos","hasta 0,07","0,061",1,208 meses
 ipc,,"desde enero de 2024, factor del sitio frente al empalme del INE, diferencia máxima (%)","hasta 0,01","0,0070",1,32 meses
-ipc,,"antes de 2024, factor del sitio frente al empalme del INE, diferencia máxima (%)",,"1,60",1,otro método de empalme: va a la robustez
+ipc,,"antes de 2024, factor del sitio frente al empalme del INE, diferencia máxima (%)",,"1,60",,otro método de empalme: va a la robustez
 ipc,,"desde enero de 2024, factor del sitio frente al INE por bases, diferencia máxima (%)","hasta 0,01","0,0070",1,32 meses
-ipc,,"antes de 2024, factor del sitio frente al INE por bases, diferencia máxima (%)",,"0,90",1,otro método de empalme: va a la robustez
-odepa,,"A con el del sitio (empalme BCCh, indices.py)",20,20,1,"fuera: Asado de tira, Filete, Malaya, Pollo Ganso"
-odepa,,"B con el del sitio (empalme BCCh, indices.py)",ninguno,ninguno,1,máximo por menos de 1%: ninguno
-odepa,,"C con el del sitio (empalme BCCh, indices.py)","12922, 6.3","12922, 6.3",1,
+ipc,,"antes de 2024, factor del sitio frente al INE por bases, diferencia máxima (%)",,"0,90",,otro método de empalme: va a la robustez
+control,,"A con las series del sitio (empalme BCCh, indices.py)",20,20,1,"fuera: Asado de tira, Filete, Malaya, Pollo Ganso"
+control,,"B con las series del sitio (empalme BCCh, indices.py)",ninguno,ninguno,1,"máximo por menos de 1%: ninguno; con el promedio del mes: Punta de Ganso (+2,4% sobre octubre de 2021)"
+control,,"C con las series del sitio (empalme BCCh, indices.py)","12922, 6.3","12922, 6.3",1,
 odepa,,A con serie rehecha desde los CSV crudos de ODEPA,20,20,1,"fuera: Asado de tira, Filete, Malaya, Pollo Ganso"
-odepa,,B con serie rehecha desde los CSV crudos de ODEPA,ninguno,ninguno,1,máximo por menos de 1%: ninguno
+odepa,,B con serie rehecha desde los CSV crudos de ODEPA,ninguno,ninguno,1,"máximo por menos de 1%: ninguno; con el promedio del mes: Punta de Ganso (+2,4% sobre octubre de 2021)"
 odepa,,C con serie rehecha desde los CSV crudos de ODEPA,"12922, 6.3","12922, 6.3",1,
-robustez,,A con empalme del INE desde diciembre de 2009,20,19,1,"fuera: Asado de tira, Filete, Ganso, Malaya, Pollo Ganso"
-robustez,,B con empalme del INE desde diciembre de 2009,ninguno,ninguno,1,máximo por menos de 1%: ninguno
-robustez,,C con empalme del INE desde diciembre de 2009,"12922, 6.3","12922, 6.3",1,
-robustez,,"A con IPC del INE por bases desde 2019, empalme del INE antes",20,19,1,"fuera: Asado de tira, Filete, Ganso, Malaya, Pollo Ganso"
-robustez,,"B con IPC del INE por bases desde 2019, empalme del INE antes",ninguno,ninguno,1,máximo por menos de 1%: ninguno
-robustez,,"C con IPC del INE por bases desde 2019, empalme del INE antes","12922, 6.3","12922, 6.3",1,
-robustez,,"A con IPC de septiembre de 0,5%",20,18,1,"fuera: Asado de tira, Filete, Ganso, Malaya, Pollo Ganso, Posta Negra"
-robustez,,"B con IPC de septiembre de 0,5%",ninguno,ninguno,1,máximo por menos de 1%: ninguno
-robustez,,"C con IPC de septiembre de 0,5%","12922, 6.3","12922, 5.8",1,
-robustez,,A con IPC de septiembre de 1%,20,14,1,"fuera: Asado de tira, Asiento, Filete, Ganso, Lomo Vetado, Malaya, Palanca, Plateada, Pollo Ganso, Posta Negra"
-robustez,,B con IPC de septiembre de 1%,ninguno,ninguno,1,máximo por menos de 1%: ninguno
-robustez,,C con IPC de septiembre de 1%,"12922, 6.3","12922, 5.2",1,
-robustez,,A con ODEPA sin la limpieza del sitio,20,20,1,"fuera: Asado de tira, Filete, Malaya, Pollo Ganso"
-robustez,,B con ODEPA sin la limpieza del sitio,ninguno,ninguno,1,máximo por menos de 1%: ninguno
-robustez,,C con ODEPA sin la limpieza del sitio,"12922, 6.3","12922, 6.3",1,
+robustez,,A con empalme del INE desde diciembre de 2009,20,19,,"fuera: Asado de tira, Filete, Ganso, Malaya, Pollo Ganso"
+robustez,,B con empalme del INE desde diciembre de 2009,ninguno,ninguno,,"máximo por menos de 1%: ninguno; con el promedio del mes: Punta de Ganso (+1,8% sobre octubre de 2021)"
+robustez,,C con empalme del INE desde diciembre de 2009,"12922, 6.3","12922, 6.3",,
+robustez,,"A con IPC del INE por bases desde 2019, empalme del INE antes",20,19,,"fuera: Asado de tira, Filete, Ganso, Malaya, Pollo Ganso"
+robustez,,"B con IPC del INE por bases desde 2019, empalme del INE antes",ninguno,ninguno,,"máximo por menos de 1%: ninguno; con el promedio del mes: Punta de Ganso (+1,8% sobre octubre de 2021)"
+robustez,,"C con IPC del INE por bases desde 2019, empalme del INE antes","12922, 6.3","12922, 6.3",,
+robustez,,"A con IPC de septiembre de 0,1%",20,19,,"fuera: Asado de tira, Filete, Ganso, Malaya, Pollo Ganso"
+robustez,,"B con IPC de septiembre de 0,1%",ninguno,ninguno,,"máximo por menos de 1%: ninguno; con el promedio del mes: Punta de Ganso (+2,3% sobre octubre de 2021)"
+robustez,,"C con IPC de septiembre de 0,1%","12922, 6.3","12922, 6.2",,
+robustez,,"A con IPC de septiembre de 0,3%",20,18,,"fuera: Asado de tira, Filete, Ganso, Malaya, Pollo Ganso, Posta Negra"
+robustez,,"B con IPC de septiembre de 0,3%",ninguno,ninguno,,"máximo por menos de 1%: ninguno; con el promedio del mes: Punta de Ganso (+2,1% sobre octubre de 2021)"
+robustez,,"C con IPC de septiembre de 0,3%","12922, 6.3","12922, 6.0",,
+robustez,,"A con IPC de septiembre de 0,5%",20,18,,"fuera: Asado de tira, Filete, Ganso, Malaya, Pollo Ganso, Posta Negra"
+robustez,,"B con IPC de septiembre de 0,5%",ninguno,ninguno,,"máximo por menos de 1%: ninguno; con el promedio del mes: Punta de Ganso (+1,9% sobre octubre de 2021)"
+robustez,,"C con IPC de septiembre de 0,5%","12922, 6.3","12922, 5.8",,
+robustez,,A con IPC de septiembre de 1%,20,14,,"fuera: Asado de tira, Asiento, Filete, Ganso, Lomo Vetado, Malaya, Palanca, Plateada, Pollo Ganso, Posta Negra"
+robustez,,B con IPC de septiembre de 1%,ninguno,ninguno,,"máximo por menos de 1%: ninguno; con el promedio del mes: Punta de Ganso (+1,4% sobre octubre de 2021)"
+robustez,,C con IPC de septiembre de 1%,"12922, 6.3","12922, 5.2",,
+robustez,,A con ODEPA sin la limpieza del sitio,20,20,,"fuera: Asado de tira, Filete, Malaya, Pollo Ganso"
+robustez,,B con ODEPA sin la limpieza del sitio,ninguno,ninguno,,"máximo por menos de 1%: ninguno; con el promedio del mes: Punta de Ganso (+2,4% sobre octubre de 2021)"
+robustez,,C con ODEPA sin la limpieza del sitio,"12922, 6.3","12922, 6.3",,
+robustez,,A con ODEPA sin los supermercados en línea (desde 2020),20,18,,"fuera: Asado de tira, Filete, Ganso, Malaya, Pollo Ganso, Posta Negra"
+robustez,,B con ODEPA sin los supermercados en línea (desde 2020),ninguno,ninguno,,"máximo por menos de 1%: ninguno; con el promedio del mes: Punta de Ganso (+2,8% sobre agosto de 2026)"
+robustez,,C con ODEPA sin los supermercados en línea (desde 2020),"12922, 6.3","12922, 6.3",,
 sitio,,semana del catálogo,2026-09-28,2026-09-28,1,
 sitio,,cortes de vacuno en el catálogo,24,24,1,
 sitio,Abastero,catálogo: precio,10675,10675,1,
@@ -367,27 +376,27 @@ sitio,Tapapecho,ficha: mismo mes de los últimos 10 años,10 de 10 septiembres,1
 sitio,Tapapecho,ficha: frente a toda su historia,"100% desde 2010, pesos de agosto de 2026","100% desde 2010, pesos de agosto de 2026",1,"Frente a toda su historia, está más caro que en el 100% de las semanas desde 2010, ajustado por inflación, en pesos de agosto de 2026."
 sitio,Tapapecho,ficha: semana de los precios,28 de septiembre de 2026,28 de septiembre de 2026,1,
 sitio,Tapapecho,"portada: precio, a un año y percentil","10202, 5.5, 100","10202, 5.5, 100",1,
-limpieza,Abastero,semanas descartadas por el sitio en los últimos 10 años,,0,1,
-limpieza,Asado carnicero,semanas descartadas por el sitio en los últimos 10 años,,0,1,
-limpieza,Asado de tira,semanas descartadas por el sitio en los últimos 10 años,,0,1,
-limpieza,Asiento,semanas descartadas por el sitio en los últimos 10 años,,0,1,
-limpieza,Choclillo,semanas descartadas por el sitio en los últimos 10 años,,0,1,
-limpieza,Estomaguillo (Tapabarriga),semanas descartadas por el sitio en los últimos 10 años,,0,1,
-limpieza,Filete,semanas descartadas por el sitio en los últimos 10 años,,0,1,
-limpieza,Ganso,semanas descartadas por el sitio en los últimos 10 años,,0,1,
-limpieza,Huachalomo,semanas descartadas por el sitio en los últimos 10 años,,0,1,
-limpieza,Lomo Liso,semanas descartadas por el sitio en los últimos 10 años,,0,1,
-limpieza,Lomo Vetado,semanas descartadas por el sitio en los últimos 10 años,,0,1,
-limpieza,Malaya,semanas descartadas por el sitio en los últimos 10 años,,1,1,2024-09-16 $9.490 nominal
-limpieza,Osobuco,semanas descartadas por el sitio en los últimos 10 años,,0,1,
-limpieza,Palanca,semanas descartadas por el sitio en los últimos 10 años,,0,1,
-limpieza,Plateada,semanas descartadas por el sitio en los últimos 10 años,,0,1,
-limpieza,Pollo Ganso,semanas descartadas por el sitio en los últimos 10 años,,0,1,
-limpieza,Posta Negra,semanas descartadas por el sitio en los últimos 10 años,,0,1,
-limpieza,Posta Paleta,semanas descartadas por el sitio en los últimos 10 años,,0,1,
-limpieza,Posta Rosada,semanas descartadas por el sitio en los últimos 10 años,,0,1,
-limpieza,Punta de Ganso,semanas descartadas por el sitio en los últimos 10 años,,0,1,
-limpieza,Punta paleta,semanas descartadas por el sitio en los últimos 10 años,,0,1,
-limpieza,Punta picana,semanas descartadas por el sitio en los últimos 10 años,,0,1,
-limpieza,Sobrecostilla,semanas descartadas por el sitio en los últimos 10 años,,0,1,
-limpieza,Tapapecho,semanas descartadas por el sitio en los últimos 10 años,,0,1,
+limpieza,Abastero,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Asado carnicero,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Asado de tira,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Asiento,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Choclillo,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Estomaguillo (Tapabarriga),semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Filete,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Ganso,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Huachalomo,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Lomo Liso,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Lomo Vetado,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Malaya,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,1 descartadas; sobre el precio de esta semana: 2024-09-16 $10.271
+limpieza,Osobuco,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Palanca,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Plateada,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Pollo Ganso,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Posta Negra,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Posta Paleta,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Posta Rosada,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Punta de Ganso,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Punta paleta,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Punta picana,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Sobrecostilla,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna
+limpieza,Tapapecho,semanas descartadas en la ventana de 10 años que darían vuelta B,ninguna,ninguna,1,0 descartadas; sobre el precio de esta semana: ninguna

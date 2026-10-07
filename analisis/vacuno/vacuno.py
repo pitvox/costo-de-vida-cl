@@ -37,7 +37,7 @@ AQUI = os.path.dirname(os.path.abspath(__file__))
 CRUDOS = os.path.join(AQUI, "datos_crudos")
 RESULTADOS = os.path.join(AQUI, "resultados")
 sys.path.insert(0, os.path.dirname(os.path.dirname(AQUI)))
-from indices import comparar_temporada  # noqa: E402
+from indices import comparar_temporada, promedios_mes  # noqa: E402
 
 GRUPO = "Carne bovina"
 TOP = 95.0          # el 5% más caro: más caro que en al menos el 95% de sus semanas
@@ -96,8 +96,8 @@ def hace_anios(f: datetime.date, anios: int) -> datetime.date:
 
 def maximo(fs: list, v: list, i: int, anios: int = ANIOS, margen: float = MARGEN) -> dict:
     """La semana i frente a las semanas con precio de los 'anios' años
-    anteriores (desde el mismo día de hace 'anios' años, sin contar la
-    semana i). 'margen_pct' es cuánto supera (o le falta, si es negativo) al
+    anteriores (desde la semana que contiene el mismo día de hace 'anios'
+    años, sin contar la semana i). 'margen_pct' es cuánto supera (o le falta, si es negativo) al
     máximo anterior de esa ventana; 'cubre' dice si la serie llega al
     comienzo de la ventana (si no, no se puede hablar de 10 años);
     'es_maximo', si es el precio más alto de la ventana, y 'se_afirma', si
@@ -107,10 +107,12 @@ def maximo(fs: list, v: list, i: int, anios: int = ANIOS, margen: float = MARGEN
     toda la serie anterior."""
     desde = hace_anios(fs[i], anios)
     con = [j for j, x in enumerate(v) if x is not None and j < i]
-    ventana = [j for j in con if fs[j] >= desde]
+    # la semana que contiene el día de hace 'anios' años entra en la ventana,
+    # y la serie cubre la ventana si parte ese día o antes
+    ventana = [j for j in con if fs[j] + datetime.timedelta(days=6) >= desde]
     jmax = max(ventana, key=lambda j: (v[j], fs[j]))
     mayores = [j for j in con if v[j] >= v[i]]
-    cubre = bool(con) and fs[con[0]] <= desde + datetime.timedelta(days=6)
+    cubre = bool(con) and fs[con[0]] <= desde
     m = (v[i] / v[jmax] - 1) * 100
     total = max(v[j] for j in con)
     # sin restar: con precios enteros, (10100 / 10000 - 1) * 100 da
@@ -120,6 +122,20 @@ def maximo(fs: list, v: list, i: int, anios: int = ANIOS, margen: float = MARGEN
             "se_afirma": cubre and v[i] * 100 > v[jmax] * (100 + margen),
             "ultima_igual_o_mayor": fs[mayores[-1]] if mayores else None,
             "margen_total_pct": (v[i] / total - 1) * 100}
+
+
+def maximo_mensual(fs: list, v: list, i: int, anios: int = ANIOS,
+                   margen: float = MARGEN) -> dict:
+    """Otra medida, que el sitio no muestra: el promedio del mes de la semana
+    i (sus semanas con precio hasta la i, cada una en el mes de su lunes)
+    frente al promedio de cada uno de los 'anios' x 12 meses anteriores. Solo
+    para la robustez de B."""
+    prom = promedios_mes(fs[:i + 1], v[:i + 1])
+    mes = (fs[i].year, fs[i].month)
+    antes = {k: x for k, x in prom.items() if (mes[0] - anios, mes[1]) <= k < mes}
+    kmax = max(antes, key=antes.get)
+    return {"mes_max_anterior": kmax, "margen_pct": (prom[mes] / antes[kmax] - 1) * 100,
+            "se_afirma": prom[mes] * 100 > antes[kmax] * (100 + margen)}
 
 
 def propio(p: dict, j: int) -> bool:

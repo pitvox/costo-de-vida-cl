@@ -19,17 +19,19 @@ pruebas, todas sobre datos_crudos/:
    el IPC del INE encadenado por bases se apartan del del Banco Central en
    los años de cambio de base: eso va a la robustez.
 3. Robustez. A, B y C con esos otros deflactores, con el IPC de septiembre
-   que el INE publica el 8 de octubre (si fuera 0,5% o 1%) y con la serie
-   cruda de ODEPA sin la limpieza del sitio. Es informativa: dice qué tan
-   firme es cada cifra, no si el sitio está bien.
+   que el INE publica el 8 de octubre (si fuera 0,1%, 0,3%, 0,5% o 1%), con
+   la serie cruda de ODEPA sin la limpieza del sitio y sin los supermercados
+   en línea (que ODEPA suma desde 2020), y B también con el promedio de cada
+   mes en vez de la semana. Es informativa: dice qué tan firme es cada
+   cifra, no si el sitio está bien.
 4. Sitio. Lo que muestra carestia.cl hoy: el número grande, la frase de
    temporada y la de toda la historia de cada ficha, la serie de
    datos/productos/{slug}.json, la fila de datos/catalogo.json y la de la
    tabla de la portada.
 
-Escribe resultados/verificacion.csv (una fila por comparación),
-resultados/deflactor.csv y resultados/robustez.csv. Termina con error si
-alguna comparación falla.
+Escribe resultados/verificacion.csv (una fila por comparación; las
+informativas van con "ok" vacío), resultados/deflactor.csv y
+resultados/robustez.csv. Termina con error si alguna comparación falla.
 
 Uso: python verificar.py
 """
@@ -60,13 +62,18 @@ from vacuno import CRUDOS, RESULTADOS  # noqa: E402
 MESES_BCCH = {"Ene": 1, "Feb": 2, "Mar": 3, "Abr": 4, "May": 5, "Jun": 6, "Jul": 7,
               "Ago": 8, "Sep": 9, "Sept": 9, "Oct": 10, "Nov": 11, "Dic": 12}
 FILAS = []
+INFORMATIVA = "informativa"
 
 
 def anotar(tipo, corte, cifra, informe, fuente, ok=None, nota=""):
+    """Una fila de verificacion.csv. Sin 'ok', coincide si son iguales; con
+    ok=INFORMATIVA es un dato (robustez, IPC de otro empalme) que no cuenta
+    como comparación ni puede fallar."""
     if ok is None:
         ok = informe == fuente
     FILAS.append({"prueba": tipo, "corte": corte, "cifra": cifra, "nota_de_prensa": informe,
-                  "fuente": fuente, "ok": int(bool(ok)), "detalle": nota})
+                  "fuente": fuente,
+                  "ok": "" if ok == INFORMATIVA else int(bool(ok)), "detalle": nota})
     return ok
 
 
@@ -246,7 +253,8 @@ def probar_odepa(df: pd.DataFrame, prods: dict, fsitio: dict, cota: dict) -> tup
         filas = sub[sub["fecha"] == pd.Timestamp(semana)]
         anotar("odepa", p["label"], "precio de esta semana: promedio simple de las filas de ODEPA",
                p["v"][i], int(round(filas["Precio promedio"].mean())),
-               nota=f"{len(filas)} filas, {filas['Punto'].nunique()} puntos de venta, "
+               nota=f"{len(filas)} filas de ODEPA (cada una, el promedio de un sector y "
+                    f"tipo de local: {', '.join(sorted(filas['Punto']))}), "
                     f"factor {fsitio[mes_ipc(semana, meses)]:.6f}")
         semanal = sub.groupby("fecha")["Precio promedio"].mean().resample("W-MON").mean()
         crudas[k] = semanal.ffill(limit=4)
@@ -291,23 +299,24 @@ def probar_ipc(data: dict, fsitio: dict, v12: dict, fine_emp: dict, fine: dict) 
                max(d) <= 0.01, f"{len(d)} meses")
         d = [abs(fsitio[m] / ref[m] - 1) * 100 for m in fsitio if m in ref]
         anotar("ipc", "", f"antes de 2024, factor del sitio frente al {nombre}, "
-               "diferencia máxima (%)", "", f"{max(d):.2f}".replace(".", ","), True,
+               "diferencia máxima (%)", "", f"{max(d):.2f}".replace(".", ","), INFORMATIVA,
                "otro método de empalme: va a la robustez")
 
 
 # ---------------- 3. robustez ----------------
 def reescalar(p: dict, fsitio: dict, fnuevo: dict, extra=None) -> list:
     """La serie del sitio llevada a otro deflactor: v * fnuevo / fsitio en el
-    mes de IPC de cada semana; los meses que fnuevo no trae quedan con el
-    del sitio. 'extra(semana)' multiplica además (el IPC del mes siguiente)."""
-    meses = set(fsitio)
+    mes de IPC de cada semana. Los meses anteriores al primero de fnuevo
+    siguen las variaciones del sitio, encadenadas en ese primer mes (sin
+    escalón). 'extra(semana)' multiplica además (el IPC del mes siguiente)."""
+    meses, m0 = set(fsitio), min(fnuevo)
     out = []
     for f, x in zip(vacuno.fechas(p), p["v"]):
         if x is None:
             out.append(None)
             continue
         m = mes_ipc(f, meses)
-        r = fnuevo.get(m, fsitio[m]) / fsitio[m]
+        r = fnuevo[m] / fsitio[m] if m in fnuevo else fnuevo[m0] / fsitio[m0]
         out.append(x * r * (extra(f) if extra else 1))
     return out
 
@@ -320,30 +329,45 @@ def empalmar(base: dict, nuevo: dict) -> dict:
     return {m: f / out[max(out)] for m, f in out.items()}   # el último mes, 1
 
 
+def alinear(q: dict, p: dict) -> list:
+    """Los valores de la serie q en las semanas de la serie p (mismo t0 y
+    largo que p; None donde q no tiene)."""
+    corr = (datetime.date.fromisoformat(p["t0"]) - datetime.date.fromisoformat(q["t0"])).days // 7
+    return [q["v"][j + corr] if 0 <= j + corr < len(q["v"]) else None
+            for j in range(len(p["v"]))]
+
+
 def abc(prods: dict, series: dict) -> dict:
     """A, B y C con otras series (mismas fechas que el sitio)."""
-    top, afirma, cerca, c = [], [], [], None
+    top, afirma, cerca, mensual, c = [], [], [], [], None
     for k, p in prods.items():
-        r = vacuno.cifras({**p, "v": series[k]})
+        q = {**p, "v": series[k]}
+        r = vacuno.cifras(q)
         if r["top"]:
             top.append(p["label"])
         if r["maximo"]["se_afirma"]:
             afirma.append(p["label"])
         elif r["maximo"]["es_maximo"]:
             cerca.append(p["label"])
+        mm = vacuno.maximo_mensual(vacuno.fechas(q), q["v"], vacuno.ultima(q["v"]))
+        if mm["se_afirma"]:
+            mensual.append(f"{p['label']} ({vacuno.pct(mm['margen_pct'])} sobre "
+                           f"{vacuno.MESES[mm['mes_max_anterior'][1] - 1]} de "
+                           f"{mm['mes_max_anterior'][0]})")
         if k == "asado_de_tira":
             c = (r["precio"], r["variacion_anual"])
     return {"top5": len(top),
             "fuera_del_5": sorted(set(p["label"] for p in prods.values()) - set(top)),
-            "se_afirman": afirma, "maximo_sin_margen": cerca, "C": c}
+            "se_afirman": afirma, "maximo_sin_margen": cerca, "mensual": mensual, "C": c}
 
 
-def probar_robustez(prods, fsitio, fine_emp, fine, rehecho, crudas, base):
+def probar_robustez(prods, fsitio, fine_emp, fine, rehecho, crudas, sin_linea, base):
     sig, nombre_sig = mes_siguiente(fsitio)
-    rehechas = {k: q["v"][:len(prods[k]["v"])] + [None] * (len(prods[k]["v"]) - len(q["v"]))
-                for k, q in rehecho.items()}
+    rehechas = {k: alinear(rehecho[k], p) for k, p in prods.items()}
+    sin_linea = {k: alinear(sin_linea[k], p) for k, p in prods.items()}
     escenarios = [
-        ("sitio", "el del sitio (empalme BCCh, indices.py)", {k: p["v"] for k, p in prods.items()}),
+        ("sitio", "las series del sitio (empalme BCCh, indices.py)",
+         {k: p["v"] for k, p in prods.items()}),
         ("odepa", "serie rehecha desde los CSV crudos de ODEPA", rehechas),
         ("ine_empalme", "empalme del INE desde diciembre de 2009",
          {k: reescalar(p, fsitio, fine_emp) for k, p in prods.items()}),
@@ -352,7 +376,7 @@ def probar_robustez(prods, fsitio, fine_emp, fine, rehecho, crudas, base):
     ]
     # con el IPC del mes siguiente todo pasa a pesos de ese mes: las semanas
     # de ese mes quedan en su precio de la época y las anteriores suben x%
-    for x in (0.5, 1.0):
+    for x in (0.1, 0.3, 0.5, 1.0):
         escenarios.append((
             "ipc_siguiente", f"IPC de {nombre_sig} de {x:g}%".replace(".", ","),
             {k: reescalar(p, fsitio, fsitio,
@@ -365,6 +389,8 @@ def probar_robustez(prods, fsitio, fine_emp, fine, rehecho, crudas, base):
         sin_limpieza[k] = [None if pd.isna(y := s.get(pd.Timestamp(f), np.nan))
                            else y * fsitio[mes_ipc(f, meses)] for f in vacuno.fechas(p)]
     escenarios.append(("sin_limpieza", "ODEPA sin la limpieza del sitio", sin_limpieza))
+    escenarios.append(("sin_linea", "ODEPA sin los supermercados en línea (desde 2020)",
+                       sin_linea))
     filas = []
     for tipo, nombre, series in escenarios:
         r = abc(prods, series)
@@ -372,16 +398,19 @@ def probar_robustez(prods, fsitio, fine_emp, fine, rehecho, crudas, base):
                       "fuera_del_5": "; ".join(r["fuera_del_5"]),
                       "B_se_afirman": "; ".join(r["se_afirman"]) or "ninguno",
                       "B_maximo_sin_margen": "; ".join(r["maximo_sin_margen"]) or "ninguno",
+                      "B_con_el_promedio_del_mes": "; ".join(r["mensual"]) or "ninguno",
                       "C_precio": round(r["C"][0]), "C_variacion_anual": round(r["C"][1], 1)})
-        # la serie rehecha desde ODEPA tiene que dar lo mismo que el sitio;
-        # los demás escenarios dicen qué tan firme es cada cifra
-        prueba = "odepa" if tipo in ("sitio", "odepa") else "robustez"
-        ok = None if prueba == "odepa" else True
+        # las series del sitio tienen que dar lo de resumen.json (control de
+        # que está al día) y la rehecha desde ODEPA, lo mismo; los demás
+        # escenarios dicen qué tan firme es cada cifra
+        prueba = {"sitio": "control", "odepa": "odepa"}.get(tipo, "robustez")
+        ok = None if prueba != "robustez" else INFORMATIVA
         anotar(prueba, "", f"A con {nombre}", base["A"]["top5"], r["top5"], ok,
                "fuera: " + ", ".join(r["fuera_del_5"]))
         anotar(prueba, "", f"B con {nombre}", ", ".join(base["B"]["se_afirman"]) or "ninguno",
                ", ".join(r["se_afirman"]) or "ninguno", ok,
-               "máximo por menos de 1%: " + (", ".join(r["maximo_sin_margen"]) or "ninguno"))
+               "máximo por menos de 1%: " + (", ".join(r["maximo_sin_margen"]) or "ninguno")
+               + "; con el promedio del mes: " + (", ".join(r["mensual"]) or "ninguno"))
         anotar(prueba, "", f"C con {nombre}",
                f"{base['C']['precio']}, {base['C']['variacion_anual']}",
                f"{round(r['C'][0])}, {round(r['C'][1], 1)}", ok)
@@ -446,18 +475,28 @@ def probar_sitio(data: dict, prods: dict) -> None:
                f"{attrs.get('p')}, {attrs.get('y')}, {attrs.get('c')}")
 
 
-def probar_descartes(data: dict, prods: dict) -> None:
-    """Semanas que la limpieza del sitio sacó en los últimos 10 años: si
-    alguna tuviera un precio sobre el de esta semana, un máximo dependería
-    de la limpieza (los descartes vienen en pesos nominales)."""
+def probar_descartes(data: dict, prods: dict, fsitio: dict) -> None:
+    """Semanas que la limpieza del sitio sacó en la ventana de 10 años,
+    ajustadas por inflación con el factor del sitio (vienen en pesos
+    nominales). Si alguna quedara sobre el precio de esta semana y sobre el
+    máximo de la ventana, B dependería de la limpieza: un corte que hoy no es
+    máximo podría seguir sin serlo por ese descarte (no cambia B) y uno que
+    sí lo es dejaría de serlo (cambia B, y la fila falla)."""
+    meses = set(fsitio)
     for k, p in prods.items():
         c = vacuno.cifras(p)
-        desde = c["maximo"]["desde"].isoformat()
+        mx = c["maximo"]
+        desde = (mx["desde"] - datetime.timedelta(days=6)).isoformat()
         fuera = [d for clave in ("descartes", "descartes_anuales", "descartes_puntos")
                  for d in data.get(clave, []) if d["slug"] == k and d["semana"] >= desde]
-        anotar("limpieza", p["label"], "semanas descartadas por el sitio en los últimos 10 años",
-               "", len(fuera), True,
-               "; ".join(f"{d['semana']} {vacuno.clp(d['precio'])} nominal" for d in fuera))
+        reales = [(d["semana"], d["precio"] * fsitio[mes_ipc(
+            datetime.date.fromisoformat(d["semana"]), meses)]) for d in fuera]
+        sobre = [(s, x) for s, x in reales if x > c["precio"]]
+        anotar("limpieza", p["label"], "semanas descartadas en la ventana de 10 años que "
+               "darían vuelta B", "ninguna",
+               "ninguna" if not (sobre and mx["es_maximo"]) else f"{len(sobre)}",
+               nota=f"{len(fuera)} descartadas; sobre el precio de esta semana: " +
+                    (", ".join(f"{s} {vacuno.clp(x)}" for s, x in sobre) or "ninguna"))
 
 
 def main() -> None:
@@ -481,23 +520,28 @@ def main() -> None:
     print("1. ODEPA: armando las series desde los CSV crudos...")
     df = odepa_rm()
     rehecho, crudas = probar_odepa(df, prods, fsitio, cota)
+    with contextlib.redirect_stdout(io.StringIO()):
+        sin_linea = indices.series_productos(
+            df[~df["Punto"].str.endswith("Supermercado en Línea")], ipc_desde_factor(fsitio))
     print("2. IPC")
     probar_ipc(data, fsitio, v12, fine_emp, fine)
     print("3. Robustez")
-    probar_robustez(prods, fsitio, fine_emp, fine, rehecho, crudas, base)
+    probar_robustez(prods, fsitio, fine_emp, fine, rehecho, crudas, sin_linea, base)
     print("4. Sitio desplegado")
     probar_sitio(data, prods)
-    probar_descartes(data, prods)
+    probar_descartes(data, prods, fsitio)
     with open(os.path.join(RESULTADOS, "verificacion.csv"), "w", encoding="utf-8",
               newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=list(FILAS[0]))
         w.writeheader()
         w.writerows(FILAS)
-    malas = [f for f in FILAS if not f["ok"]]
+    comparaciones = [f for f in FILAS if f["ok"] != ""]
+    malas = [f for f in comparaciones if not f["ok"]]
     for f in malas:
         print(f"  FALLA {f['prueba']} {f['corte']} {f['cifra']}: nota {f['nota_de_prensa']!r}, "
               f"fuente {f['fuente']!r} {f['detalle']}")
-    print(f"{len(FILAS) - len(malas)} de {len(FILAS)} comparaciones coinciden")
+    print(f"{len(comparaciones) - len(malas)} de {len(comparaciones)} comparaciones coinciden "
+          f"(y {len(FILAS) - len(comparaciones)} filas informativas de robustez)")
     sys.exit(1 if malas else 0)
 
 
