@@ -207,9 +207,12 @@ def _funciones_del_aviso() -> dict:
     with open(os.path.join(RAIZ, "build_site.py"), encoding="utf-8") as fh:
         arbol = ast.parse(fh.read())
     piezas = [n for n in arbol.body if
-              (isinstance(n, ast.FunctionDef) and n.name in ("semana_esperada", "sin_datos_nuevos"))
+              (isinstance(n, ast.FunctionDef) and n.name in ("semana_esperada", "sin_datos_nuevos",
+                                                             "fecha_larga", "linea_semana"))
               or (isinstance(n, ast.Assign) and any(getattr(t, "elts", None) and
-                                                     t.elts[0].id == "ODEPA_DIA" for t in n.targets))]
+                                                     t.elts[0].id == "ODEPA_DIA" for t in n.targets))
+              or (isinstance(n, ast.Assign) and any(getattr(t, "id", None) == "MESES"
+                                                     for t in n.targets))]
     g = {"datetime": datetime}
     exec(compile(ast.Module(body=piezas, type_ignores=[]), "build_site.py", "exec"), g)
     return g
@@ -233,20 +236,71 @@ def test_semana_esperada_segun_el_viernes_de_odepa():
     assert not g["sin_datos_nuevos"](lunes, viernes)
 
 
+def test_linea_de_la_semana():
+    """De qué semana son los precios, el viernes en que ODEPA los publicó (el
+    de esa misma semana) y la próxima actualización (el viernes siguiente al
+    de la última semana que ODEPA ya debía publicar)."""
+    g = _funciones_del_aviso()
+    tz = datetime.timezone(datetime.timedelta(hours=-3))
+    d = datetime.date
+    miercoles = datetime.datetime(2026, 10, 7, 10, 0, tzinfo=tz)
+    # el texto del dueño, palabra por palabra
+    assert g["linea_semana"](d(2026, 9, 28), d(2026, 9, 28), miercoles) == (
+        "Precios de la semana del 28 de septiembre de 2026, publicados por ODEPA el viernes "
+        "2 de octubre. Próxima actualización: viernes 9 de octubre en la tarde.")
+    # una ficha sin precio esta semana: la semana de su último dato y la
+    # próxima actualización del sitio
+    assert g["linea_semana"](d(2026, 2, 2), d(2026, 9, 28), miercoles) == (
+        "Precios de la semana del 2 de febrero de 2026, publicados por ODEPA el viernes "
+        "6 de febrero. Próxima actualización: viernes 9 de octubre en la tarde.")
+    # ODEPA no publicó la que tocaba: el aviso, y la próxima es el viernes que viene
+    viernes = datetime.datetime(2026, 10, 9, 16, 0, tzinfo=tz)
+    assert g["linea_semana"](d(2026, 9, 28), d(2026, 9, 28), viernes) == (
+        "Precios de la semana del 28 de septiembre de 2026, publicados por ODEPA el viernes "
+        '2 de octubre. <span class="sin-nuevos">Sin datos nuevos de ODEPA esta semana.</span> '
+        "Próxima actualización: viernes 16 de octubre en la tarde.")
+    # un viernes de otro año que el de los precios lleva su año
+    enero = datetime.datetime(2026, 1, 3, 10, 0, tzinfo=tz)
+    assert g["linea_semana"](d(2025, 12, 29), d(2025, 12, 29), enero) == (
+        "Precios de la semana del 29 de diciembre de 2025, publicados por ODEPA el viernes "
+        "2 de enero de 2026. Próxima actualización: viernes 9 de enero de 2026 en la tarde.")
+
+
+AL_DIA = ("Precios de la semana del 21 de septiembre de 2026, publicados por ODEPA el viernes "
+          "25 de septiembre. Próxima actualización: viernes 2 de octubre en la tarde.")
+
+
 def test_portada_sin_aviso_con_la_semana_al_dia(sitio):
     h = _leer(sitio, "index.html")
-    assert ('<div class="semana">Semana del <span class="nw">21-09-2026</span>. '
-            '<span>Se actualiza los viernes.</span></div>') in h
+    assert f'<div class="semana">{AL_DIA}</div>' in h
     assert "Sin datos nuevos de ODEPA" not in h
+    # la misma línea en /graficos.html y en las fichas (con el año de su serie)
+    assert f'<div class="semana">{AL_DIA}</div>' in _leer(sitio, "graficos.html")
+    assert re.search(f'<div class="fecha">{re.escape(AL_DIA)} Serie desde \\d{{4}}\\.</div>',
+                     _leer(sitio, "productos/tomate.html"))
+    for p in ["index.html", "graficos.html", "productos/tomate.html"]:
+        h = _leer(sitio, p)
+        assert "Semana del" not in h and "Se actualiza los viernes" not in h, p
+    # la captura PNG de /graficos.html sigue diciendo "semana del dd-mm-aaaa",
+    # con la semana del índice a la vista (ya no lee la línea de arriba)
+    g = _leer(sitio, "graficos.html")
+    assert "fechaSemana = d.fecha;" in g and "fecha: fechaSemana," in g
+    assert "getElementById('fecha')" not in g
 
 
 def test_portada_avisa_si_odepa_no_publico(tmp_path):
     # una semana después: ODEPA debió publicar la del 28-09 y los datos llegan al 21-09
     d = _construir(tmp_path, "2026-10-02T16:30")
+    linea = ("Precios de la semana del 21 de septiembre de 2026, publicados por ODEPA el viernes "
+             '25 de septiembre. <span class="sin-nuevos">Sin datos nuevos de ODEPA esta semana.'
+             "</span> Próxima actualización: viernes 9 de octubre en la tarde.")
     h = _leer(d, "index.html")
-    assert ('<div class="semana">Semana del <span class="nw">21-09-2026</span>. '
-            '<span class="sin-nuevos">Sin datos nuevos de ODEPA esta semana.</span></div>') in h
+    assert f'<div class="semana">{linea}</div>' in h
     assert ".semana .sin-nuevos { color:var(--bone); }" in h
+    assert f'<div class="semana">{linea}</div>' in _leer(d, "graficos.html")
+    f = _leer(d, "productos/tomate.html")
+    assert f'<div class="fecha">{linea} Serie desde ' in f
+    assert ".fecha .sin-nuevos { color:var(--bone); }" in f
 
 
 # ---------- 5. tarjetas para WhatsApp ----------

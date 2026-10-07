@@ -179,7 +179,11 @@ def test_portada_textos(sitio):
         "en pesos de agosto de 2026.",
         "asado, desayuno, ensalada y fruta, ajustados por inflación, en pesos de agosto de 2026,",
         "Índices del costo de vida en Chile</div>",
-        "Se actualiza los viernes.",
+        # de qué semana son los precios, cuándo los publicó ODEPA y la
+        # próxima actualización (con CARESTIA_AHORA el viernes 25-09)
+        "Precios de la semana del ",
+        ", publicados por ODEPA el viernes ",
+        ". Próxima actualización: viernes 2 de octubre en la tarde.",
         ">Índices Carestía</h2>",
         "Canastas fijas, ajustadas por inflación, en pesos de agosto de 2026. El color compara "
         "el precio con el mismo mes de los últimos 10 años y cambia solo si la nueva zona se "
@@ -199,7 +203,7 @@ def test_portada_textos(sitio):
         "Percentil en su historia",
         ">Ver todos los productos</a>",
         "© 2026 Carestía SpA, ",
-        "TradingView Lightweight Charts™. Copyright (c) 2023 TradingView, Inc.",
+        "Gráfico de respaldo: TradingView Lightweight Charts™, Copyright (c) 2023 TradingView, Inc.",
         "Fuente: precios al consumidor de ODEPA",
         "licencia CC-BY), deflactados con el IPC.",
     ]:
@@ -221,7 +225,7 @@ def test_graficos_textos(sitio):
     for esperado in [
         "<title>Gráficos de los índices del costo de vida en Santiago | Carestía</title>",
         "Índices del costo de vida en Chile</div>",
-        "Se actualiza los viernes.",
+        ". Próxima actualización: viernes 2 de octubre en la tarde.",
         # bajo el selector de unidad, la línea de la unidad elegida (la de
         # ajustado por inflación ya en el HTML; las dos en el JS)
         '<p class="utxt" id="utxt">Cada precio pasado, llevado a pesos de agosto de 2026 con '
@@ -247,7 +251,7 @@ def test_graficos_textos(sitio):
         "Esta canasta la armaste tú con datos de ODEPA. No es un índice de Carestía.",
         "COMPONENTES DE LA CANASTA <span>(aporte de cada uno al total)</span>",
         "© 2026 Carestía SpA, ",
-        "TradingView Lightweight Charts™. Copyright (c) 2023 TradingView, Inc.",
+        "Gráfico de respaldo: TradingView Lightweight Charts™, Copyright (c) 2023 TradingView, Inc.",
         "Fuente: precios al consumidor de ODEPA",
         "licencia CC-BY), deflactados con el IPC.",
         "La diferencia entre esos meses es de ",
@@ -328,7 +332,6 @@ def test_ficha_textos_nuevos(sitio):
         '<div class="miga">Precio de esta semana en Santiago</div>',
         '<div class="ouni">por kilo</div>',
         "Serie desde ",
-        "Se actualiza los viernes.",
         "Carne de cerdo, ave y cordero",
         # el selector de unidad y su línea
         ">Ajustado por inflación</button>", ">Precio de la época</button>",
@@ -337,8 +340,9 @@ def test_ficha_textos_nuevos(sitio):
     ]:
         assert esperado in h, esperado
     assert "pesos de hoy" not in h
-    assert re.search(r"Semana del \d\d-\d\d-\d{4}\. Serie desde \d{4}\. "
-                     r"Se actualiza los viernes\.", h)
+    assert re.search(r"Precios de la semana del \d{1,2} de [a-z]+ de \d{4}, publicados por ODEPA "
+                     r"el viernes \d{1,2} de [a-z]+( de \d{4})?\. Próxima actualización: viernes "
+                     r"\d{1,2} de [a-z]+( de \d{4})? en la tarde\. Serie desde \d{4}\.", h)
 
 
 def test_listado_de_productos(sitio):
