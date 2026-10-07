@@ -222,18 +222,25 @@ def test_semana_esperada_segun_el_viernes_de_odepa():
     g = _funciones_del_aviso()
     tz = datetime.timezone(datetime.timedelta(hours=-3))
     lunes = datetime.date(2026, 9, 28)
-    casos = [("2026-10-02T11:59", lunes - datetime.timedelta(weeks=1)),   # viernes antes de las 12
-             ("2026-10-02T12:00", lunes),                                   # viernes a mediodía
-             ("2026-10-02T16:30", lunes),
+    # ODEPA se da por no publicada recién desde el viernes a las 17:00 de
+    # Chile, después de la última corrida del viernes (19:00 UTC)
+    casos = [("2026-10-02T12:30", lunes - datetime.timedelta(weeks=1)),   # 15:30 UTC
+             ("2026-10-02T16:59", lunes - datetime.timedelta(weeks=1)),
+             ("2026-10-02T17:00", lunes),
+             ("2026-10-03T10:00", lunes),                                   # sábado, 13:00 UTC
              ("2026-10-05T09:00", lunes),                                   # lunes siguiente
              ("2026-10-08T23:00", lunes),                                   # jueves
-             ("2026-10-09T13:00", lunes + datetime.timedelta(weeks=1))]
+             ("2026-10-09T17:30", lunes + datetime.timedelta(weeks=1))]
     for ahora, esperada in casos:
         f = datetime.datetime.fromisoformat(ahora).replace(tzinfo=tz)
         assert g["semana_esperada"](f) == esperada, ahora
-    viernes = datetime.datetime(2026, 10, 2, 14, 0, tzinfo=tz)
-    assert g["sin_datos_nuevos"](lunes - datetime.timedelta(weeks=1), viernes)
-    assert not g["sin_datos_nuevos"](lunes, viernes)
+    sabado = datetime.datetime(2026, 10, 3, 10, 0, tzinfo=tz)
+    assert g["sin_datos_nuevos"](lunes - datetime.timedelta(weeks=1), sabado)
+    assert not g["sin_datos_nuevos"](lunes, sabado)
+    # las corridas del viernes, antes de que ODEPA publique: sin aviso
+    for hora in [12, 14, 16]:
+        viernes = datetime.datetime(2026, 10, 2, hora, 0, tzinfo=tz)
+        assert not g["sin_datos_nuevos"](lunes - datetime.timedelta(weeks=1), viernes), hora
 
 
 def test_linea_de_la_semana():
@@ -253,9 +260,16 @@ def test_linea_de_la_semana():
     assert g["linea_semana"](d(2026, 2, 2), d(2026, 9, 28), miercoles) == (
         "Precios de la semana del 2 de febrero de 2026, publicados por ODEPA el viernes "
         "6 de febrero. Próxima actualización: viernes 9 de octubre en la tarde.")
-    # ODEPA no publicó la que tocaba: el aviso, y la próxima es el viernes que viene
-    viernes = datetime.datetime(2026, 10, 9, 16, 0, tzinfo=tz)
-    assert g["linea_semana"](d(2026, 9, 28), d(2026, 9, 28), viernes) == (
+    # las corridas del viernes antes de que ODEPA publique dicen lo mismo que
+    # el día anterior: la próxima actualización es ese mismo viernes
+    for hora in [12, 14, 16]:
+        viernes = datetime.datetime(2026, 10, 9, hora, 30, tzinfo=tz)
+        assert g["linea_semana"](d(2026, 9, 28), d(2026, 9, 28), viernes) == \
+            g["linea_semana"](d(2026, 9, 28), d(2026, 9, 28), miercoles), hora
+    # ODEPA no publicó la que tocaba (la corrida del sábado): el aviso, y la
+    # próxima es el viernes que viene
+    sabado = datetime.datetime(2026, 10, 10, 10, 0, tzinfo=tz)
+    assert g["linea_semana"](d(2026, 9, 28), d(2026, 9, 28), sabado) == (
         "Precios de la semana del 28 de septiembre de 2026, publicados por ODEPA el viernes "
         '2 de octubre. <span class="sin-nuevos">Sin datos nuevos de ODEPA esta semana.</span> '
         "Próxima actualización: viernes 16 de octubre en la tarde.")
@@ -289,8 +303,9 @@ def test_portada_sin_aviso_con_la_semana_al_dia(sitio):
 
 
 def test_portada_avisa_si_odepa_no_publico(tmp_path):
-    # una semana después: ODEPA debió publicar la del 28-09 y los datos llegan al 21-09
-    d = _construir(tmp_path, "2026-10-02T16:30")
+    # la corrida del sábado: ODEPA debió publicar la del 28-09 y los datos
+    # llegan al 21-09
+    d = _construir(tmp_path, "2026-10-03T10:00")
     linea = ("Precios de la semana del 21 de septiembre de 2026, publicados por ODEPA el viernes "
              '25 de septiembre. <span class="sin-nuevos">Sin datos nuevos de ODEPA esta semana.'
              "</span> Próxima actualización: viernes 9 de octubre en la tarde.")
@@ -372,7 +387,8 @@ def test_pagina_de_prensa(sitio):
     assert "<h1>Prensa</h1>" in h
     assert "<strong>Fuente: Carestía (carestia.cl), con datos de ODEPA</strong>" in h
     assert '<a href="mailto:pedro@carestia.cl">pedro@carestia.cl</a>' in h
-    assert "los viernes después de las 14:00" in h
+    assert "El sitio se actualiza los viernes en la tarde, cuando ODEPA ya publicó" in h
+    assert "después de las 14:00" not in h
     assert ("<p>Carestía publica información de consumo. No opina sobre tasas, "
             "mercados ni inversiones.</p>") in h
     assert "Fundador: Pedro Larraín." in h
@@ -390,6 +406,27 @@ def test_pagina_de_prensa(sitio):
 
 
 # ---------- publicación ----------
+def test_workflow_corre_varias_veces_el_viernes_sin_publicar_a_medias():
+    """Los viernes a las 15:30, 17:00 y 19:00 UTC y el sábado a las 13:00 UTC,
+    más a mano. Una corrida nueva cancela la que esté en curso (concurrencia
+    "pages") y nunca queda una publicación a medias: nada se commitea al repo
+    y lo único que publica es el job deploy, con actions/deploy-pages y el
+    artefacto completo de su propio build."""
+    with open(os.path.join(RAIZ, ".github", "workflows", "actualizar.yml"), encoding="utf-8") as fh:
+        wf = fh.read()
+    assert re.findall(r'- cron: "([^"]+)"', wf) == ["30 15 * * 5", "0 17 * * 5", "0 19 * * 5",
+                                                   "0 13 * * 6"]
+    assert "  workflow_dispatch: {}" in wf
+    assert 'concurrency:\n  group: "pages"\n  cancel-in-progress: true' in wf
+    assert not re.search(r"git (add|commit|push)", wf)
+    # un solo despliegue, en el job que espera el build, con el artefacto de Pages
+    assert wf.count("uses: actions/deploy-pages@") == 1
+    assert wf.count("uses: actions/upload-pages-artifact@") == 1
+    deploy = wf[wf.index("\n  deploy:"):wf.index("\n  aviso-libreria:")]
+    assert "needs: build" in deploy and "uses: actions/deploy-pages@" in deploy
+    assert "gh-pages" not in wf and "peaceiris" not in wf
+
+
 def test_workflow_publica_tarjetas_indices_y_prensa():
     with open(os.path.join(RAIZ, ".github", "workflows", "actualizar.yml"), encoding="utf-8") as fh:
         wf = fh.read()
