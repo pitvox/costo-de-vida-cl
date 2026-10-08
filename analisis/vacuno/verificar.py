@@ -412,8 +412,11 @@ def probar_robustez(prods, fsitio, fine_emp, fine, rehecho, crudas, sin_linea, b
          {k: reescalar(p, fsitio, empalmar(fine_emp, fine)) for k, p in prods.items()}),
     ]
     # con el IPC del mes siguiente todo pasa a pesos de ese mes: las semanas
-    # de ese mes quedan en su precio de la época y las anteriores suben x%
-    for x in (-0.5, 0.1, 0.3, 0.5, 1.0):
+    # de ese mes quedan en su precio de la época y las anteriores suben x%.
+    # Solo si esta semana es de un mes todavía sin IPC: si no, ese IPC mueve
+    # todas las semanas por igual y no cambia ninguna cifra
+    semana_mes = vacuno.max_semana(prods)[:7]
+    for x in ((-0.5, 0.1, 0.3, 0.5, 1.0) if semana_mes >= sig else ()):
         escenarios.append((
             "ipc_siguiente", f"IPC de {nombre_sig} de {x:g}%".replace(".", ","),
             {k: reescalar(p, fsitio, fsitio,

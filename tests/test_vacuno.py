@@ -59,9 +59,19 @@ def test_historia_cuenta_como_la_ficha_y_el_catalogo():
 def test_el_5_por_ciento_mas_caro_sin_redondear():
     # 95 de 100 semanas más baratas: entra
     assert vacuno.en_top(vacuno.historia(list(range(1, 96)) + [200] * 4 + [100], 99))
-    # 947 de 1000 (94,7%) redondea a 95 en la ficha, pero queda fuera
+    # 947 de 1000 (94,7%): fuera, y la ficha dice 94 (trunca)
     h = vacuno.historia(list(range(1, 948)) + [5000] * 52 + [1000], 999)
-    assert h["ficha"] == 95 and not vacuno.en_top(h)
+    assert h["ficha"] == 94 and not vacuno.en_top(h)
+
+
+def test_ficha_y_catalogo_truncan_como_el_sitio():
+    serie = list(range(1, 1001))
+    h = vacuno.historia(serie, 996)                      # 996 de 1000
+    assert (h["ficha"], h["catalogo"]) == (99, 99)       # antes, 100 y 100
+    h = vacuno.historia(serie, 999)                      # el más alto
+    assert (h["ficha"], h["catalogo"]) == (100, 100)
+    h = vacuno.historia(serie + [1000], 1000)            # igual al más alto
+    assert (h["ficha"], h["catalogo"]) == (99, 100)
 
 
 def test_maximo_de_10_anios_con_margen_de_1_por_ciento():
