@@ -18,9 +18,9 @@ pruebas, todas sobre datos_crudos/:
    empalme), frente al índice del INE. Antes de 2024, el empalme del INE y
    el IPC del INE encadenado por bases se apartan del del Banco Central en
    los años de cambio de base: eso va a la robustez.
-3. Robustez. A, B y C con esos otros deflactores, con el IPC de septiembre
-   que el INE publica el 8 de octubre (si fuera -0,5%, 0,1%, 0,3%, 0,5% o 1%), con
-   la serie cruda de ODEPA sin la limpieza del sitio y sin los supermercados
+3. Robustez. A, B y C con esos otros deflactores, con el IPC del mes de
+   esta semana si el INE todavía no lo publica (si fuera -0,5%, 0,1%, 0,3%,
+   0,5% o 1%), con la serie cruda de ODEPA sin la limpieza del sitio y sin los supermercados
    en línea (que ODEPA suma desde 2020), y B también con el promedio de cada
    mes en vez de la semana. Es informativa: dice qué tan firme es cada
    cifra, no si el sitio está bien.
@@ -412,8 +412,11 @@ def probar_robustez(prods, fsitio, fine_emp, fine, rehecho, crudas, sin_linea, b
          {k: reescalar(p, fsitio, empalmar(fine_emp, fine)) for k, p in prods.items()}),
     ]
     # con el IPC del mes siguiente todo pasa a pesos de ese mes: las semanas
-    # de ese mes quedan en su precio de la época y las anteriores suben x%
-    for x in (-0.5, 0.1, 0.3, 0.5, 1.0):
+    # de ese mes quedan en su precio de la época y las anteriores suben x%.
+    # Solo si esta semana es de un mes todavía sin IPC: si no, ese IPC mueve
+    # todas las semanas por igual y no cambia ninguna cifra
+    semana_mes = vacuno.max_semana(prods)[:7]
+    for x in ((-0.5, 0.1, 0.3, 0.5, 1.0) if semana_mes >= sig else ()):
         escenarios.append((
             "ipc_siguiente", f"IPC de {nombre_sig} de {x:g}%".replace(".", ","),
             {k: reescalar(p, fsitio, fsitio,

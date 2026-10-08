@@ -61,17 +61,19 @@ def historia(v: list, i: int) -> dict:
     """La semana i frente a todas las semanas con precio de la serie (ella
     incluida, como en build_site.py): cuántas fueron más baratas, cuántas
     más caras y cuántas hay. 'ficha' es el % de la frase de la ficha (más
-    caro que en el X% de las semanas, con el redondeo de Python) y
-    'catalogo', el percentil del catálogo y la portada (semanas con precio
-    menor o igual)."""
+    caro que en el X% de las semanas: pct_semanas de build_site.py, truncado
+    y 100 solo si supera a todas las demás) y 'catalogo', el percentil del
+    catálogo y la portada (semanas con precio menor o igual, truncado:
+    percentil_catalogo)."""
     vals = [x for x in v if x is not None]
     ult, n = v[i], len(vals)
     debajo = sum(1 for x in vals if x < ult)
     encima = sum(1 for x in vals if x > ult)
     igual = sum(1 for x in vals if x <= ult)
+    ficha = 100 if n > 1 and debajo == n - 1 else 100 * debajo // n
     return {"n": n, "debajo": debajo, "encima": encima,
             "pct_debajo": 100 * debajo / n, "pct_encima": 100 * encima / n,
-            "ficha": round(100 * debajo / n), "catalogo": round(100 * igual / n)}
+            "ficha": ficha, "catalogo": 100 * igual // n}
 
 
 def en_top(h: dict, top: float = TOP) -> bool:

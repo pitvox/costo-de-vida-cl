@@ -1,13 +1,13 @@
 {
  "fuente": "https://carestia.cl/indices.json",
- "sha256": "b73103d0639c1250244977d0698a462cc6207d3e6173f3b1884e6d6ac1f2e7f1",
- "generado": "2026-10-07",
- "ipc_mes": "2026-08",
+ "sha256": "3681d12f4534d77f51d6e28d1549ce7bff0d8fcc7a7c4ac43401b5ae6107eb83",
+ "generado": "2026-10-08",
+ "ipc_mes": "2026-09",
  "semana": "2026-09-28",
  "todas_en_la_semana": true,
  "cortes": 24,
  "A": {
-  "top5": 20,
+  "top5": 18,
   "de": 24,
   "cortes": [
    "Abastero",
@@ -15,14 +15,12 @@
    "Asiento",
    "Choclillo",
    "Estomaguillo (Tapabarriga)",
-   "Ganso",
    "Huachalomo",
    "Lomo Liso",
    "Lomo Vetado",
    "Osobuco",
    "Palanca",
    "Plateada",
-   "Posta Negra",
    "Posta Paleta",
    "Posta Rosada",
    "Punta de Ganso",
@@ -38,7 +36,7 @@
  },
  "C": {
   "precio": 12922,
-  "variacion_anual": 6.3,
+  "variacion_anual": 5.9,
   "semana": "2026-09-28",
   "semana_anio_antes": "2025-09-29",
   "anio_antes_propio": true
@@ -52,41 +50,40 @@
   "2026-02": 3,
   "2026-03": 2,
   "2026-06": 1,
-  "2026-08": 9,
-  "2026-09": 2
+  "2026-08": 10,
+  "2026-09": 1
  },
- "mismo_mes_10_de_10": 21,
+ "mismo_mes_10_de_10": 20,
  "contexto": {
   "top5_por_semana": [
    {
     "semana": "2026-09-07",
-    "top5": 20
+    "top5": 18
    },
    {
     "semana": "2026-09-14",
-    "top5": 11
+    "top5": 9
    },
    {
     "semana": "2026-09-21",
-    "top5": 22
+    "top5": 20
    },
    {
     "semana": "2026-09-28",
-    "top5": 20
+    "top5": 18
    }
   ],
   "bajaron_esta_semana": 17,
   "a_menos_de_1_de_su_maximo": [
    "Estomaguillo (Tapabarriga)",
    "Posta Rosada",
-   "Sobrecostilla",
-   "Asado carnicero"
+   "Sobrecostilla"
   ],
   "todos_con_una_semana_mas_cara_este_anio": true,
   "mismo_mes_entra_mas_justo": {
-   "corte": "Lomo Vetado",
-   "margen_pct": 0.033
+   "corte": "Malaya",
+   "margen_pct": 0.857
   },
-  "asado_de_tira_mes_sobre_mes_del_anio_anterior_pct": 1.4
+  "asado_de_tira_mes_sobre_mes_del_anio_anterior_pct": 1.0
  }
 }

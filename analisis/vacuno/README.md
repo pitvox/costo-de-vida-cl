@@ -20,8 +20,11 @@ python imprimir.py    # informe.pdf (necesita pandoc y Chromium)
 `datos_crudos/` no va al repositorio. `descargar.py` anota en
 `datos_crudos/descarga.json` la URL, la hora (UTC), el tamaño y el sha256 de
 cada archivo; las cifras de esta nota salen del `indices.json` de carestia.cl
-del 7 de octubre de 2026 (sha256 `b73103d0639c...`, en `resultados/resumen.json`).
-El sitio se actualiza cada viernes: para repetir estas cifras sin red, los
+del 8 de octubre de 2026, ya con el IPC de septiembre (sha256 `3681d12f4534...`,
+en `resultados/resumen.json`). Reemplaza a la nota del 7 de octubre, en pesos de
+agosto (sha256 `b73103d0639c...`).
+El sitio suma una semana cada viernes (este archivo es del jueves 8, cuando pasó
+al IPC de septiembre): para repetir estas cifras sin red, los
 tests usan `resultados/series_vacuno.json`, las series de ese archivo.
 
 ## Las reglas
@@ -33,6 +36,8 @@ ajustado por inflación, en pesos del último IPC):
   ficha. En su semana, ajustado y de la época son el mismo.
 - **Frente a toda su historia**: en qué parte de sus semanas el precio fue
   menor, como la frase de la ficha ("más caro que en el 96% de las semanas").
+  El sitio trunca ese porcentaje desde el 8 de octubre (99,6% es 99%; el 100
+  queda para el precio más alto de la serie), y la tabla del informe también.
 - **Mismo mes de los últimos 10 años**: `comparar_temporada` de `indices.py`,
   el precio de esta semana frente al promedio de septiembre de cada uno de los
   10 años anteriores.
@@ -52,10 +57,10 @@ ajustado por inflación, en pesos del último IPC):
 |---|---|
 | `descargar.py` | Baja la foto del sitio desplegado (indices.json, catálogo, portada, fichas y series de los cortes), los CSV de ODEPA 2008 a 2026, dos cuadros públicos del Banco Central y el IPC del INE |
 | `vacuno.py` | Las cifras de cada corte, con las reglas de arriba |
-| `verificar.py` | Rehace las series desde los CSV crudos de ODEPA con `indices.series_productos`; compara el factor de inflación del sitio con el empalme del Banco Central (variación a 12 meses, G073.IPC.V12.2023.M) y con el INE desde 2024; compara cada cifra con lo que muestra el sitio; y mide qué tan firmes son A, B y C con otros deflactores, con el IPC de septiembre, sin la limpieza del sitio, sin los supermercados en línea y con el promedio de cada mes |
+| `verificar.py` | Rehace las series desde los CSV crudos de ODEPA con `indices.series_productos`; compara el factor de inflación del sitio con el empalme del Banco Central (variación a 12 meses, G073.IPC.V12.2023.M) y con el INE desde 2024; compara cada cifra con lo que muestra el sitio; y mide qué tan firmes son A, B y C con otros deflactores, con el IPC del mes de esta semana si todavía no se publica, sin la limpieza del sitio, sin los supermercados en línea y con el promedio de cada mes |
 | `graficar.py` | El gráfico de los cuatro cortes principales desde 2016 |
 | `imprimir.py` | `informe.pdf`, el informe en una página carta, con la huella de `informe.md` en su título |
-| `resultados/series_vacuno.json` | Las 24 series usadas (del indices.json del 7 de octubre de 2026) |
+| `resultados/series_vacuno.json` | Las 24 series usadas (del indices.json del 8 de octubre de 2026) |
 | `resultados/cortes.csv` | Las cifras de cada corte |
 | `resultados/resumen.json` | Las tres cifras de la nota, las de contexto que cita el informe y el sha256 del indices.json |
 | `resultados/verificacion.csv` | Cada comparación, con su fuente y si coincide (las filas de robustez van con "ok" vacío) |

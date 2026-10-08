@@ -29,7 +29,7 @@ ESTILO = """
 @font-face { font-family: "Plex"; font-weight: 600 700;
              src: url("file://%(f)s/IBMPlexSans-SemiBold.ttf"); }
 @page { size: Letter; margin: 1.1cm 1.2cm; }
-body { font-family: "Plex", sans-serif; font-size: 8.2pt; line-height: 1.32; color: #111; }
+body { font-family: "Plex", sans-serif; font-size: 8.2pt; line-height: 1.3; color: #111; }
 h1 { font-size: 13.5pt; margin: 0 0 4pt; }
 h2 { font-size: 10pt; margin: 5pt 0 1pt; }
 p { margin: 2pt 0; }
@@ -37,7 +37,7 @@ ul { margin: 2pt 0; padding-left: 13pt; }
 li { margin: 1pt 0; }
 table { border-collapse: collapse; width: 100%%; font-size: 7.8pt; margin: 4pt 0; }
 th, td { border-bottom: 0.5pt solid #ccc; padding: 0.6pt 4pt; text-align: left; }
-th { font-weight: 600; }
+th { font-weight: 600; white-space: nowrap; }
 td { white-space: nowrap; }
 #lo-que-no-podemos-afirmar + ul { columns: 2; column-gap: 14pt; }
 #lo-que-no-podemos-afirmar + ul li { break-inside: avoid; }
