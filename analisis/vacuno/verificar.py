@@ -18,9 +18,9 @@ pruebas, todas sobre datos_crudos/:
    empalme), frente al índice del INE. Antes de 2024, el empalme del INE y
    el IPC del INE encadenado por bases se apartan del del Banco Central en
    los años de cambio de base: eso va a la robustez.
-3. Robustez. A, B y C con esos otros deflactores, con el IPC de septiembre
-   que el INE publica el 8 de octubre (si fuera -0,5%, 0,1%, 0,3%, 0,5% o 1%), con
-   la serie cruda de ODEPA sin la limpieza del sitio y sin los supermercados
+3. Robustez. A, B y C con esos otros deflactores, con el IPC del mes de
+   esta semana si el INE todavía no lo publica (si fuera -0,5%, 0,1%, 0,3%,
+   0,5% o 1%), con la serie cruda de ODEPA sin la limpieza del sitio y sin los supermercados
    en línea (que ODEPA suma desde 2020), y B también con el promedio de cada
    mes en vez de la semana. Es informativa: dice qué tan firme es cada
    cifra, no si el sitio está bien.

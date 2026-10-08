@@ -37,7 +37,7 @@ ul { margin: 2pt 0; padding-left: 13pt; }
 li { margin: 1pt 0; }
 table { border-collapse: collapse; width: 100%%; font-size: 7.8pt; margin: 4pt 0; }
 th, td { border-bottom: 0.5pt solid #ccc; padding: 0.6pt 4pt; text-align: left; }
-th { font-weight: 600; }
+th { font-weight: 600; white-space: nowrap; }
 td { white-space: nowrap; }
 #lo-que-no-podemos-afirmar + ul { columns: 2; column-gap: 14pt; }
 #lo-que-no-podemos-afirmar + ul li { break-inside: avoid; }
