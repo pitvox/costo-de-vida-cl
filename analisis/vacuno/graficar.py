@@ -31,9 +31,13 @@ DESDE = datetime.date(2016, 1, 1)
 CORTES = [("lomo_vetado", "Lomo vetado"), ("asado_de_tira", "Asado de tira"),
           ("posta_negra", "Posta negra"), ("asado_carnicero", "Asado carnicero")]
 # paleta validada (dataviz, scripts/validate_palette.js en modo claro: pasa;
-# el contraste bajo 3:1 de los dos últimos se cubre con etiquetas directas)
+# el contraste bajo 3:1 de los dos últimos se cubre con etiquetas directas).
+# El lomo vetado va en el magenta de Comparar (--cmp2 del sitio): la marca no
+# usa azules. Queda a 14 o más (OKLab x100) de cada uno de los otros tres con
+# visión normal y con protanopía, deuteranopía y tritanopía simuladas, y a
+# 4,4:1 de la superficie
 SUPERFICIE, TEXTO, TEXTO_2, MUTED, GRILLA = "#fcfcfb", "#0b0b0b", "#52514e", "#898781", "#e1e0d9"
-SERIES = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100"]
+SERIES = ["#b04fb5", "#eb6834", "#1baf7a", "#eda100"]
 LADO = 1080                                   # pixeles
 TEXTOS = []                                   # todo el texto del gráfico (lo revisa el test)
 
