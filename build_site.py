@@ -4828,6 +4828,18 @@ def franja_comparar(sugerencias: list) -> str:
             f'    </section>')
 
 
+def pct_semanas(k: int, n: int) -> int:
+    """El X de "más caro (o más barato) que en el X% de las semanas" de la
+    ficha: k de sus n semanas con precio (esta incluida) fueron más baratas
+    (o más caras) que esta. Truncado hacia abajo, en enteros: 99,6% es 99%,
+    así el 100% queda solo para la semana más cara (o más barata) de toda la
+    serie, la que supera a todas las demás (k = n - 1). Con una sola semana
+    no hay con qué comparar: 0."""
+    if n > 1 and k == n - 1:
+        return 100
+    return 100 * k // n
+
+
 def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
                     semana: datetime.date = None, og: str = None,
                     sugerencias: list = ()) -> str:
@@ -4858,9 +4870,10 @@ def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
     precio = fmt_clp(ult)
 
     # percentil sobre la serie real completa: en qué fracción de las semanas
-    # el precio fue menor (más caro) o mayor (más barato) que el de hoy
-    pct_caro = round(100 * sum(1 for v in vals if v < ult) / n)
-    pct_barato = round(100 * sum(1 for v in vals if v > ult) / n)
+    # el precio fue menor (más caro) o mayor (más barato) que el de hoy,
+    # truncado hacia abajo (pct_semanas)
+    pct_caro = pct_semanas(sum(1 for v in vals if v < ult), n)
+    pct_barato = pct_semanas(sum(1 for v in vals if v > ult), n)
     if antiguo:
         cuando, esta = "En esa semana", c["estaba"]
     else:

@@ -13,6 +13,7 @@ la frase contra toda la historia con menos de 5 años), las tarjetas de la
 portada, /graficos.html, las páginas de los índices, las fichas y
 resumen.json."""
 import datetime
+import glob
 import json
 import math
 import os
@@ -463,6 +464,52 @@ def test_nota_de_las_dos_semanas_en_graficos(sitio):
     assert '<div class="ovs onota" id="onota"></div>' in g
     assert "document.getElementById('onota').textContent = d.nota || '';" in g
     assert ".onota:empty { display:none; }" in g
+
+
+def _pct_semanas():
+    """pct_semanas de build_site.py, sin correr el build."""
+    import ast
+    with open(os.path.join(RAIZ, "build_site.py"), encoding="utf-8") as fh:
+        arbol = ast.parse(fh.read())
+    piezas = [n for n in arbol.body if isinstance(n, ast.FunctionDef) and n.name == "pct_semanas"]
+    ns = {}
+    exec(compile(ast.Module(body=piezas, type_ignores=[]), "build_site.py", "exec"), ns)
+    return ns["pct_semanas"]
+
+
+def test_pct_semanas_trunca_y_deja_el_100_para_el_maximo():
+    pct = _pct_semanas()
+    # 573 de 575 semanas más baratas (99,65%): 99, no 100
+    assert pct(573, 575) == 99
+    # 94,6% es 94 (antes se redondeaba a 95)
+    assert pct(946, 1000) == 94 and pct(950, 1000) == 95
+    # la semana más cara de la serie: más que todas las demás
+    assert pct(574, 575) == 100 and pct(1, 2) == 100
+    # empatada con otra semana en el máximo ya no es "más que todas"
+    assert pct(573, 575) < 100
+    # una sola semana: no hay con qué comparar
+    assert pct(0, 1) == 0 and pct(0, 575) == 0
+
+
+def test_fichas_porcentaje_truncado_hacia_abajo(sitio):
+    # cada ficha, contra su propia serie: el % de la frase de toda la
+    # historia es el de las semanas más baratas (o más caras), truncado, y
+    # 100 solo si esta semana supera a todas las demás
+    d, _ = sitio
+    revisadas = 0
+    for ruta in glob.glob(os.path.join(d, "productos", "*.html")):
+        html_ficha = open(ruta, encoding="utf-8").read()
+        m = re.search(r"más (car|barat)\w+ que en el (\d+)% de las semanas desde", html_ficha)
+        if not m:
+            continue
+        v = json.loads(re.search(r"const V = (\[.*?\]);", html_ficha).group(1))
+        vals = [x for x in v if x is not None]
+        ult, n = vals[-1], len(vals)
+        k = sum(1 for x in vals if (x < ult if m.group(1) == "car" else x > ult))
+        esperado = 100 if (n > 1 and k == n - 1) else 100 * k // n
+        assert int(m.group(2)) == esperado, os.path.basename(ruta)
+        revisadas += 1
+    assert revisadas >= 5
 
 
 def _nota_indice():
