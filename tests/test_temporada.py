@@ -491,6 +491,92 @@ def test_pct_semanas_trunca_y_deja_el_100_para_el_maximo():
     assert pct(0, 1) == 0 and pct(0, 575) == 0
 
 
+def _funciones(*nombres):
+    """Funciones puras de build_site.py, sin correr el build."""
+    import ast
+    with open(os.path.join(RAIZ, "build_site.py"), encoding="utf-8") as fh:
+        arbol = ast.parse(fh.read())
+    piezas = [n for n in arbol.body if isinstance(n, ast.FunctionDef) and n.name in nombres]
+    ns = {}
+    exec(compile(ast.Module(body=piezas, type_ignores=[]), "build_site.py", "exec"), ns)
+    return [ns[n] for n in nombres]
+
+
+def test_percentil_catalogo_trunca_y_deja_el_100_para_el_maximo():
+    percentil, = _funciones("percentil_catalogo")
+    serie = list(range(1, 1001))                     # 1000 semanas, sin empates
+    assert percentil(serie, 996) == 99               # 99,6%: antes 100
+    assert percentil(serie, 946) == 94               # 94,6%: antes 95
+    assert percentil(serie, 1000) == 100             # el precio más alto
+    assert percentil(serie + [1000], 1000) == 100    # igual al más alto: también
+    assert percentil([5], 5) == 100
+
+
+def test_frase_historia_trunca_las_de_cada_10():
+    _, frase = _funciones("pct_semanas", "frase_historia")
+    serie = list(range(1, 1001))
+    # 99,6% más baratas: 9 de cada 10, no 10
+    assert frase(serie, 997, "2008") == ("Más caro que en 9 de cada 10 semanas desde 2008, "
+                                         "descontada la inflación.")
+    # 95%: antes redondeaba a 10
+    assert "en 9 de cada 10" in frase(serie, 951, "2008")
+    # la semana más cara de la serie: 10 de cada 10
+    assert "Más caro que en 10 de cada 10" in frase(serie, 1000, "2008")
+    # igual que la más cara ya no es "más cara que todas"
+    assert "en 9 de cada 10" in frase(serie + [1000], 1000, "2008")
+    # del lado barato, igual: 10 de cada 10 solo para la más barata
+    assert "Más barato que en 10 de cada 10" in frase(serie, 1, "2008")
+    assert "Más barata que en 9 de cada 10" in frase(serie, 4, "2008", "a")
+
+
+def test_portada_y_catalogo_percentil_truncado(sitio):
+    # el percentil del catálogo y de la portada, contra la serie de cada
+    # producto: truncado, y 100 solo si su precio es el más alto
+    d, _ = sitio
+    cat = json.load(open(os.path.join(d, "datos", "catalogo.json"), encoding="utf-8"))
+    portada = _leer(d, "index.html")
+    revisados = 0
+    for f in cat["productos"]:
+        v = json.load(open(os.path.join(d, "datos", "productos", f"{f['slug']}.json"),
+                           encoding="utf-8"))["v"]
+        vals = [x for x in v if x is not None]
+        ult = vals[-1]
+        esperado = 100 * sum(1 for x in vals if x <= ult) // len(vals)
+        assert f["percentil"] == esperado, f["slug"]
+        assert (f["percentil"] == 100) == (ult == max(vals)), f["slug"]
+        fila = re.search(rf'<a class="fila" href="/productos/{re.escape(f["slug"])}\.html"[^>]*>',
+                         portada)
+        if fila:
+            assert f'data-c="{esperado}"' in fila.group(0), f["slug"]
+            revisados += 1
+    # la tabla de la portada lleva solo los que tienen precio reciente
+    assert revisados >= 3 and len(cat["productos"]) >= 7
+
+
+def test_tarjetas_y_frase_de_cada_10_truncadas(sitio):
+    # sin temporada (kiwi, con 3 años), la tarjeta og lleva la frase de cada
+    # 10 semanas: truncada como la de la ficha
+    d, _ = sitio
+    kiwi = _leer(d, "productos/kiwi.html")
+    v = json.loads(re.search(r"const V = (\[.*?\]);", kiwi).group(1))
+    vals = [x for x in v if x is not None]
+    ult, n = vals[-1], len(vals)
+    pct, = _funciones("pct_semanas")
+    barato = pct(sum(1 for x in vals if x > ult), n)
+    alt = re.search(r'<meta property="og:image:alt" content="([^"]*)"', kiwi).group(1)
+    assert f"Más barato que en {barato // 10} de cada 10 semanas desde 2024" in alt
+
+
+def test_canasta_trunca_sus_percentiles(sitio):
+    d, _ = sitio
+    g = _leer(d, "graficos.html")
+    assert "const pct = Math.floor(100 * vals.filter(v => v <= ult).length / n);" in g
+    assert "const pca = Math.floor(100 * comp.filter(v => v < ult).length / nc);" in g
+    assert "const pba = Math.floor(100 * comp.filter(v => v > ult).length / nc);" in g
+    assert "'más barata que el ' + pba + '%'" in g
+    assert "100 - pca" not in g and "Math.round(100 *" not in g
+
+
 def test_fichas_porcentaje_truncado_hacia_abajo(sitio):
     # cada ficha, contra su propia serie: el % de la frase de toda la
     # historia es el de las semanas más baratas (o más caras), truncado, y
