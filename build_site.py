@@ -1511,7 +1511,9 @@ __JS_CAPTURA__
       const vals = r.serie.map(p => p.value);
       const ult = vals[vals.length - 1], n = vals.length;
       costo.textContent = fmt(ult);
-      const pct = Math.round(100 * vals.filter(v => v <= ult).length / n);
+      // truncados, como en las fichas y la portada: el 100 queda para el
+      // precio más alto (o, en la temporada, más que todas las comparables)
+      const pct = Math.floor(100 * vals.filter(v => v <= ult).length / n);
       const prom = vals.reduce((a, b) => a + b, 0) / n;
       const vsp = Math.round((ult / prom - 1) * 100);
       stats.textContent = 'percentil ' + pct + ' de ' + n +
@@ -1534,9 +1536,10 @@ __JS_CAPTURA__
         const nc = comp.length;
         const ord = comp.slice().sort((a, b) => a - b);
         const med = (ord[(nc - 1) >> 1] + ord[nc >> 1]) / 2;
-        const pca = Math.round(100 * comp.filter(v => v < ult).length / nc);
+        const pca = Math.floor(100 * comp.filter(v => v < ult).length / nc);
+        const pba = Math.floor(100 * comp.filter(v => v > ult).length / nc);
         temporada.textContent = 'en esta época del año: ' + (ult < med ?
-          'más barata que el ' + (100 - pca) + '%' :
+          'más barata que el ' + pba + '%' :
           'más cara que el ' + pca + '%') +
           ' de las semanas comparables (' + nc + ' desde ' + desde + ')';
       }
@@ -3483,18 +3486,39 @@ def numero_variacion(x: float, txt: str) -> str:
     return f'<span class="{"v-sube" if x > 0 else "v-baja"}">{num}</span>'
 
 
+def pct_semanas(k: int, n: int) -> int:
+    """El X de "más caro (o más barato) que en el X% de las semanas" de la
+    ficha: k de sus n semanas con precio (esta incluida) fueron más baratas
+    (o más caras) que esta. Truncado hacia abajo, en enteros: 99,6% es 99%,
+    así el 100% queda solo para la semana más cara (o más barata) de toda la
+    serie, la que supera a todas las demás (k = n - 1). Con una sola semana
+    no hay con qué comparar: 0."""
+    if n > 1 and k == n - 1:
+        return 100
+    return 100 * k // n
+
+
+def percentil_catalogo(vals: list, ult: float) -> int:
+    """El percentil de la portada, /productos/ y datos/catalogo.json: qué
+    parte de las semanas con precio (esta incluida) tuvo un precio menor o
+    igual al de esta. Truncado hacia abajo, en enteros, como pct_semanas: el
+    100 queda solo para el precio más alto de la serie."""
+    return 100 * sum(1 for x in vals if x <= ult) // len(vals)
+
+
 def frase_historia(vals: list, ult: float, anio: str, o: str = "o") -> str:
     """La frase contra toda la historia: en cuántas de cada 10 semanas de su
     historia (ajustada por inflación) el precio fue menor ("Más caro que en 8
     de cada 10 semanas desde 2008") o mayor ("Más barato"), con el mismo
-    criterio que la línea del percentil de la ficha. Es la que queda cuando
-    no hay veredicto por temporada (menos de 5 años del mes). 'o' es la
-    terminación del adjetivo (o, a, os, as)."""
+    criterio que la línea del percentil de la ficha (pct_semanas), truncado:
+    "10 de cada 10" solo si esta semana supera a todas las demás (o queda
+    bajo todas). Es la que queda cuando no hay veredicto por temporada (menos
+    de 5 años del mes). 'o' es la terminación del adjetivo (o, a, os, as)."""
     n = len(vals)
-    caro = round(100 * sum(1 for v in vals if v < ult) / n)
-    barato = round(100 * sum(1 for v in vals if v > ult) / n)
+    caro = pct_semanas(sum(1 for v in vals if v < ult), n)
+    barato = pct_semanas(sum(1 for v in vals if v > ult), n)
     adj, pct = ("car" + o, caro) if caro >= barato else ("barat" + o, barato)
-    k = int(pct / 10 + 0.5)
+    k = pct // 10
     if k == 0:
         return f"Igual que en casi todas las semanas desde {anio}, descontada la inflación."
     return f"Más {adj} que en {k} de cada 10 semanas desde {anio}, descontada la inflación."
@@ -3936,7 +3960,8 @@ def generar_catalogo(prods: dict, slugs: dict) -> dict:
     mostrar). Variaciones ajustadas por inflación contra 1, 13 y 52 semanas antes
     (null si esa semana no tiene dato) y contra el promedio de las 4 semanas
     anteriores (variacion_promedio); percentil como el de los índices
-    (semanas con precio menor o igual al último); las últimas 52 semanas del
+    (semanas con precio menor o igual al último), pero truncado
+    (percentil_catalogo); las últimas 52 semanas del
     calendario, con null donde no hubo precio."""
     filas = []
     for clave, p in prods.items():
@@ -3967,7 +3992,7 @@ def generar_catalogo(prods: dict, slugs: dict) -> dict:
             "variacion_13s_pct": variacion(13),
             "variacion_52s_pct": variacion(52),
             "variacion_prom4s_pct": variacion_promedio(v, dato_propio(p), i),
-            "percentil": round(100 * sum(1 for x in vals if x <= ult) / len(vals)),
+            "percentil": percentil_catalogo(vals, ult),
             "ultimas_52": [None if x is None else int(round(x))
                            for x in v[max(0, i - 51):i + 1]],
         }))
@@ -4826,18 +4851,6 @@ def franja_comparar(sugerencias: list) -> str:
             f'      <p class="cmp-frase" id="cmp-frase" hidden></p>\n'
             f'      <p class="cmp-sin" id="cmp-sin" hidden></p>\n'
             f'    </section>')
-
-
-def pct_semanas(k: int, n: int) -> int:
-    """El X de "más caro (o más barato) que en el X% de las semanas" de la
-    ficha: k de sus n semanas con precio (esta incluida) fueron más baratas
-    (o más caras) que esta. Truncado hacia abajo, en enteros: 99,6% es 99%,
-    así el 100% queda solo para la semana más cara (o más barata) de toda la
-    serie, la que supera a todas las demás (k = n - 1). Con una sola semana
-    no hay con qué comparar: 0."""
-    if n > 1 and k == n - 1:
-        return 100
-    return 100 * k // n
 
 
 def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
