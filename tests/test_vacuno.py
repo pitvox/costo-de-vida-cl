@@ -252,17 +252,23 @@ def test_informe_dice_las_tres_cifras():
     assert "$12.922 el kilo, +5,9% sobre la semana del 29 de septiembre de 2025" in t
 
 
-def test_informe_dice_que_reemplaza_a_la_nota_del_7_de_octubre(guardado):
-    # la nota del 7 de octubre (pesos de agosto) daba 20 de 24 y +6,3%; los
-    # precios de la semana son los mismos, cambia solo el IPC
-    _, _, r = guardado
-    t = informe()
-    assert "en pesos de septiembre (IPC de 0,4%, publicado hoy por el INE)" in t
-    assert (f"Reemplaza a la del 7 de octubre, en pesos de agosto: con los mismos precios, "
-            f"los cortes en el 5% más caro bajan de 20 a {r['A']['top5']} "
-            f"(salen el ganso y la posta negra) y el asado de tira, de +6,3% a "
-            f"{vacuno.pct(r['C']['variacion_anual'])}.") in t
+def test_informe_dice_que_cambio_desde_la_nota_del_7_de_octubre(guardado):
+    # la nota del 7 de octubre (pesos de agosto) daba 20 en el 5% más caro,
+    # 21 sobre sus 10 septiembres, cuatro a menos de 1% de su máximo y +6,3%;
+    # los precios de la semana son los mismos, cambia solo el IPC
+    prods, _, r = guardado
+    t, c = informe(), r["contexto"]
+    assert "en pesos de septiembre (el IPC subió 0,4% en el mes, según publicó el INE el 8 de octubre)" in t
+    assert (f"**Frente a la nota del 7 de octubre**, en pesos de agosto y con los mismos precios: "
+            f"en el 5% más caro quedan {r['A']['top5']} y no 20 (salen el ganso y la posta negra); "
+            f"sobre sus 10 septiembres, {r['mismo_mes_10_de_10']} y no 21 (sale el lomo vetado); "
+            f"a menos de 1% de su máximo, tres y no cuatro (sale el asado carnicero), "
+            f"y el asado de tira, {vacuno.pct(r['C']['variacion_anual'])} y no +6,3%.") in t
     assert "Ganso" not in r["A"]["cortes"] and "Posta Negra" not in r["A"]["cortes"]
+    assert len(c["a_menos_de_1_de_su_maximo"]) == 3
+    assert "Asado carnicero" not in c["a_menos_de_1_de_su_maximo"]
+    lomo = vacuno.cifras(prods["lomo_vetado"])["temporada"]
+    assert lomo["debajo"] == 9                             # ya no supera a los 10 septiembres
     assert r["C"]["precio"] == 12922                       # el de la nota del 7 de octubre
 
 
@@ -280,7 +286,9 @@ def _miles(xs: list) -> str:
 def test_informe_cita_el_contexto_que_calcula_vacuno(guardado):
     _, _, r = guardado
     t, c = informe(), r["contexto"]
-    assert f"en septiembre el conteo fue {_miles([s['top5'] for s in c['top5_por_semana']])}" in t
+    assert len(c["top5_por_semana"]) == 4
+    assert (f"en las cuatro semanas de septiembre el conteo fue "
+            f"{_miles([s['top5'] for s in c['top5_por_semana']])}") in t
     assert f"{c['bajaron_esta_semana']} de los 24 bajaron esta semana" in t
     assert c["todos_con_una_semana_mas_cara_este_anio"]
     assert "Todos tuvieron una semana más cara en 2026" in t
@@ -289,7 +297,8 @@ def test_informe_cita_el_contexto_que_calcula_vacuno(guardado):
     assert ("tres quedan a menos de 1%: "
             + ", ".join(nombres[:-1]) + " y " + nombres[-1]) in t
     justo = c["mismo_mes_entra_mas_justo"]
-    assert f" {justo['corte'].lower()} entra por {justo['margen_pct']:.2f}%".replace(".", ",") in t
+    assert (f"la más justa, la {justo['corte'].lower()}, supera al más caro por "
+            f"{justo['margen_pct']:.2f}%").replace(".", ",") in t
     assert (f"septiembre sobre septiembre, "
             f"{vacuno.pct(c['asado_de_tira_mes_sobre_mes_del_anio_anterior_pct'])}") in t
 
@@ -318,17 +327,26 @@ def test_informe_cita_la_robustez_de_robustez_csv():
     assert bases == sin_linea
     assert (f"Con el IPC del INE por bases (el sitio usa el empalme del Banco Central) "
             f"o sin los supermercados en línea (desde 2020) son {bases}; "
-            f"con el empalme del INE, {a['empalme del INE desde diciembre de 2009']}.") in t
+            f"con el empalme del INE siguen siendo {a['empalme del INE desde diciembre de 2009']}.") in t
     # con el IPC de septiembre publicado no quedan escenarios de IPC por venir
     assert not [k for k in r if k.startswith("IPC de septiembre de")]
     assert "IPC de septiembre de" not in t
     # B: ninguno, ni con la regla del 1% ni sin ella, en todos los escenarios
     assert all(f["B_se_afirman"] == "ninguno" for f in r.values())
     assert all(f["B_maximo_sin_margen"] == "ninguno" for f in r.values())
-    assert "con otros deflactores y sin la limpieza del sitio" in t
-    sitio = r["las series del sitio (empalme BCCh, indices.py)"]["B_con_el_promedio_del_mes"]
-    m = re.match(r"Punta de Ganso \(\+([\d,]+)% sobre", sitio)
-    assert m and f"la punta de ganso queda {m.group(1)}% sobre su mes más caro" in t
+    assert "con el margen y sin él**, en esos escenarios y sin la limpieza del sitio" in t
+    # con el promedio del mes, solo la punta de ganso pasa la regla del 1% en
+    # cada escenario: el sitio y el rango de los demás
+    mensual = {}
+    for k, f in r.items():
+        m = re.fullmatch(r"Punta de Ganso \(\+([\d,]+)% sobre [a-z]+ de \d{4}\)",
+                         f["B_con_el_promedio_del_mes"])
+        assert m, k
+        mensual[k] = float(m.group(1).replace(",", "."))
+    sitio = mensual.pop("las series del sitio (empalme BCCh, indices.py)")
+    otros = [x for k, x in mensual.items() if k != "serie rehecha desde los CSV crudos de ODEPA"]
+    assert (f"solo la punta de ganso supera en más de 1% a su mes más caro de 10 años: "
+            f"{sitio:.1f}% (de {min(otros):.1f}% a {max(otros):.1f}% en los demás)").replace(".", ",") in t
 
 
 def test_informe_cita_los_porcentajes_al_borde(guardado):

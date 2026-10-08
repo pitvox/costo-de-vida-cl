@@ -29,7 +29,7 @@ ESTILO = """
 @font-face { font-family: "Plex"; font-weight: 600 700;
              src: url("file://%(f)s/IBMPlexSans-SemiBold.ttf"); }
 @page { size: Letter; margin: 1.1cm 1.2cm; }
-body { font-family: "Plex", sans-serif; font-size: 8.2pt; line-height: 1.32; color: #111; }
+body { font-family: "Plex", sans-serif; font-size: 8.2pt; line-height: 1.3; color: #111; }
 h1 { font-size: 13.5pt; margin: 0 0 4pt; }
 h2 { font-size: 10pt; margin: 5pt 0 1pt; }
 p { margin: 2pt 0; }

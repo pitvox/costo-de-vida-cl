@@ -1,13 +1,14 @@
 # Vacuno: cerca de sus máximos, sin superarlos esta semana
 
-Nota de datos para prensa; no se publica en el sitio. Cifras de carestia.cl del 8 de octubre de 2026 para los 24 cortes de vacuno que releva ODEPA en Santiago (Región Metropolitana): semana del 28 de septiembre de 2026, en pesos de septiembre (IPC de 0,4%, publicado hoy por el INE). Reemplaza a la del 7 de octubre, en pesos de agosto: con los mismos precios, los cortes en el 5% más caro bajan de 20 a 18 (salen el ganso y la posta negra) y el asado de tira, de +6,3% a +5,9%. Valen hasta el viernes 9, cuando el sitio suma la semana del 5 de octubre. Método y validación, en [README.md](https://github.com/pitvox/costo-de-vida-cl/blob/main/analisis/vacuno/README.md).
+Nota de datos para prensa; no se publica en el sitio. Cifras de carestia.cl del 8 de octubre de 2026 para los 24 cortes de vacuno que releva ODEPA en Santiago (Región Metropolitana): semana del 28 de septiembre de 2026, en pesos de septiembre (el IPC subió 0,4% en el mes, según publicó el INE el 8 de octubre). Valen hasta el viernes 9, cuando el sitio suma la semana del 5 de octubre. Método y validación, en [README.md](https://github.com/pitvox/costo-de-vida-cl/blob/main/analisis/vacuno/README.md).
 
 ## Lo principal
 
-- **18 de los 24 cortes están en el 5% más caro de su historia**: más caros que en al menos el 95% de sus semanas, descontada la inflación. Quedan fuera asado de tira (84%), filete (83%), malaya (91%), pollo ganso (92%), ganso y posta negra (94%).
+- **18 de los 24 cortes están en el 5% más caro de su historia**: más caros que en al menos el 95% de sus semanas, descontada la inflación. Quedan fuera filete (83%), asado de tira (84%), malaya (91%), pollo ganso (92%), ganso y posta negra (94%).
 - **Ninguno está esta semana en su precio real más alto en al menos 10 años**, ni con el margen de 1% ni sin él. Todos tuvieron una semana más cara en 2026; tres quedan a menos de 1%: estomaguillo, posta rosada y sobrecostilla.
-- **20 de los 24 están más caros que el promedio de cada uno de los últimos 10 septiembres** (el lomo vetado y el pollo ganso superan a 9; el asado de tira y el filete, a 8; la malaya entra por 0,86%).
+- **20 de los 24 están más caros que el promedio de cada uno de los últimos 10 septiembres** (el lomo vetado y el pollo ganso superan a 9; el asado de tira y el filete, a 8; la más justa, la malaya, supera al más caro por 0,86%).
 - **Asado de tira: $12.922 el kilo, +5,9% sobre la semana del 29 de septiembre de 2025**, descontada la inflación.
+- **Frente a la nota del 7 de octubre**, en pesos de agosto y con los mismos precios: en el 5% más caro quedan 18 y no 20 (salen el ganso y la posta negra); sobre sus 10 septiembres, 20 y no 21 (sale el lomo vetado); a menos de 1% de su máximo, tres y no cuatro (sale el asado carnicero), y el asado de tira, +5,9% y no +6,3%.
 
 | Corte | Precio por kilo | % de semanas más baratas | Septiembres más baratos (de 10) | A un año | Su máximo de 10 años |
 |---|---|---|---|---|---|
@@ -36,14 +37,14 @@ Nota de datos para prensa; no se publica en el sitio. Cifras de carestia.cl del 
 | Asado de tira | $12.922 | 84% (desde 2015) | 8 | +5,9% | $15.079 (30-03-2026) |
 | Filete | $18.570 | 83% (desde 2012) | 8 | -0,2% | $20.485 (17-01-2022) |
 
-Como en la ficha (precio, porcentaje, septiembres, contra el promedio de cada uno) y en la portada (precio, percentil, a un año), que desde el 8 de octubre truncan el porcentaje: el 100 queda para el precio más alto de la serie. El máximo sale de las series del sitio (lunes de su semana).
+Como en la ficha y la portada, que desde el 8 de octubre redondean el porcentaje hacia abajo (99,6% se ve como 99%) y dejan el 100% solo para el precio más alto de la serie. El máximo sale de las series del sitio (lunes de su semana).
 
 ## Qué tan firmes son
 
-- **Validadas** contra carestia.cl de hoy y los CSV crudos de ODEPA: 351 comparaciones, todas coinciden.
-- **El 18 de 24 es frágil.** Asiento (95,1%), palanca (95,4%), plateada (95,4%) y lomo vetado (95,6%) están en el borde; en septiembre el conteo fue 18, 9, 20 y 18. Con el IPC del INE por bases (el sitio usa el empalme del Banco Central) o sin los supermercados en línea (desde 2020) son 17; con el empalme del INE, 18.
-- **El +5,9% del asado de tira depende de qué locales informaron** (5 promedios de ODEPA por sector y tipo de local). Con las mismas 4 carnicerías es +2,5%, y septiembre sobre septiembre, +1,0%. Su máximo de marzo lo empujaron dos supermercados.
-- **"Ningún máximo" vale semana a semana y con la regla del 1%**, con otros deflactores y sin la limpieza del sitio. Con el promedio de septiembre, que el sitio no muestra, la punta de ganso queda 2,0% sobre su mes más caro de 10 años.
+- **Validadas** contra carestia.cl del 8 de octubre y los CSV crudos de ODEPA: 351 comparaciones, todas coinciden.
+- **El 18 de 24 es frágil.** Asiento (95,1%), palanca (95,4%), plateada (95,4%) y lomo vetado (95,6%) están en el borde; en las cuatro semanas de septiembre el conteo fue 18, 9, 20 y 18. Con el IPC del INE por bases (el sitio usa el empalme del Banco Central) o sin los supermercados en línea (desde 2020) son 17; con el empalme del INE siguen siendo 18.
+- **El +5,9% del asado de tira depende de qué locales informaron** (5 promedios de ODEPA por sector y tipo de local). Con las mismas 4 carnicerías es +2,5%; con todos los locales, septiembre sobre septiembre, +1,0%. Su máximo de marzo lo empujaron dos supermercados.
+- **"Ningún máximo" vale semana a semana, con el margen y sin él**, en esos escenarios y sin la limpieza del sitio. Con el promedio del mes, que el sitio no muestra, solo la punta de ganso supera en más de 1% a su mes más caro de 10 años: 2,0% (de 1,4% a 2,4% en los demás).
 
 ## Lo que no podemos afirmar
 

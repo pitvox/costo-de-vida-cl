@@ -23,7 +23,8 @@ cada archivo; las cifras de esta nota salen del `indices.json` de carestia.cl
 del 8 de octubre de 2026, ya con el IPC de septiembre (sha256 `3681d12f4534...`,
 en `resultados/resumen.json`). Reemplaza a la nota del 7 de octubre, en pesos de
 agosto (sha256 `b73103d0639c...`).
-El sitio se actualiza cada viernes: para repetir estas cifras sin red, los
+El sitio suma una semana cada viernes (este archivo es del jueves 8, cuando pasó
+al IPC de septiembre): para repetir estas cifras sin red, los
 tests usan `resultados/series_vacuno.json`, las series de ese archivo.
 
 ## Las reglas
