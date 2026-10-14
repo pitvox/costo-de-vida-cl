@@ -438,7 +438,7 @@ __CSS_SITIO__
       <!-- un único span envuelve el texto: con flex, los nodos sueltos se
            vuelven flex items y innerText/copy-paste los separa con saltos
            de línea; así el wordmark es UN run inline: "CARESTÍA" -->
-      <a class="wordmark" href="https://carestia.cl/"><span>CAREST<span class="i">Í</span>A</span></a>
+      <a class="wordmark" href="https://carestia.cl/"><span>CAREST<span class="i"><span>Í</span></span>A</span></a>
       <div class="tagline">Índices del costo de vida en Chile</div>
     </div>
     <div class="semana">__SEMANA__</div>
@@ -2039,7 +2039,7 @@ __CINTA__
     <div class="brand">
       <!-- un único span envuelve el texto: innerText y copy-paste leen
            "CARESTÍA" en un solo run -->
-      <div class="wordmark"><span>CAREST<span class="i">Í</span>A</span></div>
+      <div class="wordmark"><span>CAREST<span class="i"><span>Í</span></span>A</span></div>
       <div class="tagline">Índices del costo de vida en Chile</div>
     </div>
     <div class="semana">__SEMANA__</div>
@@ -2262,12 +2262,60 @@ FUENTES = """<link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">"""
 
-# Favicon: la í del wordmark (tallo hueso, acento brasa) sobre el fondo.
+# Favicon: el símbolo (la I en hueso y la línea de precio que sube, en brasa)
+# sobre el fondo. El ícono de iOS (apple-touch-icon.png, 180 x 180, a sangre:
+# iOS redondea las esquinas) lo dibuja tarjetas.icono en cada build.
 ICONO = ("<link rel=\"icon\" href=\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' "
-         "viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230f0f0e'/%3E"
-         "%3Crect x='28.5' y='28' width='7' height='24' rx='2' fill='%23e4dacc'/%3E"
-         "%3Cpath d='M29.5 22L39 13.5' stroke='%23e8743b' stroke-width='7' "
-         "stroke-linecap='round' fill='none'/%3E%3C/svg%3E\">")
+         "viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f0f0e'/%3E"
+         "%3Crect x='26' y='30' width='12' height='25' rx='2' fill='%23e4dacc'/%3E"
+         "%3Cpolyline points='16,26 25,17 31,21 47,7' fill='none' stroke='%23e8743b' "
+         "stroke-width='8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\">\n"
+         "<link rel=\"apple-touch-icon\" href=\"/apple-touch-icon.png\">")
+
+# Wordmark: la Í de CARESTÍA lleva, en vez de la tilde, la línea de precio
+# que sube (en brasa). Es la misma en todas las páginas; cada una fija solo el
+# tamaño del wordmark. La forma de la línea es la de la marca (caja de 52 por
+# 30) con trazo 10 en vez de 7 para que se lea a 20 y 26px; el viewBox se
+# agranda a -1 -3 54 34 para que entren los extremos redondeados.
+MASCARA_LINEA = ("url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' "
+                 "viewBox='-1 -3 54 34'%3E%3Cpolyline points='4,26 18,12 28,19 48,2' "
+                 "fill='none' stroke='%23000' stroke-width='10' stroke-linecap='round' "
+                 "stroke-linejoin='round'/%3E%3C/svg%3E\")")
+CSS_MARCA = r"""  /* la Í de la marca: el texto del nodo sigue siendo la Í única (innerText
+     y copy-paste leen CARESTÍA). El clip-path del span interior recorta la
+     tilde del glifo y el ::after del envoltorio dibuja la línea: el color es
+     el token --ember y la forma va como máscara. Envoltorio y span son
+     inline-block con line-height normal y un margen negativo que los deja
+     dentro de la línea: el wordmark no cambia de alto ni se mueve (CLS).
+     Inline-block y no inline: en un span inline, Chrome no mueve el recorte
+     cuando llega la fuente web y la I queda fuera. El recorte y la línea se
+     miden desde la tapa de la I (1cap) sobre la línea base, que queda a
+     round(.292em, 1px) del borde de abajo: el descendente de Space Grotesk
+     y de su respaldo métrico, que el navegador redondea a px. Así el corte
+     cae entre la tapa y la tilde en cualquier tamaño, y la línea queda con
+     el aire que tenía la tilde sobre la I y cabe en los 22px de las fichas
+     (overflow:hidden). Sin round() ni cap, valen las medidas fijas en em */
+  .wordmark .i { position:relative; display:inline-block; line-height:normal;
+    margin:-.25em 0; }
+  .wordmark .i > span { display:inline-block; clip-path:inset(.265em 0 0 0); }
+  .wordmark .i::after { content:""; position:absolute; left:0; top:.12em;
+    width:.243em; height:.153em; pointer-events:none; background:var(--ember);
+    --linea:__MASCARA__;
+    -webkit-mask:var(--linea) 0 0/100% 100% no-repeat;
+    mask:var(--linea) 0 0/100% 100% no-repeat;
+    /* la línea es un fondo: sin esto no sale al imprimir */
+    -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  @supports (top:calc(round(1em, 1px) + 1cap)) {
+    .wordmark .i > span {
+      clip-path:inset(calc(100% - round(.292em, 1px) - 1cap - .029em) 0 0 0); }
+    .wordmark .i::after { top:auto; bottom:calc(round(.292em, 1px) + 1cap + .027em); }
+  }
+  /* temas de contraste: el fondo de la línea se forzaría al del lienzo y no
+     se vería; va en el color de sistema del texto, como las letras */
+  @media (forced-colors:active) {
+    .wordmark .i::after { forced-color-adjust:none; background:CanvasText; }
+    a.wordmark .i::after { background:LinkText; }
+  }""".replace("__MASCARA__", MASCARA_LINEA)
 
 # Los tokens de color y de familia viven SOLO aquí (cada página los recibe en
 # su :root); los gráficos y la captura PNG los leen con getComputedStyle.
@@ -2361,20 +2409,7 @@ CSS_CABECERA = r"""  /* ---- ticker ---- */
   .wordmark { font:700 clamp(20px,4vw,26px)/1.15 var(--display);
     letter-spacing:.06em; color:var(--bone); display:flex; align-items:baseline;
     height:1.15em; }
-  /* í-brasa: el texto real del nodo lleva la Í única (innerText, copy-paste
-     y lectores de pantalla leen CARESTÍA); el adorno es un ::after
-     decorativo que repinta la misma Í en brasa y el clip-path deja visible
-     solo el acento, tapando el de hueso que queda debajo (mismo glifo,
-     misma posición: solape exacto). Al cuerpo del header (20-26px) la
-     tilde va siempre plana, sin glow: a ese tamaño el halo es más grande
-     que el acento y lo vuelve una mancha. El 86% está calibrado al pixel
-     en Chromium a 20 y 26px: menos corta el tallo, más corta el acento.
-     El box del span no cambia (la altura la fija line-height, no el
-     glifo): el fix de CLS del wordmark queda intacto */
-  .wordmark .i { position:relative; display:inline-block; }
-  .wordmark .i::after { content:"Í"; content:"Í" / ""; position:absolute;
-    left:0; top:0; pointer-events:none;
-    color:var(--ember); clip-path:inset(0 0 86% 0); }
+__CSS_MARCA__
   /* line-height fijo en el texto del encabezado: su alto no cambia con la
      tipografía y el encuadre del lienzo (calc más abajo) sigue exacto */
   .tagline { font:400 13px/15.6px var(--sans); color:var(--ash); }
@@ -2382,7 +2417,7 @@ CSS_CABECERA = r"""  /* ---- ticker ---- */
   .semana span { color:var(--dim); }
   .semana .sin-nuevos { color:var(--bone); }
   a.wordmark, a.titem { text-decoration:none; }
-"""
+""".replace("__CSS_MARCA__", CSS_MARCA)
 
 CSS_SITIO = r"""
   /* ---- navegación del sitio (común a todas las páginas) ---- */
@@ -2551,12 +2586,7 @@ __CSS_BASE__
   .wordmark { font:700 20px/1.1 var(--display); letter-spacing:.06em;
     color:var(--bone); text-decoration:none; display:inline-flex;
     align-items:baseline; height:22px; overflow:hidden; }
-  /* í-brasa: misma construcción del index; el texto del nodo lleva la Í
-     única y el ::after decorativo repinta el acento en brasa (clip-path) */
-  .wordmark .i { position:relative; display:inline-block; }
-  .wordmark .i::after { content:"Í"; content:"Í" / ""; position:absolute;
-    left:0; top:0; pointer-events:none;
-    color:var(--ember); clip-path:inset(0 0 86% 0); }
+__CSS_MARCA__
   .tagline { font:400 12px/14.3px var(--sans); color:var(--ash); }
   /* el gráfico usa el ancho de la página, como en /graficos.html, y el texto
      se alinea con él (y con la marca y el pie) a la izquierda, en un ancho
@@ -2672,7 +2702,7 @@ __CSS_SITIO__
 
   <header>
     <!-- span único: un solo flex item para que innerText no parta el texto -->
-    <a class="wordmark" href="https://carestia.cl/"><span>CAREST<span class="i">Í</span>A</span></a>
+    <a class="wordmark" href="https://carestia.cl/"><span>CAREST<span class="i"><span>Í</span></span>A</span></a>
     <span class="tagline">Índices del costo de vida en Chile</span>
     __NAV__
   </header>
@@ -4979,6 +5009,7 @@ def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
         ("__ICONO__", ICONO),
         ("__FUENTES__", FUENTES),
         ("__CSS_BASE__", CSS_BASE),
+        ("__CSS_MARCA__", CSS_MARCA),
         ("__CSS_SITIO__", CSS_SITIO),
         ("__NAV__", nav_sitio("productos", exacto=False)),
         ("__PIE__", pie_sitio()),
@@ -6039,10 +6070,7 @@ __CSS_BASE__
   .wordmark { font:700 20px/1.1 var(--display); letter-spacing:.06em;
     color:var(--bone); text-decoration:none; display:inline-flex;
     align-items:baseline; height:22px; overflow:hidden; }
-  .wordmark .i { position:relative; display:inline-block; }
-  .wordmark .i::after { content:"Í"; content:"Í" / ""; position:absolute;
-    left:0; top:0; pointer-events:none;
-    color:var(--ember); clip-path:inset(0 0 86% 0); }
+__CSS_MARCA__
   .tagline { font:400 12px/14.3px var(--sans); color:var(--ash); }
   main { max-width:1280px; margin:0 auto;
     padding:clamp(20px,3vw,32px) clamp(16px,3vw,32px) clamp(28px,4vw,44px); }
@@ -6094,7 +6122,7 @@ __CSS_SITIO__
 
   <header>
     <!-- span único: un solo flex item para que innerText no parta el texto -->
-    <a class="wordmark" href="https://carestia.cl/"><span>CAREST<span class="i">Í</span>A</span></a>
+    <a class="wordmark" href="https://carestia.cl/"><span>CAREST<span class="i"><span>Í</span></span>A</span></a>
     <span class="tagline">Índices del costo de vida en Chile</span>
     __NAV__
   </header>
@@ -6385,6 +6413,7 @@ def generar_tradingview(app: dict, catalogo: dict) -> None:
         ("__ICONO__", ICONO),
         ("__FUENTES__", FUENTES),
         ("__CSS_BASE__", CSS_BASE),
+        ("__CSS_MARCA__", CSS_MARCA),
         ("__CSS_SITIO__", CSS_SITIO),
         ("__NAV__", nav_sitio()),
         ("__PIE__", pie_sitio()),
@@ -6431,10 +6460,7 @@ __CSS_BASE__
   .wordmark { font:700 20px/1.1 var(--display); letter-spacing:.06em;
     color:var(--bone); text-decoration:none; display:inline-flex;
     align-items:baseline; height:22px; overflow:hidden; }
-  .wordmark .i { position:relative; display:inline-block; }
-  .wordmark .i::after { content:"Í"; content:"Í" / ""; position:absolute;
-    left:0; top:0; pointer-events:none;
-    color:var(--ember); clip-path:inset(0 0 86% 0); }
+__CSS_MARCA__
   .tagline { font:400 12px/14.3px var(--sans); color:var(--ash); }
   /* el texto usa el mismo ancho y el mismo margen izquierdo que el pie (y
      que la marca): sin columna angosta centrada */
@@ -6539,7 +6565,7 @@ __CSS_SITIO__
 
   <header>
     <!-- span único: un solo flex item para que innerText no parta el texto -->
-    <a class="wordmark" href="https://carestia.cl/"><span>CAREST<span class="i">Í</span>A</span></a>
+    <a class="wordmark" href="https://carestia.cl/"><span>CAREST<span class="i"><span>Í</span></span>A</span></a>
     <span class="tagline">Índices del costo de vida en Chile</span>
     __NAV__
   </header>
@@ -6576,6 +6602,7 @@ def escribir_pagina(archivo: str, url: str, titulo: str, desc: str, cuerpo: str,
         ("__ICONO__", ICONO),
         ("__FUENTES__", FUENTES),
         ("__CSS_BASE__", CSS_BASE),
+        ("__CSS_MARCA__", CSS_MARCA),
         ("__CSS_SITIO__", CSS_SITIO),
         ("__NAV__", nav_sitio(actual, exacto)),
         ("__PIE__", pie_sitio(actual)),
@@ -7070,6 +7097,14 @@ def tarjeta_portada(ultima) -> str:
     return og_meta(og_url(ruta, datos), alt)
 
 
+def generar_marca() -> None:
+    """og.png, la tarjeta genérica, y apple-touch-icon.png, el ícono de iOS:
+    los dibuja tarjetas.py en cada build, con la misma marca que el resto."""
+    dibujar(tarjetas.generica, "og.png",
+            {"tagline": "Índices del costo de vida en Chile", "sitio": "carestía.cl"})
+    dibujar(tarjetas.icono, "apple-touch-icon.png", {})
+
+
 def generar_paginas_indices() -> list:
     """indices/{codigo}.html por cada índice. Devuelve las rutas (sitemap)."""
     rutas = []
@@ -7553,11 +7588,13 @@ generar_prensa(PAGINAS_INDICES)
 generar_sitemap(sorted(FICHAS), PAGINAS_INDICES)
 generar_resumen()
 generar_tradingview(APP, CATALOGO)
+generar_marca()
 
 print(f"Listo: index.html + graficos.html + robots.txt + sitemap.xml + resumen.json + "
       f"{len(FICHAS)} páginas en productos/ + productos/index.html + "
       f"{len(PAGINAS_INDICES)} páginas en indices/ + prensa.html + "
-      f"{len(FICHAS) + len(PAGINAS_INDICES) + 1} tarjetas en og/ + "
+      f"{len(FICHAS) + len(PAGINAS_INDICES) + 1} tarjetas en og/ + og.png + "
+      f"apple-touch-icon.png + "
       f"metodologia.html + {len(PAGINAS_TEXTO)} páginas institucionales + "
       f"datos/ ({len(DATA['indices'])} índices, "
       f"{len(DATA.get('productos', {}))} productos y catalogo.json)")
