@@ -2281,28 +2281,41 @@ MASCARA_LINEA = ("url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/
                  "viewBox='-1 -3 54 34'%3E%3Cpolyline points='4,26 18,12 28,19 48,2' "
                  "fill='none' stroke='%23000' stroke-width='10' stroke-linecap='round' "
                  "stroke-linejoin='round'/%3E%3C/svg%3E\")")
-CSS_MARCA = r"""  /* la Í de la marca: el texto real del nodo sigue siendo la Í única
-     (innerText, copy-paste y lectores de pantalla leen CARESTÍA). El
-     clip-path del span interior recorta la tilde del glifo y el ::after del
-     envoltorio dibuja la línea: el color es el token --ember y la forma va
-     como máscara. Envoltorio y span son inline-block con line-height
-     normal: sus cajas son el área de la fuente y no el line-height (que el
-     navegador redondea distinto en cada página), así que la tapa de la I
-     queda siempre a .3em del borde de arriba y la tilde termina en .24em;
-     el corte va entre medio. Inline-block y no inline: en un span inline,
-     Chrome no mueve el recorte cuando llega la fuente web y la I queda
-     fuera. El margen negativo deja la caja dentro de la línea: el wordmark
-     no cambia de alto ni se mueve (CLS). La línea queda donde iba la tilde,
-     sin tocar la I, y dentro del alto de 22px de las fichas
-     (overflow:hidden) */
+CSS_MARCA = r"""  /* la Í de la marca: el texto del nodo sigue siendo la Í única (innerText
+     y copy-paste leen CARESTÍA). El clip-path del span interior recorta la
+     tilde del glifo y el ::after del envoltorio dibuja la línea: el color es
+     el token --ember y la forma va como máscara. Envoltorio y span son
+     inline-block con line-height normal y un margen negativo que los deja
+     dentro de la línea: el wordmark no cambia de alto ni se mueve (CLS).
+     Inline-block y no inline: en un span inline, Chrome no mueve el recorte
+     cuando llega la fuente web y la I queda fuera. El recorte y la línea se
+     miden desde la tapa de la I (1cap) sobre la línea base, que queda a
+     round(.292em, 1px) del borde de abajo: el descendente de Space Grotesk
+     y de su respaldo métrico, que el navegador redondea a px. Así el corte
+     cae entre la tapa y la tilde en cualquier tamaño, y la línea queda con
+     el aire que tenía la tilde sobre la I y cabe en los 22px de las fichas
+     (overflow:hidden). Sin round() ni cap, valen las medidas fijas en em */
   .wordmark .i { position:relative; display:inline-block; line-height:normal;
     margin:-.25em 0; }
   .wordmark .i > span { display:inline-block; clip-path:inset(.265em 0 0 0); }
-  .wordmark .i::after { content:""; position:absolute; left:-.02em; top:.12em;
-    width:.27em; height:.17em; pointer-events:none; background:var(--ember);
+  .wordmark .i::after { content:""; position:absolute; left:0; top:.12em;
+    width:.243em; height:.153em; pointer-events:none; background:var(--ember);
     --linea:__MASCARA__;
     -webkit-mask:var(--linea) 0 0/100% 100% no-repeat;
-    mask:var(--linea) 0 0/100% 100% no-repeat; }""".replace("__MASCARA__", MASCARA_LINEA)
+    mask:var(--linea) 0 0/100% 100% no-repeat;
+    /* la línea es un fondo: sin esto no sale al imprimir */
+    -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  @supports (top:calc(round(1em, 1px) + 1cap)) {
+    .wordmark .i > span {
+      clip-path:inset(calc(100% - round(.292em, 1px) - 1cap - .029em) 0 0 0); }
+    .wordmark .i::after { top:auto; bottom:calc(round(.292em, 1px) + 1cap + .027em); }
+  }
+  /* temas de contraste: el fondo de la línea se forzaría al del lienzo y no
+     se vería; va en el color de sistema del texto, como las letras */
+  @media (forced-colors:active) {
+    .wordmark .i::after { forced-color-adjust:none; background:CanvasText; }
+    a.wordmark .i::after { background:LinkText; }
+  }""".replace("__MASCARA__", MASCARA_LINEA)
 
 # Los tokens de color y de familia viven SOLO aquí (cada página los recibe en
 # su :root); los gráficos y la captura PNG los leen con getComputedStyle.

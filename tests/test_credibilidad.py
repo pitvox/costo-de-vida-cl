@@ -347,6 +347,40 @@ def test_cada_ficha_indice_y_portada_tiene_su_tarjeta(sitio):
         _leer(sitio, "metodologia.html")
 
 
+def test_la_marca_y_los_iconos_en_todas_las_paginas(sitio):
+    # la Í con su envoltorio, la regla común de la línea y los dos íconos;
+    # ningún marcador de plantilla sin reemplazar
+    paginas = sorted(glob.glob(str(sitio / "*.html")) + glob.glob(str(sitio / "productos" / "*.html")) +
+                     glob.glob(str(sitio / "indices" / "*.html")))
+    assert len(paginas) > 20
+    for p in paginas:
+        h = _leer(sitio, p)
+        assert re.search(r"__[A-Z][A-Z_]*__", h) is None, p
+        assert h.count('CAREST<span class="i"><span>Í</span></span>A') == 1, p
+        for regla in [".wordmark .i > span { display:inline-block; clip-path:inset(.265em 0 0 0); }",
+                      "-webkit-print-color-adjust:exact; print-color-adjust:exact;",
+                      ".wordmark .i::after { forced-color-adjust:none; background:CanvasText; }"]:
+            assert regla in h, (p, regla)
+        assert "points='16,26 25,17 31,21 47,7'" in h, p
+        assert '<link rel="apple-touch-icon" href="/apple-touch-icon.png">' in h, p
+
+
+def test_og_generica_e_icono_de_ios(sitio):
+    def a_px(x, y):   # del viewBox -3.5 -5.5 70 70 a los 180 px
+        return round((x + 3.5) * 180 / 70), round((y + 5.5) * 180 / 70)
+
+    with Image.open(sitio / "og.png") as im:
+        assert im.size == (1200, 630) and im.format == "PNG"
+    with Image.open(sitio / "apple-touch-icon.png") as im:
+        assert im.size == (180, 180) and im.format == "PNG"
+        px = im.convert("RGB").load()
+        # a sangre (iOS redondea las esquinas): el fondo llega al borde
+        assert px[0, 0] == px[179, 179] == (0x0f, 0x0f, 0x0e)
+        # el centro de la barra en hueso y un punto de la línea en brasa
+        assert px[a_px(32, 42)] == (0xe4, 0xda, 0xcc)
+        assert px[a_px(25, 17)] == (0xe8, 0x74, 0x3b)
+
+
 def test_la_frase_y_el_alt_de_las_tarjetas(sitio):
     asado = _leer(sitio, "indices/asado.html")
     # menos de 5 años de cada mes: la frase contra toda la historia
@@ -431,7 +465,9 @@ def test_workflow_publica_tarjetas_indices_y_prensa():
     with open(os.path.join(RAIZ, ".github", "workflows", "actualizar.yml"), encoding="utf-8") as fh:
         wf = fh.read()
     for linea in ["cp prensa.html public/prensa.html", "cp -r indices public/indices",
-                  "cp -r og public/og", "pip install pandas numpy requests pillow"]:
+                  "cp -r og public/og", "cp og.png public/og.png",
+                  "cp apple-touch-icon.png public/apple-touch-icon.png",
+                  "pip install pandas numpy requests pillow"]:
         assert linea in wf, linea
     with open(os.path.join(RAIZ, ".github", "workflows", "tests.yml"), encoding="utf-8") as fh:
         assert "pillow" in fh.read()
