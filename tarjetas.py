@@ -2,7 +2,8 @@
 tarjetas.py - las og:image de 1200 x 630 que muestran WhatsApp y las redes
 =========================================================================
 build_site.py las genera en cada build: una por ficha de producto, una por
-índice y una para la portada, en og/. Cada tarjeta lleva el nombre, el precio
+índice y una para la portada, en og/, más la genérica (og.png) y el ícono de
+iOS (apple-touch-icon.png). Cada tarjeta lleva el nombre, el precio
 de la semana, la frase de su veredicto ("Más caro que en 7 de los últimos 10
 septiembres, aun descontando la inflación", o con menos de 5 años de ese mes
 "Más caro que en 8 de cada 10 semanas desde 2008, descontada la inflación"),
@@ -15,12 +16,23 @@ Grotesk, licencia SIL Open Font License, ver fuentes/OFL-*.txt).
 
 Requiere Pillow.
 """
+import math
 import os
 
 from PIL import Image, ImageDraw, ImageFont
 
 ANCHO, ALTO = 1200, 630
 MARGEN = 64
+# La marca: la Í de CARESTÍA lleva, en vez de la tilde, una línea de precio
+# que sube. Sus puntos van en una caja de 52 por 30 y su trazo es 7. Respecto
+# de la I, en em del wordmark: la caja mide 0.46 por 0.27 y su esquina de
+# arriba a la izquierda va 0.07 a la izquierda de la I y 0.21 sobre el tope de
+# su caja (la de line-height 1).
+LINEA = ((4, 26), (18, 12), (28, 19), (48, 2))
+LINEA_CAJA = (52, 30)
+LINEA_TRAZO = 7
+# dibujos a 8x que después se reducen: bordes suaves en el trazo y la barra
+SUPER = 8
 CARPETA_FUENTES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fuentes")
 ARCHIVOS = {
     "display": "SpaceGrotesk-Bold.ttf",
@@ -42,6 +54,24 @@ def fuente(familia: str, tam: int) -> ImageFont.FreeTypeFont:
 def _rgb(hexa: str) -> tuple:
     hexa = hexa.lstrip("#")
     return tuple(int(hexa[i:i + 2], 16) for i in (0, 2, 4))
+
+
+def _carpeta(ruta: str) -> None:
+    """Crea la carpeta de 'ruta' si hace falta (og.png va en la raíz)."""
+    if os.path.dirname(ruta):
+        os.makedirs(os.path.dirname(ruta), exist_ok=True)
+
+
+def trazo(d: ImageDraw.ImageDraw, pts, ancho: float, color) -> None:
+    """Polilínea con extremos y uniones redondeados (los round de SVG): cada
+    tramo es un trazo recto y cada punto, un círculo del ancho del trazo. La
+    caja de ellipse incluye su último píxel: va uno menos para que el círculo
+    mida lo mismo que el trazo."""
+    r = ancho / 2
+    for a, b in zip(pts, pts[1:]):
+        d.line([a, b], fill=color, width=round(ancho))
+    for x, y in pts:
+        d.ellipse([x - r, y - r, x + r - 1, y + r - 1], fill=color)
 
 
 class Lienzo:
@@ -95,21 +125,39 @@ class Lienzo:
         return f, ls[:max_lineas]
 
     # ---- piezas comunes ----
-    def marca(self, tam: int = 34, y: int = 92):
-        """El wordmark CARESTÍA en hueso, con el acento de la Í en brasa
-        (como el ::after del sitio: la misma Í repintada y recortada a la
-        altura de las mayúsculas)."""
+    def linea(self, x: float, y: float, escala: float, color: str = "ember"):
+        """La línea de la marca con la esquina de arriba a la izquierda de su
+        caja en (x, y) y 'escala' píxeles por unidad. Se dibuja a 8x en una
+        capa del tamaño de la línea y se reduce: bordes suaves."""
+        r = LINEA_TRAZO * escala / 2
+        pts = [(x + px * escala, y + py * escala) for px, py in LINEA]
+        izq = math.floor(min(p[0] for p in pts) - r) - 1
+        arr = math.floor(min(p[1] for p in pts) - r) - 1
+        ancho = math.ceil(max(p[0] for p in pts) + r) + 1 - izq
+        alto = math.ceil(max(p[1] for p in pts) + r) + 1 - arr
+        capa = Image.new("L", (ancho * SUPER, alto * SUPER), 0)
+        trazo(ImageDraw.Draw(capa), [((px - izq) * SUPER, (py - arr) * SUPER) for px, py in pts],
+              LINEA_TRAZO * escala * SUPER, 255)
+        capa = capa.reduce(SUPER)
+        self.img.paste(Image.new("RGB", capa.size, self.tok[color]), (izq, arr), capa)
+
+    def marca(self, tam: int = 34, y: int = 92, x: float = MARGEN):
+        """El wordmark CARESTÍA en hueso, con la línea de precio que sube en
+        brasa en vez de la tilde de la Í (como el sitio y el favicon): la I va
+        sin tilde y la línea, en su lugar (ver LINEA)."""
         f = fuente("display", tam)
         esp = tam * 0.06
-        x = MARGEN
-        for c in "CARESTÍA":
+        for c in "CARESTIA":
             self.d.text((x, y), c, font=f, fill=self.tok["bone"], anchor="ls")
-            if c == "Í":
-                capa = Image.new("L", self.img.size, 0)
-                ImageDraw.Draw(capa).text((x, y), c, font=f, fill=255, anchor="ls")
-                tope = y + f.getbbox("I", anchor="ls")[1]
-                capa.paste(0, (0, int(tope), ANCHO, ALTO))
-                self.img.paste(Image.new("RGB", self.img.size, self.tok["ember"]), (0, 0), capa)
+            if c == "I":
+                # tope de la caja de la I con line-height 1: el medio de la
+                # fuente (ascendente más descendente) queda al medio de la caja
+                asc, desc = f.getmetrics()
+                tope = y - (asc - desc + tam) / 2
+                # la caja de 0.46 por 0.27 em con la línea centrada adentro
+                escala = 0.46 * tam / LINEA_CAJA[0]
+                self.linea(x - 0.07 * tam,
+                           tope - 0.21 * tam + (0.27 * tam - LINEA_CAJA[1] * escala) / 2, escala)
             x += self.d.textlength(c, font=f) + esp
 
     def fecha(self, texto: str, y: int = 92):
@@ -135,7 +183,7 @@ class Lienzo:
         return w
 
     def guardar(self, ruta: str):
-        os.makedirs(os.path.dirname(ruta), exist_ok=True)
+        _carpeta(ruta)
         # compresión 6 sin optimize: la mitad del tiempo y casi el mismo peso
         self.img.save(ruta, "PNG", compress_level=6)
 
@@ -216,3 +264,33 @@ def portada(ruta: str, tok: dict, *, indices: list, fecha: str,
             c.texto((xi, y0 + 142 + k * int(f_f.size * 1.3)), linea, f_f, "bone")
     c.pie(pie_txt, sitio)
     c.guardar(ruta)
+
+
+def generica(ruta: str, tok: dict, *, tagline: str, sitio: str) -> None:
+    """og.png, la tarjeta de las páginas sin tarjeta propia: el wordmark
+    grande, la línea del sitio y, abajo a la derecha, el sitio."""
+    c = Lienzo(tok)
+    c.marca(tam=160, y=337, x=MARGEN + 32)
+    c.texto((MARGEN + 32, 407), tagline, fuente("mono", 28), "ash")
+    c.texto((ANCHO - MARGEN, 590), sitio, fuente("display", 30), "dim", ancla="rs")
+    c.guardar(ruta)
+
+
+def icono(ruta: str, tok: dict, lado: int = 180) -> None:
+    """apple-touch-icon.png: el símbolo del favicon (la I en hueso y la línea
+    en brasa) sobre el fondo, a sangre: iOS redondea las esquinas. Es el SVG
+    de viewBox -3.5 -5.5 70 70 con la barra en x=27 y=30 (10 por 24, radio 2)
+    y la línea 17,25 25,17 31,21 46,8 de trazo 6, dibujado a 8x y reducido
+    (como en trazo, la caja del rectángulo incluye su último píxel)."""
+    k = lado * SUPER / 70
+
+    def a(x, y):   # unidades del viewBox a píxeles
+        return (x + 3.5) * k, (y + 5.5) * k
+
+    img = Image.new("RGB", (lado * SUPER, lado * SUPER), _rgb(tok["bg"]))
+    d = ImageDraw.Draw(img)
+    (x0, y0), (x1, y1) = a(27, 30), a(37, 54)
+    d.rounded_rectangle([x0, y0, x1 - 1, y1 - 1], radius=2 * k, fill=_rgb(tok["bone"]))
+    trazo(d, [a(17, 25), a(25, 17), a(31, 21), a(46, 8)], 6 * k, _rgb(tok["ember"]))
+    _carpeta(ruta)
+    img.reduce(SUPER).save(ruta, "PNG", optimize=True)

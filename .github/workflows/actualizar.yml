@@ -154,6 +154,7 @@ jobs:
           cp indices.json public/indices.json
           cp resumen.json public/resumen.json
           cp og.png public/og.png
+          cp apple-touch-icon.png public/apple-touch-icon.png
           cp robots.txt public/robots.txt
           cp sitemap.xml public/sitemap.xml
           cp metodologia.html public/metodologia.html
