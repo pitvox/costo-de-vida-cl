@@ -517,10 +517,13 @@ def test_graficos_canasta_en_advanced_charts(sitio):
 
 def test_graficos_altos_y_captura_cuadrada(sitio):
     """Escritorio: alto de 0,6 veces el ancho, entre 520 y 760px; celular:
-    el ancho, sin pasar del 75% de la pantalla. La captura PNG, de 1080 ×
-    1080, con el gráfico fotografiado en la proporción de su recuadro."""
+    el ancho, sin pasar del 75% de la pantalla. El ancho va fijo en el 100%
+    para que el tope del alto no le recorte el ancho ni el mínimo lo saque
+    de la página. La captura PNG, de 1080 × 1080, con el gráfico
+    fotografiado en la proporción de su recuadro."""
     h = _leer(sitio, "graficos.html")
-    assert ".hero-wrap, .tvbox { aspect-ratio:5 / 3; min-height:520px; max-height:760px; }" in h
+    assert (".hero-wrap, .tvbox { width:100%; aspect-ratio:5 / 3; min-height:520px;\n"
+            "    max-height:760px; }") in h
     assert (".hero-wrap, .tvbox { aspect-ratio:1 / 1; min-height:0; max-height:75vh;\n"
             "      max-height:75svh; } }") in h
     assert "100vh - " not in h and "100svh - " not in h
@@ -528,7 +531,7 @@ def test_graficos_altos_y_captura_cuadrada(sitio):
     # el gráfico va en un marco con el ancho de la página (la captura fija su
     # alto mientras la librería se redibuja)
     assert ".marco { position:relative; max-width:none; margin-top:16px; }" in ficha
-    assert ("#grafico { position:relative; aspect-ratio:5 / 3;\n"
+    assert ("#grafico { position:relative; width:100%; aspect-ratio:5 / 3;\n"
             "    min-height:520px; max-height:760px; }") in ficha
     assert "#grafico { aspect-ratio:1 / 1; min-height:0; max-height:75vh;" in ficha
     js = _script(h)
