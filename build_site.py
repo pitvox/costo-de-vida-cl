@@ -160,8 +160,12 @@ __CSS_CABECERA__
      760px. Celular (bajo 760px): el ancho, sin pasar del 75% de la pantalla
      (en svh donde exista: estable frente a la barra del navegador). Lo
      lleva el lienzo de Lightweight (todo el hero) o la caja de Advanced
-     Charts del modo */
-  .hero-wrap, .tvbox { aspect-ratio:5 / 3; min-height:520px; max-height:760px; }
+     Charts del modo. El ancho va fijo en el 100%: con el ancho automático,
+     el navegador pasa el tope del alto al ancho por la proporción (760px
+     de alto dejaban el gráfico en 1267px de ancho) y el mínimo lo saca de
+     la página entre 760 y 870px */
+  .hero-wrap, .tvbox { width:100%; aspect-ratio:5 / 3; min-height:520px;
+    max-height:760px; }
   @media (max-width:759px) {
     .hero-wrap, .tvbox { aspect-ratio:1 / 1; min-height:0; max-height:75vh;
       max-height:75svh; } }
@@ -2636,9 +2640,11 @@ __CSS_MARCA__
   /* alto reservado por CSS antes de que monte cualquiera de los dos
      motores: la página no salta al renderizar. Escritorio: 0,6 veces el
      ancho, entre 520 y 760px. Celular (bajo 760px): el ancho, sin pasar del
-     75% de la pantalla (svh: estable frente a la barra del navegador) */
+     75% de la pantalla (svh: estable frente a la barra del navegador). El
+     ancho va fijo en el 100%, igual que en /graficos.html: el gráfico llega
+     hasta la captura PNG y el tope del alto no le recorta el ancho */
   .marco { position:relative; max-width:none; margin-top:16px; }
-  #grafico { position:relative; aspect-ratio:5 / 3;
+  #grafico { position:relative; width:100%; aspect-ratio:5 / 3;
     min-height:520px; max-height:760px; }
   @media (max-width:759px) {
     #grafico { aspect-ratio:1 / 1; min-height:0; max-height:75vh;
