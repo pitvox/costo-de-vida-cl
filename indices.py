@@ -21,6 +21,11 @@ años anteriores (ver comparar_temporada); el percentil de toda la historia
 sigue en indices.json como dato secundario. indices.json lleva además el mes
 del último IPC con que se deflactó ("ipc_mes").
 
+Unidad de cada producto (19-10-2026): cada producto usa solo las filas de
+ODEPA cuyo precio mide lo mismo que la unidad que declara (de_su_unidad), en
+los índices y en el catálogo. Antes se promediaban, por ejemplo, la cebolla
+en $/unidad y en $/kilo, que ODEPA publica a la vez desde octubre de 2014.
+
 Correr:
   pip install pandas numpy requests statsmodels
   python indices.py
@@ -498,9 +503,36 @@ def factor_precio(odepa_unit: str, objetivo: str):
     return 1.0 / contenido, False   # precio por unidad-objetivo real
 
 
+def _medida(unidad_str: str):
+    """Lo que mide un precio de ODEPA: (base, contenido) de
+    parse_envase_estricto, sin lo que va entre paréntesis, que describe el
+    envase en que se vende y no la unidad del precio ("$/kilo (en saco de 25
+    kilos)" es precio por kilo). None si la unidad no se reconoce."""
+    return parse_envase_estricto(re.sub(r"\(.*?\)", " ", unidad_str or ""))
+
+
+def de_su_unidad(sub: pd.DataFrame) -> pd.DataFrame:
+    """Las filas de un producto cuyo precio mide lo mismo que la unidad que
+    el producto declara (su unidad modal, la misma de unidad_modal): esa
+    unidad u otra que _medida lee igual. ODEPA cotiza algunos productos en
+    dos unidades a la vez (la cebolla en $/unidad en ferias y en $/kilo en
+    supermercados desde octubre de 2014; los huevos en bandeja de 12 y de 30
+    desde mayo de 2020) y promediar esas filas mezclaba precios de cantidades
+    distintas. Las de otra unidad quedan fuera, sin convertirlas: un kilo de
+    cebollas no trae un número fijo de cebollas."""
+    if sub.empty or "Unidad" not in sub.columns:
+        return sub
+    unidades = sub["Unidad"].fillna("").astype(str).str.strip()
+    declarada = _modal(unidades)
+    medida = _medida(declarada)
+    entra = {u: u == declarada or (medida is not None and _medida(u) == medida)
+             for u in unidades.unique()}
+    return sub[unidades.map(entra).to_numpy(dtype=bool)]
+
+
 # ---------------- Calculo de un indice ----------------
 def precio_semanal(df: pd.DataFrame, texto: str, col: str = "Precio promedio") -> pd.Series:
-    sub = df[df["ProductoBase"].str.contains(texto, case=False, na=False)]
+    sub = de_su_unidad(df[df["ProductoBase"].str.contains(texto, case=False, na=False)])
     if sub.empty:
         if col == "Precio promedio":
             print(f"    [aviso] sin datos para '{texto}'")
@@ -680,7 +712,9 @@ def series_productos(df: pd.DataFrame, ipc: pd.Series, descartes: list = None,
 
     COMPUERTA: solo entra al JSON el producto cuya unidad modal ODEPA se
     parsea con certeza (parse_envase_estricto) a kg/un/l; el resto se
-    excluye y se reporta. Serie: precio por unidad base, W-MON +
+    excluye y se reporta. De cada producto entran solo las filas de su
+    unidad (de_su_unidad, igual que en los índices); las de otra unidad se
+    reportan. Serie: precio por unidad base, W-MON +
     ffill(limit=4) como el pipeline, deflactada a pesos de hoy, y emitida
     compacta: {label, unidad, grupo, t0, v, min, max} con v = enteros
     semanales consecutivos desde t0 y null en las semanas sin dato
@@ -704,7 +738,16 @@ def series_productos(df: pd.DataFrame, ipc: pd.Series, descartes: list = None,
     JSON)."""
     ipc_hoy = float(ipc.iloc[-1])
     der = ipc.rename("ipc").rename_axis("fecha").reset_index().sort_values("fecha")
-    out, excluidos = {}, []
+    out, excluidos, otra_unidad = {}, [], []
+
+    def propias(slug, sub):
+        """Las filas de su unidad (de_su_unidad); anota las que quedan fuera."""
+        filas = de_su_unidad(sub)
+        fuera = sub.drop(filas.index)
+        if not fuera.empty:
+            otra_unidad.append((slug, sorted(set(fuera["Unidad"].astype(str))), len(fuera),
+                                fuera["fecha"].min(), fuera["fecha"].max()))
+        return filas
 
     def emitir(slug, label, uni, grupo, precios, minimos, maximos, contenido, n_puntos):
         def semanal(x):
@@ -767,6 +810,7 @@ def series_productos(df: pd.DataFrame, ipc: pd.Series, descartes: list = None,
         if p is None or p[0] != uni:
             excluidos.append((lab, odu))
             continue
+        sub = propias(_slug(lab), sub)
         emitir(_slug(lab), lab, uni, _modal(sub.get("Grupo")), *_precios(sub), p[1],
                _puntos(sub))
 
@@ -785,11 +829,15 @@ def series_productos(df: pd.DataFrame, ipc: pd.Series, descartes: list = None,
         slug = _slug(label)
         if slug in out:
             continue
+        sub = propias(slug, sub)
         emitir(slug, label, p[0], _modal(sub.get("Grupo")), *_precios(sub), p[1],
                _puntos(sub))
 
     for lab, odu in sorted(excluidos):
         print(f"EXCLUIDOS (unidad no parseada): {lab}: {odu or '(sin unidad)'}")
+    for slug, unidades, n, desde, hasta in otra_unidad:
+        print(f"OTRA UNIDAD (no entra): {slug}: {n} filas en {', '.join(unidades)}, "
+              f"{desde:%Y-%m-%d} a {hasta:%Y-%m-%d}")
     print(f"Catálogo: {len(out)} incluidos, {len(excluidos)} excluidos")
     return out
 
