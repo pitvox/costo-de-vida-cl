@@ -12,3 +12,6 @@ __pycache__/
 
 # Salida de mayoristas.py: todavía no se publica, y el deploy copia datos/ entero
 datos/mayoristas.json
+
+# Caché de los CSV anuales que baja mayoristas.py
+.cache/
