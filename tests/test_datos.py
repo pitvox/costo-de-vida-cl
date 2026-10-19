@@ -155,9 +155,9 @@ def test_graficos_lleva_inline_solo_el_primer_pantallazo(sitio):
         real = data["indices"][code]["real"]
         assert r["delta"] == (real[-1]["value"] / real[-2]["value"] - 1) * 100
         # al lado, el cambio de 4 semanas: las últimas 4 con precio contra las
-        # 4 anteriores
+        # 4 anteriores, redondeado a un decimal
         vals = [p["value"] for p in real]
-        assert r["delta4"] == (sum(vals[-4:]) / sum(vals[-8:-4]) - 1) * 100
+        assert r["delta4"] == round((sum(vals[-4:]) / sum(vals[-8:-4]) - 1) * 100, 1)
         assert r["costo_real"] == data["indices"][code]["costo_real"]
     # productos sin series, con la clave de los links de canasta
     assert set(inline["productos"]) == set(data["productos"])

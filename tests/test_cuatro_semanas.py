@@ -51,7 +51,10 @@ def _indice(code: str, valores: list, saltos: dict = None) -> dict:
                          "aporte": 1000} for (lab, _m, qty, uni) in meta["items"]],
         "estacionalidad": {"factores": {str(m): 1.0 for m in range(1, 13)},
                            "mes_barato": 1, "mes_caro": 2, "amplitud": 1},
-        "velas": [], "nominal": real, "real": real,
+        # la serie de la época distinta de la ajustada: la cuenta usa la ajustada
+        "velas": [], "real": real,
+        "nominal": [{"time": p["time"], "value": p["value"] * (1 + i / 100)}
+                    for i, p in enumerate(real)],
     }
 
 
@@ -71,13 +74,14 @@ def sintetico() -> dict:
     out["indices"]["ensalada"] = _indice("ensalada", [8000, 8100, 8200, 8300, 8400, 8500])
     # fruta: de 10.000 a 9.000 (-10%)
     out["indices"]["fruta"] = _indice("fruta", [10000] * 56 + [9000] * 4)
-    # desayuno: plano
-    out["indices"]["desayuno"] = _indice("desayuno", [9000] * 60)
+    # desayuno: de 4.000 a 4.250, +6,25% justo: un empate al redondear
+    out["indices"]["desayuno"] = _indice("desayuno", [4000] * 56 + [4250] * 4)
     p = out["productos"]
     # con semanas sin precio entre medio: las últimas 8 con precio son
-    # 4 en 1.000 y 4 en 2.000 (+100%)
-    p["huecos"] = _producto("Huecos", [1000] * 20 + [1000, None, 1000, 1000, None, None,
-                                                      1000, 2000, None, 2000, 2000, 2000])
+    # 4 en 1.000 y 4 en 2.000 (+100%); si las semanas sin precio contaran
+    # como 0, daría +50%
+    p["huecos"] = _producto("Huecos", [1000] * 20 + [1000, 1000, None, 1000, 1000, 2000,
+                                                      None, None, 2000, 2000, 2000])
     # 6 semanas con precio: sin el cambio de 4 semanas
     p["corto"] = _producto("Corto", [None] * 20 + [500] * 6)
     # de 3.000 a 2.000 (-33,3%)
@@ -133,6 +137,8 @@ def test_cuenta_con_las_ultimas_8_semanas_con_precio():
     # las semanas sin precio no cuentan
     assert f([None, 100, None, 100, 100, None, None, 100, 110, 110, None, 110, 110]) == \
         pytest.approx(10.0)
+    # promedio contra promedio, no esta semana contra la de hace 4
+    assert f([100, 100, 100, 80, 110, 100, 100, 130]) == pytest.approx((440 / 380 - 1) * 100)
     assert f([100] * 8) == 0
     # sin 8 semanas con precio, o sin precio en las 4 anteriores, no hay cambio
     assert f([100] * 7) is None and f([None] * 3 + [100] * 7) is None and f([]) is None
@@ -141,13 +147,15 @@ def test_cuenta_con_las_ultimas_8_semanas_con_precio():
 
 def test_cuenta_en_el_resumen_de_los_indices(sitio):
     """Promedio de las últimas 4 semanas con precio contra el de las 4
-    anteriores, sin redondear, como la variación semanal."""
+    anteriores, de la serie ajustada por inflación, redondeado a un decimal:
+    /graficos.html lo muestra igual que la portada, también en un empate."""
     r = _inline(sitio)["indices"]
-    assert r["asado"]["delta4"] == pytest.approx(20.0)
+    assert r["asado"]["delta4"] == 20.0
     assert r["asado"]["delta"] == 0
     assert r["ensalada"]["delta4"] is None and r["ensalada"]["delta"] is not None
-    assert r["fruta"]["delta4"] == pytest.approx(-10.0)
-    assert r["desayuno"]["delta4"] == 0
+    assert r["fruta"]["delta4"] == -10.0
+    # +6,25%: round lo deja en 6,2 (en el navegador, toFixed daría 6,3)
+    assert r["desayuno"]["delta4"] == 6.2
 
 
 def test_resumen_json_no_cambia(sitio):
@@ -174,6 +182,8 @@ def test_cinta_con_la_semana_y_las_4_semanas(sitio):
         '</span> <small>4 semanas</small></span>')
     assert ('<span class="td"><i class="f">▼</i><span class="v-baja">10,0%</span></span> '
             '<small>4 semanas</small>') in _titem(h, "fruta")
+    assert ('<span class="td"><i class="f">▲</i><span class="v-sube">6,2%</span></span> '
+            '<small>4 semanas</small>') in _titem(h, "desayuno")
     # sin 8 semanas con precio no va (ni un "·" con su etiqueta)
     ensalada = _titem(h, "ensalada")
     assert "<small>sem.</small>" in ensalada and "4 semanas" not in ensalada
@@ -226,6 +236,8 @@ def test_tabla_con_la_columna_de_4_semanas(sitio):
     assert ".fila:not([data-m]) .c-m { display:none; }" in h
     # en el celular no hay cabecera: la etiqueta la pone el CSS, una vez
     assert '.c-m::after { content:" 4 semanas";' in h
+    assert '.c-w::after { content:" sem.";' in h
+    assert ".fila:not([data-w]) .c-w::after { content:none; }" in h
     assert not any("4 semanas" in f for f in re.findall(r'<a class="fila".*?</a>', h))
 
 
@@ -255,9 +267,13 @@ def test_graficos_con_la_semana_y_las_4_semanas(sitio):
             '          <div class="odelta" id="odelta4-caja"><span id="odelta4"></span> '
             '<small>4 semanas</small></div>') in g
     assert "const cuatroSemanas = d => d.delta4;" in g
-    assert "document.getElementById('odelta4').innerHTML = fmtDelta(d4);" in g
-    assert "document.getElementById('odelta4-caja').hidden = d4 == null;" in g
+    assert ("    const d4 = cuatroSemanas(d);\n"
+            "    document.getElementById('odelta4').innerHTML = fmtDelta(d4);\n"
+            "    document.getElementById('odelta4-caja').hidden = d4 == null;") in g
     # la cinta: las dos cifras con su etiqueta; sin dato, solo la semanal
+    assert ("        const d4 = cuatroSemanas(d);\n"
+            "        b.innerHTML = '<span class=\"tn\">' + nombre + '</span>' +") in g
+    assert g.count("const d4 = cuatroSemanas(d);") == 2
     assert "'</span> <small>sem.</small></span>' + (d4 == null ? '' :" in g
     assert "'<span class=\"tv\"><span class=\"td\">' + fmtDelta(d4) +" in g
     assert "'</span> <small>4 semanas</small></span>');" in g

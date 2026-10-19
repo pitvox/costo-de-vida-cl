@@ -179,7 +179,10 @@ __CSS_CABECERA__
        variaciones, que con la de 4 semanas llegan más a la derecha) */
     body:not(.tv-ind) .overlay.m-ind .opct, body:not(.tv-ind) .overlay.m-ind .ovs,
     body:not(.tv-ind) .overlay.m-ind .odelta {
-      background:color-mix(in srgb, var(--bg) 82%, transparent); } }
+      background:color-mix(in srgb, var(--bg) 82%, transparent); }
+    /* y la fila del precio no llega al eje de precios: la de 4 semanas baja
+       a la línea siguiente */
+    body:not(.tv-ind) .overlay.m-ind .orow { max-width:calc(100vw - 96px); } }
   #chart, #pchart, #cchart { position:absolute; inset:0; }
   /* ---- Advanced Charts (índices, Comparar y Arma tu canasta) ---- */
   /* la librería trae su barra arriba y su leyenda: el texto del modo sale
@@ -1867,13 +1870,16 @@ __CSS_CABECERA__
   .zonas.historia .z3 { flex-grow:34; }
   .zonas .marca { position:absolute; top:-4px; width:3px; height:16px;
     margin-left:-1px; background:var(--bone); border-radius:2px; }
-  .ic-pie { display:flex; flex-wrap:wrap; justify-content:space-between; gap:4px 8px;
+  .ic-pie { display:flex; flex-direction:column; gap:4px 8px;
     font:400 12px/1.5 var(--sans); color:var(--bone);
     border-top:1px solid var(--line); padding-top:12px; }
-  /* las 4 tarjetas miden lo mismo: si el pie no cabe en una línea, va en dos
-     en todas, no solo en las de cifras más largas */
+  /* las 4 tarjetas miden lo mismo y el pie va igual en todas, sin depender
+     del largo de cada cifra: en columna y, si la tarjeta tiene espacio para
+     las cifras más largas, en dos columnas (la semana y las 4 semanas
+     arriba, el percentil y el promedio abajo) */
   .icard { container-type:inline-size; }
-  @container (max-width:264px) { .ic-pie { flex-direction:column; } }
+  @container (min-width:320px) { .ic-pie { display:grid;
+    grid-template-columns:auto auto; justify-content:space-between; } }
   .ic-m { display:none; }
   /* la nota de la regla de las dos semanas, como texto secundario; en las
      tarjetas sin nota, el mismo alto vacío */
@@ -1929,6 +1935,8 @@ __CSS_CABECERA__
     font:500 12px var(--sans); color:var(--dim); }
   .thead > :first-child { justify-content:flex-start; text-align:left; }
   .thead button { cursor:pointer; }
+  /* las cabeceras de cifras no se parten, ni con la flecha del orden */
+  .thead button:not([data-k="c"]) { white-space:nowrap; }
   .thead button:hover, .thead button:focus-visible,
   .thead button[aria-pressed="true"] { color:var(--bone); }
   .fila { min-height:60px; padding-top:8px; padding-bottom:8px;
@@ -2028,6 +2036,9 @@ __CSS_CABECERA__
        no va */
     .c-m::after { content:" 4 semanas"; font:400 11px var(--sans); color:var(--bone); }
     .fila:not([data-m]) .c-m { display:none; }
+    /* y la semanal, la suya, para no confundirlas */
+    .c-w::after { content:" sem."; font:400 11px var(--sans); color:var(--bone); }
+    .fila:not([data-w]) .c-w::after { content:none; }
     .c-t, .c-y, .c-c, .mg { display:none; }
     .mp { display:inline; }
     .sec-tit p .d-only { display:none; }
@@ -3936,7 +3947,10 @@ def resumen_indice(d: dict) -> dict:
     r["delta"] = ((real[-1]["value"] / real[-2]["value"] - 1) * 100
                   if len(real) >= 2 and real[-2]["value"] else None)
     # al lado, el cambio de 4 semanas (variacion_4_semanas)
-    r["delta4"] = variacion_4_semanas([p["value"] for p in real])
+    # redondeado: /graficos.html lo formatea con toFixed, que en un empate
+    # (6,25) no redondea igual que la portada (round), y así dicen lo mismo
+    x4 = variacion_4_semanas([p["value"] for p in real])
+    r["delta4"] = None if x4 is None else round(x4, 1)
     r["estacionalidad"] = d.get("estacionalidad") or {}
     # la frase del veredicto (por temporada) y el dato secundario (el
     # percentil de toda la historia), ya escritos
