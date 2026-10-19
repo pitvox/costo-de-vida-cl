@@ -43,6 +43,27 @@ Cada índice es una **canasta fija** de cantidades (tipo Laspeyres): lo que camb
 - **Inflación:** IPC del Banco Central de Chile (con `mindicador.cl` como respaldo).
 - **UF:** valor diario del Banco Central de Chile (con `mindicador.cl` como respaldo), en `datos/uf.json`; el sitio ya no la muestra.
 
+## Precios mayoristas (`mayoristas.py`, aparte del sitio)
+
+`mayoristas.py` baja los precios mayoristas de frutas y hortalizas de los mercados de Santiago y escribe `datos/mayoristas.json`. Corre aparte: no importa `indices.py`, ni `build_site.py` ni los workflows lo usan, y `datos/mayoristas.json` está en `.gitignore` (el deploy copia `datos/` entero). Nada de esto se publica todavía.
+
+- **Fuente:** el dataset [Precios mayoristas de frutas y hortalizas](https://datos.odepa.gob.cl/dataset/precios-mayoristas-de-frutas-y-hortalizas) del portal de datos abiertos de ODEPA. Es un CSV por año desde 1994, con un precio por día hábil, mercado, producto, variedad, calidad, unidad de comercialización y origen. La lista de archivos sale de la API del portal (CKAN, `package_show`), así que un año nuevo entra solo; no se lee HTML. ODEPA lo actualiza una vez por semana, el viernes en la noche, con los días de esa semana.
+- **Mercados:** los de la Región Metropolitana: Lo Valledor, Vega Central Mapocho, Mapocho venta directa y Vega Poniente (hasta 2011).
+- **Kilos:** cada precio pasa a pesos por kilo con los kilos que declara la propia unidad ("$/malla 18 kilos", "$/bins (400 kilos)", "$/bandeja 12 canastillos 125 gramos"; "$/kilo (en caja de 17 kilos)" ya viene por kilo). Una unidad sin kilos (por unidad, atado, docena o paquete) no tiene factor oficial: esas filas quedan fuera, y el producto entero si no tiene otra unidad. Cada producto anota cuántas filas perdió por eso, y `fuera` lista los que no entraron, con su motivo.
+- **Limpieza:** salen las filas con precio cero y las que se alejan más de cinco veces de la mediana de su semana (en una semana con menos de 3 filas, de su semana y las 8 anteriores). Así salen los errores de captura (el precio de un bins rotulado "$/kilo") y también variedades muy distintas del resto, como el limón sutil o de Pica y el tomate cherry.
+- **Semana:** rotulada con su lunes, como en `indices.py`. El precio es el promedio simple, en pesos nominales por kilo, de las filas de la semana (todas las variedades, calidades y orígenes), y `obs` cuenta esas filas. Las semanas sin filas no se rellenan, y un producto entra con al menos 52 semanas con precio.
+- **Slugs:** los productos que también están en `indices.json` llevan su mismo slug (la tabla `EQUIVALENCIAS` del script); el resto, el que les daría `indices.py`. En ajo, cebolla, pimiento y sandía `indices.json` tiene precio por unidad y acá es por kilo, así que esas series no se comparan directo.
+
+```bash
+pip install pandas numpy requests
+python mayoristas.py               # baja unos 940 MB de CSV
+python mayoristas.py --cache DIR   # guarda los CSV en DIR y reusa los de años cerrados
+```
+
+Los tests (`tests/test_mayoristas.py`) corren sin red sobre `tests/muestra_mayoristas.csv`, 31 filas reales de ODEPA.
+
+**Atribución:** datos de ODEPA, Oficina de Estudios y Políticas Agrarias, [Precios mayoristas de frutas y hortalizas](https://datos.odepa.gob.cl/dataset/precios-mayoristas-de-frutas-y-hortalizas), bajo licencia [Creative Commons Atribución 4.0 (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/deed.es) ([términos del portal](https://datos.odepa.gob.cl/manual/terminos-y-condiciones.pdf)). `datos/mayoristas.json` es elaboración propia sobre esos datos, modificados: solo la Región Metropolitana, precio por kilo, filas descartadas y promedio por semana. ODEPA no hizo ni revisó este procesamiento. `tests/muestra_mayoristas.csv` es un extracto sin cambios.
+
 ## Deslinde
 
 Información de consumo con fines informativos. No constituye asesoría ni recomendación de inversión. Los datos provienen de fuentes públicas de terceros y pueden contener errores o cambios de metodología.

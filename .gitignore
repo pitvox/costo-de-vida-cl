@@ -9,3 +9,6 @@ datafeeds/
 
 # Caché de Python
 __pycache__/
+
+# Salida de mayoristas.py: todavía no se publica, y el deploy copia datos/ entero
+datos/mayoristas.json
