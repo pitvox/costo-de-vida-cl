@@ -6,6 +6,11 @@ hasta 2014 y el aceite en $/botella 900 ml desde julio de 2023. Promediar esas
 filas mezclaba precios de cantidades distintas; estos tests fallan si un
 índice o un producto del catálogo vuelve a mezclarlas.
 
+La regla: si la unidad declara el volumen o el peso exacto del envase, la
+fila entra convertida con ese número (la botella de 900 ml, por litro
+dividido por 0,9); si no, queda fuera. Un número de piezas no es peso ni
+volumen: la bandeja de 30 huevos no se lleva a la de 12.
+
 Las unidades son las 18 que traen los CSV de precios al consumidor de ODEPA
 2008 a 2026 en la Región Metropolitana."""
 import ast
@@ -19,17 +24,22 @@ RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RAIZ)
 import indices  # noqa: E402
 
-# las unidades de ODEPA, agrupadas por lo que mide su precio: dentro de un
-# grupo se pueden promediar, entre grupos no
+# las unidades de ODEPA y lo que mide su precio, (base, contenido): con la
+# misma medida se promedian tal cual; con la misma base de peso o volumen, la
+# fila se convierte; entre bases distintas o entre conteos distintos, no
 POR_KILO = ["$/kilo", "$/envase 1 kilo", "$/bolsa 1 kilo", "$/kilo (en envase de 1 kilo)",
             "$/kilo (en saco de 5 kilos)", "$/kilo (en saco de 25 kilos)",
             "$/kilo (en saco de 50 kilos)"]
 POR_LITRO = ["$/litro", "$/Caja de 1 Litro"]
-GRUPOS = [POR_KILO, POR_LITRO, ["$/unidad"], ["$/bandeja 12 unidades"],
-          ["$/bandeja 30 unidades"], ["$/bolsa 800 grs"], ["$/envase 400 gramos"],
-          ["$/pote 500 gramos"], ["$/pan de 250 gramos"], ["$/envase 125 gramos"],
-          ["$/botella 900 ml"]]
-UNIDADES = [u for g in GRUPOS for u in g]
+MEDIDAS = {
+    **{u: ("kg", 1.0) for u in POR_KILO}, **{u: ("l", 1.0) for u in POR_LITRO},
+    "$/unidad": ("un", 1.0), "$/bandeja 12 unidades": ("un", 12.0),
+    "$/bandeja 30 unidades": ("un", 30.0), "$/bolsa 800 grs": ("kg", 0.8),
+    "$/envase 400 gramos": ("kg", 0.4), "$/pote 500 gramos": ("kg", 0.5),
+    "$/pan de 250 gramos": ("kg", 0.25), "$/envase 125 gramos": ("kg", 0.125),
+    "$/botella 900 ml": ("l", 0.9),
+}
+UNIDADES = list(MEDIDAS)
 
 SEMANAS = pd.date_range("2025-01-06", periods=20, freq="W-MON")
 IPC = pd.Series([100.0], index=pd.to_datetime(["2024-12-01"]))
@@ -47,14 +57,48 @@ def filas(producto, unidad, precio, semanas=SEMANAS, puntos=FERIAS, grupo="Horta
             for f in semanas for p in puntos]
 
 
-def test_entran_solo_las_unidades_que_miden_lo_mismo():
-    assert len(UNIDADES) == len(set(UNIDADES)) == 18
+def test_medida_de_cada_unidad():
+    assert len(UNIDADES) == 18
+    for u, (base, contenido) in MEDIDAS.items():
+        m = indices._medida(u)
+        assert m is not None and m[0] == base and m[1] == pytest.approx(contenido), u
+
+
+def test_entran_las_que_miden_lo_mismo_y_los_envases_de_peso_o_volumen():
     for declarada in UNIDADES:
-        # la declarada es la modal: 3 filas suyas y 1 de cada una de las otras
-        sub = pd.DataFrame([{"Unidad": declarada}] * 3
-                           + [{"Unidad": u} for u in UNIDADES if u != declarada])
-        grupo = next(g for g in GRUPOS if declarada in g)
-        assert sorted(set(indices.de_su_unidad(sub)["Unidad"])) == sorted(grupo), declarada
+        # la declarada es la modal: 3 filas suyas y 1 de cada una de las
+        # otras, todas a $1.000 por su envase (mínimo $800, máximo $1.200)
+        sub = pd.DataFrame([{"Unidad": u, "Precio promedio": 1000.0,
+                             "Precio minimo": 800.0, "Precio maximo": 1200.0}
+                            for u in [declarada] * 3 + [u for u in UNIDADES if u != declarada]])
+        base, contenido = MEDIDAS[declarada]
+        esperado = {u: 1000.0 * contenido / c for u, (b, c) in MEDIDAS.items()
+                    if (b, c) == (base, contenido) or (b == base and b in ("kg", "l"))}
+        out = indices.de_su_unidad(sub)
+        assert sorted(set(out["Unidad"])) == sorted(esperado), declarada
+        for _, r in out.iterrows():
+            f = esperado[r["Unidad"]] / 1000.0
+            assert (r["Precio promedio"], r["Precio minimo"], r["Precio maximo"]) == \
+                pytest.approx((1000.0 * f, 800.0 * f, 1200.0 * f)), (declarada, r["Unidad"])
+
+
+def test_botella_de_900_ml_entra_por_litro():
+    """El aceite en "$/botella 900 ml" entra al precio por litro dividido por
+    0,9, con su mínimo y su máximo, y sin tocar las filas que recibe."""
+    rs = filas("Aceite maravilla", "$/litro", 2000, SEMANAS[:14], grupo="Abarrotes y otros")
+    rs += filas("Aceite maravilla", "$/botella 900 ml", 2700, SEMANAS[12:], puntos=SUPER,
+                grupo="Abarrotes y otros")
+    df = pd.DataFrame(rs)
+    copia = df.copy()
+    # semanas 12 y 13: 4 filas por litro a $2.000 y 3 botellas a $2.700 ($3.000 el litro)
+    esperado = [2000.0] * 12 + [(4 * 2000 + 3 * 3000) / 7] * 2 + [3000.0] * 6
+    for col, k in (("Precio promedio", 1.0), ("Precio minimo", 0.8), ("Precio maximo", 1.2)):
+        s = indices.precio_semanal(df, "Aceite maravilla", col)
+        assert list(s.index) == list(SEMANAS)
+        assert list(s) == pytest.approx([x * k for x in esperado]), col
+    pd.testing.assert_frame_equal(df, copia)
+    # el factor de la canasta es el de la unidad que declara, el litro
+    assert indices.factor_precio(indices.unidad_modal(df, "Aceite maravilla"), "l") == (1.0, False)
 
 
 def test_sin_unidad_entran_todas_las_filas():
@@ -128,9 +172,13 @@ def test_catalogo_no_mezcla_unidades(capsys):
     assert out["zanahoria"]["unidad"] == "kg"
     assert out["zanahoria"]["t0"] == SEMANAS[6].strftime("%Y-%m-%d")
     assert out["zanahoria"]["v"] == [800] * (n - 6)
-    # sin convertir la botella: la serie termina en la última semana en litros
+    # la botella de 900 ml entra por litro: $2.600 / 0,9 = $2.889, con su
+    # mínimo ($2.080 / 0,9) y su máximo ($3.120 / 0,9)
     assert out["aceite_maravilla"]["unidad"] == "l"
-    assert out["aceite_maravilla"]["v"] == [2000] * 14
+    assert out["aceite_maravilla"]["t0"] == SEMANAS[0].strftime("%Y-%m-%d")
+    assert out["aceite_maravilla"]["v"] == [2000] * 14 + [2889] * 6
+    assert out["aceite_maravilla"]["min"] == [1600] * 14 + [2311] * 6
+    assert out["aceite_maravilla"]["max"] == [2400] * 14 + [3467] * 6
     assert out["lentejas_6_mm"]["v"] == [round((4 * 2000 + 3 * 1500) / 7)] * n
     log = capsys.readouterr().out
     assert "OTRA UNIDAD (no entra): cebolla: 60 filas en $/kilo, 2025-01-06 a 2025-05-19" in log
@@ -138,8 +186,9 @@ def test_catalogo_no_mezcla_unidades(capsys):
             "2025-01-06 a 2025-05-19") in log
     assert ("OTRA UNIDAD (no entra): zanahoria: 32 filas en $/unidad, "
             "2025-01-06 a 2025-02-24") in log
-    assert ("OTRA UNIDAD (no entra): aceite_maravilla: 24 filas en $/botella 900 ml, "
-            "2025-04-14 a 2025-05-19") in log
+    assert "OTRA UNIDAD (no entra): aceite_maravilla" not in log
+    assert ("OTRO ENVASE (entra convertido, precio x 1.111): aceite_maravilla: 24 filas en "
+            "$/botella 900 ml, 2025-04-14 a 2025-05-19") in log
     assert "lentejas" not in log
 
 

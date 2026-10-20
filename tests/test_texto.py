@@ -391,15 +391,22 @@ def test_metodologia_usa_el_texto_del_dueno_y_las_canastas(sitio):
     for viejo in ["Nominal y en pesos de hoy", "Pesos de hoy, precio de la época y UF",
                   "Se mide con el percentil histórico", "pesos de hoy"]:
         assert viejo not in md, viejo
-    # la nota metodológica del cambio, al final de las notas
+    # las notas metodológicas de los cambios, en orden: la del veredicto y al
+    # final la corrección de unidades, palabra por palabra
     notas = h[h.index("<h2>Notas metodológicas</h2>"):]
     notas = notas[:notas.index("</section>") + len("</section>")]
+    with open(os.path.join(RAIZ, "textos", "notas_metodologicas.md"), encoding="utf-8") as fh:
+        correccion = fh.read().splitlines()[-1]
+    assert correccion.startswith("- **Corrección del ")
+    correccion = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", correccion[2:])
+    assert "Índice Asado pasa de $26.467 a $25.924" in correccion
     assert notas.endswith(
         '<li><strong><span class="nw">05-10-2026</span>.</strong> El veredicto pasa a '
         "compararse con el mismo mes de "
         "los últimos 10 años en vez de con toda la historia, para no confundir la temporada "
         "con un alza ni marcar casi todo como caro por la tendencia de largo plazo. Los "
         "veredictos publicados antes de esta fecha no son comparables con los nuevos.</li>\n"
+        f"<li>{correccion}</li>\n"
         "</ul>\n    </section>")
 
 
