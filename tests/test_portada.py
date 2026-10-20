@@ -168,10 +168,18 @@ def test_variaciones_en_color_con_criterio_de_consumidor(sitio):
     assert '<span class="c-v c-w"><i class="f">▼</i> <span class="v-baja">30,0%</span></span>' in fila
     fila = re.search(r'<a class="fila" href="/productos/sube-0.html".*?</a>', h).group(0)
     assert '<span class="c-v c-w"><i class="f">▲</i> <span class="v-sube">30,0%</span></span>' in fila
-    # la cinta y las tarjetas
+    # el cambio de 4 semanas de la tabla, igual
+    fila = re.search(r'<a class="fila" href="/productos/baja-0.html".*?</a>', h).group(0)
+    assert '<span class="c-v c-m"><i class="f">▼</i> <span class="v-baja">28,7%</span></span>' in fila
+    fila = re.search(r'<a class="fila" href="/productos/sube-0.html".*?</a>', h).group(0)
+    assert '<span class="c-v c-m"><i class="f">▲</i> <span class="v-sube">13,9%</span></span>' in fila
+    # la cinta y las tarjetas, con la semana y las 4 semanas
     assert '<span class="td"><i class="f">▲</i><span class="v-sube">0,1%</span></span>' in h
-    assert ('<div class="ic-m"><i class="f">▲</i> <span class="v-sube">0,1%</span>, '
-            'percentil 88 en su historia</div>') in h
+    assert ('<span class="td"><i class="f">▲</i><span class="v-sube">0,4%</span></span> '
+            '<small>4 semanas</small>') in h
+    assert ('<div class="ic-m"><span class="nw"><i class="f">▲</i> <span class="v-sube">0,1%</span> '
+            'esta semana</span>, <span class="nw"><i class="f">▲</i> <span class="v-sube">0,4%</span> '
+            '4 semanas</span>, percentil 88 en su historia</div>') in h
     # el resto del texto en hueso
     assert ".titem .td { font:500 12px var(--sans); color:var(--bone); }" in h
     assert "font:400 12px/1.5 var(--sans); color:var(--bone);\n    border-top:1px solid var(--line); padding-top:12px; }" in h
@@ -179,19 +187,25 @@ def test_variaciones_en_color_con_criterio_de_consumidor(sitio):
 
 
 def test_variacion_de_la_ficha_y_de_graficos_en_color(sitio):
-    for slug, clase, flecha in [("sube-0", "v-sube", "▲"), ("baja-0", "v-baja", "▼")]:
+    for slug, clase, flecha, cuatro in [("sube-0", "v-sube", "▲", "13,9%"),
+                                        ("baja-0", "v-baja", "▼", "28,7%")]:
         h = _leer(sitio, f"productos/{slug}.html")
         assert (f'<div class="odelta"><i class="f">{flecha}</i><span class="{clase}">30,0%</span> '
                 f'<small>sem.</small></div>') in h, slug
+        # al lado, el cambio de 4 semanas en el mismo formato
+        assert (f'<div class="odelta"><i class="f">{flecha}</i><span class="{clase}">{cuatro}</span> '
+                f'<small>4 semanas</small></div>') in h, slug
         assert ".odelta { font:600 15px var(--sans); color:var(--bone); }" in h
     quieto = _leer(sitio, "productos/quieto.html")
     assert '<div class="odelta"><i class="f">▲</i>0,0% <small>sem.</small></div>' in quieto
+    assert '<div class="odelta"><i class="f">▲</i>0,0% <small>4 semanas</small></div>' in quieto
     # /productos/ no muestra variaciones
     assert "v-sube" not in _leer(sitio, "productos/index.html").split("</style>")[1]
     # /graficos.html arma la cinta y la cifra del índice con el mismo criterio
     g = _leer(sitio, "graficos.html")
     assert "'<span class=\"' + (x > 0 ? 'v-sube' : 'v-baja') + '\">' + num + '</span>'" in g
     assert "document.getElementById('odelta').innerHTML = fmtDelta(deltaSemanal(d));" in g
+    assert "document.getElementById('odelta4').innerHTML = fmtDelta(d4);" in g
 
 
 def test_semaforo_solo_en_los_indices(sitio):
@@ -247,7 +261,7 @@ def test_fila_con_sus_columnas_y_datos_para_ordenar(sitio):
     h = _leer(sitio, "index.html")
     fila = re.search(r'<a class="fila" href="/productos/sube-0.html"([^>]*)>(.*?)</a>', h)
     attrs, cuerpo = fila.group(1), fila.group(2)
-    assert 'data-p="1300.0"' in attrs and 'data-w="30.0"' in attrs
+    assert 'data-p="1300.0"' in attrs and 'data-w="30.0"' in attrs and 'data-m="13.9"' in attrs
     assert 'data-c="100"' in attrs and "data-y=" in attrs and "data-t=" in attrs
     assert '<span class="mg">Hortalizas, </span>por kilo' in cuerpo
     assert '<span class="mp">, percentil 100</span>' in cuerpo
@@ -257,6 +271,7 @@ def test_fila_con_sus_columnas_y_datos_para_ordenar(sitio):
     # sin cambio: flecha "=" y el número en el color del texto
     quieto = re.search(r'href="/productos/quieto.html".*?</a>', h).group(0)
     assert '<i class="f">=</i> 0,0%' in quieto and "v-sube" not in quieto and "v-baja" not in quieto
+    assert '<span class="c-v c-m"><i class="f">=</i> 0,0%</span>' in quieto
     # huecos en el último año: la línea se corta (más de un trazo)
     estacional = re.search(r'href="/productos/estacional.html".*?</a>', h).group(0)
     assert re.search(r'<path d="([^"]+)"', estacional).group(1).count("M") == 2
@@ -271,7 +286,7 @@ def test_chips_de_grupos_y_orden(sitio):
     for opcion in ["Alfabético", "Más subió esta semana", "Más bajó esta semana",
                    "Más caro frente a su historia", "Mayor alza en un año"]:
         assert f">{opcion}</option>" in h
-    for col in ["Producto", "Precio hoy", "1 semana", "3 meses", "1 año",
+    for col in ["Producto", "Precio hoy", "1 semana", "4 semanas", "3 meses", "1 año",
                 "Percentil en su historia"]:
         assert re.search(rf'data-k="\w" aria-pressed="\w+">{col} <span', h), col
     assert '<a class="ver-todos" href="/productos/">Ver todos los productos</a>' in h

@@ -175,9 +175,14 @@ __CSS_CABECERA__
     body.tv-ind .overlay.m-ind .oname, body.tv-ind .overlay.m-ind .opct,
     body.tv-ind .overlay.m-ind .ovs, body.tv-can .overlay.m-can > * { max-width:none; }
     /* con el respaldo de Lightweight el texto queda sobre el lienzo: un
-       fondo tenue para que la línea no lo cruce */
-    body:not(.tv-ind) .overlay.m-ind .opct, body:not(.tv-ind) .overlay.m-ind .ovs {
-      background:color-mix(in srgb, var(--bg) 82%, transparent); } }
+       fondo tenue para que la línea no lo cruce (también bajo las
+       variaciones, que con la de 4 semanas llegan más a la derecha) */
+    body:not(.tv-ind) .overlay.m-ind .opct, body:not(.tv-ind) .overlay.m-ind .ovs,
+    body:not(.tv-ind) .overlay.m-ind .odelta {
+      background:color-mix(in srgb, var(--bg) 82%, transparent); }
+    /* y la fila del precio no llega al eje de precios: la de 4 semanas baja
+       a la línea siguiente */
+    body:not(.tv-ind) .overlay.m-ind .orow { max-width:calc(100vw - 96px); } }
   #chart, #pchart, #cchart { position:absolute; inset:0; }
   /* ---- Advanced Charts (índices, Comparar y Arma tu canasta) ---- */
   /* la librería trae su barra arriba y su leyenda: el texto del modo sale
@@ -484,6 +489,7 @@ __CSS_SITIO__
         <div class="orow">
           <div class="oprice" id="oprice"></div>
           <div class="odelta"><span id="odelta"></span> <small>sem.</small></div>
+          <div class="odelta" id="odelta4-caja"><span id="odelta4"></span> <small>4 semanas</small></div>
         </div>
         <div class="overd">
           <span class="badge" id="obadge"></span>
@@ -790,6 +796,9 @@ __JS_CAPTURA__
   // variación de las dos últimas semanas: viene calculada en el resumen,
   // así el ticker no necesita las series
   const deltaSemanal = d => d.delta;
+  // al lado, el cambio de 4 semanas (el promedio de las últimas 4 semanas
+  // con precio contra el de las 4 anteriores): también viene en el resumen
+  const cuatroSemanas = d => d.delta4;
   // la flecha al lado, en gris, y el número en color con criterio de
   // consumidor: rojo si el precio subió, verde si bajó; si redondea a 0,0,
   // en el color del texto. Devuelve HTML (solo cifras y flechas)
@@ -815,9 +824,15 @@ __JS_CAPTURA__
         b.className = 'titem';
         b.setAttribute('aria-label', d.nombre);
         const nombre = d.nombre.replace(/^Índice /i, '').toUpperCase();
+        // cada variación con su etiqueta; sin 8 semanas con precio, la de 4
+        // semanas no va
+        const d4 = cuatroSemanas(d);
         b.innerHTML = '<span class="tn">' + nombre + '</span>' +
           '<span class="tp">' + fmt(d.costo_real) + '</span>' +
-          '<span class="td">' + fmtDelta(deltaSemanal(d)) + '</span>';
+          '<span class="tv"><span class="td">' + fmtDelta(deltaSemanal(d)) +
+          '</span> <small>sem.</small></span>' + (d4 == null ? '' :
+          '<span class="tv"><span class="td">' + fmtDelta(d4) +
+          '</span> <small>4 semanas</small></span>');
         b.onclick = () => render(code);
         track.appendChild(b);
       });
@@ -1092,6 +1107,10 @@ __JS_CAPTURA__
     // la época son el mismo), sin etiqueta
     countUp(document.getElementById('oprice'), d.costo_real);
     document.getElementById('odelta').innerHTML = fmtDelta(deltaSemanal(d));
+    // sin 8 semanas con precio no hay cambio de 4 semanas: el bloque no va
+    const d4 = cuatroSemanas(d);
+    document.getElementById('odelta4').innerHTML = fmtDelta(d4);
+    document.getElementById('odelta4-caja').hidden = d4 == null;
     document.getElementById('obadge').textContent = d.veredicto;
     document.getElementById('obadge').style.background = d.color;
     // la frase del veredicto por temporada y el percentil de toda la
@@ -1851,13 +1870,16 @@ __CSS_CABECERA__
   .zonas.historia .z3 { flex-grow:34; }
   .zonas .marca { position:absolute; top:-4px; width:3px; height:16px;
     margin-left:-1px; background:var(--bone); border-radius:2px; }
-  .ic-pie { display:flex; flex-wrap:wrap; justify-content:space-between; gap:4px 8px;
+  .ic-pie { display:flex; flex-direction:column; gap:4px 8px;
     font:400 12px/1.5 var(--sans); color:var(--bone);
     border-top:1px solid var(--line); padding-top:12px; }
-  /* las 4 tarjetas miden lo mismo: si el pie no cabe en una línea, va en dos
-     en todas, no solo en las de cifras más largas */
+  /* las 4 tarjetas miden lo mismo y el pie va igual en todas, sin depender
+     del largo de cada cifra: en columna y, si la tarjeta tiene espacio para
+     las cifras más largas, en dos columnas (la semana y las 4 semanas
+     arriba, el percentil y el promedio abajo) */
   .icard { container-type:inline-size; }
-  @container (max-width:264px) { .ic-pie { flex-direction:column; } }
+  @container (min-width:320px) { .ic-pie { display:grid;
+    grid-template-columns:auto auto; justify-content:space-between; } }
   .ic-m { display:none; }
   /* la nota de la regla de las dos semanas, como texto secundario; en las
      tarjetas sin nota, el mismo alto vacío */
@@ -1906,13 +1928,15 @@ __CSS_CABECERA__
     border-radius:14px; overflow:hidden; }
   .thead, .fila { display:grid; align-items:center; gap:12px; padding:0 16px;
     grid-template-columns:minmax(0,2.4fr) minmax(0,1.1fr) minmax(0,.9fr)
-      minmax(0,.9fr) minmax(0,.9fr) minmax(0,1.7fr) 124px 24px; }
+      minmax(0,.9fr) minmax(0,.9fr) minmax(0,.9fr) minmax(0,1.7fr) 124px 24px; }
   .thead { border-bottom:1px solid var(--line); }
   .thead > * { display:flex; justify-content:flex-end; align-items:center; gap:4px;
     min-height:40px; padding:0; background:none; border:0; text-align:right;
     font:500 12px var(--sans); color:var(--dim); }
   .thead > :first-child { justify-content:flex-start; text-align:left; }
   .thead button { cursor:pointer; }
+  /* las cabeceras de cifras no se parten, ni con la flecha del orden */
+  .thead button:not([data-k="c"]) { white-space:nowrap; }
   .thead button:hover, .thead button:focus-visible,
   .thead button[aria-pressed="true"] { color:var(--bone); }
   .fila { min-height:60px; padding-top:8px; padding-bottom:8px;
@@ -1953,11 +1977,13 @@ __CSS_CABECERA__
   @media (max-width:1099px) {
     .icards { grid-template-columns:repeat(2,minmax(0,1fr)); }
   }
+  /* con "4 semanas" son tres columnas de cifras: van parejas y la barra del
+     percentil más corta, así un "▲ 110,6%" cabe en su columna desde 761px */
   @media (max-width:1023px) {
-    .thead, .fila { grid-template-columns:minmax(0,2.4fr) minmax(0,1.1fr)
-      minmax(0,.9fr) minmax(0,.9fr) minmax(0,1.3fr) 96px 16px; }
+    .thead, .fila { grid-template-columns:minmax(0,2fr) minmax(0,1fr)
+      minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1.3fr) 96px 16px; }
     .c-t { display:none; }
-    .bar { width:56px; }
+    .bar { width:48px; }
     .sp { width:96px; }
   }
 
@@ -1994,16 +2020,25 @@ __CSS_CABECERA__
     .tabla { order:3; background:none; border:0; border-radius:0; overflow:visible; }
     .ver-todos { order:4; align-self:stretch; min-height:48px; }
     .thead { display:none; }
-    .fila { grid-template-columns:minmax(0,1fr) 64px 92px; grid-template-rows:auto auto;
+    .fila { grid-template-columns:minmax(0,1fr) 64px 92px; grid-template-rows:auto auto auto;
       gap:3px 12px; min-height:66px; padding:10px 0;
       border-bottom:1px solid var(--hover); }
     .fila:last-child { border-bottom:1px solid var(--hover); }
     .fila:hover, .fila:focus-visible { background:none; }
     .fila::after { display:none; }
-    .c-n { grid-column:1; grid-row:1 / 3; gap:3px; }
+    .c-n { grid-column:1; grid-row:1 / 4; gap:3px; }
     .sp { grid-column:2; grid-row:1 / 3; width:64px; height:24px; }
     .c-p { grid-column:3; grid-row:1; align-self:end; }
     .c-w { grid-column:3; grid-row:2; align-self:start; font-size:12px; }
+    .c-m { grid-column:2 / 4; grid-row:3; align-self:start; font-size:12px; }
+    /* en el celular no hay cabecera: el cambio de 4 semanas lleva su
+       etiqueta (aquí y no en cada fila, por el peso de la página); sin dato
+       no va */
+    .c-m::after { content:" 4 semanas"; font:400 11px var(--sans); color:var(--bone); }
+    .fila:not([data-m]) .c-m { display:none; }
+    /* y la semanal, la suya, para no confundirlas */
+    .c-w::after { content:" sem."; font:400 11px var(--sans); color:var(--bone); }
+    .fila:not([data-w]) .c-w::after { content:none; }
     .c-t, .c-y, .c-c, .mg { display:none; }
     .mp { display:inline; }
     .sec-tit p .d-only { display:none; }
@@ -2092,6 +2127,7 @@ __CHIPS__
           <button type="button" data-k="n" aria-pressed="true">Producto <span aria-hidden="true">▾</span></button>
           <button type="button" data-k="p" aria-pressed="false">Precio hoy <span aria-hidden="true"></span></button>
           <button type="button" data-k="w" aria-pressed="false">1 semana <span aria-hidden="true"></span></button>
+          <button type="button" data-k="m" aria-pressed="false">4 semanas <span aria-hidden="true"></span></button>
           <button type="button" class="c-t" data-k="t" aria-pressed="false">3 meses <span aria-hidden="true"></span></button>
           <button type="button" data-k="y" aria-pressed="false">1 año <span aria-hidden="true"></span></button>
           <button type="button" data-k="c" aria-pressed="false">Percentil en su historia <span aria-hidden="true"></span></button>
@@ -2139,16 +2175,16 @@ __PIE__
 
   // Productos: las filas ya vienen en el HTML, en orden alfabético; aquí solo
   // se reordenan (encabezados y selector) y se ocultan las de otros grupos.
-  // Los valores van en data-*: p precio, w 1 semana, t 3 meses, y 1 año,
-  // c percentil y g el grupo; sin el atributo, la fila no tiene ese dato y
-  // va al final
+  // Los valores van en data-*: p precio, w 1 semana, m 4 semanas, t 3 meses,
+  // y 1 año, c percentil y g el grupo; sin el atributo, la fila no tiene ese
+  // dato y va al final
   const cont = document.getElementById('filas');
   const filas = [...cont.children];
   const POS = new Map(filas.map((f, i) => [f, i]));
   // sentido de partida de cada columna: A a Z, y de mayor a menor en cifras
-  const DEF = { n: 1, p: -1, w: -1, t: -1, y: -1, c: -1 };
-  const NOMBRE = { n: 'Producto', p: 'Precio hoy', w: '1 semana', t: '3 meses',
-    y: '1 año', c: 'Percentil en su historia' };
+  const DEF = { n: 1, p: -1, w: -1, m: -1, t: -1, y: -1, c: -1 };
+  const NOMBRE = { n: 'Producto', p: 'Precio hoy', w: '1 semana', m: '4 semanas',
+    t: '3 meses', y: '1 año', c: 'Percentil en su historia' };
   const heads = [...document.querySelectorAll('.thead button')];
   const sel = document.getElementById('orden');
   const libre = sel.querySelector('option[hidden]');
@@ -2378,8 +2414,10 @@ CSS_CABECERA = r"""  /* ---- ticker ---- */
   .ticker-scroll { flex:1; overflow-x:auto; overflow-y:hidden;
     scrollbar-width:none; -webkit-overflow-scrolling:touch; }
   .ticker-scroll::-webkit-scrollbar { display:none; }
+  /* 100s: unos 27px por segundo con la variación semanal y la de 4 semanas
+     de los 4 índices (la pista mide unos 2.700px) */
   .ticker-track { display:flex; width:max-content; min-height:44px;
-    animation:car-marquee 60s linear infinite; }
+    animation:car-marquee 100s linear infinite; }
   /* pausa al foco y, en táctil, mientras el dedo esté sobre el ticker
      (.tocado la pone touchstart y la saca touchend); pausado, el scroll
      manual sigue disponible. El hover pausa solo donde existe hover real:
@@ -2395,11 +2433,17 @@ CSS_CABECERA = r"""  /* ---- ticker ---- */
   .titem:hover { background:var(--hover); }
   .titem .tn { font:600 11px var(--mono); letter-spacing:.1em; color:var(--bone); }
   .titem .tp { font:500 13px var(--sans); color:var(--bone); }
-  /* la variación semanal: el número en color (ver .v-sube y .v-baja) */
+  /* la variación semanal y la de 4 semanas: el número en color (ver
+     .v-sube y .v-baja) y su etiqueta en hueso */
   .titem .td { font:500 12px var(--sans); color:var(--bone); }
+  .titem .tv, .titem .tv small { font:400 11px var(--sans); color:var(--bone); }
   @media (min-width:760px) {
     .ticker .tag { display:flex; }
     .ticker-scroll { overflow-x:hidden; }
+  }
+  /* con movimiento reducido no hay animación: la cinta se desplaza a mano */
+  @media (prefers-reduced-motion: reduce) {
+    .ticker-scroll { overflow-x:auto; }
   }
   @keyframes car-marquee { from{transform:translateX(0)} to{transform:translateX(-50%)} }
 
@@ -3507,9 +3551,23 @@ def fmt_delta(vals: list) -> str:
     con el color de numero_variacion."""
     if len(vals) < 2 or not vals[-2]:
         return "·"
-    d = (vals[-1] / vals[-2] - 1) * 100
+    return fmt_variacion((vals[-1] / vals[-2] - 1) * 100)
+
+
+def fmt_variacion(d: float) -> str:
+    """Una variación de la ficha (d en %), en HTML: la flecha al lado y el
+    número con el color de numero_variacion."""
     return (f'<i class="f">{"▼" if d < 0 else "▲"}</i>'
             f'{numero_variacion(d, f"{abs(d):.1f}")}')
+
+
+def fmt_delta_4_semanas(vals: list) -> str:
+    """El cambio de 4 semanas de la ficha, al lado de la variación semanal y
+    en su mismo formato (variacion_4_semanas); sin dato, nada."""
+    d = variacion_4_semanas(vals)
+    if d is None:
+        return ""
+    return f'      <div class="odelta">{fmt_variacion(d)} <small>4 semanas</small></div>\n'
 
 
 def numero_variacion(x: float, txt: str) -> str:
@@ -3881,11 +3939,18 @@ def resumen_indice(d: dict) -> dict:
     veredicto y el percentil de toda la historia), el ticker, la
     estacionalidad y los componentes. La variación semanal es la
     misma cuenta que hacía el navegador con las dos últimas semanas, sin
-    redondear, para que la cifra mostrada no cambie."""
+    redondear, para que la cifra mostrada no cambie; el cambio de 4 semanas
+    (delta4, variacion_4_semanas) también va calculado, así la cinta no
+    necesita las series."""
     r = {k: d[k] for k in RESUMEN_INDICE}
     real = d.get("real") or []
     r["delta"] = ((real[-1]["value"] / real[-2]["value"] - 1) * 100
                   if len(real) >= 2 and real[-2]["value"] else None)
+    # al lado, el cambio de 4 semanas (variacion_4_semanas)
+    # redondeado: /graficos.html lo formatea con toFixed, que en un empate
+    # (6,25) no redondea igual que la portada (round), y así dicen lo mismo
+    x4 = variacion_4_semanas([p["value"] for p in real])
+    r["delta4"] = None if x4 is None else round(x4, 1)
     r["estacionalidad"] = d.get("estacionalidad") or {}
     # la frase del veredicto (por temporada) y el dato secundario (el
     # percentil de toda la historia), ya escritos
@@ -3988,6 +4053,26 @@ def variacion_promedio(v: list, propio: list, i: int):
         return None
     prom = sum(v[i - k:i]) / k
     return round((v[i] / prom - 1) * 100, 1) if prom else None
+
+
+# al lado de cada variación semanal va el cambio de 4 semanas: el promedio de
+# las últimas SEMANAS_BLOQUE semanas con precio contra el promedio de las
+# SEMANAS_BLOQUE anteriores. Sale de las mismas series de indices.json (real
+# de los índices, v de los productos): indices.py no lo calcula
+SEMANAS_BLOQUE = 4
+
+
+def variacion_4_semanas(vals: list):
+    """Variación (%) del promedio de las últimas SEMANAS_BLOQUE semanas con
+    precio contra el promedio de las SEMANAS_BLOQUE anteriores, sin
+    redondear, como la semanal. Las semanas sin precio (None) no cuentan.
+    None si no hay 2 * SEMANAS_BLOQUE semanas con precio."""
+    k = SEMANAS_BLOQUE
+    x = [v for v in vals if v is not None]
+    if len(x) < 2 * k:
+        return None
+    antes = sum(x[-2 * k:-k])
+    return (sum(x[-k:]) / antes - 1) * 100 if antes else None
 
 
 def generar_catalogo(prods: dict, slugs: dict) -> dict:
@@ -4960,6 +5045,7 @@ def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
                 f'      <div class="oprice">{precio}</div>\n'
                 f'      <div class="ouni">{html.escape(f"por {uni_txt}")}</div>\n'
                 f'      <div class="odelta">{fmt_delta(vals)} <small>sem.</small></div>\n'
+                f'{fmt_delta_4_semanas(vals)}'
                 f'    </div>\n')
         desc = (f"Hoy {c['art']} {label_frase} {c['cuesta']} {precio} por {uni_txt} en la "
                 f"Región Metropolitana (promedio de ferias, supermercados y carnicerías). "
@@ -6766,6 +6852,15 @@ def sparkline(vals: list) -> str:
             f'aria-hidden="true"><path d="{d}"/></svg>')
 
 
+def cinta_4_semanas(x) -> str:
+    """El cambio de 4 semanas de un índice en la cinta, al lado del semanal;
+    sin dato no va (nada de "·" suelto con su etiqueta)."""
+    if x is None:
+        return ""
+    return (f'<span class="tv"><span class="td">{cambio(x, "")}</span> '
+            f'<small>4 semanas</small></span>')
+
+
 def html_cinta(indices: dict) -> str:
     """La cinta de índices, dos veces seguidas para el desplazamiento continuo
     (la segunda copia queda fuera del orden de tabulación y de los lectores
@@ -6777,7 +6872,8 @@ def html_cinta(indices: dict) -> str:
             f'<a class="titem" href="/graficos.html#{code}"__OCULTA__>'
             f'<span class="tn">{html.escape(d["nombre"].replace("Índice ", "").upper())}</span>'
             f'<span class="tp">{fmt_clp(d["costo_real"])}</span>'
-            f'<span class="td">{cambio(r["delta"], "")}</span></a>')
+            f'<span class="tv"><span class="td">{cambio(r["delta"], "")}</span> '
+            f'<small>sem.</small></span>{cinta_4_semanas(r["delta4"])}</a>')
     return "\n".join(["      " + i.replace("__OCULTA__", "") for i in items] +
                      ["      " + i.replace("__OCULTA__", ' aria-hidden="true" tabindex="-1"')
                       for i in items])
@@ -6787,10 +6883,10 @@ def html_tarjetas(indices: dict) -> str:
     """Las 4 tarjetas de "Índices Carestía": veredicto con su color del
     semáforo, el precio de esta semana (sin etiqueta), la frase del veredicto
     por temporada sobre las tres zonas (la marca en la cuenta de esta
-    semana), el cambio semanal y, como dato secundario, el percentil de toda
-    la historia y la distancia a su promedio. Sin temporada (menos de 5 años
-    del mes), la frase y las zonas de toda la historia. Cada una abre
-    /graficos.html#codigo."""
+    semana), el cambio semanal y el de 4 semanas y, como dato secundario, el
+    percentil de toda la historia y la distancia a su promedio. Sin
+    temporada (menos de 5 años del mes), la frase y las zonas de toda la
+    historia. Cada una abre /graficos.html#codigo."""
     out = []
     # la nota de la regla de las dos semanas va al final de su tarjeta; las
     # otras reservan el mismo alto (sin texto en la página), para que las
@@ -6816,8 +6912,14 @@ def html_tarjetas(indices: dict) -> str:
         # sin la semana anterior no hay cambio que mostrar
         semana = (f'{cambio(r["delta"])} esta semana' if r["delta"] is not None
                   else "sin la semana anterior")
-        semana_m = (f'{cambio(r["delta"])}, percentil {pct} en su historia'
-                    if r["delta"] is not None else f"percentil {pct} en su historia")
+        # al lado, el cambio de 4 semanas; sin dato, no va
+        cuatro = ("" if r["delta4"] is None else
+                  f'<span>{cambio(r["delta4"])} 4 semanas</span>')
+        # en el celular, una sola línea: cada variación con su etiqueta
+        semana_m = ", ".join(
+            [f'<span class="nw">{cambio(x)} {et}</span>'
+             for x, et in ((r["delta"], "esta semana"), (r["delta4"], "4 semanas"))
+             if x is not None] + [f"percentil {pct} en su historia"])
         out.append(
             f'        <a class="icard" href="/graficos.html#{code}">\n'
             f'          <div class="ic-top"><span class="ic-ey"><span class="ic-ind">ÍNDICE </span>{corto}</span>'
@@ -6827,7 +6929,7 @@ def html_tarjetas(indices: dict) -> str:
             f'          <div class="ic-niv"><p class="ic-fr">{html.escape(r["frase"])}</p>'
             f'<div class="{zonas}" aria-hidden="true"><span class="z z1"></span><span class="z z2"></span>'
             f'<span class="z z3"></span><span class="marca" style="left:{marca}%"></span></div></div>\n'
-            f'          <div class="ic-pie"><span>{semana}</span>'
+            f'          <div class="ic-pie"><span>{semana}</span>{cuatro}'
             f'<span>percentil {pct} en su historia</span>'
             f'<span>{vs_txt} su promedio</span></div>\n'
             f'          <div class="ic-m">{semana_m}</div>\n'
@@ -6907,12 +7009,16 @@ def html_productos(tabla: list, vigente: str) -> tuple:
     for f in tabla:
         uni = UNI_TXT.get(f["unidad"], f["unidad"])
         pct = f["percentil"]
+        # el cambio de 4 semanas, de la serie del producto en indices.json
+        m = variacion_4_semanas(DATA["productos"][f["clave"]]["v"])
+        m = None if m is None else round(m, 1)
         viejo = ("" if f["semana"] == vigente else
                  f'<small>semana del {f["semana"][8:10]}-{f["semana"][5:7]}</small>')
         filas.append(
             f'          <a class="fila" href="/productos/{f["slug"]}.html" '
             f'data-g="{grupos.index(f["grupo"])}"'
             f'{dato("p", f["precio_pesos_hoy"])}{dato("w", f["variacion_1s_pct"])}'
+            f'{dato("m", m)}'
             f'{dato("t", f["variacion_13s_pct"])}{dato("y", f["variacion_52s_pct"])}'
             f'{dato("c", pct)}>'
             f'<span class="c-n"><span class="nm">{html.escape(f["nombre"])}</span>'
@@ -6920,6 +7026,7 @@ def html_productos(tabla: list, vigente: str) -> tuple:
             f'<span class="mp">, percentil {pct}</span></span></span>'
             f'<span class="c-p">{fmt_clp(f["precio_pesos_hoy"])}{viejo}</span>'
             f'<span class="c-v c-w">{cambio(f["variacion_1s_pct"])}</span>'
+            f'<span class="c-v c-m">{cambio(m)}</span>'
             f'<span class="c-v c-t">{cambio(f["variacion_13s_pct"])}</span>'
             f'<span class="c-v c-y">{cambio(f["variacion_52s_pct"])}</span>'
             f'<span class="c-c"><span class="bar"><span style="width:{pct}%"></span></span>'
