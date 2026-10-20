@@ -96,9 +96,34 @@ def test_botella_de_900_ml_entra_por_litro():
         s = indices.precio_semanal(df, "Aceite maravilla", col)
         assert list(s.index) == list(SEMANAS)
         assert list(s) == pytest.approx([x * k for x in esperado]), col
+    # de_su_unidad recibe las filas y devuelve otras: las que recibe quedan
+    # igual aunque entren todas
+    convertidas = indices.de_su_unidad(df)
     pd.testing.assert_frame_equal(df, copia)
+    assert len(convertidas) == len(df)
+    assert convertidas["Precio promedio"].max() == pytest.approx(3000.0)
     # el factor de la canasta es el de la unidad que declara, el litro
     assert indices.factor_precio(indices.unidad_modal(df, "Aceite maravilla"), "l") == (1.0, False)
+
+
+def test_con_la_botella_como_unidad_declarada_sigue_por_litro():
+    """Cuando la botella de 900 ml pase a tener más filas que el litro, el
+    aceite sigue en el catálogo y en las canastas por litro: el litro se
+    lleva a la botella (x 0,9) y el precio de la botella, a litro (/ 0,9)."""
+    assert indices.parse_envase("$/botella 900 ml") == ("l", pytest.approx(0.9))
+    assert indices.parse_envase_estricto("$/botella 900 ml") == ("l", pytest.approx(0.9))
+    assert indices.factor_precio("$/botella 900 ml", "l") == (pytest.approx(1 / 0.9), False)
+    rs = filas("Aceite maravilla", "$/litro", 2000, SEMANAS[:6], grupo="Abarrotes y otros")
+    rs += filas("Aceite maravilla", "$/botella 900 ml", 2700, SEMANAS[6:],
+                grupo="Abarrotes y otros")
+    df = pd.DataFrame(rs)
+    assert indices.unidad_modal(df, "Aceite maravilla") == "$/botella 900 ml"
+    f, _ = indices.factor_precio(indices.unidad_modal(df, "Aceite maravilla"), "l")
+    assert list(indices.precio_semanal(df, "Aceite maravilla") * f) == \
+        pytest.approx([2000.0] * 6 + [3000.0] * 14)
+    out = indices.series_productos(df, IPC)
+    assert out["aceite_maravilla"]["unidad"] == "l"
+    assert out["aceite_maravilla"]["v"] == [2000] * 6 + [3000] * 14
 
 
 def test_sin_unidad_entran_todas_las_filas():

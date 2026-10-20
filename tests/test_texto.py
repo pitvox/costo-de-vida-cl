@@ -395,11 +395,19 @@ def test_metodologia_usa_el_texto_del_dueno_y_las_canastas(sitio):
     # final la corrección de unidades, palabra por palabra
     notas = h[h.index("<h2>Notas metodológicas</h2>"):]
     notas = notas[:notas.index("</section>") + len("</section>")]
-    with open(os.path.join(RAIZ, "textos", "notas_metodologicas.md"), encoding="utf-8") as fh:
-        correccion = fh.read().splitlines()[-1]
-    assert correccion.startswith("- **Corrección del ")
-    correccion = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", correccion[2:])
-    assert "Índice Asado pasa de $26.467 a $25.924" in correccion
+    correccion = (
+        "<strong>Corrección del 23 de octubre de 2026.</strong> Algunos productos aparecen en "
+        "los datos de ODEPA con precios en más de una unidad, y el sitio los estaba promediando "
+        "juntos: la cebolla (precio por kilo de supermercados junto al precio por unidad de "
+        "ferias, desde octubre de 2014), los huevos (bandejas de 30 tratadas como docenas, desde "
+        "mayo de 2020), la zanahoria (precio por unidad publicado como kilo, de 2008 a 2014), "
+        "los aceites maravilla y vegetal (botella de 900 ml tratada como litro, desde julio de "
+        "2023) y semanas sueltas de pepino, sandía y zapallo italiano. Desde ahora cada producto "
+        "usa solo precios en la unidad que declara, y los envases con volumen o peso declarado "
+        "se convierten con ese número. Toda la historia se recalculó con este criterio. En la "
+        "semana del 12 de octubre de 2026, el Índice Asado pasa de $26.467 a $25.924, el Índice "
+        "Ensalada de $7.840 a $7.297 (de caro a normal para la época) y el Índice Desayuno de "
+        "$10.451 a $9.966. El Índice Fruta no cambia.")
     assert notas.endswith(
         '<li><strong><span class="nw">05-10-2026</span>.</strong> El veredicto pasa a '
         "compararse con el mismo mes de "

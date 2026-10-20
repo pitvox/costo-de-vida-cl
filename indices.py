@@ -442,11 +442,15 @@ def parse_envase(unidad_str: str):
       '$/pan de 250 gramos' -> ('kg', 0.25)   (precio del pan / 0.25 = precio por kg)
       '$/bandeja 12 unidades' -> ('un', 12.0)  (precio bandeja / 12 = precio por huevo)
       '$/Caja de 1 Litro' -> ('l', 1.0)        '$/unidad' -> ('un', 1.0)
+      '$/botella 900 ml' -> ('l', 0.9)
     """
     u = (unidad_str or "").lower()
     m = re.search(r"(\d+(?:[.,]\d+)?)\s*(?:gramos|grs|gr|g\b)", u)
     if m:
         return ("kg", float(m.group(1).replace(",", ".")) / 1000.0)
+    m = re.search(r"(\d+(?:[.,]\d+)?)\s*ml\b", u)
+    if m:
+        return ("l", float(m.group(1).replace(",", ".")) / 1000.0)
     m = re.search(r"(\d+(?:[.,]\d+)?)\s*kilo", u)
     if m and ("envase" in u or "bolsa" in u or "caja" in u):
         return ("kg", float(m.group(1).replace(",", ".")))
@@ -476,6 +480,9 @@ def parse_envase_estricto(unidad_str: str):
     m = re.search(r"(\d+(?:[.,]\d+)?)\s*(?:gramos|grs|gr|g\b)", u)
     if m:
         return ("kg", float(m.group(1).replace(",", ".")) / 1000.0)
+    m = re.search(r"(\d+(?:[.,]\d+)?)\s*ml\b", u)
+    if m:
+        return ("l", float(m.group(1).replace(",", ".")) / 1000.0)
     m = re.search(r"(\d+(?:[.,]\d+)?)\s*kilo", u)
     if m:
         if "envase" in u or "bolsa" in u or "caja" in u:
@@ -510,14 +517,8 @@ def _medida(unidad_str: str):
     """Lo que mide un precio de ODEPA: (base, contenido) de
     parse_envase_estricto, sin lo que va entre paréntesis, que describe el
     envase en que se vende y no la unidad del precio ("$/kilo (en saco de 25
-    kilos)" es precio por kilo). Lee además los mililitros, que
-    parse_envase_estricto no conoce: "$/botella 900 ml" es ('l', 0.9). None
-    si la unidad no se reconoce."""
-    u = re.sub(r"\(.*?\)", " ", unidad_str or "")
-    m = re.search(r"(\d+(?:[.,]\d+)?)\s*ml\b", u.lower())
-    if m:
-        return ("l", float(m.group(1).replace(",", ".")) / 1000.0)
-    return parse_envase_estricto(u)
+    kilos)" es precio por kilo). None si la unidad no se reconoce."""
+    return parse_envase_estricto(re.sub(r"\(.*?\)", " ", unidad_str or ""))
 
 
 # Regla de las unidades (decisión del dueño, 20-10-2026): si la unidad de
