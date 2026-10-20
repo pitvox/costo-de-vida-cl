@@ -21,6 +21,14 @@ años anteriores (ver comparar_temporada); el percentil de toda la historia
 sigue en indices.json como dato secundario. indices.json lleva además el mes
 del último IPC con que se deflactó ("ipc_mes").
 
+Unidad de cada producto (19-10-2026): cada producto usa solo las filas de
+ODEPA cuyo precio mide lo mismo que la unidad que declara (de_su_unidad), en
+los índices y en el catálogo. Antes se promediaban, por ejemplo, la cebolla
+en $/unidad y en $/kilo, que ODEPA publica a la vez desde octubre de 2014.
+Desde el 20-10-2026, las filas de un envase con su peso o volumen declarado
+entran convertidas con ese número (el aceite en $/botella 900 ml, por litro
+dividido por 0,9); las de otra unidad siguen fuera.
+
 Correr:
   pip install pandas numpy requests statsmodels
   python indices.py
@@ -434,11 +442,15 @@ def parse_envase(unidad_str: str):
       '$/pan de 250 gramos' -> ('kg', 0.25)   (precio del pan / 0.25 = precio por kg)
       '$/bandeja 12 unidades' -> ('un', 12.0)  (precio bandeja / 12 = precio por huevo)
       '$/Caja de 1 Litro' -> ('l', 1.0)        '$/unidad' -> ('un', 1.0)
+      '$/botella 900 ml' -> ('l', 0.9)
     """
     u = (unidad_str or "").lower()
     m = re.search(r"(\d+(?:[.,]\d+)?)\s*(?:gramos|grs|gr|g\b)", u)
     if m:
         return ("kg", float(m.group(1).replace(",", ".")) / 1000.0)
+    m = re.search(r"(\d+(?:[.,]\d+)?)\s*ml\b", u)
+    if m:
+        return ("l", float(m.group(1).replace(",", ".")) / 1000.0)
     m = re.search(r"(\d+(?:[.,]\d+)?)\s*kilo", u)
     if m and ("envase" in u or "bolsa" in u or "caja" in u):
         return ("kg", float(m.group(1).replace(",", ".")))
@@ -468,6 +480,9 @@ def parse_envase_estricto(unidad_str: str):
     m = re.search(r"(\d+(?:[.,]\d+)?)\s*(?:gramos|grs|gr|g\b)", u)
     if m:
         return ("kg", float(m.group(1).replace(",", ".")) / 1000.0)
+    m = re.search(r"(\d+(?:[.,]\d+)?)\s*ml\b", u)
+    if m:
+        return ("l", float(m.group(1).replace(",", ".")) / 1000.0)
     m = re.search(r"(\d+(?:[.,]\d+)?)\s*kilo", u)
     if m:
         if "envase" in u or "bolsa" in u or "caja" in u:
@@ -498,9 +513,71 @@ def factor_precio(odepa_unit: str, objetivo: str):
     return 1.0 / contenido, False   # precio por unidad-objetivo real
 
 
+def _medida(unidad_str: str):
+    """Lo que mide un precio de ODEPA: (base, contenido) de
+    parse_envase_estricto, sin lo que va entre paréntesis, que describe el
+    envase en que se vende y no la unidad del precio ("$/kilo (en saco de 25
+    kilos)" es precio por kilo). None si la unidad no se reconoce."""
+    return parse_envase_estricto(re.sub(r"\(.*?\)", " ", unidad_str or ""))
+
+
+# Regla de las unidades (decisión del dueño, 20-10-2026): si la unidad de
+# ODEPA declara el volumen o peso exacto del envase, la fila se convierte con
+# ese número a la unidad que declara el producto; si no lo declara, la fila
+# queda fuera. El aceite en "$/botella 900 ml" entra por litro dividido por
+# 0,9. Un número de piezas no es peso ni volumen: la bandeja de 30 huevos no
+# se lleva a la de 12, y un kilo de cebollas no trae un número fijo de
+# cebollas.
+CONVERTIBLES = ("kg", "l")
+
+
+def _factores(unidades: pd.Series) -> dict:
+    """{unidad: factor} de las unidades de un producto (sin espacios a los
+    lados) que entran en la que el producto declara, su unidad modal: 1 para
+    esa unidad y las que _medida lee igual, y contenido declarado / contenido
+    de la fila para un envase de otro peso o volumen (CONVERTIBLES). Las que
+    quedan fuera no están."""
+    declarada = _modal(unidades)
+    medida = _medida(declarada)
+    factores = {}
+    for u in unidades.unique():
+        m = _medida(u)
+        if u == declarada or (medida is not None and m == medida):
+            factores[u] = 1.0
+        elif (medida is not None and m is not None and m[0] == medida[0]
+              and m[0] in CONVERTIBLES):
+            factores[u] = medida[1] / m[1]
+    return factores
+
+
+def de_su_unidad(sub: pd.DataFrame) -> pd.DataFrame:
+    """Las filas de un producto con su precio en la unidad que el producto
+    declara (su unidad modal, la misma de unidad_modal). ODEPA cotiza algunos
+    productos en dos unidades a la vez (la cebolla en $/unidad en ferias y en
+    $/kilo en supermercados desde octubre de 2014; los huevos en bandeja de 12
+    y de 30 desde mayo de 2020; el aceite en $/litro y en $/botella 900 ml
+    desde julio de 2023) y promediar esas filas mezclaba precios de
+    cantidades distintas. Entran tal cual las filas de esa unidad o de otra
+    que _medida lee igual; las de un envase con su peso o volumen declarado,
+    con el precio, el mínimo y el máximo convertidos (_factores), y el resto
+    queda fuera."""
+    if sub.empty or "Unidad" not in sub.columns:
+        return sub
+    unidades = sub["Unidad"].fillna("").astype(str).str.strip()
+    f = unidades.map(_factores(unidades))
+    entra = f.notna().to_numpy()
+    sub, f = sub[entra], f[entra].to_numpy(dtype=float)
+    if (f != 1.0).any():
+        sub = sub.copy()
+        for c in ("Precio promedio", "Precio minimo", "Precio maximo"):
+            if c in sub.columns:
+                sub[c] = sub[c].to_numpy(dtype=float) * f
+    return sub
+
+
 # ---------------- Calculo de un indice ----------------
 def precio_semanal(df: pd.DataFrame, texto: str, col: str = "Precio promedio") -> pd.Series:
-    sub = df[df["ProductoBase"].str.contains(texto, case=False, na=False)]
+    sub = de_su_unidad(df[df["ProductoBase"].str.contains(texto, case=False, na=False)])
     if sub.empty:
         if col == "Precio promedio":
             print(f"    [aviso] sin datos para '{texto}'")
@@ -680,7 +757,10 @@ def series_productos(df: pd.DataFrame, ipc: pd.Series, descartes: list = None,
 
     COMPUERTA: solo entra al JSON el producto cuya unidad modal ODEPA se
     parsea con certeza (parse_envase_estricto) a kg/un/l; el resto se
-    excluye y se reporta. Serie: precio por unidad base, W-MON +
+    excluye y se reporta. De cada producto entran las filas de su unidad y
+    las de un envase con su peso o volumen declarado, convertidas
+    (de_su_unidad, igual que en los índices); las que quedan fuera y las
+    convertidas se reportan. Serie: precio por unidad base, W-MON +
     ffill(limit=4) como el pipeline, deflactada a pesos de hoy, y emitida
     compacta: {label, unidad, grupo, t0, v, min, max} con v = enteros
     semanales consecutivos desde t0 y null en las semanas sin dato
@@ -704,7 +784,23 @@ def series_productos(df: pd.DataFrame, ipc: pd.Series, descartes: list = None,
     JSON)."""
     ipc_hoy = float(ipc.iloc[-1])
     der = ipc.rename("ipc").rename_axis("fecha").reset_index().sort_values("fecha")
-    out, excluidos = {}, []
+    out, excluidos, otra_unidad, convertidas = {}, [], [], []
+
+    def propias(slug, sub):
+        """Las filas de su unidad (de_su_unidad); anota las que quedan fuera
+        y las que entran convertidas."""
+        filas = de_su_unidad(sub)
+        fuera = sub.drop(filas.index)
+        if not fuera.empty:
+            otra_unidad.append((slug, sorted(set(fuera["Unidad"].astype(str))), len(fuera),
+                                fuera["fecha"].min(), fuera["fecha"].max()))
+        if "Unidad" in sub.columns:
+            unidades = sub["Unidad"].fillna("").astype(str).str.strip()
+            for u, f in _factores(unidades).items():
+                if f != 1.0:
+                    c = sub[unidades == u]
+                    convertidas.append((slug, u, f, len(c), c["fecha"].min(), c["fecha"].max()))
+        return filas
 
     def emitir(slug, label, uni, grupo, precios, minimos, maximos, contenido, n_puntos):
         def semanal(x):
@@ -767,6 +863,7 @@ def series_productos(df: pd.DataFrame, ipc: pd.Series, descartes: list = None,
         if p is None or p[0] != uni:
             excluidos.append((lab, odu))
             continue
+        sub = propias(_slug(lab), sub)
         emitir(_slug(lab), lab, uni, _modal(sub.get("Grupo")), *_precios(sub), p[1],
                _puntos(sub))
 
@@ -785,11 +882,18 @@ def series_productos(df: pd.DataFrame, ipc: pd.Series, descartes: list = None,
         slug = _slug(label)
         if slug in out:
             continue
+        sub = propias(slug, sub)
         emitir(slug, label, p[0], _modal(sub.get("Grupo")), *_precios(sub), p[1],
                _puntos(sub))
 
     for lab, odu in sorted(excluidos):
         print(f"EXCLUIDOS (unidad no parseada): {lab}: {odu or '(sin unidad)'}")
+    for slug, unidades, n, desde, hasta in otra_unidad:
+        print(f"OTRA UNIDAD (no entra): {slug}: {n} filas en {', '.join(unidades)}, "
+              f"{desde:%Y-%m-%d} a {hasta:%Y-%m-%d}")
+    for slug, u, f, n, desde, hasta in convertidas:
+        print(f"OTRO ENVASE (entra convertido, precio x {f:.4g}): {slug}: {n} filas en {u}, "
+              f"{desde:%Y-%m-%d} a {hasta:%Y-%m-%d}")
     print(f"Catálogo: {len(out)} incluidos, {len(excluidos)} excluidos")
     return out
 
