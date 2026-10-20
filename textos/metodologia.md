@@ -14,6 +14,8 @@
 
 **Velas.** Son semanales. El cuerpo muestra el cambio de una semana a otra, y la mecha va del precio más bajo al más alto que ODEPA encontró esa semana entre los locales encuestados.
 
+**4 semanas:** compara el precio promedio de las últimas 4 semanas con el de las 4 anteriores. Una sola semana trae mucho ruido de medición: en estos datos, cerca de 4 de cada 10 alzas semanales de 10% o más se devuelven a la mitad la semana siguiente.
+
 **Límites.** Cubre solo la Región Metropolitana. Cada precio es el promedio de los puntos que ODEPA encuesta cada semana (ferias libres, supermercados y carnicerías), por eso suele ser menor que el precio de supermercado. La historia de cada canasta tiene un largo distinto, porque ODEPA empezó a cotizar sus productos en años distintos.
 
 ## Fuentes
