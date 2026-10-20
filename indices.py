@@ -498,9 +498,30 @@ def factor_precio(odepa_unit: str, objetivo: str):
     return 1.0 / contenido, False   # precio por unidad-objetivo real
 
 
+def misma_base(sub: pd.DataFrame, odepa_unit: str) -> pd.DataFrame:
+    """Solo las filas cuya unidad tiene la misma base (kg, un o l) que la
+    unidad modal 'odepa_unit' del producto. ODEPA informa algunos productos
+    en dos bases a la vez: la cebolla, desde 2014, va por unidad en las
+    ferias y por kilo en los supermercados. Promediar un precio por kilo con
+    uno por unidad no da ninguno de los dos, y sin un peso por unidad que
+    venga de la fuente no hay cómo convertir, así que las filas de la otra
+    base quedan fuera. Solo sale la fila cuya unidad se reconoce con certeza
+    (parse_envase_estricto): una sin unidad o con un envase que no se lee
+    ('$/botella 900 ml') se queda, como antes. Envases de la misma base y
+    distinto contenido (bandeja de 12 y de 30 huevos) no se tocan aquí."""
+    if sub.empty or "Unidad" not in sub.columns or not odepa_unit:
+        return sub
+    base = parse_envase(odepa_unit)[0]
+    u = sub["Unidad"].fillna("").astype(str)
+    leidas = {x: parse_envase_estricto(x) for x in u.unique()}
+    otra = [x for x, p in leidas.items() if p is not None and p[0] != base]
+    return sub[~u.isin(otra)]
+
+
 # ---------------- Calculo de un indice ----------------
 def precio_semanal(df: pd.DataFrame, texto: str, col: str = "Precio promedio") -> pd.Series:
     sub = df[df["ProductoBase"].str.contains(texto, case=False, na=False)]
+    sub = misma_base(sub, unidad_modal(sub, texto))
     if sub.empty:
         if col == "Precio promedio":
             print(f"    [aviso] sin datos para '{texto}'")
@@ -680,7 +701,9 @@ def series_productos(df: pd.DataFrame, ipc: pd.Series, descartes: list = None,
 
     COMPUERTA: solo entra al JSON el producto cuya unidad modal ODEPA se
     parsea con certeza (parse_envase_estricto) a kg/un/l; el resto se
-    excluye y se reporta. Serie: precio por unidad base, W-MON +
+    excluye y se reporta. Del producto que entra se usan solo las filas de
+    esa misma base (misma_base), como en los índices. Serie: precio por
+    unidad base, W-MON +
     ffill(limit=4) como el pipeline, deflactada a pesos de hoy, y emitida
     compacta: {label, unidad, grupo, t0, v, min, max} con v = enteros
     semanales consecutivos desde t0 y null en las semanas sin dato
@@ -767,6 +790,7 @@ def series_productos(df: pd.DataFrame, ipc: pd.Series, descartes: list = None,
         if p is None or p[0] != uni:
             excluidos.append((lab, odu))
             continue
+        sub = misma_base(sub, odu)
         emitir(_slug(lab), lab, uni, _modal(sub.get("Grupo")), *_precios(sub), p[1],
                _puntos(sub))
 
@@ -785,6 +809,7 @@ def series_productos(df: pd.DataFrame, ipc: pd.Series, descartes: list = None,
         slug = _slug(label)
         if slug in out:
             continue
+        sub = misma_base(sub, odu)
         emitir(slug, label, p[0], _modal(sub.get("Grupo")), *_precios(sub), p[1],
                _puntos(sub))
 
