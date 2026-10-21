@@ -2274,6 +2274,7 @@ PIE_LINKS = [
     ("acerca", "Acerca de", f"{SITIO}/acerca.html"),
     ("novedades", "Novedades", f"{SITIO}/novedades.html"),
     ("prensa", "Prensa", f"{SITIO}/prensa.html"),
+    ("compras", "Para compras", f"{SITIO}/compras.html"),
     ("contacto", "Contacto", f"{SITIO}/contacto.html"),
     ("terminos", "Términos de uso", f"{SITIO}/terminos.html"),
     ("privacidad", "Privacidad", f"{SITIO}/privacidad.html"),
@@ -6651,7 +6652,7 @@ __CSS_MARCA__
   .tarjeta { display:block; width:100%; max-width:600px; height:auto; margin-top:32px;
     border:1px solid var(--line); }
 __CSS_SITIO__
-</style>
+__CSS_PAGINA__</style>
 </head>
 <body>
 
@@ -6674,11 +6675,13 @@ __PIE__
 
 def escribir_pagina(archivo: str, url: str, titulo: str, desc: str, cuerpo: str,
                     actual: str = "", clase: str = "doc", og: str = None,
-                    exacto: bool = True) -> None:
+                    exacto: bool = True, css: str = "") -> None:
     """Escribe una página del sitio. url=None: no indexable (el 404), sin
     canonical y con noindex. 'og': las etiquetas de su og:image (og_meta);
     sin ellas, la genérica. exacto=False: la página está dentro de la
-    sección 'actual' del menú (como una ficha bajo Productos)."""
+    sección 'actual' del menú (como una ficha bajo Productos). 'css': el CSS
+    que usa solo esta página (como la tabla de /compras.html), al final de su
+    <style>; las demás no lo llevan."""
     if og is None:
         og = og_meta(OG_GENERICA, "Carestía", generica=True)
     if url:
@@ -6696,6 +6699,7 @@ def escribir_pagina(archivo: str, url: str, titulo: str, desc: str, cuerpo: str,
         ("__CSS_BASE__", CSS_BASE),
         ("__CSS_MARCA__", CSS_MARCA),
         ("__CSS_SITIO__", CSS_SITIO),
+        ("__CSS_PAGINA__", css),
         ("__NAV__", nav_sitio(actual, exacto)),
         ("__PIE__", pie_sitio(actual)),
         ("__CLASE__", clase),
@@ -7302,6 +7306,142 @@ def generar_prensa(paginas_indices: list) -> None:
         cuerpo, actual="prensa")
 
 
+# ---- /compras.html: para áreas de compras de alimentos ----
+# Casinos, colegios, clínicas y hoteles: los insumos de una minuta, en cuatro
+# bloques, cada uno con las cifras de su ficha. Fuera del menú, enlazada en
+# el pie. Las claves son las de indices.json
+COMPRAS = [
+    ("Proteínas", ["posta_paleta", "pollo_trutro_entero", "cerdo_pulpa_s/hueso", "huevos"]),
+    ("Abarrotes", ["arroz_grano_largo_delgado_grado_2", "spaghetti_n°5", "lentejas_6_mm",
+                   "aceite_vegetal", "azucar"]),
+    ("Verduras", ["papa", "cebolla", "tomate", "zanahoria"]),
+    ("Pan y lácteos", ["marraqueta", "leche_entera"]),
+]
+
+# la tabla (escribir_pagina la pone solo en /compras.html): en el escritorio,
+# cuatro columnas; en el celular (hasta 760px, como la tabla de la portada)
+# cada fila se apila, con el nombre arriba y, abajo, el precio, el cambio de
+# 4 semanas con su etiqueta y la frase. Sin scroll horizontal
+CSS_COMPRAS = r"""
+  /* ---- /compras.html: los insumos de una minuta ---- */
+  .compras .meta .sin-nuevos { color:var(--bone); }
+  .insumos { width:100%; max-width:1100px; margin-top:6px; border-collapse:collapse; }
+  .insumos th, .insumos td { padding:11px 12px; text-align:left; vertical-align:baseline; }
+  .insumos th:first-child { padding-left:0; }
+  .insumos thead th:last-child, .insumos td:last-child { padding-left:24px; padding-right:0; }
+  .insumos thead th { padding-top:14px; font:500 12px var(--sans); color:var(--dim);
+    white-space:nowrap; border-bottom:1px solid var(--line); }
+  .insumos .ins-p, .insumos .ins-4 { text-align:right; white-space:nowrap; }
+  /* cada bloque abre con su subtítulo */
+  .insumos .ins-g th { padding-top:26px; font:600 16px var(--sans); color:var(--bone); }
+  .insumos tr:not(.ins-g) { border-bottom:1px solid var(--line); }
+  .ins-n { width:28%; font:500 15px/1.4 var(--sans); }
+  .ins-p { font:500 15px var(--sans); }
+  .ins-p small { font:400 12px var(--sans); color:var(--ash); }
+  .ins-p .ins-sem { display:block; margin-top:2px; }
+  .ins-4 { font:400 14px var(--sans); }
+  .ins-4 .f { font-size:10px; }
+  .ins-f { font:400 14px/1.5 var(--sans); color:var(--bone); text-wrap:pretty; }
+  .doc .ins-nota { margin-top:12px; font-size:12px; color:var(--ash); }
+  @media (max-width:760px) {
+    .insumos, .insumos tbody, .insumos tr, .insumos th, .insumos td { display:block; }
+    .insumos thead { display:none; }
+    .insumos th, .insumos td, .insumos td:last-child { padding:0; }
+    .insumos tbody tr:not(.ins-g) { display:grid; grid-template-columns:auto minmax(0,1fr);
+      align-items:baseline; gap:4px 16px; padding:12px 0; }
+    .insumos .ins-g th { padding:24px 0 4px; }
+    .ins-n, .ins-f { grid-column:1 / -1; width:auto; }
+    .insumos .ins-p, .insumos .ins-4 { text-align:left; }
+    /* sin cabecera, el cambio de 4 semanas lleva su etiqueta; sin dato no va */
+    .ins-4:not(:empty)::after { content:" 4 semanas"; font:400 12px var(--sans);
+      color:var(--bone); }
+  }
+"""
+
+
+def fila_compras(p: dict, slug: str, semana: datetime.date) -> str:
+    """Una fila de la tabla de /compras.html, con lo que dice la ficha del
+    producto: el precio de esta semana y su unidad (sin precio esta semana,
+    el último dato de ultimo_dato, con su semana), el cambio de 4 semanas
+    (fmt_variacion; sin dato, vacío) y la frase de su tarjeta, la de
+    temporada o, sin ella, la de toda la historia. Sin semáforo."""
+    vals = [v for v in p["v"] if v is not None]
+    fin = fin_serie(p)
+    unidad = f"por {UNI_TXT.get(p['unidad'], p['unidad'])}"
+    precio, cuando = fmt_clp(vals[-1]), ""
+    if fin != semana:
+        u = ultimo_dato(p, semana)
+        precio = u["precio"]
+        if u["ajuste"]:
+            unidad += f", {u['ajuste']}"
+        cuando = f'<small class="ins-sem">semana del {fin:%d-%m-%Y}</small>'
+    d = variacion_4_semanas(vals)
+    t = temporada_producto(p)
+    o = concordancia(p["label"])["o"]
+    frase = frase_temporada(t, o) if t else frase_historia(vals, vals[-1], p["t0"][:4], o)
+    return (f'        <tr><th class="ins-n" scope="row"><a href="{SITIO}/productos/{slug}.html">'
+            f'{html.escape(nombre(p["label"]))}</a></th>'
+            f'<td class="ins-p">{precio} <small>{html.escape(unidad)}</small>{cuando}</td>'
+            f'<td class="ins-4">{"" if d is None else fmt_variacion(d)}</td>'
+            f'<td class="ins-f">{html.escape(frase)}</td></tr>')
+
+
+def generar_compras(fichas: dict, catalogo: dict) -> None:
+    """/compras.html: el texto del dueño, textos/compras.md (literal), con la
+    línea de la semana de la portada y la tabla de los insumos de COMPRAS en
+    sus bloques (fila_compras) después de la entrada, lo que va antes del
+    primer título ('## '). Va solo lo que tiene precio en las últimas
+    SEMANAS_TABLA semanas, como en la tabla de la portada: un precio viejo no
+    pasa por uno de esta semana. Lo que queda fuera se avisa en la consola."""
+    prods = DATA.get("productos", {})
+    slugs = {clave: slug for slug, (clave, _label) in fichas.items()}
+    semana = semana_vigente(prods[k] for k in slugs)
+    bloques, fuera = [], []
+    for titulo, claves in COMPRAS:
+        filas = []
+        for clave in claves:
+            if clave not in slugs:
+                fuera.append(f"{clave} (sin ficha)")
+            elif fin_serie(prods[clave]) < semana - datetime.timedelta(weeks=SEMANAS_TABLA - 1):
+                fuera.append(f"{clave} (último precio: {fin_serie(prods[clave]):%d-%m-%Y})")
+            else:
+                filas.append(fila_compras(prods[clave], slugs[clave], semana))
+        if filas:
+            bloques.append(f'      <tbody>\n        <tr class="ins-g"><th colspan="4" '
+                           f'scope="rowgroup">{html.escape(titulo)}</th></tr>\n'
+                           + "\n".join(filas) + "\n      </tbody>")
+    if fuera:
+        print(f"AVISO compras.html: sin precio en las últimas {SEMANAS_TABLA} semanas, fuera "
+              f"de la tabla: " + ", ".join(fuera))
+    tabla = ""
+    if bloques:
+        tabla = ('    <h2 id="h-semana">Esta semana</h2>\n'
+                 '    <table class="insumos" aria-labelledby="h-semana">\n'
+                 '      <thead><tr><th scope="col">Insumo</th>'
+                 '<th class="ins-p" scope="col">Precio esta semana</th>'
+                 '<th class="ins-4" scope="col">4 semanas</th>'
+                 '<th scope="col">Frente al mismo mes</th></tr></thead>\n'
+                 + "\n".join(bloques) + "\n    </table>\n"
+                 # la misma etiqueta de la tabla de la portada
+                 f'    <p class="ins-nota">Precios al consumidor ODEPA, Región Metropolitana, '
+                 f'{ajustado("os")}.</p>\n')
+    ultima = semana_de_los_datos(catalogo)
+    secciones = secciones_md(con_cifras(leer_texto("compras")))
+    entrada = secciones.pop(0)[1] if secciones and secciones[0][0] is None else ""
+    cuerpo = (f"    <h1>Para compras de alimentación</h1>\n{entrada}\n"
+              f'    <p class="meta">{linea_semana(ultima) if ultima else ""}</p>\n'
+              f"{tabla}"
+              + "\n".join(f"    <h2>{md_en_linea(t)}</h2>\n{contenido}"
+                          for t, contenido in secciones))
+    escribir_pagina(
+        "compras.html", f"{SITIO}/compras.html",
+        "Precios de alimentos para áreas de compras | Carestía",
+        "Los insumos de una minuta con su precio de esta semana en Santiago, ajustado por "
+        "inflación, y cómo está frente al mismo mes de los últimos 10 años. Datos de ODEPA, "
+        "cada viernes.",
+        cuerpo, actual="compras", clase="doc compras", css=CSS_COMPRAS)
+
+
 def generar_portada(catalogo: dict, fichas: dict) -> None:
     """index.html: la portada en formato tabla (ver PORTADA_HTML), con su
     tarjeta og/portada.png y, si ODEPA no publicó la semana que tocaba, el
@@ -7414,7 +7554,7 @@ def md_a_html(texto: str) -> str:
 # a publicar (ver más abajo) salvo en una vista previa local con
 # CARESTIA_BORRADOR=1.
 TEXTOS = ["terminos", "privacidad", "acerca", "contacto", "novedades",
-          "metodologia", "notas_metodologicas", "404"]
+          "metodologia", "notas_metodologicas", "compras", "404"]
 
 
 def leer_texto(nombre: str) -> str:
@@ -7612,8 +7752,8 @@ def generar_resumen() -> None:
 # salud.yml chequea la primera URL con /productos/ del sitemap y así sigue
 # siendo una ficha
 PAGINAS_SITEMAP = ["graficos.html", "productos/", "metodologia.html", "acerca.html",
-                   "novedades.html", "prensa.html", "contacto.html", "terminos.html",
-                   "privacidad.html"]
+                   "novedades.html", "prensa.html", "compras.html", "contacto.html",
+                   "terminos.html", "privacidad.html"]
 
 
 def generar_sitemap(slugs: list, indices: list = ()) -> None:
@@ -7695,6 +7835,7 @@ with open("robots.txt", "w", encoding="utf-8") as fh:
 generar_productos(FICHAS, CATALOGO)
 generar_indice_productos(FICHAS)
 generar_metodologia()
+generar_compras(FICHAS, CATALOGO)
 generar_paginas_texto()
 PAGINAS_INDICES = generar_paginas_indices()
 generar_prensa(PAGINAS_INDICES)
@@ -7705,7 +7846,7 @@ generar_marca()
 
 print(f"Listo: index.html + graficos.html + robots.txt + sitemap.xml + resumen.json + "
       f"{len(FICHAS)} páginas en productos/ + productos/index.html + "
-      f"{len(PAGINAS_INDICES)} páginas en indices/ + prensa.html + "
+      f"{len(PAGINAS_INDICES)} páginas en indices/ + prensa.html + compras.html + "
       f"{len(FICHAS) + len(PAGINAS_INDICES) + 1} tarjetas en og/ + og.png + "
       f"apple-touch-icon.png + "
       f"metodologia.html + {len(PAGINAS_TEXTO)} páginas institucionales + "
