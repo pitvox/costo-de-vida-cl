@@ -3756,6 +3756,23 @@ def dibujar(funcion, ruta: str, datos: dict) -> None:
         funcion(ruta, tokens_css(), **datos)
 
 
+# El gráfico de las tarjetas de producto y de índice: los últimos 10 años de
+# la serie ajustada por inflación (la de la ficha y la del índice), con su
+# leyenda.
+TARJETA_ANIOS = 10
+TARJETA_LEYENDA = "Ajustado por inflación"
+
+
+def serie_tarjeta(fechas: list, valores: list) -> list:
+    """Los puntos del gráfico de una tarjeta: [fecha ISO, valor redondeado]
+    de los últimos TARJETA_ANIOS años, sin las semanas sin precio."""
+    pts = [(f, v) for f, v in zip(fechas, valores) if v is not None]
+    if not pts:
+        return []
+    desde = pts[-1][0] - datetime.timedelta(days=round(365.25 * TARJETA_ANIOS))
+    return [[f.isoformat(), round(v)] for f, v in pts if f > desde]
+
+
 def og_url(ruta: str, datos: dict) -> str:
     """URL pública de una tarjeta, versionada por su contenido y por el
     dibujo (tarjetas.py): cambia solo cuando cambia la imagen."""
@@ -5195,6 +5212,10 @@ def tarjeta_producto(p: dict, slug: str, semana: datetime.date = None) -> str:
         "fecha": semana_larga(fin_serie(p)),
         "fuente_txt": FUENTE_CITA,
         "sitio": "carestia.cl",
+        "serie": serie_tarjeta(
+            [datetime.date.fromisoformat(p["t0"]) + datetime.timedelta(weeks=j)
+             for j in range(len(p["v"]))], p["v"]),
+        "leyenda": TARJETA_LEYENDA,
     }
     ruta = f"{OG_DIR}/productos/{slug}.png"
     dibujar(tarjetas.ficha, ruta, datos)
@@ -7184,6 +7205,9 @@ def tarjeta_indice(code: str, d: dict) -> tuple:
         "color_veredicto": COLOR_VEREDICTO.get(d["veredicto"], "ambar"),
         # la nota de la regla de las dos semanas, bajo la frase ("" si no corre)
         "nota": nota_indice(d),
+        "serie": serie_tarjeta([datetime.date.fromisoformat(x["time"]) for x in d["real"]],
+                               [x["value"] for x in d["real"]]),
+        "leyenda": TARJETA_LEYENDA,
     }
     ruta = f"{OG_DIR}/indices/{code}.png"
     dibujar(tarjetas.ficha, ruta, datos)

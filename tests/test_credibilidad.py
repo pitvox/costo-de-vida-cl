@@ -19,6 +19,7 @@ from PIL import Image
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RAIZ)
 from indices import BASKETS  # noqa: E402
+import tarjetas  # noqa: E402
 
 FIN = datetime.date(2026, 9, 21)          # lunes de la semana vigente
 VIERNES = "2026-09-25T15:00"              # ODEPA ya publicó esa semana
@@ -363,6 +364,57 @@ def test_la_marca_y_los_iconos_en_todas_las_paginas(sitio):
             assert regla in h, (p, regla)
         assert "points='16,26 25,17 31,21 47,7'" in h, p
         assert '<link rel="apple-touch-icon" href="/apple-touch-icon.png">' in h, p
+
+
+def test_las_tarjetas_llevan_el_grafico_de_su_serie(sitio):
+    # con al menos 26 semanas con precio, el gráfico de la serie ajustada por
+    # inflación va a la derecha (hay brasa en su caja); con menos (maracuyá,
+    # 10 semanas) la tarjeta queda como antes, sin gráfico
+    def brasa(png):
+        with Image.open(sitio / png) as im:
+            colores = im.convert("RGB").crop(tarjetas.GRAFICO).getcolors(1 << 24)
+            return dict((c, n) for n, c in colores).get((0xe8, 0x74, 0x3b), 0)
+    assert brasa("og/productos/tomate.png") > 500
+    assert brasa("og/indices/asado.png") > 500
+    assert brasa("og/productos/maracuya.png") == 0
+
+
+def test_un_grafico_que_falla_no_frena_la_tarjeta(tmp_path, capsys):
+    # una serie que no se puede dibujar (una fecha ilegible): la tarjeta sale
+    # sin gráfico, como antes, y queda el aviso; el build sigue
+    serie = [[f"2026-01-{d:02d}", 1000] for d in range(1, 27)] + [["no-es-fecha", 1000]]
+    ruta = str(tmp_path / "rota.png")
+    tok = {"bg": "#0f0f0e", "bone": "#e4dacc", "ash": "#a39e95", "dim": "#86817a",
+           "line": "#2b2a27", "ember": "#e8743b", "rojo": "#e0552f"}
+    tarjetas.ficha(ruta, tok, antetitulo="Precio en Santiago", nombre="Prueba", precio="$1.000",
+                   unidad="por kilo", frase="Frase.", fecha="Semana del 19-10-2026",
+                   fuente_txt="Fuente", sitio="carestia.cl", serie=serie, leyenda="Ajustado por inflación")
+    assert "va sin gráfico" in capsys.readouterr().out
+    with Image.open(ruta) as im:
+        assert im.size == (1200, 630)
+        colores = im.convert("RGB").crop(tarjetas.GRAFICO).getcolors(1 << 24)
+        assert (0xe8, 0x74, 0x3b) not in dict((c, n) for n, c in colores)
+
+
+def test_el_grafico_de_la_tarjeta_son_los_ultimos_10_anios():
+    with open(os.path.join(RAIZ, "build_site.py"), encoding="utf-8") as fh:
+        arbol = ast.parse(fh.read())
+    piezas = [n for n in arbol.body if
+              (isinstance(n, ast.FunctionDef) and n.name == "serie_tarjeta")
+              or (isinstance(n, ast.Assign) and any(getattr(t, "id", None) == "TARJETA_ANIOS"
+                                                     for t in n.targets))]
+    g = {"datetime": datetime}
+    exec(compile(ast.Module(body=piezas, type_ignores=[]), "build_site.py", "exec"), g)
+    fin = datetime.date(2026, 10, 19)
+    fechas = [fin - datetime.timedelta(weeks=j) for j in range(12 * 52, -1, -1)]
+    valores = [1000.4] * len(fechas)
+    valores[-2] = None                      # la semana del 12-10 sin precio
+    pts = g["serie_tarjeta"](fechas, valores)
+    # desde la primera semana después del 19-10-2016 (3.652 días antes), sin
+    # la semana vacía y con los valores redondeados
+    assert pts[0] == ["2016-10-24", 1000] and pts[-1] == ["2026-10-19", 1000]
+    assert ["2026-10-12", 1000] not in pts and len(pts) == 521
+    assert g["serie_tarjeta"]([], []) == []
 
 
 def test_og_generica_e_icono_de_ios(sitio):
