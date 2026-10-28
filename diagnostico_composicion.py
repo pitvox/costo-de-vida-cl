@@ -239,12 +239,21 @@ def anios_sin_tipo(filas: pd.DataFrame) -> list:
     return sorted(set(anio) - set(anio[filas["tipo"] != SIN_TIPO]))
 
 
+MIN_SEMANAS_ANIO = 20      # semanas con fecha en un año para darlo por bajado
+
+
 def anios_faltantes(df: pd.DataFrame, anios=None) -> list:
-    """Años de ODEPA sin ninguna fila RM: cargar_odepa salta en silencio el
-    año que no pudo bajar, y el diagnóstico sobre datos incompletos no vale."""
+    """Años de ODEPA que no se bajaron: cargar_odepa salta en silencio el año
+    que falla, y el diagnóstico sobre datos incompletos no vale. Una fila no
+    basta para darlo por bajado: el CSV de un año trae filas con fecha en el
+    anterior (el de 2013, la semana del 31 de diciembre de 2012), así que se
+    piden MIN_SEMANAS_ANIO semanas con fecha en ese año, salvo el último, que
+    al empezar el año trae pocas."""
     anios = [y for y in YEARS if y in RESOURCES] if anios is None else list(anios)
-    cargados = set(pd.to_datetime(df["fecha"]).dt.year)
-    return [y for y in anios if y not in cargados]
+    f = pd.to_datetime(df["fecha"])
+    semanas = semana_de(f).groupby(f.dt.year).nunique()
+    return [y for y in anios
+            if semanas.get(y, 0) < (1 if y == max(anios) else MIN_SEMANAS_ANIO)]
 
 
 # ---------------- 3. los índices ----------------
@@ -600,7 +609,11 @@ def lineas_resumen(res: dict, saltos: pd.DataFrame, info: dict, v: dict,
         partes = [f"{res[k]['nombre']} ({res[k]['motivo'].split(':')[0]})"
                   for k in v["no_verificable"]]
         if v["sin_evaluar"]:
-            partes.append(f"(c) sin evaluar en {len(v['sin_evaluar'])} años con filas sin tipo")
+            ing = {x.rsplit(" ", 1)[0] for x in v["sin_evaluar"]}
+            anios = [int(x.rsplit(" ", 1)[1]) for x in v["sin_evaluar"]]
+            partes.append(f"(c) sin evaluar por filas sin tipo: {len(v['sin_evaluar'])} casos "
+                          f"de ingrediente y año ({len(ing)} ingredientes, {min(anios)} a "
+                          f"{max(anios)})")
         lineas.append("No verificable: " + "; ".join(partes) + ".")
     lineas.append(f"VEREDICTO: {v['veredicto']}")
     lineas.append("Solo diagnóstico: cero cambios de metodología. Decide Pedro.")
@@ -812,7 +825,8 @@ def prueba() -> None:
     assert set(bas["veredicto"]["no_verificable"]) == {"ensalada", "fruta"}
     assert "Tomate 2010" in bas["veredicto"]["sin_evaluar"]
     assert bas["indices"]["asado"]["comparable"] and bas["indices"]["desayuno"]["comparable"]
-    assert any(l.startswith("No verificable") for l in bas["resumen"])
+    assert any(l.startswith("No verificable") and "casos de ingrediente y año" in l
+               for l in bas["resumen"])
 
     # ninguna fila con tipo: NO VERIFICABLE, sin caerse, y escribe los CSV
     nada = df_prueba(sin_cambio=True).assign(Punto="")
@@ -826,6 +840,15 @@ def prueba() -> None:
     falta = falta[falta["fecha"].dt.year != 2011]
     assert anios_faltantes(falta, range(2010, 2017)) == [2011]
     assert anios_faltantes(df_prueba(sin_cambio=True), range(2010, 2017)) == []
+    # el CSV de 2013 trae la semana del 31 de diciembre de 2012: no da 2012 por bajado
+    sin_2012 = df_prueba(sin_cambio=True)
+    sin_2012 = sin_2012[(sin_2012["fecha"].dt.year != 2012)
+                        | (sin_2012["fecha"] == pd.Timestamp("2012-12-31"))]
+    assert anios_faltantes(sin_2012, range(2010, 2017)) == [2012]
+    # el último año, con pocas semanas (enero), no detiene la corrida
+    enero = df_prueba(sin_cambio=True)
+    enero = enero[enero["fecha"] <= pd.Timestamp("2016-01-11")]
+    assert anios_faltantes(enero, range(2010, 2017)) == []
     print("\nPRUEBA SINTÉTICA OK")
 
 
