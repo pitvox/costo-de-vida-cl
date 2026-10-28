@@ -19,6 +19,7 @@ from PIL import Image
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RAIZ)
 from indices import BASKETS  # noqa: E402
+import tarjetas  # noqa: E402
 
 FIN = datetime.date(2026, 9, 21)          # lunes de la semana vigente
 VIERNES = "2026-09-25T15:00"              # ODEPA ya publicó esa semana
@@ -363,6 +364,40 @@ def test_la_marca_y_los_iconos_en_todas_las_paginas(sitio):
             assert regla in h, (p, regla)
         assert "points='16,26 25,17 31,21 47,7'" in h, p
         assert '<link rel="apple-touch-icon" href="/apple-touch-icon.png">' in h, p
+
+
+def test_las_tarjetas_llevan_el_grafico_de_su_serie(sitio):
+    # con al menos 26 semanas con precio, el gráfico de la serie ajustada por
+    # inflación va a la derecha (hay brasa en su caja); con menos (maracuyá,
+    # 10 semanas) la tarjeta queda como antes, sin gráfico
+    def brasa(png):
+        with Image.open(sitio / png) as im:
+            colores = im.convert("RGB").crop(tarjetas.GRAFICO).getcolors(1 << 24)
+            return dict((c, n) for n, c in colores).get((0xe8, 0x74, 0x3b), 0)
+    assert brasa("og/productos/tomate.png") > 500
+    assert brasa("og/indices/asado.png") > 500
+    assert brasa("og/productos/maracuya.png") == 0
+
+
+def test_el_grafico_de_la_tarjeta_son_los_ultimos_10_anios():
+    with open(os.path.join(RAIZ, "build_site.py"), encoding="utf-8") as fh:
+        arbol = ast.parse(fh.read())
+    piezas = [n for n in arbol.body if
+              (isinstance(n, ast.FunctionDef) and n.name == "serie_tarjeta")
+              or (isinstance(n, ast.Assign) and any(getattr(t, "id", None) == "TARJETA_ANIOS"
+                                                     for t in n.targets))]
+    g = {"datetime": datetime}
+    exec(compile(ast.Module(body=piezas, type_ignores=[]), "build_site.py", "exec"), g)
+    fin = datetime.date(2026, 10, 19)
+    fechas = [fin - datetime.timedelta(weeks=j) for j in range(12 * 52, -1, -1)]
+    valores = [1000.4] * len(fechas)
+    valores[-2] = None                      # la semana del 12-10 sin precio
+    pts = g["serie_tarjeta"](fechas, valores)
+    # desde la primera semana después del 19-10-2016 (3.652 días antes), sin
+    # la semana vacía y con los valores redondeados
+    assert pts[0] == ["2016-10-24", 1000] and pts[-1] == ["2026-10-19", 1000]
+    assert ["2026-10-12", 1000] not in pts and len(pts) == 521
+    assert g["serie_tarjeta"]([], []) == []
 
 
 def test_og_generica_e_icono_de_ios(sitio):
