@@ -119,7 +119,7 @@ def semana_de(fechas: pd.Series) -> pd.Series:
     """Etiqueta de la semana W-MON de cada fecha (la de resample("W-MON"):
     cierra y se rotula el lunes, así que un lunes es su propia semana)."""
     f = pd.to_datetime(fechas).dt.normalize()
-    return f + pd.to_timedelta((-f.dt.weekday) % 7, unit="D")
+    return f + pd.to_timedelta((-f.dt.dayofweek) % 7, unit="D")
 
 
 # ---------------- 2. agrupada y estratificada ----------------
@@ -268,6 +268,58 @@ def brecha(agr: pd.Series, est: pd.Series, corte: pd.Timestamp):
             None if despues.empty else float(despues.mean()))
 
 
+# ---------------- descomposición (contexto, no entra a la regla) ----------------
+def solo_comunes(filas: pd.DataFrame, comunes: list, indice: pd.Index) -> pd.Series:
+    """La agrupada con solo las filas de los tipos comunes, ponderada por
+    filas como precio_semanal: frente a la agrupada aísla el efecto de los
+    tipos que no son comunes (los que entran después, como el supermercado en
+    línea); frente a la estratificada, el de reponderar los tipos comunes."""
+    sub = filas[filas["tipo"].isin(comunes)]
+    if sub.empty:
+        return pd.Series(np.nan, index=indice, dtype=float)
+    return sub.groupby("fecha")["precio"].mean().resample("W-MON").mean().reindex(indice)
+
+
+def imprimir_participacion(anual: pd.DataFrame) -> None:
+    """Participación de cada tipo por año (aa:% de las filas con tipo) y
+    puntos distintos por año."""
+    if anual.empty:
+        return
+    for t, g in anual.groupby("tipo"):
+        print(f"    {t}: " + " ".join(f"{int(r.anio) % 100:02d}:{r.participacion:.0f}"
+                                     for r in g.itertuples()))
+    pts = anual.drop_duplicates("anio")
+    print("    puntos distintos: " + " ".join(f"{int(r.anio) % 100:02d}:{r.puntos_anio}"
+                                           for r in pts.itertuples()))
+
+
+def _por_anio(x: pd.Series, base: pd.Series) -> str:
+    d = ((x / base) - 1).dropna() * 100
+    return " ".join(f"{a % 100:02d}:{v:+.1f}" for a, v in d.groupby(d.index.year).mean().items())
+
+
+def imprimir_descomposicion(items, com_ing, ipc, real_agr, real_est, agr, est) -> None:
+    """Tres versiones del índice: agrupada (todas las filas, la del
+    pipeline), solo tipos comunes por filas, y estratificada; la brecha media
+    por año de las dos últimas sobre la agrupada, y qué tan lejos queda cada
+    máximo en la otra serie."""
+    nom_com = canasta({m: com_ing[m] for (_l, m, _q, _u) in items}, items)
+    real_com = deflactar(nom_com, ipc) if nom_com.notna().any() else nom_com
+    com = metricas(real_com)
+    if com is not None:
+        print(f"    solo tipos comunes, por filas: percentil {com['percentil']}, máximo "
+              f"{com['maximo']:%Y-%m-%d}, z {com['z']} ({com['n']} semanas)")
+        print(f"    comunes por filas sobre agrupada, por año (%): {_por_anio(real_com, real_agr)}")
+    if est is None:
+        return
+    print(f"    estratificada sobre agrupada, por año (%): {_por_anio(real_est, real_agr)}")
+    ma, me = agr["maximo"], est["maximo"]
+    print(f"    máximos: en {ma:%Y-%m-%d} (el de la agrupada) la estratificada queda "
+          f"{(real_est.get(ma, np.nan) / real_est.max() - 1) * 100:+.1f}% de su máximo; en "
+          f"{me:%Y-%m-%d} (el de la estratificada) la agrupada queda "
+          f"{(real_agr.get(me, np.nan) / real_agr.max() - 1) * 100:+.1f}% del suyo")
+
+
 # ---------------- veredicto ----------------
 def veredicto(indices_res: dict, saltos: list) -> dict:
     """La regla preregistrada sobre los resultados por índice
@@ -297,7 +349,7 @@ def diagnostico(df: pd.DataFrame, ipc: pd.Series, carpeta: str = ".",
     imprime el detalle y, al final, el resumen. Devuelve los resultados."""
     print("\n" + "=" * 72)
     print("DETALLE POR INGREDIENTE (tipos comunes, cobertura, productos)")
-    semanal, anual, agr_ing, est_ing, info = [], [], {}, {}, {}
+    semanal, anual, agr_ing, est_ing, com_ing, info = [], [], {}, {}, {}, {}
     for match, (lab, uni) in ingredientes().items():
         filas, f = filas_ingrediente(df, match, uni)
         if filas.empty:
@@ -311,6 +363,7 @@ def diagnostico(df: pd.DataFrame, ipc: pd.Series, carpeta: str = ".",
         comunes, corte, solo_antes, solo_despues = tipos_comunes(filas)
         est, n_est = estratificada(tipos, comunes)
         agr_ing[match], est_ing[match] = agr, est
+        com_ing[match] = solo_comunes(filas, comunes, agr.index)
         semanal.append(tabla_semanal(lab, filas, agr, est, n_est, len(comunes)))
         anual.append(participacion_anual(lab, filas))
         con_est = n_est.dropna()
@@ -328,6 +381,7 @@ def diagnostico(df: pd.DataFrame, ipc: pd.Series, carpeta: str = ".",
         prods = filas.groupby("producto")["fecha"].agg(["min", "max", "size"])
         print("    productos: " + "; ".join(
             f"{p} ({r['min']:%Y} a {r['max']:%Y}, {r['size']} filas)" for p, r in prods.iterrows()))
+        imprimir_participacion(anual[-1])
 
     tabla = pd.concat(semanal, ignore_index=True)
     anual = [a for a in anual if not a.empty]
@@ -369,6 +423,7 @@ def diagnostico(df: pd.DataFrame, ipc: pd.Series, carpeta: str = ".",
               f"{est['percentil']}; máximo {agr['maximo']:%Y-%m-%d} -> "
               f"{est['maximo']:%Y-%m-%d}; z {agr['z']} -> {est['z']}; estratificada sobre "
               f"agrupada: antes del corte {f_(antes)}, después {f_(despues)}")
+        imprimir_descomposicion(items, com_ing, ipc, d["real"], real_est, agr, est)
         if publicado and code in publicado:
             p = publicado[code]
             igual = (p.get("percentil"), p.get("zscore"), p.get("fecha")) == (
