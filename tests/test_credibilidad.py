@@ -379,6 +379,23 @@ def test_las_tarjetas_llevan_el_grafico_de_su_serie(sitio):
     assert brasa("og/productos/maracuya.png") == 0
 
 
+def test_un_grafico_que_falla_no_frena_la_tarjeta(tmp_path, capsys):
+    # una serie que no se puede dibujar (una fecha ilegible): la tarjeta sale
+    # sin gráfico, como antes, y queda el aviso; el build sigue
+    serie = [[f"2026-01-{d:02d}", 1000] for d in range(1, 27)] + [["no-es-fecha", 1000]]
+    ruta = str(tmp_path / "rota.png")
+    tok = {"bg": "#0f0f0e", "bone": "#e4dacc", "ash": "#a39e95", "dim": "#86817a",
+           "line": "#2b2a27", "ember": "#e8743b", "rojo": "#e0552f"}
+    tarjetas.ficha(ruta, tok, antetitulo="Precio en Santiago", nombre="Prueba", precio="$1.000",
+                   unidad="por kilo", frase="Frase.", fecha="Semana del 19-10-2026",
+                   fuente_txt="Fuente", sitio="carestia.cl", serie=serie, leyenda="Ajustado por inflación")
+    assert "va sin gráfico" in capsys.readouterr().out
+    with Image.open(ruta) as im:
+        assert im.size == (1200, 630)
+        colores = im.convert("RGB").crop(tarjetas.GRAFICO).getcolors(1 << 24)
+        assert (0xe8, 0x74, 0x3b) not in dict((c, n) for n, c in colores)
+
+
 def test_el_grafico_de_la_tarjeta_son_los_ultimos_10_anios():
     with open(os.path.join(RAIZ, "build_site.py"), encoding="utf-8") as fh:
         arbol = ast.parse(fh.read())

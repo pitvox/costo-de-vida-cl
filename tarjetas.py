@@ -305,10 +305,19 @@ def ficha(ruta: str, tok: dict, *, antetitulo: str, nombre: str, precio: str,
              "unidad": unidad, "frase": frase, "veredicto": veredicto,
              "color_veredicto": color_veredicto, "nota": nota}
     if serie and len(serie) >= MIN_PUNTOS:
-        # los tamaños más grandes con que la columna no toca el pie
-        k = next((k for k in (1, 0.92, 0.85, 0.78) if _columna(c, texto, k) <= 528), 0.72)
-        _columna(c, texto, k, dibujar=True)
-        c.grafico(serie, leyenda)
+        try:
+            # los tamaños más grandes con que la columna no toca el pie
+            k = next((k for k in (1, 0.92, 0.85, 0.78) if _columna(c, texto, k) <= 528), 0.72)
+            _columna(c, texto, k, dibujar=True)
+            c.grafico(serie, leyenda)
+        except Exception as e:  # noqa: BLE001
+            # un gráfico que no se puede dibujar no frena el build: la tarjeta
+            # sale como antes, sin gráfico, y queda el aviso en el log
+            print(f"AVISO tarjeta {ruta}: va sin gráfico ({type(e).__name__}: {e})")
+            c = Lienzo(tok)
+            c.marca()
+            c.fecha(fecha)
+            _ancho_completo(c, texto)
     else:
         _ancho_completo(c, texto)
     c.pie(fuente_txt, sitio)
