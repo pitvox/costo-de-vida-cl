@@ -3,7 +3,8 @@ name: Diagnostico composicion (one-off)
 # Diagnostico de composicion de puntos ODEPA (tipo de punto de monitoreo) en
 # los ingredientes de los 4 indices. Solo lectura: SOLO workflow_dispatch (sin
 # cron), no toca Pages ni usa el grupo de concurrencia "pages", no commitea
-# nada y no publica nada. Los CSV y el log quedan como artifact del run.
+# nada y no publica nada. Los CSV quedan como artifact del run; el detalle y el
+# resumen, en el log del job.
 on:
   workflow_dispatch: {}
 
@@ -34,12 +35,10 @@ jobs:
         env:
           BCCH_USER: ${{ secrets.BCCH_USER }}
           BCCH_PASS: ${{ secrets.BCCH_PASS }}
-        # tee: el detalle y el resumen quedan en el log del workflow Y en
-        # diagnostico_composicion.txt (artifact). pipefail para que un fallo
-        # de python no quede oculto por el tee.
-        run: |
-          set -o pipefail
-          python diagnostico_composicion.py 2>&1 | tee diagnostico_composicion.txt
+        # Sin copia del log en el artifact: si el Banco Central falla, indices.py
+        # imprime el error de requests, que trae la URL con BCCH_USER y
+        # BCCH_PASS. GitHub los enmascara en el log del job, no en un archivo.
+        run: python diagnostico_composicion.py
 
       - name: Subir resultados como artifact
         if: ${{ !cancelled() }}
@@ -50,5 +49,4 @@ jobs:
             diagnostico_composicion_semanal.csv
             diagnostico_composicion_anual.csv
             diagnostico_composicion_indices.csv
-            diagnostico_composicion.txt
           retention-days: 30
