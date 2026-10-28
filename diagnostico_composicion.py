@@ -461,6 +461,7 @@ def diagnostico(df: pd.DataFrame, ipc: pd.Series, carpeta: str = ".",
     anual = (pd.concat(anual, ignore_index=True) if anual else pd.DataFrame(
         {"ingrediente": [], "anio": [], "tipo": [], "anio_base": [], "filas": [],
          "participacion": [], "cambio_pp": [], "marca": pd.Series([], dtype=bool)}))
+    anual["anio_base"] = anual["anio_base"].astype("Int64")      # sin el .0 del concat
     print("\nÍNDICES: pipeline de esta corrida y estratificada")
     res, filas_idx = {}, []
     for code, meta in BASKETS.items():
