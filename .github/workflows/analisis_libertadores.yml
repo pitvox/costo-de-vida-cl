@@ -28,17 +28,15 @@ jobs:
         env:
           BCCH_USER: ${{ secrets.BCCH_USER }}
           BCCH_PASS: ${{ secrets.BCCH_PASS }}
-        # tee: la tabla queda en el log del workflow Y en tabla.txt (artifact).
-        # pipefail para que un fallo de python no quede oculto por el tee.
-        run: |
-          set -o pipefail
-          python analisis_libertadores.py 2>&1 | tee tabla.txt
+        # La tabla queda en el log del job, sin copia en el artifact: si el
+        # Banco Central falla, indices.py imprime el error de requests, que trae
+        # la URL con BCCH_USER y BCCH_PASS. GitHub los enmascara en el log del
+        # job, no en un archivo.
+        run: python analisis_libertadores.py
 
       - name: Subir resultados como artifact
         uses: actions/upload-artifact@v7
         with:
           name: libertadores
-          path: |
-            libertadores.png
-            tabla.txt
+          path: libertadores.png
           retention-days: 30
