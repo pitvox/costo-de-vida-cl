@@ -7,8 +7,8 @@ hace más de un año.
 
 Verifica el Dataset (JSON-LD) de cada ficha y cada página de índice, la
 frase citable y la línea de cita de las fichas, la línea de cita de las
-páginas de índice y el bloque estático "ESTA SEMANA" de /graficos.html (que
-no va si los índices no terminan en la misma semana)."""
+páginas de índice y el bloque estático "ESTA SEMANA" de /graficos.html (con
+la semana propia del índice que termina antes, como el Fruta sin mandarina)."""
 import datetime
 import glob
 import html
@@ -333,15 +333,33 @@ def test_bloque_esta_semana_en_graficos(sitio, datos):
     assert infracciones(b) == []
 
 
-def test_bloque_omitido_si_los_indices_no_terminan_igual(tmp_path):
+def test_bloque_con_un_indice_atrasado(tmp_path):
+    """El Índice Fruta termina antes casi todos los veranos (sin mandarina):
+    el bloque va igual, con la semana más reciente en la línea de entrada y
+    la suya al lado de su nombre (decisión del dueño). Cada página de índice
+    cita la semana de su propio último dato."""
     datos = indices_sintetico()
     f = datos["indices"]["fruta"]
-    f["real"] = f["nominal"] = f["real"][:-1]
-    f["velas"] = f["velas"][:-1]
-    salida = _construir(tmp_path, datos)
-    assert "AVISO: los índices no terminan en la misma semana" in salida
-    h = (tmp_path / "graficos.html").read_text(encoding="utf-8")
-    assert "ctx-semana" not in h.split("</style>", 1)[1] and "ESTA SEMANA" not in h
+    f["real"] = f["nominal"] = f["real"][:-8]
+    f["velas"] = f["velas"][:-8]
+    _construir(tmp_path, datos)
+    fruta = FIN - datetime.timedelta(weeks=8)
+    b = _bloque((tmp_path / "graficos.html").read_text(encoding="utf-8"))
+    assert _parrafo(b, "sem-intro") == [
+        f"Costo de cada canasta en la Región Metropolitana, semana del {_fecha_larga(FIN)}."]
+    lineas = re.findall(r'<p class="sem-ind"><a href="https://carestia\.cl/indices/(\w+)\.html">'
+                        r'([^<]+)</a>( \(semana del [^)]+\))?: (\$[\d.]+)\. (.*?)</p>', b)
+    assert [x[0] for x in lineas] == list(BASKETS)
+    for code, nombre, cuando, cifra, frase in lineas:
+        pagina = (tmp_path / f"indices/{code}.html").read_text(encoding="utf-8")
+        # solo el atrasado lleva su semana, y es la de su último dato
+        assert cuando == ("" if code != "fruta" else f" (semana del {_fecha_larga(fruta)})")
+        assert f'<span class="ind-precio">{cifra}</span>' in pagina
+        assert f'<p class="intro">{frase} Está en el percentil' in pagina
+        fin = fruta if code == "fruta" else FIN
+        assert _parrafo(pagina, "cita") == [
+            f"Para citar: {CITA}, semana del {_fecha_larga(fin)}."], code
+    assert infracciones(b) == []
 
 
 def test_frases_nuevas_sin_maximos_ni_records(sitio):

@@ -7396,21 +7396,21 @@ def html_semana_indices() -> str:
     del modo índices (m-ind, como ella; el JS no lo toca): el costo y la
     frase de cada índice en HTML estático, con las mismas funciones que su
     página (fmt_clp, frase_indice), y un link a ella. Sin JS, la página no
-    mostraba ninguna cifra. La línea de entrada lleva la semana del último
-    dato de los índices; si no es la misma en todos, el bloque no va (lo
-    avisa el build): una sola fecha no puede presentarlos."""
+    mostraba ninguna cifra. La línea de entrada lleva la semana más reciente
+    de los índices; un índice que termina antes (el Fruta, casi todos los
+    veranos, sin mandarina) lleva la suya al lado del nombre: un dato viejo
+    nunca se presenta como de esta semana (decisión del dueño)."""
     indices = {c: d for c, d in DATA["indices"].items() if d.get("real")}
-    semanas = sorted({d["real"][-1]["time"] for d in indices.values()})
-    if len(semanas) != 1:
-        print("AVISO: los índices no terminan en la misma semana ("
-              + ", ".join(semanas) + "); /graficos.html va sin el bloque ESTA SEMANA.")
+    if not indices:
         return ""
-    semana = datetime.date.fromisoformat(semanas[0])
-    filas = "".join(
-        f'      <p class="sem-ind"><a href="{SITIO}/indices/{c}.html">'
-        f'{html.escape(d["nombre"])}</a>: {fmt_clp(d["costo_real"])}. '
-        f'{html.escape(frase_indice(d))}</p>\n'
-        for c, d in indices.items())
+    fin = {c: datetime.date.fromisoformat(d["real"][-1]["time"]) for c, d in indices.items()}
+    semana = max(fin.values())
+    filas = ""
+    for c, d in indices.items():
+        cuando = "" if fin[c] == semana else f" (semana del {fecha_larga(fin[c])})"
+        filas += (f'      <p class="sem-ind"><a href="{SITIO}/indices/{c}.html">'
+                  f'{html.escape(d["nombre"])}</a>{cuando}: {fmt_clp(d["costo_real"])}. '
+                  f'{html.escape(frase_indice(d))}</p>\n')
     return ('    <section class="ctx-semana m-ind" aria-labelledby="h-semana-ind">\n'
             '      <h2 class="ctx-h" id="h-semana-ind">ESTA SEMANA</h2>\n'
             f'      <p class="sem-intro">Costo de cada canasta en la Región Metropolitana, '
