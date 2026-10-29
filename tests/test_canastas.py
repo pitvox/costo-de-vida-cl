@@ -3,20 +3,24 @@ en un directorio temporal con el indices.json sintético de test_texto.py más
 los 8 insumos del almuerzo de casino (con las claves de indices.json, el
 aceite con menos historia que el resto y el tomate con semanas sin precio) y
 dos productos para los casos de la franja: uno de historia corta y uno que
-baja.
+baja. La última semana de la canasta suma 20.322,5 pesos (Math.round da
+20.323 y el round() de Python, 20.322) y la marraqueta aporta 1.134,5 (1.135
+y 1.134).
 
 Verifica que las funciones de Python de la página (serie_canasta,
 lineas_canasta, hash_canasta y las que usan) den lo mismo que el JS de Arma
 tu canasta de /graficos.html, corrido en Node sobre el mismo build
 (tests/canasta_node.js): la misma serie, el mismo percentil, el mismo % y la
-misma línea de temporada, también con una canasta truncada y con una de
-menos de 30 semanas comparables, y que leerHash lea el link del botón con las
-mismas claves y cantidades. Sin Node, esas comparaciones se saltan y quedan
-las cuentas hechas a mano. Verifica también la página (orden, cifras, tabla,
-botón, cita y Dataset), su tarjeta en hueso, el párrafo de /compras.html, el
-sitemap y el workflow, que una canasta con un insumo sin precio en las
-últimas 4 semanas no se escriba (y una con uno de hace 2 semanas sí, con su
-semana) y la guardia de texto."""
+misma línea de temporada, también con una canasta truncada, con una de menos
+de 30 semanas comparables y con casos borde (29 y 30 comparables, mediana de
+un número par, empates, dos productos que parten juntos, el redondeo del %),
+y que leerHash lea el link del botón con las mismas claves y cantidades. Sin
+Node, esas comparaciones se saltan y quedan las cuentas hechas a mano.
+Verifica también la página (orden, cifras, tabla, botón, cita y Dataset), su tarjeta en hueso, el párrafo de
+/compras.html, el sitemap y el workflow, cuándo no se escribe (un insumo sin
+precio en las últimas 4 semanas, sin ficha o sin semanas en común en ese
+plazo) y cuándo sí (un insumo de hace 3 semanas: la canasta va con esa
+semana), y la guardia de texto."""
 import ast
 import datetime
 import html
@@ -48,15 +52,9 @@ LINEA = ("Canasta de ejemplo con precios de Santiago, ajustados por inflación. 
          "insumos y las cantidades en el gráfico. No es un índice de Carestía.")
 LD = re.compile(r'<script type="application/ld\+json">(.*?)</script>', re.S)
 
-# las canastas que se comparan con el JS
-CANASTAS_PRUEBA = [
-    INSUMOS,                                    # truncada por el aceite, con temporada
-    [("papa", 1), ("corto", 0.5)],              # truncada, con menos de 30 comparables
-    [("baja", 2), ("tomate", 0.5)],             # más barata, bajo su promedio
-    [("tomate", 1)],                            # sola, con semanas sin precio
-    [("aceite_vegetal", 1), ("papa", 0.3)],     # el primero es el que la limita
-    [("no_existe", 1), ("papa", 1)],            # una clave que no está queda fuera
-]
+
+def _semana(f: datetime.date, k: int) -> datetime.date:
+    return f + datetime.timedelta(weeks=k)
 
 
 def _serie(base: int, n: int, ultimo: int, fase: float = 0.0, huecos=()) -> list:
@@ -72,35 +70,101 @@ def _serie(base: int, n: int, ultimo: int, fase: float = 0.0, huecos=()) -> list
 
 def _producto(label: str, unidad: str, grupo: str, v: list, atraso: int = 0) -> dict:
     """Una serie semanal 'v' que termina 'atraso' semanas antes de FIN."""
-    fin = FIN - datetime.timedelta(weeks=atraso)
+    fin = _semana(FIN, -atraso)
     return {"label": label, "unidad": unidad, "grupo": grupo,
-            "t0": (fin - datetime.timedelta(weeks=len(v) - 1)).isoformat(), "v": v}
+            "t0": _semana(fin, -(len(v) - 1)).isoformat(), "v": v}
 
 
-def sintetico(atraso_tomate: int = 0, sin_marraqueta: bool = False) -> dict:
-    """El sintético de test_texto.py con los insumos de la canasta. La última
-    semana suma 20.320,5 pesos: Math.round da 20.321 y el round() de Python,
-    20.320."""
+def sintetico(atraso_tomate: int = 0, sin_marraqueta: bool = False,
+              sin_semana_comun: bool = False) -> dict:
+    """El sintético de test_texto.py con los insumos de la canasta. Con
+    'atraso_tomate', el tomate termina esas semanas antes; con
+    'sin_semana_comun', cada insumo tiene precio en las últimas 4 semanas,
+    pero nunca todos la misma: el tomate no tiene las 3 anteriores a esta y
+    la cebolla termina hace una."""
     out = indices_sintetico()
     p = out["productos"]
-    p["posta_paleta"] = _producto("Posta Paleta", "kg", "Carne bovina", _serie(11000, 260, 11580, 0.3))
+    p["posta_paleta"] = _producto("Posta Paleta", "kg", "Carne bovina", _serie(11000, 260, 11582, 0.3))
     p["pollo_trutro_entero"] = _producto("Pollo Trutro Entero", "kg", "Carne de Cerdo - Ave - Cordero",
-                                         _serie(3400, 260, 3580, 1.1))
+                                         _serie(3400, 260, 3581, 1.1))
     p["arroz_grano_largo_delgado_grado_2"] = _producto(
-        "Arroz grano largo delgado grado 2", "kg", "Abarrotes y otros", _serie(1400, 260, 1510, 2.0))
-    p["papa"] = _producto("Papa", "kg", "Hortalizas", _serie(1200, 260, 1431, 0.7))
-    tomate = _serie(1500, 260, 1695, 2.9, huecos=(100, 101, 102))
+        "Arroz grano largo delgado grado 2", "kg", "Abarrotes y otros", _serie(1400, 260, 1511, 2.0))
+    p["papa"] = _producto("Papa", "kg", "Hortalizas", _serie(1200, 260, 1430, 0.7))
+    tomate = _serie(1500, 260, 1696, 2.9, huecos=(100, 101, 102))
+    if sin_semana_comun:
+        tomate[-4:-1] = [None] * 3
     p["tomate"] = _producto("Tomate", "kg", "Hortalizas",
                             tomate[:len(tomate) - atraso_tomate], atraso_tomate)
-    p["cebolla"] = _producto("Cebolla", "un", "Hortalizas", _serie(330, 260, 358, 1.7))
+    cebolla = _serie(330, 260, 358, 1.7)
+    p["cebolla"] = (_producto("Cebolla", "un", "Hortalizas", cebolla[:-1], 1) if sin_semana_comun
+                    else _producto("Cebolla", "un", "Hortalizas", cebolla))
     # tres años: la canasta parte con él (2023), con 30 o más comparables
     p["aceite_vegetal"] = _producto("Aceite vegetal", "l", "Abarrotes y otros",
                                     _serie(2400, 156, 2505, 0.9))
     if not sin_marraqueta:
-        p["marraqueta"] = _producto("Marraqueta", "kg", "Pan", _serie(2100, 260, 2270, 0.2))
+        p["marraqueta"] = _producto("Marraqueta", "kg", "Pan", _serie(2100, 260, 2269, 0.2))
     p["corto"] = _producto("Corto", "kg", "Frutas", _serie(900, 40, 990))
     p["baja"] = _producto("Baja", "kg", "Frutas", _serie(1000, 200, 610))
     return out
+
+
+# ---------- los casos borde, con series hechas aquí (no van al build) ----------
+def _en_semanas(t0: datetime.date, puntos: dict) -> dict:
+    """Un producto con precio solo en las semanas de 'puntos' ({semana desde
+    t0: valor})."""
+    n = max(puntos) + 1
+    return {"label": "Borde", "unidad": "kg", "t0": t0.isoformat(),
+            "v": [puntos.get(i) for i in range(n)]}
+
+
+def _treinta(valores: list, ult: float) -> dict:
+    """30 semanas comparables con FIN (semana ISO 39): de la 35 a la 45 de
+    2024, de la 33 a la 45 de 2025 y de la 33 a la 38 de 2026, con 'valores',
+    y FIN con 'ult'. Ninguna otra semana tiene precio."""
+    t0 = datetime.date(2024, 8, 26)
+    semanas = list(range(0, 11)) + list(range(50, 63)) + list(range(102, 108))
+    assert len(semanas) == len(valores) == 30
+    return _en_semanas(t0, {**dict(zip(semanas, valores)), 108: ult})
+
+
+def _seguidas(valores: list, fin: datetime.date = FIN) -> dict:
+    return _en_semanas(_semana(fin, -(len(valores) - 1)), dict(enumerate(valores)))
+
+
+BORDE = {
+    # 108 y 109 semanas seguidas hasta FIN: 29 y 30 comparables
+    "c108": _seguidas([1000 + i for i in range(108)]),
+    "c109": _seguidas([1000 + i for i in range(109)]),
+    # un número par de comparables: la mediana es el promedio de las dos del medio
+    "pares160": _treinta([100] * 15 + [200] * 15, 160),
+    "pares140": _treinta([100] * 15 + [200] * 15, 140),
+    "pares120": _treinta([100] * 16 + [200] * 14, 120),
+    # empates con las comparables y con la mediana (150: la cuenta la da cara)
+    "empate100": _treinta([100] * 15 + [200] * 15, 100),
+    "empate150": _treinta([100] * 15 + [200] * 15, 150),
+    "empate200": _treinta([100] * 15 + [200] * 15, 200),
+    # dos productos que parten la misma semana, después del primero
+    "lim_a": _seguidas([1] * 10), "lim_b": _seguidas([1] * 6), "lim_c": _seguidas([1] * 6),
+    # el redondeo del %: 9 sobre 8 es +12,5%; y el orden de la suma
+    "dos_7_9": _seguidas([7, 9]), "dos_11_5": _seguidas([11, 5]),
+    "orden": _seguidas([7.5, 4.9, 14.3, 10.7, 3.7, 13.2, 0.7, 9.0]),
+    # 1,5 por 1.431: 2.146,5
+    "mitad": _seguidas([1000] * 39 + [1431]),
+}
+
+# las canastas que se comparan con el JS
+CANASTAS_PRUEBA = [
+    INSUMOS,                                    # truncada por el aceite, con temporada
+    [("papa", 1), ("corto", 0.5)],              # truncada, con menos de 30 comparables
+    [("baja", 2), ("tomate", 0.5)],             # más barata, bajo su promedio
+    [("tomate", 1)],                            # sola, con semanas sin precio
+    [("aceite_vegetal", 1), ("papa", 0.3)],     # el primero es el que la limita
+    [("no_existe", 1), ("papa", 1)],            # una clave que no está queda fuera
+] + [[(k, q)] for k, q in [("c108", 1), ("c109", 1), ("pares160", 1), ("pares140", 1),
+                           ("pares120", 1), ("empate100", 1), ("empate150", 1), ("empate200", 1),
+                           ("dos_7_9", 1), ("dos_11_5", 1), ("orden", 1), ("mitad", 1.5)]] + [
+    [("lim_a", 0.1), ("lim_b", 0.2), ("lim_c", 0.3)],
+]
 
 
 def _construir(d, datos: dict, tarjetas: bool = False) -> str:
@@ -131,19 +195,35 @@ def sitio(tmp_path_factory, datos):
     return d
 
 
+def _variante(tmp_path_factory, nombre: str, **kw):
+    d = tmp_path_factory.mktemp(f"build_canastas_{nombre}")
+    return d, _construir(d, sintetico(**kw))
+
+
 @pytest.fixture(scope="module")
 def atrasado(tmp_path_factory):
-    """El tomate sin precio hace 4 semanas y sin marraqueta: no se escribe."""
-    d = tmp_path_factory.mktemp("build_canastas_atrasado")
-    return d, _construir(d, sintetico(atraso_tomate=4, sin_marraqueta=True))
+    """El tomate con su último precio hace 4 semanas: no se escribe."""
+    return _variante(tmp_path_factory, "atrasado", atraso_tomate=4)
 
 
 @pytest.fixture(scope="module")
-def esa_semana(tmp_path_factory):
-    """El tomate con su último precio hace 2 semanas: va, con esa semana."""
-    d = tmp_path_factory.mktemp("build_canastas_esa_semana")
-    _construir(d, sintetico(atraso_tomate=2))
-    return d
+def sin_ficha(tmp_path_factory):
+    """Sin marraqueta en indices.json: no se escribe."""
+    return _variante(tmp_path_factory, "sin_ficha", sin_marraqueta=True)
+
+
+@pytest.fixture(scope="module")
+def sin_semana_comun(tmp_path_factory):
+    """Cada insumo con precio en las últimas 4 semanas, pero no la misma: no
+    se escribe."""
+    return _variante(tmp_path_factory, "sin_semana_comun", sin_semana_comun=True)
+
+
+@pytest.fixture(scope="module")
+def tres_semanas(tmp_path_factory):
+    """El tomate con su último precio hace 3 semanas, el borde del plazo: va,
+    con esa semana."""
+    return _variante(tmp_path_factory, "tres_semanas", atraso_tomate=3)[0]
 
 
 def _leer(d, ruta):
@@ -175,11 +255,106 @@ def f():
     return _f()
 
 
+def _prods(datos) -> dict:
+    """Los productos del build y los de los casos borde."""
+    return {**datos["productos"], **BORDE}
+
+
 def _nombres(f, datos) -> dict:
-    return {k: f["nombre"](p["label"]) for k, p in datos["productos"].items()}
+    return {k: f["nombre"](p["label"]) for k, p in _prods(datos).items()}
 
 
-# ---------- la cuenta, contra el JS de /graficos.html ----------
+# ---------- las cuentas, a mano (sin Node) ----------
+def test_cuentas_hechas_a_mano(f):
+    """Un producto plano con un salto al final, por 1,5. La última semana es
+    1,5 x 1.431 = 2.146,5, que Math.round lleva a 2.147 (round() de Python, a
+    2.146); el promedio es 60.646,5 / 40 = 1.516,16, así que está 42% sobre
+    él; percentil 100; solo 6 semanas comparables (sin temporada). Con un
+    segundo producto que parte 10 semanas después, la canasta queda
+    truncada."""
+    t0 = datetime.date(2025, 12, 29)
+    prods = {"a": {"label": "Pera", "unidad": "kg", "t0": t0.isoformat(), "v": [1000] * 39 + [1431]},
+             "b": {"label": "Cerdo Lomo", "unidad": "kg",
+                   "t0": _semana(t0, 10).isoformat(), "v": [500] * 30}}
+    r = f["serie_canasta"]([("a", 1.5)], prods)
+    assert len(r["serie"]) == 40 and r["serie"][-1] == ("2026-09-28", 2146.5)
+    assert f["lineas_canasta"](r, {"a": "Pera"}) == {
+        "costo": "$2.147",
+        "stats": "percentil 100 de 40 semanas de esta canasta (+42% sobre su promedio histórico)",
+        "temporada": "", "aviso": ""}
+    r = f["serie_canasta"]([("a", 1), ("b", 2)], prods)
+    assert r["serie"][0] == ("2026-03-09", 2000.0) and r["truncada"] and r["limitante"] == "b"
+    assert f["lineas_canasta"](r, {"a": "Pera", "b": "Lomo de cerdo"})["aviso"] == \
+        "esta canasta tiene datos desde 2026 (limitada por Lomo de cerdo)"
+    assert f["redondeo_js"](-2.5) == -2 and f["redondeo_js"](2.5) == 3
+    assert f["redondeo_js"](0.49999999999999994) == 0
+    assert f["numero_js"](4.0) == "4" and f["numero_js"](0.8) == "0.8"
+
+
+def test_casos_borde_a_mano(f, datos):
+    """Los casos borde, con lo que dice el JS de /graficos.html de cada uno
+    (leído en Node y anotado aquí): el mínimo de 30 comparables, la mediana
+    de un número par, los empates, el redondeo del % (9 sobre 8 es +12,5%:
+    Math.round sube; con el orden del JS, la suma de la serie "orden" da
+    64,00000000000001, el promedio 8,000000000000002 y +12%, y con el sum()
+    de Python daría +13%) y el limitante cuando dos parten juntos."""
+    prods, nombres = _prods(datos), _nombres(f, datos)
+
+    def lineas(*c):
+        return f["lineas_canasta"](f["serie_canasta"](list(c), prods), nombres)
+    comparables = " de las semanas comparables (30 desde 2024)"
+    assert lineas(("c108", 1))["temporada"] == ""
+    assert lineas(("c109", 1))["temporada"] == "en esta época del año: más cara que el 100%" + comparables
+    for k, frase in [("pares160", "más cara que el 50%"), ("pares140", "más barata que el 50%"),
+                     ("pares120", "más cara que el 53%"), ("empate100", "más barata que el 50%"),
+                     ("empate150", "más cara que el 50%"), ("empate200", "más cara que el 50%")]:
+        assert lineas((k, 1))["temporada"] == "en esta época del año: " + frase + comparables, k
+    assert lineas(("dos_7_9", 1))["stats"] == \
+        "percentil 100 de 2 semanas de esta canasta (+13% sobre su promedio histórico)"
+    assert lineas(("dos_11_5", 1))["stats"] == \
+        "percentil 50 de 2 semanas de esta canasta (-37% bajo su promedio histórico)"
+    assert lineas(("orden", 1))["stats"] == \
+        "percentil 62 de 8 semanas de esta canasta (+12% sobre su promedio histórico)"
+    assert lineas(("mitad", 1.5))["costo"] == "$2.147"
+    r = f["serie_canasta"]([("lim_a", 0.1), ("lim_b", 0.2), ("lim_c", 0.3)], prods)
+    assert r["truncada"] and r["limitante"] == "lim_b"
+    assert r["serie"][-1][1] == 0.6000000000000001   # 0,1 + 0,2 + 0,3 en el orden de la canasta
+
+
+def test_semanas_y_link_a_mano(f):
+    """La semana ISO, la distancia circular y el link de canasta, con lo que
+    da el JS: el link redondea a 0,1 como redondear() y escribe los números
+    como JS; cantidad_del_link deja fuera lo que leerHash cambiaría."""
+    assert [f["semana_iso"](t) for t in ["2026-09-21", "2021-01-03", "2024-12-30", "2027-01-01",
+                                         "2020-12-28", "2015-12-31"]] == [39, 53, 1, 53, 53, 53]
+    assert [f["distancia_semanas"](a, b) for a, b in [(1, 52), (1, 53), (46, 39), (39, 33)]] == \
+        [1, 0, 7, 6]
+    assert f["hash_canasta"](INSUMOS) == HASH
+    assert f["hash_canasta"]([("a", 0.25), ("g", 2.05), ("i", 0.15), ("j", 0.35), ("k", 4),
+                              ("m", 0.05), ("n", 1.45)]) == \
+        "#canasta=a:0.3,g:2.1,i:0.2,j:0.4,k:4,m:0.1,n:1.5"
+    for q, uni in [(0.25, "kg"), (2.6, "un"), (0, "kg"), (0.05, "l"), (0.5, "un"), (2.05, "kg")]:
+        assert not f["cantidad_del_link"](q, uni), (q, uni)
+    unidades = {k: p["unidad"] for k, p in sintetico()["productos"].items()}
+    for k, q in INSUMOS:
+        assert f["cantidad_del_link"](q, unidades[k]), k
+
+
+def test_la_definicion_de_la_canasta():
+    """La canasta del pedido, tal cual: claves de indices.json, cantidades y
+    la frase de /compras.html."""
+    with open(os.path.join(RAIZ, "build_site.py"), encoding="utf-8") as fh:
+        arbol = ast.parse(fh.read())
+    nodo = next(n for n in arbol.body if isinstance(n, ast.Assign)
+                and getattr(n.targets[0], "id", None) == "CANASTAS_EJEMPLO")
+    canastas = ast.literal_eval(nodo.value)
+    assert canastas[0] == {
+        "slug": SLUG, "titulo": TITULO,
+        "compras": "Estos insumos juntos, como un almuerzo para 10 personas, semana a semana",
+        "insumos": INSUMOS}
+
+
+# ---------- las cuentas, contra el JS de /graficos.html ----------
 def _script(h):
     """El JS inline de /graficos.html (el último <script> sin src)."""
     return re.findall(r"<script>\n(.*?)</script>", h, re.S)[-1]
@@ -200,6 +375,7 @@ def _fechas() -> list:
 
 MAPAS = [[("a", 0.1), ("b", 0.25), ("c", 0.3), ("d", 0.7), ("e", 1), ("f", 1.5), ("g", 2.05),
           ("h", 12), ("i", 0.15), ("j", 0.35), ("k", 4)], INSUMOS]
+HASHES_PRUEBA = ["#canasta=papa:0.25,cebolla:2.6,tomate:0", "#canasta=no_existe:1,papa:2,papa:3"]
 
 
 @pytest.fixture(scope="module")
@@ -214,17 +390,20 @@ def js(sitio, tmp_path_factory):
     pagina = _leer(sitio, f"canastas/{SLUG}.html")
     boton = re.search(r'<a href="https://carestia\.cl/graficos\.html(#canasta=[^"]+)">'
                       r'Abrir en el gráfico y cambiarla</a>', pagina).group(1)
+    prods = _inline(h)["productos"]
+    for k, p in BORDE.items():
+        prods[k] = {"label": p["label"], "unidad": p["unidad"], "slug": k,
+                    "t0": p["t0"], "v": p["v"]}
     entrada = {
         "datos": s[s.index("  const DIA = 864e5;"):s.index("  Object.keys(DATA.series")],
         "fmt": re.search(r"^  const fmt = v => .*$", s, re.M).group(0),
         "canasta": s[s.index("  /* ---------- vista Tu canasta ---------- */"):
                      s.index("  function buildCanasta()")],
-        "prods": _inline(h)["productos"],
+        "prods": prods,
         "dir": str(sitio),
         "canastas": CANASTAS_PRUEBA,
         # el del botón, uno que leerHash redondea y otro con claves que no están
-        "hashes": [html.unescape(boton), "#canasta=papa:0.25,cebolla:2.6,tomate:0",
-                   "#canasta=no_existe:1,papa:2,papa:3"],
+        "hashes": [html.unescape(boton)] + HASHES_PRUEBA,
         "mapas": MAPAS,
         "fechas": _fechas(),
     }
@@ -233,7 +412,12 @@ def js(sitio, tmp_path_factory):
     r = subprocess.run([NODE, os.path.join(RAIZ, "tests", "canasta_node.js"), str(archivo)],
                        capture_output=True, text=True, timeout=120)
     assert r.returncode == 0, r.stdout + r.stderr
-    return json.loads(r.stdout)
+    out = json.loads(r.stdout)
+    assert len(out["canastas"]) == len(CANASTAS_PRUEBA)
+    assert len(out["hashes"]) == 1 + len(HASHES_PRUEBA)
+    assert len(out["mapas"]) == len(MAPAS)
+    assert len(out["iso"]) == len(entrada["fechas"]) and len(out["dist"]) == 53 * 53
+    return out
 
 
 def test_la_cuenta_es_la_del_js(js, datos, f):
@@ -241,9 +425,9 @@ def test_la_cuenta_es_la_del_js(js, datos, f):
     limitante, el mismo costo, el mismo percentil con su %, la misma línea
     de temporada y el mismo aviso, salvo "tu canasta", que en la página es
     "esta canasta"."""
-    nombres = _nombres(f, datos)
+    prods, nombres = _prods(datos), _nombres(f, datos)
     for c, j in zip(CANASTAS_PRUEBA, js["canastas"]):
-        r = f["serie_canasta"](c, datos["productos"])
+        r = f["serie_canasta"](c, prods)
         assert [list(x) for x in r["serie"]] == j["serie"], c
         assert (r["truncada"], r["limitante"]) == (j["truncada"], j["limitante"]), c
         lineas = f["lineas_canasta"](r, nombres)
@@ -257,12 +441,12 @@ def test_la_cuenta_es_la_del_js(js, datos, f):
 def test_los_casos_son_los_que_dicen(js):
     """Cada canasta de prueba cubre lo que dice: así la comparación con el
     JS no pasa por casos vacíos."""
-    almuerzo, corta, baja, sola, primero, falta = js["canastas"]
+    almuerzo, corta, baja, sola, primero, falta = js["canastas"][:6]
     assert almuerzo["truncada"] and almuerzo["limitante"] == "aceite_vegetal"
     assert almuerzo["temporada"].startswith("en esta época del año: ")
     assert almuerzo["aviso"] == "tu canasta tiene datos desde 2023 (limitada por Aceite vegetal)"
-    # el costo de su última semana suma 20.320,5: Math.round sube
-    assert almuerzo["costo"] == "$20.321"
+    # el costo de su última semana suma 20.322,5: Math.round sube
+    assert almuerzo["costo"] == "$20.323"
     assert corta["truncada"] and corta["limitante"] == "corto"
     assert corta["temporada"] == "" and len(corta["serie"]) == 40
     assert "% bajo su promedio histórico" in baja["stats"]
@@ -271,6 +455,10 @@ def test_los_casos_son_los_que_dicen(js):
     assert len(sola["serie"]) == 257   # 260 semanas menos los 3 huecos
     assert primero["truncada"] and primero["limitante"] == "aceite_vegetal"
     assert falta["serie"] and falta["limitante"] == "papa" and not falta["truncada"]
+    borde = dict(zip([c[0][0] for c in CANASTAS_PRUEBA[6:]], js["canastas"][6:]))
+    assert borde["c108"]["temporada"] == "" and "(30 desde 2024)" in borde["c109"]["temporada"]
+    assert borde["lim_a"]["limitante"] == "lim_b"
+    assert borde["orden"]["stats"].startswith("percentil 62 de 8 semanas de esta canasta (+12%")
 
 
 def test_el_boton_lleva_la_misma_canasta(js, datos):
@@ -285,26 +473,17 @@ def test_el_boton_lleva_la_misma_canasta(js, datos):
     assert boton["hash"] == HASH
 
 
-def test_cantidades_que_el_link_no_lleva_tal_cual(js, f):
+def test_leerhash_cambia_lo_que_cantidad_del_link_deja_fuera(js):
     """leerHash redondea a 0,1 (por unidad, a enteros) y cambia lo que no es
-    positivo: esas cantidades no pasan cantidad_del_link, la que deja fuera
-    una canasta de ejemplo cuyo link no diría lo mismo. Las de la canasta sí
-    pasan."""
-    leido = js["hashes"][1]["canasta"]
-    assert leido == [["papa", 0.3], ["cebolla", 3], ["tomate", 0.5]]
-    for q, uni in [(0.25, "kg"), (2.6, "un"), (0, "kg"), (0.05, "l"), (0.5, "un")]:
-        assert not f["cantidad_del_link"](q, uni), (q, uni)
-    unidades = {k: p["unidad"] for k, p in sintetico()["productos"].items()}
-    for k, q in INSUMOS:
-        assert f["cantidad_del_link"](q, unidades[k]), k
-    # una clave que no está no entra, y una repetida entra una sola vez
+    positivo: por eso cantidad_del_link deja fuera esas cantidades. Una clave
+    que no está no entra, y una repetida entra una sola vez."""
+    assert js["hashes"][1]["canasta"] == [["papa", 0.3], ["cebolla", 3], ["tomate", 0.5]]
     assert js["hashes"][2]["canasta"] == [["papa", 2]]
 
 
 def test_hash_como_lo_escribe_el_js(js, f):
     for c, j in zip(MAPAS, js["mapas"]):
         assert f["hash_canasta"](c) == j
-    assert f["hash_canasta"](INSUMOS) == HASH
 
 
 def test_semana_iso_y_distancia_como_en_el_js(js, f):
@@ -312,52 +491,12 @@ def test_semana_iso_y_distancia_como_en_el_js(js, f):
     assert [f["distancia_semanas"](a, b) for a in range(1, 54) for b in range(1, 54)] == js["dist"]
 
 
-def test_cuentas_hechas_a_mano(f):
-    """Sin Node: un producto plano con un salto al final, por 1,5. La última
-    semana es 1,5 x 1.431 = 2.146,5, que Math.round lleva a 2.147 (round()
-    de Python, a 2.146); el promedio es 60.646,5 / 40 = 1.516,16, así que
-    está 42% sobre él; percentil 100; solo 6 semanas comparables (sin
-    temporada). Con un segundo producto que parte 10 semanas después, la
-    canasta queda truncada."""
-    t0 = datetime.date(2025, 12, 29)
-    prods = {"a": {"label": "Pera", "unidad": "kg", "t0": t0.isoformat(), "v": [1000] * 39 + [1431]},
-             "b": {"label": "Cerdo Lomo", "unidad": "kg",
-                   "t0": (t0 + datetime.timedelta(weeks=10)).isoformat(), "v": [500] * 30}}
-    r = f["serie_canasta"]([("a", 1.5)], prods)
-    assert len(r["serie"]) == 40 and r["serie"][-1] == ("2026-09-28", 2146.5)
-    assert f["lineas_canasta"](r, {"a": "Pera"}) == {
-        "costo": "$2.147",
-        "stats": "percentil 100 de 40 semanas de esta canasta (+42% sobre su promedio histórico)",
-        "temporada": "", "aviso": ""}
-    r = f["serie_canasta"]([("a", 1), ("b", 2)], prods)
-    assert r["serie"][0] == ("2026-03-09", 2000.0) and r["truncada"] and r["limitante"] == "b"
-    assert f["lineas_canasta"](r, {"a": "Pera", "b": "Lomo de cerdo"})["aviso"] == \
-        "esta canasta tiene datos desde 2026 (limitada por Lomo de cerdo)"
-    assert f["redondeo_js"](-2.5) == -2 and f["redondeo_js"](2.5) == 3
-    assert f["redondeo_js"](0.49999999999999994) == 0
-    assert f["numero_js"](4.0) == "4" and f["numero_js"](0.8) == "0.8"
-
-
-def test_la_definicion_de_la_canasta():
-    """La canasta del pedido, tal cual: claves de indices.json, cantidades y
-    la frase de /compras.html."""
-    with open(os.path.join(RAIZ, "build_site.py"), encoding="utf-8") as fh:
-        arbol = ast.parse(fh.read())
-    nodo = next(n for n in arbol.body if isinstance(n, ast.Assign)
-                and getattr(n.targets[0], "id", None) == "CANASTAS_EJEMPLO")
-    canastas = ast.literal_eval(nodo.value)
-    assert canastas[0] == {
-        "slug": SLUG, "titulo": TITULO,
-        "compras": "Estos insumos juntos, como un almuerzo para 10 personas, semana a semana",
-        "insumos": INSUMOS}
-
-
 # ---------- la página ----------
 def test_url_title_y_description(sitio):
     h = _leer(sitio, f"canastas/{SLUG}.html")
     assert f'<link rel="canonical" href="{URL}">' in h
     assert f"<title>{TITULO}: costo semanal en Santiago | Carestía</title>" in h
-    desc = (f"{TITULO}: $20.321 la semana del 21 de septiembre de 2026 en Santiago, ajustado por "
+    desc = (f"{TITULO}: $20.323 la semana del 21 de septiembre de 2026 en Santiago, ajustado por "
             f"inflación. Canasta de ejemplo con precios de ODEPA, semana a semana.")
     assert f'<meta name="description" content="{desc}">' in h
     assert f'<meta property="og:description" content="{desc}">' in h
@@ -369,7 +508,7 @@ def test_url_title_y_description(sitio):
 def test_la_pagina_en_su_orden(sitio):
     m = _main(_leer(sitio, f"canastas/{SLUG}.html"))
     piezas = [f"<h1>{TITULO}</h1>", f'<p class="intro">{LINEA}</p>',
-              '<div class="ind-cifra"><span class="ind-precio">$20.321</span>'
+              '<div class="ind-cifra"><span class="ind-precio">$20.323</span>'
               '<span class="can-sem">semana del 21 de septiembre de 2026</span></div>',
               '<p class="cstats">percentil ', '<p class="cstats ctemporada">en esta época del año: ',
               '<p class="caviso">esta canasta tiene datos desde 2023 (limitada por Aceite vegetal)</p>',
@@ -401,18 +540,39 @@ FILA = re.compile(r'<tr><th scope="row"><a href="https://carestia\.cl/productos/
                   r'<td class="can-n can-a">(\$[\d.]+)</td></tr>')
 
 
-def test_la_tabla_con_las_cifras_de_cada_ficha(sitio):
+def _pesos(txt: str) -> int:
+    return int(txt[1:].replace(".", ""))
+
+
+def _tabla(d, datos, semana: datetime.date, f) -> None:
+    """Cada fila con el precio del insumo en 'semana' (la última de la
+    canasta) y su aporte: su cantidad por ese precio, con Math.round, como
+    el costo de arriba."""
+    m = _main(_leer(d, f"canastas/{SLUG}.html"))
+    filas = FILA.findall(m)
+    assert len(filas) == len(INSUMOS)
+    for (k, q), (_s, _n, _c, precio, _u, aporte) in zip(INSUMOS, filas):
+        p = datos["productos"][k]
+        v = p["v"][(semana - datetime.date.fromisoformat(p["t0"])).days // 7]
+        assert _pesos(precio) == v, k
+        assert _pesos(aporte) == f["redondeo_js"](q * v), k
+
+
+def test_la_tabla_con_las_cifras_de_cada_ficha(sitio, datos, f):
     """Cada insumo con link a su ficha y su nombre, su cantidad, su precio de
-    esta semana (el número grande de su ficha) y lo que aporta: cantidad por
-    precio, con Math.round como el costo (1,5 x 1.431 = 2.146,5 da $2.147)."""
+    esta semana (el número grande de su ficha) y lo que aporta: su cantidad
+    por su precio, con Math.round, como el costo (0,5 x 2.269 = 1.134,5 da
+    $1.135; el round() de Python daría $1.134). Como en las páginas de
+    índice, cada fila se redondea sola: la columna suma $20.324 y el costo
+    es $20.323."""
     m = _main(_leer(sitio, f"canastas/{SLUG}.html"))
     assert ('<thead><tr><th scope="col">Insumo</th><th class="can-n" scope="col">Cantidad</th>'
             '<th class="can-n" scope="col">Precio esta semana</th>'
             '<th class="can-n" scope="col">Aporte</th></tr></thead>') in m
     filas = FILA.findall(m)
     assert [(c, u, a) for _s, _n, c, _p, u, a in filas] == [
-        ("0,8 kg", "kilo", "$9.264"), ("1 kg", "kilo", "$3.580"), ("0,6 kg", "kilo", "$906"),
-        ("1,5 kg", "kilo", "$2.147"), ("0,8 kg", "kilo", "$1.356"),
+        ("0,8 kg", "kilo", "$9.266"), ("1 kg", "kilo", "$3.581"), ("0,6 kg", "kilo", "$907"),
+        ("1,5 kg", "kilo", "$2.145"), ("0,8 kg", "kilo", "$1.357"),
         ("4 unidades", "unidad", "$1.432"), ("0,2 litros", "litro", "$501"),
         ("0,5 kg", "kilo", "$1.135")]
     for slug, nombre, _c, precio, _u, _a in filas:
@@ -422,6 +582,7 @@ def test_la_tabla_con_las_cifras_de_cada_ficha(sitio):
     assert [s for s, *_r in filas] == ["posta-paleta", "pollo-trutro-entero",
                                        "arroz-grano-largo-delgado-grado-2", "papa", "tomate",
                                        "cebolla", "aceite-vegetal", "marraqueta"]
+    _tabla(sitio, datos, FIN, f)
 
 
 def test_la_cita_y_el_dataset(sitio, datos, f):
@@ -467,7 +628,7 @@ def test_la_tarjeta_va_en_hueso(sitio):
     assert re.fullmatch(rf"https://carestia\.cl/og/canastas/{SLUG}\.png\?v=[0-9a-f]+", og)
     assert '<meta property="og:image:width" content="1200">' in h
     alt = html.unescape(re.search(r'<meta property="og:image:alt" content="([^"]+)">', h).group(1))
-    assert alt.startswith(f"{TITULO}: $20.321, semana del 21-09-2026. En esta época del año: más ")
+    assert alt.startswith(f"{TITULO}: $20.323, semana del 21-09-2026. En esta época del año: más ")
     assert alt.endswith(".") and "tu canasta" not in alt
 
     def tonos(ruta):
@@ -510,14 +671,13 @@ def test_sitemap_y_workflow(sitio):
         assert "cp -r canastas public/canastas" in fh.read()
 
 
-def test_sin_precio_reciente_no_se_escribe(atrasado):
-    """Un insumo sin precio en las últimas 4 semanas (o sin ficha): la página
-    no se escribe y la consola lo avisa, como en /compras.html. Tampoco van
-    su link en /compras.html, su URL en el sitemap ni su tarjeta, pero la
-    carpeta sí (actualizar.yml la copia)."""
-    d, salida = atrasado
-    assert ("AVISO canastas/almuerzo-casino.html: no se escribe: tomate (último precio: "
-            "24-08-2026), marraqueta (sin ficha)") in salida
+# ---------- cuándo no se escribe ----------
+def _no_se_escribe(build, motivo: str) -> None:
+    """La página no se escribe y la consola dice por qué, como en
+    /compras.html. Tampoco van su link en /compras.html, su URL en el sitemap
+    ni su tarjeta, pero la carpeta sí (actualizar.yml la copia)."""
+    d, salida = build
+    assert f"AVISO canastas/almuerzo-casino.html: no se escribe: {motivo}\n" in salida
     assert not (d / "canastas" / f"{SLUG}.html").exists()
     assert (d / "canastas").is_dir()
     assert "canastas/" not in _leer(d, "compras.html")
@@ -525,21 +685,36 @@ def test_sin_precio_reciente_no_se_escribe(atrasado):
     assert "0 páginas en canastas/" in salida
 
 
-def test_con_un_insumo_de_hace_2_semanas_va_con_esa_semana(esa_semana):
-    """Con el tomate de hace 2 semanas (dentro de las 4), la canasta termina
-    esa semana: el costo, la tabla y la cita son de esa semana y nada dice
-    "esta semana"."""
-    m = _main(_leer(esa_semana, f"canastas/{SLUG}.html"))
-    assert '<span class="can-sem">semana del 7 de septiembre de 2026</span>' in m
-    assert '<th class="can-n" scope="col">Precio esa semana</th>' in m
-    assert "Precio esta semana" not in m
-    assert ('<p class="cita">Para citar: Carestía (carestia.cl), con datos de ODEPA, semana del 7 '
-            'de septiembre de 2026.</p>') in m
+def test_sin_precio_en_las_ultimas_4_semanas_no_se_escribe(atrasado):
+    _no_se_escribe(atrasado, "tomate (último precio: 24-08-2026)")
 
 
-def test_sin_rayas_ni_muletillas(sitio):
-    for ruta in [f"canastas/{SLUG}.html", "compras.html"]:
-        h = _leer(sitio, ruta)
-        assert infracciones(h) == [], ruta
+def test_sin_ficha_no_se_escribe(sin_ficha):
+    _no_se_escribe(sin_ficha, "marraqueta (sin ficha)")
+
+
+def test_sin_semanas_en_comun_no_se_escribe(sin_semana_comun):
+    """El tomate y la cebolla tienen precio en las últimas 4 semanas, pero no
+    la misma: la última semana con todos es de hace 4."""
+    _no_se_escribe(sin_semana_comun, "sin semanas en común en las últimas 4")
+
+
+def test_con_un_insumo_de_hace_3_semanas_va_con_esa_semana(tres_semanas, f):
+    """Con el tomate de hace 3 semanas (el borde de las 4), la canasta
+    termina esa semana: el costo, la tabla (con los precios de esa semana) y
+    la cita son de esa semana, que se nombra, y nada dice "esta semana"."""
+    m = _main(_leer(tres_semanas, f"canastas/{SLUG}.html"))
+    assert '<span class="can-sem">semana del 31 de agosto de 2026</span>' in m
+    assert '<th class="can-n" scope="col">Precio de la semana del 31 de agosto de 2026</th>' in m
+    assert "esta semana" not in m.lower()
+    assert ('<p class="cita">Para citar: Carestía (carestia.cl), con datos de ODEPA, semana del 31 '
+            'de agosto de 2026.</p>') in m
+    _tabla(tres_semanas, sintetico(atraso_tomate=3), _semana(FIN, -3), f)
+
+
+def test_sin_rayas_ni_muletillas(sitio, tres_semanas):
+    for d, ruta in [(sitio, f"canastas/{SLUG}.html"), (sitio, "compras.html"),
+                    (tres_semanas, f"canastas/{SLUG}.html")]:
+        assert infracciones(_leer(d, ruta)) == [], ruta
     # el deslinde va solo en metodología
     assert "No constituye asesoría" not in _leer(sitio, f"canastas/{SLUG}.html")

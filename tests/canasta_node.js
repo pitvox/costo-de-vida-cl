@@ -16,12 +16,14 @@ const path = require('path');
 
 const E = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
 // los productos como los tiene la página: label, unidad y slug inline, y la
-// serie de datos/productos/{slug}.json, expandida con su propio código
+// serie de datos/productos/{slug}.json, expandida con su propio código. Un
+// producto que trae su serie (t0 y v) no la lee del build: los casos borde
+// de la prueba
 const PRODS = E.prods;
 const { expandirProducto } = new Function(E.datos + '\nreturn { expandirProducto };')();
 Object.keys(PRODS).forEach(k => {
   const ruta = path.join(E.dir, 'datos', 'productos', PRODS[k].slug + '.json');
-  expandirProducto(PRODS[k], JSON.parse(fs.readFileSync(ruta, 'utf8')));
+  expandirProducto(PRODS[k], PRODS[k].v ? PRODS[k] : JSON.parse(fs.readFileSync(ruta, 'utf8')));
 });
 
 // lo que la franja necesita de la página: los elementos donde escribe y el

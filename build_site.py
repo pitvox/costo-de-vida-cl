@@ -37,9 +37,10 @@ los textos literales de textos/), las canastas de ejemplo
 robots.txt, sitemap.xml y resumen.json.
 Todas las páginas comparten la navegación del encabezado y el pie.
 
-Para los buscadores y asistentes con IA, que no corren JS: cada ficha y cada
-página de índice lleva su serie como un Dataset de schema.org (JSON-LD) y
-una línea "Para citar" con la semana del dato; las fichas con precio esta
+Para los buscadores y asistentes con IA, que no corren JS: cada ficha, cada
+página de índice y cada canasta de ejemplo lleva su serie como un Dataset de
+schema.org (JSON-LD) y una línea "Para citar" con la semana del dato; las
+fichas con precio esta
 semana, una frase citable bajo el gráfico, y /graficos.html, la semana de
 los 4 índices en HTML estático (el bloque "ESTA SEMANA").
 
@@ -3754,8 +3755,9 @@ def completar_temporada() -> None:
 
 
 # ---------------- og:image por página ----------------
-# Cada ficha, cada índice y la portada tienen su tarjeta (tarjetas.py), en
-# og/. La URL lleva en ?v= una huella de lo que muestra: WhatsApp y las redes
+# Cada ficha, cada índice, cada canasta de ejemplo y la portada tienen su
+# tarjeta (tarjetas.py), en og/. La URL lleva en ?v= una huella de lo que
+# muestra (y del dibujo: el código de tarjetas.py): WhatsApp y las redes
 # guardan la imagen por URL, y así la de una semana nueva no se confunde con
 # la anterior.
 OG_DIR = "og"
@@ -3787,9 +3789,9 @@ def dibujar(funcion, ruta: str, datos: dict) -> None:
         funcion(ruta, tokens_css(), **datos)
 
 
-# El gráfico de las tarjetas de producto y de índice: los últimos 10 años de
-# la serie ajustada por inflación (la de la ficha y la del índice), con su
-# leyenda.
+# El gráfico de las tarjetas de producto, de índice y de canasta: los últimos
+# 10 años de la serie ajustada por inflación (la de la ficha, la del índice o
+# la de la canasta), con su leyenda.
 TARJETA_ANIOS = 10
 TARJETA_LEYENDA = "Ajustado por inflación"
 
@@ -3912,8 +3914,9 @@ def sin_datos_hace_un_anio(fin: datetime.date, semana: datetime.date) -> bool:
 
 # ---------------- Para buscadores: Dataset y cita ----------------
 # Los buscadores y asistentes con IA no corren el JS de los gráficos: cada
-# ficha y cada página de índice lleva su serie como un Dataset de schema.org
-# (JSON-LD) y una línea de cita en HTML estático, armados desde los mismos
+# ficha, cada página de índice y cada canasta de ejemplo lleva su serie como
+# un Dataset de schema.org (JSON-LD) y una línea de cita en HTML estático,
+# armados desde los mismos
 # datos de la página. La licencia de las series es la de los términos de uso:
 # CC-BY es la de los datos de origen de ODEPA, no la de Carestía (términos
 # 4.2, 4.4 y 4.5).
@@ -3970,9 +3973,9 @@ def dataset_jsonld(nombre_serie: str, descripcion: str, url: str, desde: datetim
     'nombre_serie' es el title de la página sin " | Carestía", 'url' su
     canonical, 'desde' la primera semana con valor y 'hasta' la última si la
     serie quedó cerrada (sin precio hace más de un año, como en /productos/)
-    o None si sigue abierta. 'clave' es el producto o el índice en las
-    palabras clave. 'descarga': resumen.json como distribution, solo en los
-    índices (no trae productos). "</" escapado, como en __DATA__."""
+    o None si sigue abierta. 'clave' es el producto, el índice o la canasta
+    en las palabras clave. 'descarga': resumen.json como distribution, solo
+    en los índices (no trae productos). "</" escapado, como en __DATA__."""
     ld = {
         "@context": "https://schema.org",
         "@type": "Dataset",
@@ -7980,18 +7983,19 @@ def generar_canastas(fichas: dict) -> list:
         og = tarjeta_canasta(c, r, lineas, f"{OG_DIR}/{ruta[:-5]}.png")
         # lo que lleva: el precio de cada insumo en la última semana de la
         # canasta (la vigente si todos tienen precio esta semana) y lo que
-        # aporta a su costo
+        # aporta a su costo, redondeado como el costo, fila por fila (como en
+        # las páginas de índice, la columna puede no sumar justo el costo)
+        precios = {k: dict(semanas_con_precio(prods[k]))[t_fin] for k in claves}
         filas = []
         for k, q in c["insumos"]:
             p = prods[k]
-            v = dict(semanas_con_precio(p))[t_fin]
             filas.append(
                 f'        <tr><th scope="row"><a href="{SITIO}/productos/{slugs[k]}.html">'
                 f'{html.escape(nombres[k])}</a></th>'
                 f'<td class="can-n can-q">{fmt_cantidad(q, p["unidad"])}</td>'
-                f'<td class="can-n can-p">{fmt_clp(v)} '
+                f'<td class="can-n can-p">{fmt_clp(precios[k])} '
                 f'<small>por {UNI_TXT.get(p["unidad"], p["unidad"])}</small></td>'
-                f'<td class="can-n can-a">{fmt_clp_js(q * v)}</td></tr>')
+                f'<td class="can-n can-a">{fmt_clp_js(q * precios[k])}</td></tr>')
         lineas_html = "".join(
             f'    <p class="{clase}">{html.escape(lineas[k])}</p>\n'
             for k, clase in (("stats", "cstats"), ("temporada", "cstats ctemporada"),
@@ -8019,8 +8023,10 @@ def generar_canastas(fichas: dict) -> list:
             f'      <table class="can-tabla" aria-labelledby="can-h">\n'
             f'        <thead><tr><th scope="col">Insumo</th>'
             f'<th class="can-n" scope="col">Cantidad</th>'
-            # sin precio de todos esta semana, los de la última semana en común
-            f'<th class="can-n" scope="col">Precio {"esta" if fin == semana else "esa"} semana</th>'
+            # sin precio de todos esta semana, los de la última semana en común,
+            # con su fecha: un precio viejo no pasa por uno de esta semana
+            f'<th class="can-n" scope="col">Precio '
+            f'{"esta semana" if fin == semana else "de la semana del " + fecha_larga(fin)}</th>'
             f'<th class="can-n" scope="col">Aporte</th></tr></thead>\n'
             f'        <tbody>\n' + "\n".join(filas) + '\n        </tbody>\n'
             f'      </table>\n'
