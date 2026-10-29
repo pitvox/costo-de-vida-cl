@@ -35,6 +35,12 @@ También escribe una ficha por producto (productos/{slug}.html), el listado
 los textos literales de textos/), robots.txt, sitemap.xml y resumen.json.
 Todas las páginas comparten la navegación del encabezado y el pie.
 
+Para los buscadores y asistentes con IA, que no corren JS: cada ficha y cada
+página de índice lleva su serie como un Dataset de schema.org (JSON-LD) y
+una línea "Para citar" con la semana del dato; las fichas con precio esta
+semana, una frase citable bajo el gráfico, y /graficos.html, la semana de
+los 4 índices en HTML estático (el bloque "ESTA SEMANA").
+
 TradingView Advanced Charts: carestia-tv.js (el datafeed sobre datos/, con
 Tu canasta como un símbolo que calcula a partir de sus productos),
 carestia-tv.css (el tema para el iframe de la librería) y la página oculta
@@ -64,6 +70,8 @@ from indices import BASKETS, COLORES, comparar_temporada, resumen_temporada, zon
 # la clave de cada producto en indices.json (la de los componentes de los
 # índices sale de su label): las sugerencias de "Comparar con" de las fichas
 from indices import _slug as clave_producto
+# el dataset de ODEPA que lee indices.py: la fuente que declara el JSON-LD
+from indices import DATASET
 # las og:image de 1200 x 630 (Pillow): fichas, índices y portada
 import tarjetas
 
@@ -366,6 +374,17 @@ __CSS_CABECERA__
     padding:9px 14px; background:var(--panel); font:400 13px var(--sans);
     color:var(--bone); }
   .comp .chip b { font-weight:600; }
+  /* la semana de los 4 índices en HTML estático (html_semana_indices): sin
+     JS también se leen sus cifras */
+  .ctx-semana { border-top:1px solid var(--line);
+    padding:clamp(16px,3vw,24px) clamp(16px,3vw,32px); }
+  .sem-intro { font:400 13px/1.55 var(--sans); color:var(--ash); margin-top:12px;
+    text-wrap:pretty; }
+  .sem-ind { font:400 14px/1.55 var(--sans); color:var(--bone); margin-top:8px;
+    text-wrap:pretty; }
+  .sem-ind a { color:var(--bone); font-weight:600; text-underline-offset:3px;
+    text-decoration-color:var(--dim); }
+  .sem-ind a:hover, .sem-ind a:focus-visible { text-decoration-color:var(--bone); }
 
   /* ---- franja de contexto: productos y canasta ---- */
   .ctx-solo { border-top:1px solid var(--line); min-height:190px;
@@ -542,7 +561,7 @@ __CSS_SITIO__
         <div class="comp" id="comp"></div>
       </div>
     </section>
-
+__ESTA_SEMANA__
     <section class="ctx-solo m-prod" aria-label="Selección de productos">
       <input class="psearch" id="psearch" type="search" placeholder="busca un producto..." autocomplete="off">
       <div id="pgroups"></div>
@@ -2701,6 +2720,12 @@ __CSS_MARCA__
   .velo[hidden] { display:none; }
   .fecha { font:500 12px/1.6 var(--sans); color:var(--ash); margin-top:14px; text-wrap:pretty; }
   .fecha .sin-nuevos { color:var(--bone); }
+  /* para citar: la frase con el precio de esta semana, justo antes de la
+     línea de la semana, y la línea de cita (CSS_CITA), después */
+  .citable { font:400 13px/1.6 var(--sans); color:var(--ash); margin-top:14px;
+    text-wrap:pretty; }
+  .citable + .fecha { margin-top:4px; }
+__CSS_CITA__
   .ref-velas { font:400 12px/1.5 var(--sans); color:var(--dim); margin-top:10px; }
   /* Comparar con: el componente de Comparar de /graficos.html (CSS_COMPARAR)
      con las sugerencias del build, el buscador y, con algo elegido, la
@@ -2748,6 +2773,7 @@ __CSS_COMPARAR__
   #grafico .cargando { color:var(--dim); }
 __CSS_SITIO__
 </style>
+__JSONLD__
 </head>
 <body>
 
@@ -2775,7 +2801,8 @@ __OROW__    <p class="pct">__FRASE__</p>
       <div class="velo" id="velo" role="status" hidden>Preparando la captura...</div>
     </div>
     <p class="ref-velas" id="ref-velas" hidden>Velas semanales. La mecha va del precio más bajo al más alto que ODEPA encontró entre los locales encuestados.</p>
-    <div class="fecha">__SEMANA__ Serie desde __ANIO__.</div>
+__CITABLE__    <div class="fecha">__SEMANA__ Serie desde __ANIO__.</div>
+    <p class="cita">__CITA__</p>
 __COMPARAR__
     __OTROS__
     <nav class="links">
@@ -3733,7 +3760,9 @@ OG_DIR = "og"
 with open(tarjetas.__file__, encoding="utf-8") as _fh:
     DIBUJO_TARJETAS = _fh.read()
 OG_GENERICA = "https://carestia.cl/og.png"
-FUENTE_CITA = "Fuente: Carestía (carestia.cl), con datos de ODEPA"
+# la atribución que piden los términos (4.3): la fuente y, al citar, la semana
+CITA = "Carestía (carestia.cl), con datos de ODEPA"
+FUENTE_CITA = f"Fuente: {CITA}"
 
 
 def og_meta(url_img: str, alt: str, generica: bool = False) -> str:
@@ -3877,6 +3906,108 @@ SEMANAS_SIN_DATOS = 52
 
 def sin_datos_hace_un_anio(fin: datetime.date, semana: datetime.date) -> bool:
     return semana is not None and (semana - fin).days > SEMANAS_SIN_DATOS * 7
+
+
+# ---------------- Para buscadores: Dataset y cita ----------------
+# Los buscadores y asistentes con IA no corren el JS de los gráficos: cada
+# ficha y cada página de índice lleva su serie como un Dataset de schema.org
+# (JSON-LD) y una línea de cita en HTML estático, armados desde los mismos
+# datos de la página. La licencia de las series es la de los términos de uso:
+# CC-BY es la de los datos de origen de ODEPA, no la de Carestía (términos
+# 4.2, 4.4 y 4.5).
+ODEPA_DATASET = f"https://datos.odepa.gob.cl/dataset/{DATASET}"
+# la licencia que ODEPA declara para ese dataset en su API CKAN (package_show:
+# license_id "cc-by" y este license_url), leída el 29-10-2026
+ODEPA_LICENCIA = "http://www.opendefinition.org/licenses/cc-by"
+# la serie del IPC con que deflacta indices.py, con su código
+IPC_BCCH = "IPC empalmado del Banco Central de Chile (G073.IPC.IND.2023.M, base 2023=100)"
+# la fecha del build: el lastmod del sitemap y el dateModified de los Dataset
+LASTMOD = datetime.date.today().isoformat()
+
+
+def frase_limites() -> str:
+    """La frase de "Límites" de textos/metodologia.md sobre cómo se forma
+    cada precio (el promedio de los puntos que encuesta ODEPA), literal."""
+    for linea in leer_texto("metodologia").splitlines():
+        if linea.startswith("**Límites.**"):
+            for frase in re.split(r"(?<=\.)\s+", linea[len("**Límites.**"):].strip()):
+                if "promedio de los puntos" in frase:
+                    return frase
+    raise SystemExit("build_site.py: textos/metodologia.md no trae la frase de Límites sobre "
+                     "el promedio de los puntos que encuesta ODEPA (la usan los Dataset).")
+
+
+def enumerar(xs: list) -> str:
+    """["a", "b", "c"] -> "a, b y c"."""
+    return " y ".join([", ".join(xs[:-1]), xs[-1]]) if len(xs) > 1 else "".join(xs)
+
+
+def descripcion_serie(que: str, desde: datetime.date, lleva: str = "") -> str:
+    """La description de un Dataset: la serie y no el dato de la semana (sin
+    la cifra de esta semana), con frases que ya están en el sitio. 'que' es
+    lo que se mide ("Precio por kilo del tomate"), 'desde' la primera semana
+    con valor y 'lleva', en un índice, su canasta."""
+    return " ".join(x for x in [
+        f"{que} en la Región Metropolitana: serie semanal desde {desde.year} con datos ODEPA.",
+        lleva,
+        frase_limites(),
+        "La serie se publica como precio de la época y ajustada por inflación con el IPC "
+        "del Banco Central de Chile.",
+        "Se actualiza cada viernes.",
+        "La elabora Carestía sobre datos abiertos de ODEPA, publicados con licencia CC-BY.",
+    ] if x)
+
+
+def dataset_jsonld(nombre_serie: str, descripcion: str, url: str, desde: datetime.date,
+                   hasta, variable: str, clave: str, descarga: bool = False) -> str:
+    """El <script type="application/ld+json"> con el Dataset de una serie.
+    'nombre_serie' es el title de la página sin " | Carestía", 'url' su
+    canonical, 'desde' la primera semana con valor y 'hasta' la última si la
+    serie quedó cerrada (sin precio hace más de un año, como en /productos/)
+    o None si sigue abierta. 'clave' es el producto o el índice en las
+    palabras clave. 'descarga': resumen.json como distribution, solo en los
+    índices (no trae productos). "</" escapado, como en __DATA__."""
+    ld = {
+        "@context": "https://schema.org",
+        "@type": "Dataset",
+        "name": nombre_serie,
+        "description": descripcion,
+        "url": url,
+        "creator": {"@type": "Organization", "name": "Carestía", "url": SITIO},
+        "license": f"{SITIO}/terminos.html",
+        "acquireLicensePage": f"{SITIO}/contacto.html",
+        "creditText": CITA,
+        "isAccessibleForFree": True,
+        "isBasedOn": [
+            {"@type": "CreativeWork", "name": "Precios al consumidor, ODEPA",
+             "url": ODEPA_DATASET, "license": ODEPA_LICENCIA},
+            {"@type": "CreativeWork", "name": IPC_BCCH},
+        ],
+        "temporalCoverage": f"{desde.isoformat()}/{hasta.isoformat() if hasta else '..'}",
+        "spatialCoverage": {"@type": "Place", "name": "Región Metropolitana de Santiago, Chile"},
+        "variableMeasured": variable,
+        "measurementTechnique": frase_limites(),
+        "dateModified": LASTMOD,
+        "keywords": [clave, "precio", "Santiago", "Región Metropolitana", "ODEPA", "IPC",
+                     "costo de vida"],
+        "includedInDataCatalog": {"@type": "DataCatalog", "name": "Carestía",
+                                  "url": f"{SITIO}/productos/"},
+    }
+    if descarga:
+        ld["distribution"] = {"@type": "DataDownload", "contentUrl": f"{SITIO}/resumen.json",
+                              "encodingFormat": "application/json"}
+    return ('<script type="application/ld+json">' + _json(ld).replace("</", "<\\/")
+            + "</script>")
+
+
+def linea_cita(semana: datetime.date) -> str:
+    """La línea de cita (términos 4.3: la fuente y la semana del dato)."""
+    return f"Para citar: {CITA}, semana del {fecha_larga(semana)}."
+
+
+# la línea de cita de las fichas y de las páginas de índice: texto chico,
+# ceniza, como .fecha
+CSS_CITA = """  .cita { font:400 12px/1.6 var(--sans); color:var(--ash); margin-top:4px; text-wrap:pretty; }"""
 
 
 # ---------------- Datos a demanda (datos/) ----------------
@@ -5035,7 +5166,8 @@ def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
     else:
         en_historia = f"{esta} más barat{c['o']} que en el {pct_barato}% de las semanas desde {anio}"
     t = temporada_producto(p)
-    title = f"Precio {c['de']} {label_frase} en Santiago: histórico desde {anio} | Carestía"
+    serie = f"Precio {c['de']} {label_frase} en Santiago: histórico desde {anio}"
+    title = f"{serie} | Carestía"
     if antiguo:
         # sin precio esta semana no hay número grande: el número grande es
         # siempre el precio de esta semana. La frase de temporada, solo si el
@@ -5070,6 +5202,26 @@ def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
                 f"Serie semanal desde {anio} con datos ODEPA, actualizada cada viernes.")
     if og is None:
         og = og_meta(OG_GENERICA, "Carestía", generica=True)
+    # para buscadores y asistentes que no corren JS: el Dataset de la serie,
+    # la frase citable (solo con precio de esta semana: un precio viejo nunca
+    # se presenta como de esta semana) y la línea de cita, con la semana de
+    # los precios (o de su último dato)
+    i0 = next(i for i, v in enumerate(p["v"]) if v is not None)
+    desde = datetime.date.fromisoformat(p["t0"]) + datetime.timedelta(weeks=i0)
+    jsonld = dataset_jsonld(
+        serie, descripcion_serie(f"Precio por {uni_txt} {c['de']} {label_frase}", desde),
+        f"{SITIO}/productos/{slug}.html", desde,
+        fecha_fin if sin_datos_hace_un_anio(fecha_fin, semana) else None,
+        f"Precio al consumidor por {uni_txt}, en pesos chilenos", label_frase)
+    citable = ""
+    if not antiguo:
+        # sin temporada, la frase de arriba dice "Hoy", que deja de ser cierto
+        # a la semana siguiente: la citable cierra con la de toda la historia,
+        # la de /compras.html y la tarjeta (decisión del dueño)
+        cierre = frase if t else frase_historia(vals, ult, anio, c["o"])
+        citable = (f"{mostrar} en la Región Metropolitana: {precio} por {uni_txt} la semana "
+                   f"del {fecha_larga(fecha_fin)}. {cierre}")
+        citable = f'    <p class="citable">{html.escape(citable)}</p>\n'
 
     out = PRODUCT_HTML
     for token, valor in [
@@ -5123,6 +5275,11 @@ def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
         ("__CSS_SITIO__", CSS_SITIO),
         ("__NAV__", nav_sitio("productos", exacto=False)),
         ("__PIE__", pie_sitio()),
+        # para buscadores: el Dataset, la frase citable y la línea de cita
+        ("__CSS_CITA__", CSS_CITA),
+        ("__CITABLE__", citable),
+        ("__CITA__", html.escape(linea_cita(fecha_fin))),
+        ("__JSONLD__", jsonld),
     ]:
         out = out.replace(token, valor)
     return out
@@ -7238,6 +7395,34 @@ def tarjeta_portada(ultima) -> str:
     return og_meta(og_url(ruta, datos), alt)
 
 
+def html_semana_indices() -> str:
+    """El bloque "ESTA SEMANA" de /graficos.html, bajo la franja de contexto
+    del modo índices (m-ind, como ella; el JS no lo toca): el costo y la
+    frase de cada índice en HTML estático, con las mismas funciones que su
+    página (fmt_clp, frase_indice), y un link a ella. Sin JS, la página no
+    mostraba ninguna cifra. La línea de entrada lleva la semana más reciente
+    de los índices; un índice que termina antes (el Fruta, casi todos los
+    veranos, sin mandarina) lleva la suya al lado del nombre: un dato viejo
+    nunca se presenta como de esta semana (decisión del dueño)."""
+    indices = {c: d for c, d in DATA["indices"].items() if d.get("real")}
+    if not indices:
+        return ""
+    fin = {c: datetime.date.fromisoformat(d["real"][-1]["time"]) for c, d in indices.items()}
+    semana = max(fin.values())
+    filas = ""
+    for c, d in indices.items():
+        cuando = "" if fin[c] == semana else f" (semana del {fecha_larga(fin[c])})"
+        filas += (f'      <p class="sem-ind"><a href="{SITIO}/indices/{c}.html">'
+                  f'{html.escape(d["nombre"])}</a>{cuando}: {fmt_clp(d["costo_real"])}. '
+                  f'{html.escape(frase_indice(d))}</p>\n')
+    return ('    <section class="ctx-semana m-ind" aria-labelledby="h-semana-ind">\n'
+            '      <h2 class="ctx-h" id="h-semana-ind">ESTA SEMANA</h2>\n'
+            f'      <p class="sem-intro">Costo de cada canasta en la Región Metropolitana, '
+            f'semana del {fecha_larga(semana)}.</p>\n'
+            f'{filas}'
+            '    </section>\n')
+
+
 def generar_marca() -> None:
     """og.png, la tarjeta genérica, y apple-touch-icon.png, el ícono de iOS:
     los dibuja tarjetas.py en cada build, con la misma marca que el resto."""
@@ -7247,21 +7432,40 @@ def generar_marca() -> None:
 
 
 def generar_paginas_indices() -> list:
-    """indices/{codigo}.html por cada índice. Devuelve las rutas (sitemap)."""
+    """indices/{codigo}.html por cada índice, con su Dataset (JSON-LD) y la
+    línea de cita al final. Devuelve las rutas (sitemap)."""
     rutas = []
+    # la semana más reciente de los índices: la vara de una serie cerrada
+    ultima = max((datetime.date.fromisoformat(d["real"][-1]["time"])
+                  for d in DATA["indices"].values() if d.get("real")), default=None)
     for code, d in DATA["indices"].items():
         if not d.get("real"):
             continue
         og, img, alt = tarjeta_indice(code, d)
         img = img[len(SITIO):]   # la tarjeta, desde el mismo sitio
-        fecha = datetime.date.fromisoformat(d["real"][-1]["time"]).strftime("%d-%m-%Y")
+        fin = datetime.date.fromisoformat(d["real"][-1]["time"])
+        fecha = fin.strftime("%d-%m-%Y")
         vs = d["vs_promedio"]
         vs_txt = f"+{vs}% sobre" if vs >= 0 else f"{vs}% bajo"
+        componentes = [c for c in d.get("componentes") or [] if c.get("aporte") is not None]
         comp = "\n".join(
             f'        <li><span>{html.escape(nombre(c["label"]))} '
             f'<small>{fmt_cantidad(c["qty"], c["unidad"])}</small></span>'
             f'<b>{fmt_clp(c["aporte"])}</b></li>'
-            for c in d.get("componentes") or [] if c.get("aporte") is not None)
+            for c in componentes)
+        # el Dataset: la serie, con lo que lleva la canasta (los mismos
+        # componentes de la lista)
+        ruta = f"indices/{code}.html"
+        serie = f"{d['nombre']}: {d['subtitulo'].lower()} en Santiago"
+        desde = datetime.date.fromisoformat(d["real"][0]["time"])
+        lleva = [f"{nombre(c['label'])[0].lower()}{nombre(c['label'])[1:]} "
+                 f"({fmt_cantidad(c['qty'], c['unidad'])})" for c in componentes]
+        lleva = f"La canasta lleva {enumerar(lleva)}." if lleva else ""
+        jsonld = dataset_jsonld(
+            serie, descripcion_serie(f"Costo semanal del {d['nombre']} "
+                                     f"({d['subtitulo'].lower()})", desde, lleva),
+            f"{SITIO}/{ruta}", desde, fin if sin_datos_hace_un_anio(fin, ultima) else None,
+            "Costo semanal de la canasta, en pesos chilenos", d["nombre"], descarga=True)
         cuerpo = (
             f'    <div class="miga">Índice Carestía</div>\n'
             f'    <h1>{html.escape(d["nombre"])}</h1>\n'
@@ -7283,14 +7487,15 @@ def generar_paginas_indices() -> list:
             f'    <img class="tarjeta" src="{img}" width="{tarjetas.ANCHO}" height="{tarjetas.ALTO}" '
             f'alt="{html.escape(alt, quote=True)}" loading="lazy">\n'
             f'    <p class="intro">Fuente: precios al consumidor de ODEPA, deflactados con '
-            f'el IPC. <a href="{SITIO}/metodologia.html#canasta-{code}">Cómo se calcula</a>.</p>')
-        ruta = f"indices/{code}.html"
+            f'el IPC. <a href="{SITIO}/metodologia.html#canasta-{code}">Cómo se calcula</a>.</p>\n'
+            f'    <p class="cita">{html.escape(linea_cita(fin))}</p>\n'
+            f'    {jsonld}')
         escribir_pagina(
-            ruta, f"{SITIO}/{ruta}",
-            f"{d['nombre']}: {d['subtitulo'].lower()} en Santiago | Carestía",
+            ruta, f"{SITIO}/{ruta}", f"{serie} | Carestía",
             f"{d['nombre']} en la Región Metropolitana: {fmt_clp(d['costo_real'])} la "
             f"semana del {fecha}, {d['veredicto']}. {frase_indice(d)}",
-            cuerpo, actual="indices", clase="catalogo indice", og=og, exacto=False)
+            cuerpo, actual="indices", clase="catalogo indice", og=og, exacto=False,
+            css=CSS_CITA + "\n")
         rutas.append(ruta)
     return rutas
 
@@ -7782,8 +7987,9 @@ PAGINAS_SITEMAP = ["graficos.html", "productos/", "metodologia.html", "acerca.ht
 
 def generar_sitemap(slugs: list, indices: list = ()) -> None:
     """Raíz + las URLs de producto + las páginas del sitio (con las de los
-    índices), todas con el lastmod del build."""
-    lastmod = datetime.date.today().isoformat()
+    índices), todas con el lastmod del build (LASTMOD, el dateModified de
+    los Dataset)."""
+    lastmod = LASTMOD
     locs = ["https://carestia.cl/"] + \
         [f"https://carestia.cl/productos/{s}.html" for s in slugs] + \
         [f"https://carestia.cl/{p}" for p in PAGINAS_SITEMAP] + \
@@ -7830,6 +8036,8 @@ with open("graficos.html", "w", encoding="utf-8") as fh:
                           .replace("__PIE__", pie_sitio())
                           # de qué semana son los precios y la próxima actualización
                           .replace("__SEMANA__", linea_semana(semana_de_los_datos(CATALOGO)))
+                          # la semana de los 4 índices, en HTML estático
+                          .replace("__ESTA_SEMANA__", html_semana_indices())
                           .replace("__TV_JS__", TV_JS)
                           .replace("__VER_TV__", _ver(feed_js()))
                           .replace("__TV_CSS__", TV_CSS)
