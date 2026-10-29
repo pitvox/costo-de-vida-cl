@@ -5215,8 +5215,12 @@ def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
         f"Precio al consumidor por {uni_txt}, en pesos chilenos", label_frase)
     citable = ""
     if not antiguo:
+        # sin temporada, la frase de arriba dice "Hoy", que deja de ser cierto
+        # a la semana siguiente: la citable cierra con la de toda la historia,
+        # la de /compras.html y la tarjeta (decisión del dueño)
+        cierre = frase if t else frase_historia(vals, ult, anio, c["o"])
         citable = (f"{mostrar} en la Región Metropolitana: {precio} por {uni_txt} la semana "
-                   f"del {fecha_larga(fecha_fin)}. {frase}")
+                   f"del {fecha_larga(fecha_fin)}. {cierre}")
         citable = f'    <p class="citable">{html.escape(citable)}</p>\n'
 
     out = PRODUCT_HTML

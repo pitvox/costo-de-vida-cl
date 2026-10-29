@@ -51,6 +51,8 @@ def sintetico() -> dict:
                             [1500 + 10 * (j % 9) for j in range(52 * 13)])
     # las primeras 5 semanas sin precio: la serie parte en la sexta
     p["lechuga"] = _producto("Lechuga", "un", "Hortalizas", [None] * 5 + [700] * 55)
+    # bajando, sin temporada: "Más barata que en 10 de cada 10 semanas"
+    p["palta"] = _producto("Palta", "kg", "Frutas", [3000 - 10 * j for j in range(60)])
     # sin precio esta semana: último dato hace 8 semanas (serie abierta)
     p["uva"] = _producto("Uva", "kg", "Frutas", [1200] * 60, atraso=8)
     # el Índice Asado parte 100 semanas después que los demás
@@ -264,8 +266,18 @@ def test_frase_citable_con_el_precio_de_esta_semana(sitio, datos):
         frase = _parrafo(h, "pct")[0]
         citable = _parrafo(h, "citable")
         # la misma cifra del número grande y la semana de los precios
-        assert citable == [f"{nombre} en la Región Metropolitana: {precio} por {uni} la semana "
-                           f"del {_fecha_larga(FIN)}. {frase}"], ruta
+        inicio = (f"{nombre} en la Región Metropolitana: {precio} por {uni} la semana "
+                  f"del {_fecha_larga(FIN)}. ")
+        assert len(citable) == 1 and citable[0].startswith(inicio), ruta
+        cierre = citable[0][len(inicio):]
+        # con temporada, la frase de arriba de la ficha; sin ella (la de
+        # arriba dice "Hoy"), la de toda la historia (frase_historia)
+        if frase.startswith("Hoy "):
+            assert re.fullmatch(r"(Más (car|barat)[oa]s? que en \d+ de cada 10|Igual que en casi "
+                                r"todas las) semanas desde \d{4}, descontada la inflación\.",
+                                cierre), ruta
+        else:
+            assert cierre == frase, ruta
         assert _parrafo(h, "cita") == [f"Para citar: {CITA}, semana del {_fecha_larga(FIN)}."]
         assert f"Precios de la semana del {_fecha_larga(FIN)}," in h
         # bajo el gráfico: frase, línea de la semana y línea de cita, en ese orden
@@ -278,6 +290,28 @@ def test_frase_citable_con_el_precio_de_esta_semana(sitio, datos):
                      r"\d+ de los últimos \d+ septiembres, aun descontando la inflación\.</p>"
                      r"|Dentro de lo normal para septiembre",
                      _leer(sitio, "productos/tomate.html"))
+
+
+def test_frase_citable_no_dice_hoy(sitio, datos):
+    """Una frase hecha para citarse fuera del sitio no dice "Hoy": deja de
+    ser cierta a la semana siguiente. Sin veredicto por temporada, la frase
+    citable termina con la de toda la historia (frase_historia, la misma de
+    /compras.html y del bloque ESTA SEMANA); la de arriba de la ficha no
+    cambia."""
+    citables = [c for r in _fichas(sitio, datos) for c in _parrafo(_leer(sitio, r), "citable")]
+    assert len(citables) >= 25
+    assert [c for c in citables if "Hoy" in c] == []
+    for slug, cierre in [
+            ("producto-0", "Más caro que en 10 de cada 10 semanas desde 2025, descontada la "
+                           "inflación."),
+            ("palta", "Más barata que en 10 de cada 10 semanas desde 2025, descontada la "
+                      "inflación."),
+            ("lechuga", "Igual que en casi todas las semanas desde 2025, descontada la "
+                        "inflación.")]:
+        h = _leer(sitio, f"productos/{slug}.html")
+        assert _parrafo(h, "citable")[0].endswith(
+            f"la semana del {_fecha_larga(FIN)}. {cierre}"), slug
+        assert _parrafo(h, "pct")[0].startswith("Hoy "), slug
 
 
 @pytest.mark.parametrize("slug,fin", [("uva", FIN - datetime.timedelta(weeks=8)),
