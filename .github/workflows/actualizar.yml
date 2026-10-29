@@ -168,6 +168,7 @@ jobs:
           cp 404.html public/404.html
           cp -r productos public/productos
           cp -r indices public/indices
+          cp -r canastas public/canastas
           cp -r og public/og
           cp -r datos public/datos
 
