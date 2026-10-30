@@ -2,14 +2,16 @@
 tarjetas.py - las og:image de 1200 x 630 que muestran WhatsApp y las redes
 =========================================================================
 build_site.py las genera en cada build: una por ficha de producto, una por
-índice y una para la portada, en og/, más la genérica (og.png) y el ícono de
-iOS (apple-touch-icon.png). Cada tarjeta lleva el nombre, el precio
-de la semana, la frase de su veredicto ("Más caro que en 7 de los últimos 10
-septiembres, aun descontando la inflación", o con menos de 5 años de ese mes
-"Más caro que en 8 de cada 10 semanas desde 2008, descontada la inflación"),
-la fecha de la semana y la marca. Las de producto y de índice llevan además,
-a la derecha, el gráfico de su serie ajustada por inflación de los últimos
-años, con el punto de esta semana (si la serie es muy corta, van sin él).
+índice, una por canasta de ejemplo y una para la portada, en og/, más la
+genérica (og.png) y el ícono de iOS (apple-touch-icon.png). Cada tarjeta
+lleva el nombre, el precio de la semana, la frase de su veredicto ("Más caro
+que en 7 de los últimos 10 septiembres, aun descontando la inflación", o con
+menos de 5 años de ese mes "Más caro que en 8 de cada 10 semanas desde 2008,
+descontada la inflación"), la fecha de la semana y la marca. Las de
+producto, de índice y de canasta llevan además, a la derecha, el gráfico de
+su serie ajustada por inflación de los últimos años, con el punto de esta
+semana (si la serie es muy corta, van sin él). La línea va en brasa; en las
+canastas de ejemplo, en hueso, el color de las canastas de usuario.
 
 Aquí solo se dibuja: las frases y las cifras las arma build_site.py (ahí las
 revisa la guardia de texto). Colores: los tokens de CSS_BASE, que build_site
@@ -211,14 +213,16 @@ class Lienzo:
         capa = capa.reduce(SUPER)
         self.img.paste(Image.new("RGB", capa.size, self.tok[color]), (izq, arr), capa)
 
-    def grafico(self, puntos: list, leyenda: str = "", caja: tuple = GRAFICO):
+    def grafico(self, puntos: list, leyenda: str = "", caja: tuple = GRAFICO,
+                color: str = "ember"):
         """El gráfico de la tarjeta, en 'caja': la serie de 'puntos' (pares
-        [fecha ISO, valor], en orden) en brasa, como en el sitio, con un área
-        suave debajo; una línea punteada a la altura de la última semana, para
-        ver de un vistazo cuánto de la historia queda bajo el precio de hoy; y
-        el punto de esa semana. Abajo, el eje con una marca por año y el
-        primero y el último año; arriba, la leyenda. Sin escala de precios: el
-        precio de la semana va en grande a la izquierda."""
+        [fecha ISO, valor], en orden) en el token 'color' (brasa, como en el
+        sitio; hueso en las canastas de ejemplo), con un área suave debajo;
+        una línea punteada a la altura de la última semana, para ver de un
+        vistazo cuánto de la historia queda bajo el precio de hoy; y el punto
+        de esa semana. Abajo, el eje con una marca por año y el primero y el
+        último año; arriba, la leyenda. Sin escala de precios: el precio de la
+        semana va en grande a la izquierda."""
         x0, y0, x1, y1 = caja
         ancho, alto = x1 - x0, y1 - y0
         fechas = [datetime.date.fromisoformat(f) for f, _v in puntos]
@@ -252,7 +256,7 @@ class Lienzo:
         if fechas[-1].year != fechas[0].year:
             self.texto((x1, y1 + 36), str(fechas[-1].year), f_anio, "ash", ancla="rs")
         # el área y la línea, en capas a GRAF_SUPER x con un margen para los
-        # bordes redondeados del trazo, reducidas y pegadas en brasa
+        # bordes redondeados del trazo, reducidas y pegadas en su color
         m, s = 16, GRAF_SUPER
         tam_capa = ((ancho + 2 * m) * s, (alto + 2 * m) * s)
         area, linea = Image.new("L", tam_capa, 0), Image.new("L", tam_capa, 0)
@@ -264,11 +268,11 @@ class Lienzo:
                 d_area.polygon(pts + [(pts[-1][0], piso), (pts[0][0], piso)], fill=255)
             trazo(d_linea, pts, 4 * s, 255)
         area, linea = area.reduce(s), linea.reduce(s)
-        # el área se desvanece hacia abajo: un 32% de brasa arriba, nada en el eje
+        # el área se desvanece hacia abajo: un 32% del color arriba, nada en el eje
         degradado = Image.linear_gradient("L").rotate(180).resize(area.size)
         alfa = ImageChops.multiply(area, degradado.point(lambda a: round(a * 0.32)))
-        brasa = Image.new("RGB", area.size, self.tok["ember"])
-        self.img.paste(brasa, (x0 - m, y0 - m), alfa)
+        tinta = Image.new("RGB", area.size, self.tok[color])
+        self.img.paste(tinta, (x0 - m, y0 - m), alfa)
         # la punteada a la altura de esta semana, bajo la línea
         xu, yu = tramos[-1][-1]
         xp = x0
@@ -276,10 +280,10 @@ class Lienzo:
             self.d.line([(xp, round(yu)), (min(xp + 10, x1), round(yu))],
                         fill=self.tok["dim"], width=2)
             xp += 18
-        self.img.paste(brasa, (x0 - m, y0 - m), linea)
+        self.img.paste(tinta, (x0 - m, y0 - m), linea)
         # el punto de esta semana, con un anillo del fondo que lo separa
         self.punto(xu, yu, 13, "bg")
-        self.punto(xu, yu, 8, "ember")
+        self.punto(xu, yu, 8, color)
 
     def guardar(self, ruta: str):
         _carpeta(ruta)
@@ -290,14 +294,16 @@ class Lienzo:
 def ficha(ruta: str, tok: dict, *, antetitulo: str, nombre: str, precio: str,
           unidad: str, frase: str, fecha: str, fuente_txt: str, sitio: str,
           veredicto: str = None, color_veredicto: str = None, nota: str = None,
-          serie: list = None, leyenda: str = "") -> None:
-    """La tarjeta de un producto o de un índice: antetítulo, nombre, precio
-    con su unidad (y, en los índices, la píldora del veredicto), la frase, la
-    'nota' (índices: la regla de las dos semanas) y el pie con la fuente y la
-    marca. Con 'serie' (pares [fecha ISO, valor] de la serie ajustada por
-    inflación) y al menos MIN_PUNTOS semanas, el texto va en una columna a la
-    izquierda y el gráfico a la derecha, con 'leyenda' encima; si no, el
-    texto ocupa todo el ancho, como antes del gráfico."""
+          serie: list = None, leyenda: str = "", linea: str = "ember") -> None:
+    """La tarjeta de un producto, de un índice o de una canasta de ejemplo:
+    antetítulo, nombre, precio con su unidad (y, en los índices, la píldora
+    del veredicto), la frase, la 'nota' (índices: la regla de las dos
+    semanas) y el pie con la fuente y la marca. Con 'serie' (pares [fecha
+    ISO, valor] de la serie ajustada por inflación) y al menos MIN_PUNTOS
+    semanas, el texto va en una columna a la izquierda y el gráfico a la
+    derecha, con 'leyenda' encima y la línea en el token 'linea' (brasa;
+    hueso en las canastas de ejemplo); si no, el texto ocupa todo el ancho,
+    como antes del gráfico."""
     c = Lienzo(tok)
     c.marca()
     c.fecha(fecha)
@@ -309,7 +315,7 @@ def ficha(ruta: str, tok: dict, *, antetitulo: str, nombre: str, precio: str,
             # los tamaños más grandes con que la columna no toca el pie
             k = next((k for k in (1, 0.92, 0.85, 0.78) if _columna(c, texto, k) <= 528), 0.72)
             _columna(c, texto, k, dibujar=True)
-            c.grafico(serie, leyenda)
+            c.grafico(serie, leyenda, color=linea)
         except Exception as e:  # noqa: BLE001
             # un gráfico que no se puede dibujar no frena el build: la tarjeta
             # sale como antes, sin gráfico, y queda el aviso en el log

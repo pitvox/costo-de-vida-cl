@@ -32,12 +32,15 @@ datos inline: sus cifras salen de datos/catalogo.json en el build.
 
 También escribe una ficha por producto (productos/{slug}.html), el listado
 /productos/, /metodologia.html, las páginas institucionales y legales (con
-los textos literales de textos/), robots.txt, sitemap.xml y resumen.json.
+los textos literales de textos/), las canastas de ejemplo
+(canastas/{slug}.html: las cifras de Arma tu canasta en HTML estático),
+robots.txt, sitemap.xml y resumen.json.
 Todas las páginas comparten la navegación del encabezado y el pie.
 
-Para los buscadores y asistentes con IA, que no corren JS: cada ficha y cada
-página de índice lleva su serie como un Dataset de schema.org (JSON-LD) y
-una línea "Para citar" con la semana del dato; las fichas con precio esta
+Para los buscadores y asistentes con IA, que no corren JS: cada ficha, cada
+página de índice y cada canasta de ejemplo lleva su serie como un Dataset de
+schema.org (JSON-LD) y una línea "Para citar" con la semana del dato; las
+fichas con precio esta
 semana, una frase citable bajo el gráfico, y /graficos.html, la semana de
 los 4 índices en HTML estático (el bloque "ESTA SEMANA").
 
@@ -3752,8 +3755,9 @@ def completar_temporada() -> None:
 
 
 # ---------------- og:image por página ----------------
-# Cada ficha, cada índice y la portada tienen su tarjeta (tarjetas.py), en
-# og/. La URL lleva en ?v= una huella de lo que muestra: WhatsApp y las redes
+# Cada ficha, cada índice, cada canasta de ejemplo y la portada tienen su
+# tarjeta (tarjetas.py), en og/. La URL lleva en ?v= una huella de lo que
+# muestra (y del dibujo: el código de tarjetas.py): WhatsApp y las redes
 # guardan la imagen por URL, y así la de una semana nueva no se confunde con
 # la anterior.
 OG_DIR = "og"
@@ -3785,9 +3789,9 @@ def dibujar(funcion, ruta: str, datos: dict) -> None:
         funcion(ruta, tokens_css(), **datos)
 
 
-# El gráfico de las tarjetas de producto y de índice: los últimos 10 años de
-# la serie ajustada por inflación (la de la ficha y la del índice), con su
-# leyenda.
+# El gráfico de las tarjetas de producto, de índice y de canasta: los últimos
+# 10 años de la serie ajustada por inflación (la de la ficha, la del índice o
+# la de la canasta), con su leyenda.
 TARJETA_ANIOS = 10
 TARJETA_LEYENDA = "Ajustado por inflación"
 
@@ -3910,8 +3914,9 @@ def sin_datos_hace_un_anio(fin: datetime.date, semana: datetime.date) -> bool:
 
 # ---------------- Para buscadores: Dataset y cita ----------------
 # Los buscadores y asistentes con IA no corren el JS de los gráficos: cada
-# ficha y cada página de índice lleva su serie como un Dataset de schema.org
-# (JSON-LD) y una línea de cita en HTML estático, armados desde los mismos
+# ficha, cada página de índice y cada canasta de ejemplo lleva su serie como
+# un Dataset de schema.org (JSON-LD) y una línea de cita en HTML estático,
+# armados desde los mismos
 # datos de la página. La licencia de las series es la de los términos de uso:
 # CC-BY es la de los datos de origen de ODEPA, no la de Carestía (términos
 # 4.2, 4.4 y 4.5).
@@ -3942,17 +3947,21 @@ def enumerar(xs: list) -> str:
     return " y ".join([", ".join(xs[:-1]), xs[-1]]) if len(xs) > 1 else "".join(xs)
 
 
-def descripcion_serie(que: str, desde: datetime.date, lleva: str = "") -> str:
+def descripcion_serie(que: str, desde: datetime.date, lleva: str = "",
+                      epoca: bool = True) -> str:
     """La description de un Dataset: la serie y no el dato de la semana (sin
     la cifra de esta semana), con frases que ya están en el sitio. 'que' es
     lo que se mide ("Precio por kilo del tomate"), 'desde' la primera semana
-    con valor y 'lleva', en un índice, su canasta."""
+    con valor y 'lleva', en un índice o una canasta de ejemplo, su canasta.
+    epoca=False: la serie se publica solo ajustada por inflación (las
+    canastas de ejemplo, como Arma tu canasta)."""
     return " ".join(x for x in [
         f"{que} en la Región Metropolitana: serie semanal desde {desde.year} con datos ODEPA.",
         lleva,
         frase_limites(),
         "La serie se publica como precio de la época y ajustada por inflación con el IPC "
-        "del Banco Central de Chile.",
+        "del Banco Central de Chile." if epoca else
+        "La serie se publica ajustada por inflación con el IPC del Banco Central de Chile.",
         "Se actualiza cada viernes.",
         "La elabora Carestía sobre datos abiertos de ODEPA, publicados con licencia CC-BY.",
     ] if x)
@@ -3964,9 +3973,9 @@ def dataset_jsonld(nombre_serie: str, descripcion: str, url: str, desde: datetim
     'nombre_serie' es el title de la página sin " | Carestía", 'url' su
     canonical, 'desde' la primera semana con valor y 'hasta' la última si la
     serie quedó cerrada (sin precio hace más de un año, como en /productos/)
-    o None si sigue abierta. 'clave' es el producto o el índice en las
-    palabras clave. 'descarga': resumen.json como distribution, solo en los
-    índices (no trae productos). "</" escapado, como en __DATA__."""
+    o None si sigue abierta. 'clave' es el producto, el índice o la canasta
+    en las palabras clave. 'descarga': resumen.json como distribution, solo
+    en los índices (no trae productos). "</" escapado, como en __DATA__."""
     ld = {
         "@context": "https://schema.org",
         "@type": "Dataset",
@@ -7615,13 +7624,15 @@ def fila_compras(p: dict, slug: str, semana: datetime.date) -> str:
             f'<td class="ins-f">{html.escape(frase)}</td></tr>')
 
 
-def generar_compras(fichas: dict, catalogo: dict) -> None:
+def generar_compras(fichas: dict, catalogo: dict, canastas: list = ()) -> None:
     """/compras.html: el texto del dueño, textos/compras.md (literal), con la
     línea de la semana de la portada y la tabla de los insumos de COMPRAS en
     sus bloques (fila_compras) después de la entrada, lo que va antes del
     primer título ('## '). Va solo lo que tiene precio en las últimas
     SEMANAS_TABLA semanas, como en la tabla de la portada: un precio viejo no
-    pasa por uno de esta semana. Lo que queda fuera se avisa en la consola."""
+    pasa por uno de esta semana. Lo que queda fuera se avisa en la consola.
+    Después de la tabla, el link a cada canasta de ejemplo escrita
+    ('canastas', de generar_canastas) que trae su frase para esta página."""
     prods = DATA.get("productos", {})
     slugs = {clave: slug for slug, (clave, _label) in fichas.items()}
     semana = semana_vigente(prods[k] for k in slugs)
@@ -7653,7 +7664,11 @@ def generar_compras(fichas: dict, catalogo: dict) -> None:
                  + "\n".join(bloques) + "\n    </table>\n"
                  # la misma etiqueta de la tabla de la portada
                  f'    <p class="ins-nota">Precios al consumidor ODEPA, Región Metropolitana, '
-                 f'{ajustado("os")}.</p>\n')
+                 f'{ajustado("os")}.</p>\n'
+                 # las canastas de ejemplo con esos insumos, cada una en su página
+                 + "".join(f'    <p>{html.escape(c["compras"])}: <a href="{SITIO}/{ruta}">'
+                           f'{html.escape(c["titulo"])}</a>.</p>\n'
+                           for ruta, c in canastas if c.get("compras")))
     ultima = semana_de_los_datos(catalogo)
     secciones = secciones_md(con_cifras(leer_texto("compras")))
     entrada = secciones.pop(0)[1] if secciones and secciones[0][0] is None else ""
@@ -7669,6 +7684,369 @@ def generar_compras(fichas: dict, catalogo: dict) -> None:
         "inflación, y cómo está frente al mismo mes de los últimos 10 años. Datos de ODEPA, "
         "cada viernes.",
         cuerpo, actual="compras", clase="doc compras", css=CSS_COMPRAS)
+
+
+# ---- /canastas/{slug}.html: canastas de ejemplo ----
+# Una canasta armada como en Arma tu canasta de /graficos.html, con su página
+# en HTML estático: un correo, los buscadores y los asistentes que no corren
+# JS ven su costo y las cifras de su franja, y la página tiene su link y su
+# tarjeta. No es un índice de Carestía: su línea va en hueso, el color de las
+# canastas de usuario. Las claves son las de indices.json (las de los links
+# de canasta) y cada cantidad va en la unidad del producto. 'compras' es la
+# frase de /compras.html antes del link a la página (sin ella, no va ahí)
+CANASTAS_EJEMPLO = [
+    {"slug": "almuerzo-casino", "titulo": "Almuerzo de casino para 10 personas",
+     "compras": "Estos insumos juntos, como un almuerzo para 10 personas, semana a semana",
+     "insumos": [("posta_paleta", 0.8), ("pollo_trutro_entero", 1),
+                 ("arroz_grano_largo_delgado_grado_2", 0.6), ("papa", 1.5), ("tomate", 0.8),
+                 ("cebolla", 4), ("aceite_vegetal", 0.2), ("marraqueta", 0.5)]},
+]
+CANASTAS_DIR = "canastas"
+# el máximo de productos de una canasta en /graficos.html (CMAX): su link no
+# lleva más
+CANASTA_MAX = 8
+CANASTA_LINEA = ("Canasta de ejemplo con precios de Santiago, ajustados por inflación. "
+                 "Cámbiale los insumos y las cantidades en el gráfico. No es un índice de Carestía.")
+
+# la página de una canasta (escribir_pagina la pone solo ahí): el costo como
+# el de las páginas de índice, las líneas de la franja como en /graficos.html
+# y la tabla de lo que lleva, que en el celular (hasta 760px, como la de
+# /compras.html) apila cada fila: el nombre arriba y, abajo, la cantidad, el
+# precio y el aporte, con su etiqueta. Sin scroll horizontal
+CSS_CANASTA = r"""
+  /* ---- /canastas/{slug}.html: una canasta de ejemplo ---- */
+  .can-sem { font:400 13px var(--sans); color:var(--ash); }
+  /* las líneas de la franja de Arma tu canasta, como en /graficos.html */
+  .cstats { font:400 13px/1.5 var(--sans); color:var(--ash); margin-top:8px;
+    text-wrap:pretty; }
+  .ctemporada { margin-top:2px; }
+  .caviso { font:400 12px/1.5 var(--sans); color:var(--ash); margin-top:4px; }
+  .can-tabla { width:100%; max-width:760px; margin-top:6px; border-collapse:collapse; }
+  .can-tabla th, .can-tabla td { padding:11px 12px; text-align:left; vertical-align:baseline; }
+  .can-tabla th:first-child { padding-left:0; }
+  .can-tabla td:last-child { padding-right:0; }
+  .can-tabla thead th { font:500 12px var(--sans); color:var(--dim); white-space:nowrap;
+    border-bottom:1px solid var(--line); }
+  .can-tabla tbody tr { border-bottom:1px solid var(--line); }
+  .can-tabla tbody th { font:500 15px/1.4 var(--sans); }
+  .can-tabla a { color:var(--bone); text-decoration:underline;
+    text-decoration-color:var(--dim); text-underline-offset:3px; }
+  .can-tabla a:hover, .can-tabla a:focus-visible { text-decoration-color:var(--bone); }
+  .can-tabla .can-n { text-align:right; white-space:nowrap; }
+  .can-q, .can-p { font:400 14px var(--sans); }
+  .can-p small { font:400 12px var(--sans); color:var(--ash); }
+  .can-a { font:600 14px var(--sans); }
+  .can-nota { font:400 12px/1.6 var(--sans); color:var(--ash); margin-top:12px;
+    text-wrap:pretty; }
+  @media (max-width:760px) {
+    .can-tabla, .can-tabla tbody, .can-tabla tr, .can-tabla th, .can-tabla td { display:block; }
+    .can-tabla thead { display:none; }
+    .can-tabla th, .can-tabla td, .can-tabla td:last-child { padding:0; }
+    .can-tabla tbody tr { display:grid; grid-template-columns:auto minmax(0,1fr) auto;
+      align-items:baseline; gap:4px 16px; padding:12px 0; }
+    .can-tabla tbody th { grid-column:1 / -1; }
+    .can-tabla .can-n { text-align:left; }
+    .can-tabla .can-a { text-align:right; }
+    /* sin cabecera, el aporte lleva su etiqueta */
+    .can-a::before { content:"aporta "; font:400 12px var(--sans); color:var(--ash); }
+  }
+"""
+
+
+# ---- Arma tu canasta, en Python ----
+# La página de una canasta de ejemplo dice lo mismo que la franja de Arma tu
+# canasta de /graficos.html con el link de su botón: la misma serie, el mismo
+# percentil, el mismo % y la misma línea de temporada. Estas funciones son las
+# de su JS (calcularCanasta, hashCanasta y el bloque de syncCanasta que llena
+# cstats, ctemporada y caviso), cuenta por cuenta y en el mismo orden, con el
+# Math.round de JS; tests/test_canastas.py las compara con ese JS en Node.
+def redondeo_js(x: float) -> int:
+    """Math.round: la mitad sube, también en negativos (-2,5 da -2). El
+    round() de Python lleva la mitad al par."""
+    r = math.floor(x)
+    return r + 1 if x - r >= 0.5 else r
+
+
+def fmt_clp_js(x: float) -> str:
+    """El fmt de /graficos.html: pesos enteros con Math.round y el punto de
+    miles de es-CL ("$20.324")."""
+    return "$" + f"{redondeo_js(x):,}".replace(",", ".")
+
+
+def numero_js(x: float) -> str:
+    """Un número como lo escribe JS: 4 y no 4.0; 0.8 igual que en Python
+    (los dos usan la escritura más corta que vuelve al mismo número)."""
+    return str(int(x)) if x == int(x) else repr(float(x))
+
+
+def semanas_con_precio(p: dict) -> list:
+    """[(lunes ISO, valor)] de las semanas con precio de un producto (serie
+    compacta t0 + v): el 'real' de expandirProducto en /graficos.html."""
+    t0 = datetime.date.fromisoformat(p["t0"])
+    return [((t0 + datetime.timedelta(weeks=i)).isoformat(), v)
+            for i, v in enumerate(p["v"]) if v is not None]
+
+
+def serie_canasta(insumos: list, prods: dict) -> dict:
+    """calcularCanasta: 'insumos' es [(clave, cantidad)] en el orden de la
+    canasta y 'prods', los productos de indices.json. La serie [(lunes ISO,
+    costo)] existe solo en las semanas en que todos tienen precio (cantidad
+    por precio ajustado por inflación, sumado en el orden de la canasta),
+    recorridas en las del primero. 'limitante' es el de primer precio más
+    tardío y 'truncada', si la canasta parte después que alguno de ellos.
+    Un producto sin datos queda fuera de la cuenta, como en el JS."""
+    reales = {k: semanas_con_precio(prods[k]) for k, _q in insumos if k in prods}
+    claves = [k for k, _q in insumos if reales.get(k)]
+    if not claves:
+        return {"serie": [], "truncada": False, "limitante": None}
+    cantidad = dict(insumos)
+    mapas = [dict(reales[k]) for k in claves]
+    serie = []
+    for t, _v in reales[claves[0]]:
+        suma = 0.0
+        for k, mapa in zip(claves, mapas):
+            v = mapa.get(t)
+            if v is None:
+                break
+            suma += cantidad[k] * v
+        else:
+            serie.append((t, suma))
+    limitante = claves[0]
+    tarde = temprano = reales[limitante][0][0]
+    for k in claves:
+        t0 = reales[k][0][0]
+        if t0 > tarde:
+            tarde, limitante = t0, k
+        if t0 < temprano:
+            temprano = t0
+    return {"serie": serie, "truncada": tarde > temprano, "limitante": limitante}
+
+
+def semana_iso(t: str) -> int:
+    """semanaISO: la semana ISO (1 a 53) de una fecha 'aaaa-mm-dd'."""
+    return datetime.date.fromisoformat(t).isocalendar()[1]
+
+
+def distancia_semanas(a: int, b: int) -> int:
+    """distSem: distancia circular mod 52 entre dos semanas ISO (diciembre y
+    enero son épocas vecinas)."""
+    d = abs(a - b) % 52
+    return min(d, 52 - d)
+
+
+def lineas_canasta(r: dict, nombres: dict) -> dict:
+    """Lo que dice la franja de Arma tu canasta de una canasta con semanas en
+    común ('r', de serie_canasta), con las cuentas y las frases de
+    syncCanasta, salvo "tu canasta", que aquí es "esta canasta": 'costo' (el
+    de su última semana), 'stats' (el percentil truncado de sus semanas y el
+    % sobre o bajo su promedio), 'temporada' ("" con menos de 30 semanas
+    comparables) y 'aviso' (desde cuándo tiene datos y qué producto la
+    limita; "" si no está truncada). 'nombres' da el nombre para mostrar de
+    cada clave, el label de los productos en /graficos.html."""
+    serie = r["serie"]
+    vals = [v for _t, v in serie]
+    ult, n = vals[-1], len(vals)
+    # truncados, como en las fichas y la portada: el 100 queda para el
+    # precio más alto (o, en la temporada, más que todas las comparables)
+    pct = math.floor(100 * sum(1 for v in vals if v <= ult) / n)
+    # el promedio suma en orden, como el reduce del JS: el sum() de Python
+    # compensa el redondeo y puede dar otro último decimal
+    suma = 0.0
+    for v in vals:
+        suma += v
+    prom = suma / n
+    vsp = redondeo_js((ult / prom - 1) * 100)
+    stats = (f"percentil {pct} de {n} semanas de esta canasta ("
+             + ("+" if vsp >= 0 else "") + str(vsp)
+             + ("% sobre" if vsp >= 0 else "% bajo") + " su promedio histórico)")
+    # la temporada: la semana actual solo contra las semanas de su misma
+    # época en la historia (semana ISO a 6 o menos, circular); con menos de
+    # 30 comparables el percentil es ruido y la línea no va
+    actual = semana_iso(serie[-1][0])
+    comp, desde = [], ""
+    for t, v in serie[:-1]:
+        if distancia_semanas(semana_iso(t), actual) <= 6:
+            if not comp:
+                desde = t[:4]
+            comp.append(v)
+    temporada = ""
+    if len(comp) >= 30:
+        nc = len(comp)
+        orden = sorted(comp)
+        mediana = (orden[(nc - 1) // 2] + orden[nc // 2]) / 2
+        pca = math.floor(100 * sum(1 for v in comp if v < ult) / nc)
+        pba = math.floor(100 * sum(1 for v in comp if v > ult) / nc)
+        temporada = ("en esta época del año: "
+                     + (f"más barata que el {pba}%" if ult < mediana else f"más cara que el {pca}%")
+                     + f" de las semanas comparables ({nc} desde {desde})")
+    aviso = ""
+    if r["truncada"]:
+        aviso = (f"esta canasta tiene datos desde {serie[0][0][:4]} "
+                 f"(limitada por {nombres[r['limitante']]})")
+    return {"costo": fmt_clp_js(ult), "stats": stats, "temporada": temporada, "aviso": aviso}
+
+
+def hash_canasta(insumos: list) -> str:
+    """hashCanasta: "#canasta=clave:cantidad,..." en el orden de la canasta,
+    cada cantidad redondeada a 0,1 y escrita como la escribe JS."""
+    return "#canasta=" + ",".join(f"{k}:{numero_js(redondeo_js(q * 10) / 10)}"
+                                  for k, q in insumos)
+
+
+def cantidad_del_link(q: float, unidad: str) -> bool:
+    """Si el link de canasta lleva la cantidad tal cual: leerHash la redondea
+    a 0,1 (por unidad, a enteros) y la sube a 0,1 (o a 1) si es menor."""
+    if unidad == "un":
+        return q == int(q) and q >= 1
+    return q >= 0.1 and redondeo_js(q * 10) / 10 == q
+
+
+def oracion(s: str) -> str:
+    """Una línea de la franja como oración, con mayúscula y punto (tarjeta)."""
+    return s[:1].upper() + s[1:] + "."
+
+
+def tarjeta_canasta(c: dict, r: dict, lineas: dict, ruta: str) -> str:
+    """og/canastas/{slug}.png, como la de un producto: el título, el costo,
+    la frase de temporada (sin ella, la del percentil) y el gráfico de la
+    serie, con la línea en hueso. Devuelve las etiquetas og."""
+    fin = datetime.date.fromisoformat(r["serie"][-1][0])
+    datos = {
+        "antetitulo": "Canasta de ejemplo en Santiago",
+        "nombre": c["titulo"],
+        "precio": lineas["costo"],
+        # el costo de la semana, sin etiqueta de ajuste, como en los índices
+        "unidad": "",
+        "frase": oracion(lineas["temporada"] or lineas["stats"]),
+        "fecha": semana_larga(fin),
+        "fuente_txt": FUENTE_CITA,
+        "sitio": "carestia.cl",
+        "serie": serie_tarjeta([datetime.date.fromisoformat(t) for t, _v in r["serie"]],
+                               [v for _t, v in r["serie"]]),
+        "leyenda": TARJETA_LEYENDA,
+        "linea": "bone",
+    }
+    dibujar(tarjetas.ficha, ruta, datos)
+    alt = (f"{c['titulo']}: {datos['precio']}, {datos['fecha'][0].lower()}{datos['fecha'][1:]}. "
+           f"{datos['frase']}")
+    return og_meta(og_url(ruta, datos), alt)
+
+
+def generar_canastas(fichas: dict) -> list:
+    """canastas/{slug}.html por cada canasta de CANASTAS_EJEMPLO, con su
+    tarjeta og, en este orden: el título y su línea fija; el costo de su
+    última semana, grande, con la semana en palabras; las líneas de la
+    franja de Arma tu canasta (lineas_canasta); lo que lleva, con el link a
+    la ficha de cada insumo, su cantidad, su precio de esa semana y lo que
+    aporta; el botón que la abre en /graficos.html (hash_canasta), y la línea
+    de cita y su Dataset (JSON-LD). Una canasta con un producto sin ficha o
+    sin precio en las últimas SEMANAS_TABLA semanas no se escribe, como en
+    /compras.html, y la consola lo avisa; tampoco una cuya cantidad el link
+    no lleve tal cual o sin semanas en común en ese plazo. Devuelve las
+    escritas, [(ruta, canasta)], para el sitemap y /compras.html."""
+    prods = DATA.get("productos", {})
+    slugs = {clave: slug for slug, (clave, _label) in fichas.items()}
+    semana = semana_vigente(prods[k] for k in slugs)
+    # la carpeta va aunque no se escriba ninguna: actualizar.yml la copia
+    os.makedirs(CANASTAS_DIR, exist_ok=True)
+    nombres = {k: nombre(p["label"]) for k, p in prods.items()}
+    escritas, vistas = [], set()
+    for c in CANASTAS_EJEMPLO:
+        claves = [k for k, _q in c["insumos"]]
+        # un error de CANASTAS_EJEMPLO, no de los datos: el build se detiene
+        if (not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", c["slug"]) or c["slug"] in vistas
+                or not 0 < len(claves) <= CANASTA_MAX or len(set(claves)) != len(claves)):
+            raise SystemExit(f"build_site.py: canasta de ejemplo mal definida: {c['slug']!r} "
+                             f"(slug repetido o fuera de [a-z0-9-], o insumos repetidos, o más "
+                             f"de {CANASTA_MAX}).")
+        vistas.add(c["slug"])
+        fuera = []
+        for k, q in c["insumos"]:
+            if k not in slugs:
+                fuera.append(f"{k} (sin ficha)")
+            elif fin_serie(prods[k]) < semana - datetime.timedelta(weeks=SEMANAS_TABLA - 1):
+                fuera.append(f"{k} (último precio: {fin_serie(prods[k]):%d-%m-%Y})")
+            elif not cantidad_del_link(q, prods[k]["unidad"]):
+                fuera.append(f"{k} ({q} {prods[k]['unidad']}: el link de canasta no la lleva así)")
+        r = None if fuera else serie_canasta(c["insumos"], prods)
+        if r is not None and (not r["serie"] or datetime.date.fromisoformat(r["serie"][-1][0])
+                              < semana - datetime.timedelta(weeks=SEMANAS_TABLA - 1)):
+            fuera.append(f"sin semanas en común en las últimas {SEMANAS_TABLA}")
+        if fuera:
+            print(f"AVISO {CANASTAS_DIR}/{c['slug']}.html: no se escribe: " + ", ".join(fuera))
+            continue
+        ruta = f"{CANASTAS_DIR}/{c['slug']}.html"
+        t_fin = r["serie"][-1][0]
+        fin = datetime.date.fromisoformat(t_fin)
+        desde = datetime.date.fromisoformat(r["serie"][0][0])
+        lineas = lineas_canasta(r, nombres)
+        og = tarjeta_canasta(c, r, lineas, f"{OG_DIR}/{ruta[:-5]}.png")
+        # lo que lleva: el precio de cada insumo en la última semana de la
+        # canasta (la vigente si todos tienen precio esta semana) y lo que
+        # aporta a su costo, redondeado como el costo, fila por fila (como en
+        # las páginas de índice, la columna puede no sumar justo el costo)
+        precios = {k: dict(semanas_con_precio(prods[k]))[t_fin] for k in claves}
+        filas = []
+        for k, q in c["insumos"]:
+            p = prods[k]
+            filas.append(
+                f'        <tr><th scope="row"><a href="{SITIO}/productos/{slugs[k]}.html">'
+                f'{html.escape(nombres[k])}</a></th>'
+                f'<td class="can-n can-q">{fmt_cantidad(q, p["unidad"])}</td>'
+                f'<td class="can-n can-p">{fmt_clp(precios[k])} '
+                f'<small>por {UNI_TXT.get(p["unidad"], p["unidad"])}</small></td>'
+                f'<td class="can-n can-a">{fmt_clp_js(q * precios[k])}</td></tr>')
+        lineas_html = "".join(
+            f'    <p class="{clase}">{html.escape(lineas[k])}</p>\n'
+            for k, clase in (("stats", "cstats"), ("temporada", "cstats ctemporada"),
+                             ("aviso", "caviso")) if lineas[k])
+        serie_txt = f"{c['titulo']}: costo semanal en Santiago"
+        lleva = [f"{nombres[k][0].lower()}{nombres[k][1:]} ({fmt_cantidad(q, prods[k]['unidad'])})"
+                 for k, q in c["insumos"]]
+        jsonld = dataset_jsonld(
+            serie_txt,
+            descripcion_serie(f"Costo semanal de una canasta de ejemplo "
+                              f"({c['titulo'][0].lower()}{c['titulo'][1:]})", desde,
+                              f"La canasta lleva {enumerar(lleva)}. No es un índice de Carestía.",
+                              epoca=False),
+            f"{SITIO}/{ruta}", desde, None, "Costo semanal de la canasta, en pesos chilenos",
+            c["titulo"])
+        link = f"{SITIO}/graficos.html{hash_canasta(c['insumos'])}"
+        cuerpo = (
+            f'    <h1>{html.escape(c["titulo"])}</h1>\n'
+            f'    <p class="intro">{html.escape(CANASTA_LINEA)}</p>\n'
+            f'    <div class="ind-cifra"><span class="ind-precio">{lineas["costo"]}</span>'
+            f'<span class="can-sem">semana del {fecha_larga(fin)}</span></div>\n'
+            f'{lineas_html}'
+            f'    <section class="pgrupo" aria-labelledby="can-h">\n'
+            f'      <h2 id="can-h">Lo que lleva</h2>\n'
+            f'      <table class="can-tabla" aria-labelledby="can-h">\n'
+            f'        <thead><tr><th scope="col">Insumo</th>'
+            f'<th class="can-n" scope="col">Cantidad</th>'
+            # sin precio de todos esta semana, los de la última semana en común,
+            # con su fecha: un precio viejo no pasa por uno de esta semana
+            f'<th class="can-n" scope="col">Precio '
+            f'{"esta semana" if fin == semana else "de la semana del " + fecha_larga(fin)}</th>'
+            f'<th class="can-n" scope="col">Aporte</th></tr></thead>\n'
+            f'        <tbody>\n' + "\n".join(filas) + '\n        </tbody>\n'
+            f'      </table>\n'
+            # la misma etiqueta de la tabla de la portada y de /compras.html
+            f'      <p class="can-nota">Precios al consumidor ODEPA, Región Metropolitana, '
+            f'{ajustado("os")}.</p>\n'
+            f'    </section>\n'
+            f'    <nav class="ind-links">\n'
+            f'      <a href="{html.escape(link, quote=True)}">Abrir en el gráfico y cambiarla</a>\n'
+            f'    </nav>\n'
+            f'    <p class="cita">{html.escape(linea_cita(fin))}</p>\n'
+            f'    {jsonld}')
+        escribir_pagina(
+            ruta, f"{SITIO}/{ruta}", f"{serie_txt} | Carestía",
+            f"{c['titulo']}: {lineas['costo']} la semana del {fecha_larga(fin)} en Santiago, "
+            f"ajustado por inflación. Canasta de ejemplo con precios de ODEPA, semana a semana.",
+            cuerpo, actual="canasta", clase="catalogo canasta", og=og, exacto=False,
+            css=CSS_CITA + "\n" + CSS_CANASTA)
+        escritas.append((ruta, c))
+    return escritas
 
 
 def generar_portada(catalogo: dict, fichas: dict) -> None:
@@ -7987,8 +8365,8 @@ PAGINAS_SITEMAP = ["graficos.html", "productos/", "metodologia.html", "acerca.ht
 
 def generar_sitemap(slugs: list, indices: list = ()) -> None:
     """Raíz + las URLs de producto + las páginas del sitio (con las de los
-    índices), todas con el lastmod del build (LASTMOD, el dateModified de
-    los Dataset)."""
+    índices y las canastas de ejemplo, en 'indices'), todas con el lastmod
+    del build (LASTMOD, el dateModified de los Dataset)."""
     lastmod = LASTMOD
     locs = ["https://carestia.cl/"] + \
         [f"https://carestia.cl/productos/{s}.html" for s in slugs] + \
@@ -8067,11 +8445,12 @@ with open("robots.txt", "w", encoding="utf-8") as fh:
 generar_productos(FICHAS, CATALOGO)
 generar_indice_productos(FICHAS)
 generar_metodologia()
-generar_compras(FICHAS, CATALOGO)
+PAGINAS_CANASTAS = generar_canastas(FICHAS)
+generar_compras(FICHAS, CATALOGO, PAGINAS_CANASTAS)
 generar_paginas_texto()
 PAGINAS_INDICES = generar_paginas_indices()
 generar_prensa(PAGINAS_INDICES)
-generar_sitemap(sorted(FICHAS), PAGINAS_INDICES)
+generar_sitemap(sorted(FICHAS), PAGINAS_INDICES + [r for r, _c in PAGINAS_CANASTAS])
 generar_resumen()
 generar_tradingview(APP, CATALOGO)
 generar_marca()
@@ -8079,7 +8458,8 @@ generar_marca()
 print(f"Listo: index.html + graficos.html + robots.txt + sitemap.xml + resumen.json + "
       f"{len(FICHAS)} páginas en productos/ + productos/index.html + "
       f"{len(PAGINAS_INDICES)} páginas en indices/ + prensa.html + compras.html + "
-      f"{len(FICHAS) + len(PAGINAS_INDICES) + 1} tarjetas en og/ + og.png + "
+      f"{len(PAGINAS_CANASTAS)} página{'' if len(PAGINAS_CANASTAS) == 1 else 's'} en canastas/ + "
+      f"{len(FICHAS) + len(PAGINAS_INDICES) + len(PAGINAS_CANASTAS) + 1} tarjetas en og/ + og.png + "
       f"apple-touch-icon.png + "
       f"metodologia.html + {len(PAGINAS_TEXTO)} páginas institucionales + "
       f"datos/ ({len(DATA['indices'])} índices, "
