@@ -2723,11 +2723,17 @@ __CSS_MARCA__
   .velo[hidden] { display:none; }
   .fecha { font:500 12px/1.6 var(--sans); color:var(--ash); margin-top:14px; text-wrap:pretty; }
   .fecha .sin-nuevos { color:var(--bone); }
-  /* para citar: la frase con el precio de esta semana, justo antes de la
-     línea de la semana, y la línea de cita (CSS_CITA), después */
+  /* para citar: la frase con el precio de esta semana, antes de la línea de
+     la semana (con la del precio de hace diez años en medio, si va), y la
+     línea de cita (CSS_CITA), después */
   .citable { font:400 13px/1.6 var(--sans); color:var(--ash); margin-top:14px;
     text-wrap:pretty; }
   .citable + .fecha { margin-top:4px; }
+  /* bajo la frase citable, con su mismo aspecto, el precio de hace diez años
+     (si la serie lo tiene); la línea de la semana queda igual de cerca */
+  .diez { font:400 13px/1.6 var(--sans); color:var(--ash); margin-top:4px;
+    text-wrap:pretty; }
+  .diez + .fecha { margin-top:4px; }
 __CSS_CITA__
   .ref-velas { font:400 12px/1.5 var(--sans); color:var(--dim); margin-top:10px; }
   /* Comparar con: el componente de Comparar de /graficos.html (CSS_COMPARAR)
@@ -2804,7 +2810,7 @@ __OROW__    <p class="pct">__FRASE__</p>
       <div class="velo" id="velo" role="status" hidden>Preparando la captura...</div>
     </div>
     <p class="ref-velas" id="ref-velas" hidden>Velas semanales. La mecha va del precio más bajo al más alto que ODEPA encontró entre los locales encuestados.</p>
-__CITABLE__    <div class="fecha">__SEMANA__ Serie desde __ANIO__.</div>
+__CITABLE____DIEZ__    <div class="fecha">__SEMANA__ Serie desde __ANIO__.</div>
     <p class="cita">__CITA__</p>
 __COMPARAR__
     __OTROS__
@@ -3902,6 +3908,56 @@ def ultimo_dato(p: dict, semana: datetime.date) -> dict:
     return {"texto": f"{SIN_PRECIO} Último dato: {dato}, semana del {fin:%d-%m-%Y}.",
             "precio": precio, "ajuste": ajuste,
             "temporada": frase_temporada(t, o) if t and reciente else None}
+
+
+# La ficha con precio esta semana dice, bajo la frase citable, cuánto costaba
+# hace diez años (linea_diez_anios): la semana de los precios de esta semana
+# (fin_serie) menos estas semanas. Diez años y no más: antes de marzo de 2013
+# la muestra de puntos de venta de ODEPA era otra (diagnostico_composicion.py
+# dio QUIEBRE MATERIAL), así que no se ofrecen comparaciones más largas
+SEMANAS_DIEZ_ANIOS = 522
+# si esa semana no tiene precio propio, la más cercana con precio propio
+# dentro de estas semanas antes o después (en empate, la anterior); si
+# ninguna tiene, la línea no va
+VENTANA_DIEZ_ANIOS = 2
+# la unidad de la ficha con su artículo: "el kilo costaba"
+UNI_ARTICULO = {"kg": "el kilo", "un": "la unidad", "l": "el litro"}
+
+
+def linea_diez_anios(p: dict, factor: dict, repetidas) -> str:
+    """La línea del precio de hace diez años de una ficha con precio esta
+    semana: "Hace diez años, la semana del 17 de octubre de 2016, el kilo
+    costaba $1.214. Si solo hubiera subido con la inflación, hoy costaría
+    $1.887. Esta semana cuesta $2.271." La primera cifra es el precio de la
+    época de esa semana, el mismo del gráfico en "Precio de la época" (como
+    en ultimo_dato); la segunda, ese precio ajustado por inflación, y la
+    tercera, el número grande de la ficha. 'factor' es factor_epoca() y
+    'repetidas', los índices de v de las semanas que completó el arrastre de
+    indices.py (semanas_repetidas, con ese factor): no cuentan, como en la
+    frase de "Comparar con", porque la línea nombra la semana y ODEPA no
+    publicó precio en ella. "" si no hay precio propio en la ventana o si
+    ese mes no tiene factor."""
+    v = p["v"]
+    t0 = datetime.date.fromisoformat(p["t0"])
+    ref = fin_serie(p) - datetime.timedelta(weeks=SEMANAS_DIEZ_ANIOS)
+    i = (ref - t0).days // 7
+    # la más cercana primero y, en empate, la anterior: 0, -1, +1, -2, +2
+    cerca = sorted(range(-VENTANA_DIEZ_ANIOS, VENTANA_DIEZ_ANIOS + 1), key=lambda d: (abs(d), d))
+    j = next((i + d for d in cerca if 0 <= i + d < len(v) and v[i + d] is not None
+              and i + d not in repetidas), None)
+    if j is None:
+        return ""
+    semana = t0 + datetime.timedelta(weeks=j)
+    f = factor.get(semana.strftime("%Y-%m"))
+    if f is None:
+        return ""
+    # Math.round del datafeed: la mitad sube
+    epoca = math.floor(v[j] * f + 0.5)
+    ult = [x for x in v if x is not None][-1]
+    unidad = UNI_ARTICULO.get(p["unidad"], f"el {p['unidad']}")
+    return (f"Hace diez años, la semana del {fecha_larga(semana)}, {unidad} costaba "
+            f"{fmt_clp(epoca)}. Si solo hubiera subido con la inflación, hoy costaría "
+            f"{fmt_clp(v[j])}. Esta semana cuesta {fmt_clp(ult)}.")
 
 
 # sobre este umbral el producto va a "Sin datos hace más de un año"
@@ -5145,8 +5201,10 @@ def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
     semana (mismo criterio que el "precio de la semana del…" de /productos/),
     no hay número grande: la frase es la de ultimo_dato ("Sin precio de ODEPA
     esta semana. Último dato: …") más la de temporada si el dato es reciente,
-    y nada dice "Hoy". 'og' son las etiquetas de su og:image (og_meta); sin
-    ellas, la genérica. 'sugerencias' son las de su franja "Comparar con"
+    y nada dice "Hoy". Con precio esta semana, bajo la frase citable va la
+    línea del precio de hace diez años (linea_diez_anios), si la serie lo
+    tiene. 'og' son las etiquetas de su og:image (og_meta); sin ellas, la
+    genérica. 'sugerencias' son las de su franja "Comparar con"
     (sugerencias_comparar)."""
     vals = [v for v in p["v"] if v is not None]
     ult = vals[-1]
@@ -5222,7 +5280,11 @@ def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
         f"{SITIO}/productos/{slug}.html", desde,
         fecha_fin if sin_datos_hace_un_anio(fecha_fin, semana) else None,
         f"Precio al consumidor por {uni_txt}, en pesos chilenos", label_frase)
-    citable = ""
+    factor = factor_epoca()
+    # las semanas que completó el arrastre de indices.py: ni la frase de
+    # "Comparar con" ni la del precio de hace diez años las usan
+    rep = semanas_repetidas(p, factor)
+    citable = diez = ""
     if not antiguo:
         # sin temporada, la frase de arriba dice "Hoy", que deja de ser cierto
         # a la semana siguiente: la citable cierra con la de toda la historia,
@@ -5231,6 +5293,11 @@ def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
         citable = (f"{mostrar} en la Región Metropolitana: {precio} por {uni_txt} la semana "
                    f"del {fecha_larga(fecha_fin)}. {cierre}")
         citable = f'    <p class="citable">{html.escape(citable)}</p>\n'
+        # bajo ella, el precio de hace diez años, si la serie lo tiene: solo
+        # en el HTML de la ficha, no en la tarjeta, el Dataset ni la description
+        diez = linea_diez_anios(p, factor, rep)
+        if diez:
+            diez = f'    <p class="diez">{html.escape(diez)}</p>\n'
 
     out = PRODUCT_HTML
     for token, valor in [
@@ -5261,7 +5328,7 @@ def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
         ("__MIN__", json.dumps(p.get("min") or [])),
         ("__MAX__", json.dumps(p.get("max") or [])),
         # las semanas repetidas: la frase de "Comparar con" no las usa
-        ("__REP__", json.dumps(semanas_repetidas(p, factor_epoca()))),
+        ("__REP__", json.dumps(rep)),
         # lo que el JS común (FICHA_JS) sabe de la ficha, y su versión
         ("__NOMBRE__", json.dumps(mostrar, ensure_ascii=False).replace("</", "<\\/")),
         ("__UNIDAD__", p["unidad"]),
@@ -5287,6 +5354,8 @@ def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
         # para buscadores: el Dataset, la frase citable y la línea de cita
         ("__CSS_CITA__", CSS_CITA),
         ("__CITABLE__", citable),
+        # bajo la frase citable, el precio de hace diez años (linea_diez_anios)
+        ("__DIEZ__", diez),
         ("__CITA__", html.escape(linea_cita(fecha_fin))),
         ("__JSONLD__", jsonld),
     ]:
