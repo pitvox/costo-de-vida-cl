@@ -224,7 +224,8 @@ def test_semana_esperada_segun_el_viernes_de_odepa():
     tz = datetime.timezone(datetime.timedelta(hours=-3))
     lunes = datetime.date(2026, 9, 28)
     # ODEPA se da por no publicada recién desde el viernes a las 17:00 de
-    # Chile, después de la última corrida del viernes (19:00 UTC)
+    # Chile, después de las tres primeras corridas del viernes (a las 19:00
+    # UTC, a lo más las 16:00 de Chile)
     casos = [("2026-10-02T12:30", lunes - datetime.timedelta(weeks=1)),   # 15:30 UTC
              ("2026-10-02T16:59", lunes - datetime.timedelta(weeks=1)),
              ("2026-10-02T17:00", lunes),
@@ -493,24 +494,57 @@ def test_pagina_de_prensa(sitio):
 
 # ---------- publicación ----------
 def test_workflow_corre_varias_veces_el_viernes_sin_publicar_a_medias():
-    """Los viernes a las 15:30, 17:00 y 19:00 UTC y el sábado a las 13:00 UTC,
-    más a mano. Una corrida nueva cancela la que esté en curso (concurrencia
-    "pages") y nunca queda una publicación a medias: nada se commitea al repo
-    y lo único que publica es el job deploy, con actions/deploy-pages y el
-    artefacto completo de su propio build."""
+    """Los viernes a las 15:30, 17:00 y 19:00 UTC, con respaldos el viernes
+    en la tarde y el sábado en la mañana en minutos distintos de :00 y :30,
+    más a mano. Una corrida a la vez (concurrencia "pages", sin cancelar la
+    que está en curso) y nunca queda una publicación a medias: nada se
+    commitea al repo y lo único que publica es el job deploy, con
+    actions/deploy-pages y el artefacto completo de su propio build."""
     with open(os.path.join(RAIZ, ".github", "workflows", "actualizar.yml"), encoding="utf-8") as fh:
         wf = fh.read()
-    assert re.findall(r'- cron: "([^"]+)"', wf) == ["30 15 * * 5", "0 17 * * 5", "0 19 * * 5",
-                                                   "0 13 * * 6"]
-    assert "  workflow_dispatch: {}" in wf
-    assert 'concurrency:\n  group: "pages"\n  cancel-in-progress: true' in wf
+    crons = re.findall(r'- cron: "([^"]+)"', wf)
+    assert crons == ["30 15 * * 5", "0 17 * * 5", "0 19 * * 5", "47 20 * * 5", "13 22 * * 5",
+                     "23 12 * * 6", "0 13 * * 6", "41 14 * * 6"]
+    nuevos = crons[3:5] + [crons[5], crons[7]]
+    assert all(c.split()[0] not in ("0", "30") for c in nuevos), nuevos
+    # los respaldos del viernes son en la tarde (después de las 17:00 UTC)
+    # y los del sábado, en la mañana de Chile (antes de las 15:00 UTC)
+    assert all(c.endswith(" 5") and int(c.split()[1]) >= 17 for c in crons[3:5])
+    assert all(c.endswith(" 6") and int(c.split()[1]) < 15 for c in crons[5:])
+    assert "  workflow_dispatch:\n    inputs:\n      aceptar_salto:" in wf
+    assert 'concurrency:\n  group: "pages"\n  cancel-in-progress: false' in wf
     assert not re.search(r"git (add|commit|push)", wf)
     # un solo despliegue, en el job que espera el build, con el artefacto de Pages
     assert wf.count("uses: actions/deploy-pages@") == 1
     assert wf.count("uses: actions/upload-pages-artifact@") == 1
-    deploy = wf[wf.index("\n  deploy:"):wf.index("\n  aviso-libreria:")]
+    deploy = wf[wf.index("\n  deploy:"):wf.index("\n  aviso-odepa:")]
     assert "needs: build" in deploy and "uses: actions/deploy-pages@" in deploy
     assert "gh-pages" not in wf and "peaceiris" not in wf
+
+
+def test_workflow_no_arma_si_la_semana_ya_esta_publicada():
+    """El job revisar decide si se arma; el build lo espera y los conteos van
+    después de indices.py y antes de validar.py. ODEPA sin publicar deja el
+    sitio publicado y el run en rojo (aviso-odepa)."""
+    with open(os.path.join(RAIZ, ".github", "workflows", "actualizar.yml"), encoding="utf-8") as fh:
+        wf = fh.read()
+    revisar = wf[wf.index("\n  revisar:"):wf.index("\n  build:")]
+    assert "construir: ${{ steps.semana.outputs.construir }}" in revisar
+    assert "run: python3 publicacion.py revisar" in revisar
+    assert "persist-credentials: false" in revisar
+    build = wf[wf.index("\n  build:"):wf.index("\n  deploy:")]
+    assert "    needs: revisar\n    if: ${{ needs.revisar.outputs.construir == 'true' }}\n" in build
+    assert "aviso: ${{ steps.conteos.outputs.aviso }}" in build
+    pasos = re.findall(r"\n      - name: (.+)", build)
+    assert pasos.index("Calcular indices") + 1 == pasos.index("Conteos contra la referencia")
+    assert pasos.index("Conteos contra la referencia") + 1 == \
+        pasos.index("Validar contra sitio desplegado")
+    assert "run: python publicacion.py conteos" in build
+    assert "ACEPTAR_SALTO: ${{ inputs.aceptar_salto }}" in build
+    aviso = wf[wf.index("\n  aviso-odepa:"):wf.index("\n  # La librería no se pudo descargar")]
+    assert "needs: [build, deploy]" in aviso
+    assert "if: ${{ !cancelled() && needs.build.outputs.aviso == 'odepa' }}" in aviso
+    assert aviso.rstrip().endswith("exit 1")
 
 
 def test_workflow_publica_tarjetas_indices_y_prensa():

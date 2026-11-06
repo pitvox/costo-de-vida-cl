@@ -7298,10 +7298,10 @@ def html_productos(tabla: list, vigente: str) -> tuple:
 # ---- semana sin datos nuevos ----
 # ODEPA publica los viernes en la tarde la semana que empezó ese lunes, y
 # actualizar.yml corre los viernes a las 15:30, 17:00 y 19:00 UTC (en Chile,
-# a lo más a las 16:00) y el sábado de respaldo. Si a la hora del build ya
-# pasó el último viernes a las 17:00 (hora de Chile, después de la última
-# corrida del viernes) y los datos no llegan a esa semana, la línea de la
-# semana lo dice. Antes de esa hora, una corrida sin semana nueva publica lo
+# a lo más a las 16:00), con respaldos el viernes en la tarde y el sábado en
+# la mañana. Si a la hora del build ya pasó el último viernes a las 17:00
+# (hora de Chile, después de las tres primeras corridas del viernes) y los
+# datos no llegan a esa semana, la línea de la semana lo dice. Antes de esa hora, una corrida sin semana nueva publica lo
 # mismo que la anterior. CARESTIA_AHORA (aaaa-mm-ddThh:mm, hora de Chile) fija
 # la hora: solo tests.
 ODEPA_DIA, ODEPA_HORA = 4, 17          # viernes, 17:00
