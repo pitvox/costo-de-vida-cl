@@ -92,7 +92,9 @@ def _paso(wf, nombre):
 # ---------- workflow: la librería se descarga solo al publicar ----------
 def test_workflow_clona_la_libreria_despues_del_checkout():
     wf = _wf()
-    pasos = re.findall(r"\n      - name: (.+)", wf)
+    # los pasos del job build (antes va el job revisar, que no publica)
+    build = wf[wf.index("\n  build:"):wf.index("\n  deploy:")]
+    pasos = re.findall(r"\n      - name: (.+)", build)
     assert pasos[:2] == ["Clonar repo", "Librería TradingView"]
     paso = _paso(wf, "Librería TradingView")
     assert "TV_LIBRARY_TOKEN: ${{ secrets.TV_LIBRARY_TOKEN }}" in paso

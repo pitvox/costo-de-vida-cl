@@ -1,40 +1,90 @@
 name: Actualizar indices costo de vida
 
 # Corre los viernes a las 15:30, 17:00 y 19:00 UTC (en Chile, entre las 11:30
-# y las 16:00 según el horario de verano), para que la publicación no dependa de
-# un solo horario, y el sábado a las 13:00 UTC de respaldo. También a mano.
-# Cada corrida es idempotente: arma el sitio entero desde los datos de ODEPA y
-# si ODEPA no publicó semana nueva publica lo mismo (build_site.py da por
-# hecho que no publicó recién desde el viernes a las 17:00 de Chile, después
-# de la última corrida del viernes: ODEPA_HORA).
+# y las 16:00 según el horario de verano), con dos respaldos el viernes en la
+# tarde (20:47 y 22:13 UTC: 17:47 y 19:13 en el verano de Chile, una hora
+# antes en invierno) y tres el sábado en la mañana (12:23, 13:00 y 14:41 UTC:
+# 9:23, 10:00 y 11:41 en verano). Los respaldos nuevos van en minutos
+# distintos de :00 y :30, cuando GitHub atrasa o se salta los programados.
+# También a mano.
+#
+# Cada corrida se puede repetir sin efecto:
+# - el job revisar (publicacion.py revisar) lee el resumen.json publicado y,
+#   en una corrida programada, si la semana que ODEPA publica este viernes ya
+#   está, el workflow no arma ni publica nada y sale en verde. Una corrida a
+#   mano siempre arma;
+# - si arma y ODEPA todavía no publica, publica lo mismo que había (y desde el
+#   viernes a las 17:00 de Chile, con el aviso "Sin datos nuevos" de
+#   build_site.py: ODEPA_HORA);
+# - el paso "Conteos contra la referencia" (publicacion.py conteos) corta el
+#   build, sin deploy y con el correo de GitHub, si los conteos de los 4
+#   índices no son los de la referencia publicada más 1 (o iguales, si la
+#   semana no avanzó). Si se perdió una semana entera, se corre a mano con
+#   aceptar_salto.
 on:
   schedule:
     - cron: "30 15 * * 5"
     - cron: "0 17 * * 5"
     - cron: "0 19 * * 5"
+    - cron: "47 20 * * 5"
+    - cron: "13 22 * * 5"
+    - cron: "23 12 * * 6"
     - cron: "0 13 * * 6"
-  workflow_dispatch: {}
+    - cron: "41 14 * * 6"
+  workflow_dispatch:
+    inputs:
+      aceptar_salto:
+        description: "Aceptar que la semana avance más de una (solo si se perdió una semana entera)"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Una corrida nueva cancela la que esté en curso. Nunca queda una
-# publicación a medias: nada se commitea al repo y lo único que publica es el
-# job deploy (actions/deploy-pages), que despliega el artefacto completo de
-# su build. GitHub Pages cambia de versión de una vez: si se cancela antes del
-# deploy queda la versión anterior, y si se cancela durante el deploy, la
-# acción cancela ese despliegue y también queda la anterior.
+# Una corrida a la vez, sin cancelar la que está en curso: la que llega
+# mientras otra corre espera (si llega otra más, reemplaza a la que esperaba)
+# y, cuando le toca, el job revisar ve la semana ya publicada y termina en
+# segundos. Así un respaldo atrasado nunca corta a la corrida que estaba por
+# publicar. Nunca queda una publicación a medias: nada se commitea al repo y
+# lo único que publica es el job deploy (actions/deploy-pages), que despliega
+# el artefacto completo de su build. GitHub Pages cambia de versión de una
+# vez: si una corrida se cancela a mano antes del deploy queda la versión
+# anterior, y si se cancela durante el deploy, la acción cancela ese
+# despliegue y también queda la anterior.
 concurrency:
   group: "pages"
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
+  # ¿Hay algo que publicar? Solo lee el resumen.json publicado, con el Python
+  # del runner y sin dependencias. construir=false solo en una corrida
+  # programada con la semana ya publicada; ante cualquier duda, true.
+  revisar:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      construir: ${{ steps.semana.outputs.construir }}
+    steps:
+      - name: Clonar publicacion.py
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          sparse-checkout: publicacion.py
+          sparse-checkout-cone-mode: false
+
+      - name: Semana ya publicada
+        id: semana
+        run: python3 publicacion.py revisar
+
   build:
+    needs: revisar
+    if: ${{ needs.revisar.outputs.construir == 'true' }}
     runs-on: ubuntu-24.04
     outputs:
       libreria: ${{ steps.tv.outputs.libreria }}
+      aviso: ${{ steps.conteos.outputs.aviso }}
     steps:
       # Sin credenciales persistidas: checkout dejaría en .git/config un
       # includeIf con el GITHUB_TOKEN como http.extraheader, y git lo sumaría
@@ -130,6 +180,16 @@ jobs:
         # él Python guarda la salida hasta el final y no se ve dónde se pega)
         run: python -u indices.py
 
+      # La semana y los conteos de los 4 índices contra el resumen.json
+      # publicado: la referencia más 1 si la semana avanzó, iguales si no.
+      # Si no cuadran, exit 1: no hay deploy y llega el correo. aceptar_salto
+      # (solo a mano) deja pasar más de una semana nueva
+      - name: Conteos contra la referencia
+        id: conteos
+        env:
+          ACEPTAR_SALTO: ${{ inputs.aceptar_salto }}
+        run: python publicacion.py conteos
+
       - name: Validar contra sitio desplegado
         run: python validar.py
 
@@ -189,6 +249,25 @@ jobs:
       - name: Publicar en GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
+
+  # ODEPA no publicó la semana que ya debía estar: el sitio ya quedó publicado
+  # con el aviso "Sin datos nuevos", pero el run termina en rojo para que
+  # llegue el correo. Los conteos sí cuadraron (iguales a la referencia).
+  aviso-odepa:
+    needs: [build, deploy]
+    if: ${{ !cancelled() && needs.build.outputs.aviso == 'odepa' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Avisar que ODEPA no publicó
+        run: |
+          echo "::error::ODEPA no publicó la semana de este viernes"
+          {
+            echo "## ODEPA no publicó la semana de este viernes"
+            echo "El sitio se publicó con el aviso «Sin datos nuevos de ODEPA esta semana»."
+            echo "Los horarios de respaldo vuelven a intentar; el detalle está en el paso «Conteos contra la referencia» del job build."
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 1
 
   # La librería no se pudo descargar: el sitio ya quedó publicado (con
   # Lightweight Charts), pero el run termina en rojo para que llegue el correo.
