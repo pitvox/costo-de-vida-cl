@@ -19,10 +19,15 @@ Chequeos:
      y percentil_temporada 0..100; con "toda la historia" (menos de 5 años
      del mes), los dos null;
   c. por índice: suma de aportes = costo_nominal (±1%) y ningún mismatch;
-  d. catálogo: len(indices.json["productos"]) == PRODUCTOS_ESPERADOS (121:
-     los 125 de antes menos los 5 que el mínimo de puntos de venta deja sin
-     ninguna semana publicable, más huevo_blanco_extra_grande_(extra), que
-     ODEPA empezó a publicar la semana del 2 de noviembre de 2026);
+  d. catálogo: ningún producto del indices.json desplegado desaparece del
+     nuevo. Un producto que aparece (ODEPA empezó a publicarlo, o juntó el
+     mínimo de puntos de venta) no frena la publicación: se informa en el
+     resumen y deja un aviso en la corrida. Si no se puede bajar el
+     indices.json desplegado, el piso es PRODUCTOS_MINIMOS (121: los 125 de
+     antes menos los 5 que el mínimo de puntos de venta deja sin ninguna
+     semana publicable, más huevo_blanco_extra_grande_(extra), que ODEPA
+     publica desde la semana del 2 de noviembre de 2026). Con la variable
+     de entorno PRODUCTOS_ESPERADOS se vuelve al conteo exacto, a mano;
   e. limpieza de productos: los descartes de indices.json["descartes"] no
      superan el 0,5% de las semanas-producto con dato (si los supera, la
      regla estaría borrando de más). Sin la clave no se chequea; por debajo
@@ -57,8 +62,9 @@ MAX_VARIACION_PCT = 40
 TOLERANCIA_APORTES = 0.01
 TIMEOUT = 30
 MAX_DESCARTES = 0.005     # fracción de semanas-producto con dato
-# productos del catálogo; se puede pisar con la variable PRODUCTOS_ESPERADOS
-PRODUCTOS_ESPERADOS = 121
+# piso del catálogo cuando no se puede comparar contra el indices.json
+# desplegado (lo normal es comparar producto por producto: chequear_catalogo)
+PRODUCTOS_MINIMOS = 121
 
 OK, KO = "✓", "✗"
 
@@ -228,21 +234,33 @@ def chequear_componentes(code, d) -> list:
     return out
 
 
-def chequear_catalogo(productos: dict, esperados: int) -> tuple:
+def chequear_catalogo(productos: dict, esperados=None) -> tuple:
+    """El catálogo contra el indices.json desplegado, producto por producto.
+    Falla si desaparece alguno; los que aparecen solo se informan. Sin el
+    desplegado, el piso es PRODUCTOS_MINIMOS. Con `esperados` (la variable
+    PRODUCTOS_ESPERADOS, puesta a mano) exige ese número exacto y la
+    comparación solo sirve para listar los slugs. Devuelve (chequeo, ok,
+    detalle, nuevos)."""
+    nombre = "catálogo de productos"
     n = len(productos)
-    if n == esperados:
-        return (f"catálogo de productos", True, f"{n} series (esperadas {esperados})")
-    det = f"{n} series, esperadas {esperados}"
+    if esperados is not None and n == esperados:
+        return (nombre, True, f"{n} series (esperadas {esperados})", [])
     ref, url, errores = descargar_json(URLS_INDICES, _forma_indices)
     if ref is None:
-        det += ". No pude bajar el indices.json desplegado para listar los slugs: " \
-               + " | ".join(errores)
-    else:
-        nuevos = sorted(set(productos) - set(ref["productos"]))
-        idos = sorted(set(ref["productos"]) - set(productos))
-        det += (f". Contra {url}: aparecieron [{', '.join(nuevos) or '—'}]; "
-                f"desaparecieron [{', '.join(idos) or '—'}]")
-    return ("catálogo de productos", False, det)
+        sin_ref = ("No pude bajar el indices.json desplegado para comparar los "
+                   "slugs: " + " | ".join(errores))
+        if esperados is not None:
+            return (nombre, False, f"{n} series, esperadas {esperados}. {sin_ref}", [])
+        return (nombre, n >= PRODUCTOS_MINIMOS,
+                f"{n} series (piso {PRODUCTOS_MINIMOS}). {sin_ref}", [])
+    nuevos = sorted(set(productos) - set(ref["productos"]))
+    idos = sorted(set(ref["productos"]) - set(productos))
+    cambios = (f"Contra {url}: aparecieron [{', '.join(nuevos) or 'ninguno'}]; "
+               f"desaparecieron [{', '.join(idos) or 'ninguno'}]")
+    if esperados is not None:
+        return (nombre, False, f"{n} series, esperadas {esperados}. {cambios}", nuevos)
+    return (nombre, not idos,
+            f"{n} series ({len(ref['productos'])} en el desplegado). {cambios}", nuevos)
 
 
 def _fin_serie(p: dict) -> str:
@@ -396,7 +414,9 @@ def armar_summary(filas, chequeos, url_ref, error=None) -> str:
 
 
 def main() -> int:
-    esperados = int(os.environ.get("PRODUCTOS_ESPERADOS", str(PRODUCTOS_ESPERADOS)))
+    # vacía o sin definir: comparación producto por producto con el desplegado
+    env = os.environ.get("PRODUCTOS_ESPERADOS", "").strip()
+    esperados = int(env) if env else None
     chequeos, filas, url_ref = [], [], None
     try:
         with open("indices.json", encoding="utf-8") as fh:
@@ -432,13 +452,22 @@ def main() -> int:
             "n_ant": a.get("semanas_historia"), "n_new": n.get("semanas_historia"),
             "var": f"{var:+.1f}%" if isinstance(var, (int, float)) else var,
         })
-    chequeos.append(chequear_catalogo(data.get("productos") or {}, esperados))
+    *catalogo, nuevos = chequear_catalogo(data.get("productos") or {}, esperados)
+    chequeos.append(tuple(catalogo))
     limpieza, chequeo = revisar_limpieza(data)
     if chequeo is not None:
         chequeos.append(chequeo)
 
+    aviso_nuevos = []
+    if nuevos:
+        # anotación de GitHub Actions: se ve en la página de la corrida
+        print(f"::warning::Productos nuevos en el catálogo: {', '.join(nuevos)}")
+        aviso_nuevos = ["## Productos nuevos en el catálogo", "",
+                        "Se publican con el nombre de ODEPA. Revisar su nombre "
+                        "visible (NOMBRES en build_site.py) y su ficha:", ""]
+        aviso_nuevos += [f"- {sl}" for sl in nuevos] + [""]
     escribir_summary(armar_summary(filas, chequeos, url_ref) + "\n\n"
-                     + "\n".join(limpieza))
+                     + "\n".join(aviso_nuevos + limpieza))
     fallas = [(c, d) for c, ok, d in chequeos if not ok]
     if fallas:
         for c, d in fallas:

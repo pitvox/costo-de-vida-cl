@@ -89,8 +89,9 @@ def entorno(tmp_path, monkeypatch):
     summary = tmp_path / "summary.md"
     monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
     # el mundo sintético de estos tests tiene 120 productos, fijo, aunque el
-    # catálogo real (validar.PRODUCTOS_ESPERADOS) cambie
-    monkeypatch.setenv("PRODUCTOS_ESPERADOS", "120")
+    # piso del catálogo real (validar.PRODUCTOS_MINIMOS) cambie
+    monkeypatch.delenv("PRODUCTOS_ESPERADOS", raising=False)
+    monkeypatch.setattr(validar, "PRODUCTOS_MINIMOS", 120)
     estado = {"indices": indices_nuevo(), "resumen": resumen_desplegado(),
               "indices_remoto": indices_nuevo(productos=120), "urls": []}
 
@@ -165,17 +166,68 @@ def test_mismatch_de_unidad_falla(entorno):
     assert entorno["correr"]()[0] == 1
 
 
-def test_119_productos_falla_y_lista_slugs(entorno):
+def test_producto_desaparecido_falla_y_lista_slugs(entorno):
     entorno["indices"] = indices_nuevo(productos=119)
     code, summary = entorno["correr"]()
     assert code == 1
-    assert "119 series, esperadas 120" in summary
+    assert "119 series (120 en el desplegado)" in summary
     assert "desaparecieron [prod_119]" in summary
 
 
+def test_producto_nuevo_pasa_y_se_informa(entorno, capsys):
+    entorno["indices"] = indices_nuevo(productos=121)
+    code, summary = entorno["correr"]()
+    assert code == 0, summary
+    assert "121 series (120 en el desplegado)" in summary
+    assert "aparecieron [prod_120]; desaparecieron [ninguno]" in summary
+    assert "## Productos nuevos en el catálogo" in summary
+    assert "- prod_120" in summary
+    assert "::warning::Productos nuevos en el catálogo: prod_120" in capsys.readouterr().out
+
+
+def test_sin_productos_nuevos_no_hay_aviso(entorno, capsys):
+    code, summary = entorno["correr"]()
+    assert code == 0, summary
+    assert "Productos nuevos en el catálogo" not in summary
+    assert "::warning::" not in capsys.readouterr().out
+
+
+def test_cambio_de_un_producto_por_otro_falla(entorno):
+    # mismo conteo, pero uno se fue y otro llegó: el conteo solo no lo vería
+    nuevo = indices_nuevo(productos=120)
+    nuevo["productos"]["prod_nuevo"] = nuevo["productos"].pop("prod_007")
+    entorno["indices"] = nuevo
+    code, summary = entorno["correr"]()
+    assert code == 1
+    assert "aparecieron [prod_nuevo]; desaparecieron [prod_007]" in summary
+
+
+def test_sin_indices_desplegado_vale_el_piso(entorno):
+    entorno["indices_remoto"] = None
+    code, summary = entorno["correr"]()
+    assert code == 0, summary
+    assert "120 series (piso 120)" in summary
+    assert "No pude bajar el indices.json desplegado" in summary
+    entorno["indices"] = indices_nuevo(productos=119)
+    code, summary = entorno["correr"]()
+    assert code == 1
+    assert "119 series (piso 120)" in summary
+
+
 def test_productos_esperados_por_env(entorno, monkeypatch):
+    # a mano: el conteo exacto manda, aunque un producto haya desaparecido
     monkeypatch.setenv("PRODUCTOS_ESPERADOS", "119")
     entorno["indices"] = indices_nuevo(productos=119)
+    assert entorno["correr"]()[0] == 0
+    entorno["indices"] = indices_nuevo(productos=121)
+    code, summary = entorno["correr"]()
+    assert code == 1
+    assert "121 series, esperadas 119" in summary
+
+
+def test_productos_esperados_vacia_es_sin_definir(entorno, monkeypatch):
+    monkeypatch.setenv("PRODUCTOS_ESPERADOS", "")
+    entorno["indices"] = indices_nuevo(productos=121)
     assert entorno["correr"]()[0] == 0
 
 
@@ -379,6 +431,6 @@ def test_sin_claves_de_los_controles_nuevos_lo_dice(entorno):
     assert "no trae la clave `descartes_puntos`" in summary
 
 
-def test_catalogo_real_esperado():
+def test_piso_del_catalogo_real():
     # 121 desde la semana del 2 de noviembre de 2026 (huevo blanco extra grande)
-    assert validar.PRODUCTOS_ESPERADOS == 121
+    assert validar.PRODUCTOS_MINIMOS == 121
