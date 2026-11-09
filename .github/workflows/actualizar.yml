@@ -126,7 +126,9 @@ jobs:
         env:
           BCCH_USER: ${{ secrets.BCCH_USER }}
           BCCH_PASS: ${{ secrets.BCCH_PASS }}
-        run: python indices.py
+        # -u: el log muestra el avance año por año mientras baja ODEPA (sin
+        # él Python guarda la salida hasta el final y no se ve dónde se pega)
+        run: python -u indices.py
 
       - name: Validar contra sitio desplegado
         run: python validar.py
