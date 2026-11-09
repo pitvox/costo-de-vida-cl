@@ -88,7 +88,9 @@ def entorno(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     summary = tmp_path / "summary.md"
     monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
-    monkeypatch.delenv("PRODUCTOS_ESPERADOS", raising=False)
+    # el mundo sintético de estos tests tiene 120 productos, fijo, aunque el
+    # catálogo real (validar.PRODUCTOS_ESPERADOS) cambie
+    monkeypatch.setenv("PRODUCTOS_ESPERADOS", "120")
     estado = {"indices": indices_nuevo(), "resumen": resumen_desplegado(),
               "indices_remoto": indices_nuevo(productos=120), "urls": []}
 
@@ -375,3 +377,8 @@ def test_sin_claves_de_los_controles_nuevos_lo_dice(entorno):
     assert code == 0, summary
     assert "no trae la clave `descartes_anuales`" in summary
     assert "no trae la clave `descartes_puntos`" in summary
+
+
+def test_catalogo_real_esperado():
+    # 121 desde la semana del 2 de noviembre de 2026 (huevo blanco extra grande)
+    assert validar.PRODUCTOS_ESPERADOS == 121

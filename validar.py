@@ -19,9 +19,10 @@ Chequeos:
      y percentil_temporada 0..100; con "toda la historia" (menos de 5 años
      del mes), los dos null;
   c. por índice: suma de aportes = costo_nominal (±1%) y ningún mismatch;
-  d. catálogo: len(indices.json["productos"]) == PRODUCTOS_ESPERADOS (120:
+  d. catálogo: len(indices.json["productos"]) == PRODUCTOS_ESPERADOS (121:
      los 125 de antes menos los 5 que el mínimo de puntos de venta deja sin
-     ninguna semana publicable);
+     ninguna semana publicable, más huevo_blanco_extra_grande_(extra), que
+     ODEPA empezó a publicar la semana del 2 de noviembre de 2026);
   e. limpieza de productos: los descartes de indices.json["descartes"] no
      superan el 0,5% de las semanas-producto con dato (si los supera, la
      regla estaría borrando de más). Sin la clave no se chequea; por debajo
@@ -56,6 +57,8 @@ MAX_VARIACION_PCT = 40
 TOLERANCIA_APORTES = 0.01
 TIMEOUT = 30
 MAX_DESCARTES = 0.005     # fracción de semanas-producto con dato
+# productos del catálogo; se puede pisar con la variable PRODUCTOS_ESPERADOS
+PRODUCTOS_ESPERADOS = 121
 
 OK, KO = "✓", "✗"
 
@@ -393,7 +396,7 @@ def armar_summary(filas, chequeos, url_ref, error=None) -> str:
 
 
 def main() -> int:
-    esperados = int(os.environ.get("PRODUCTOS_ESPERADOS", "120"))
+    esperados = int(os.environ.get("PRODUCTOS_ESPERADOS", str(PRODUCTOS_ESPERADOS)))
     chequeos, filas, url_ref = [], [], None
     try:
         with open("indices.json", encoding="utf-8") as fh:
