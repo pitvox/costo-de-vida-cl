@@ -290,10 +290,11 @@ def test_portada_sin_aviso_con_la_semana_al_dia(sitio):
     h = _leer(sitio, "index.html")
     assert f'<div class="semana">{AL_DIA}</div>' in h
     assert "Sin datos nuevos de ODEPA" not in h
-    # la misma línea en /graficos.html y en las fichas (con el año de su serie)
+    # la misma línea en /graficos.html. En las fichas, con la semana al día,
+    # no va: la semana de los datos la dice el resumen del producto
     assert f'<div class="semana">{AL_DIA}</div>' in _leer(sitio, "graficos.html")
-    assert re.search(f'<div class="fecha">{re.escape(AL_DIA)} Serie desde \\d{{4}}\\.</div>',
-                     _leer(sitio, "productos/tomate.html"))
+    ficha = _leer(sitio, "productos/tomate.html")
+    assert '<div class="fecha">' not in ficha and "Próxima actualización" not in ficha
     for p in ["index.html", "graficos.html", "productos/tomate.html"]:
         h = _leer(sitio, p)
         assert "Semana del" not in h and "Se actualiza los viernes" not in h, p
@@ -315,8 +316,10 @@ def test_portada_avisa_si_odepa_no_publico(tmp_path):
     assert f'<div class="semana">{linea}</div>' in h
     assert ".semana .sin-nuevos { color:var(--bone); }" in h
     assert f'<div class="semana">{linea}</div>' in _leer(d, "graficos.html")
+    # en las fichas la línea de la semana va solo para dar este aviso
     f = _leer(d, "productos/tomate.html")
     assert f'<div class="fecha">{linea} Serie desde ' in f
+    assert f.index('<div class="notas">') < f.index('<div class="fecha">') < f.index('<nav class="links">')
     assert ".fecha .sin-nuevos { color:var(--bone); }" in f
 
 

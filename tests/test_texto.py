@@ -331,18 +331,18 @@ def test_ficha_textos_nuevos(sitio):
         # el número grande es el precio de esta semana, sin etiqueta de ajuste
         '<div class="miga">Precio de esta semana en Santiago</div>',
         '<div class="ouni">por kilo</div>',
-        "Serie desde ",
         "Carne de cerdo, ave y cordero",
-        # el selector de unidad y su línea
+        # el selector de unidad
         ">Ajustado por inflación</button>", ">Precio de la época</button>",
-        '<p class="utxt" id="utxt">Cada precio pasado, llevado a pesos de agosto de 2026 con '
-        'el IPC. Sirve para comparar años distintos.</p>',
     ]:
         assert esperado in h, esperado
     assert "pesos de hoy" not in h
-    assert re.search(r"Precios de la semana del \d{1,2} de [a-z]+ de \d{4}, publicados por ODEPA "
-                     r"el viernes \d{1,2} de [a-z]+( de \d{4})?\. Próxima actualización: viernes "
-                     r"\d{1,2} de [a-z]+( de \d{4})? en la tarde\. Serie desde \d{4}\.", h)
+    # lo que es igual en todas las fichas no va: la línea de la unidad (va
+    # en /graficos.html y en Metodología), la de la semana (solo si ODEPA no
+    # publicó) ni la de cita (cómo citar está en /prensa.html)
+    for fuera in ['id="utxt"', "Sirve para comparar años distintos", "Precios de la semana del",
+                  "Serie desde ", "Para citar"]:
+        assert fuera not in h, fuera
 
 
 def test_listado_de_productos(sitio):

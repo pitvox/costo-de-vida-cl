@@ -390,9 +390,10 @@ def test_primera_cifra_en_el_datafeed(sitio):
 def test_bajo_la_frase_citable(sitio):
     for slug in CON_LINEA:
         h = _leer(sitio, f"productos/{slug}.html")
-        # justo bajo la frase citable y antes de la línea de la semana
+        # justo bajo la frase citable; con la semana al día cierra el texto
+        # de la ficha (la línea de la semana va solo si ODEPA no publicó)
         assert re.search(r'<p class="citable">[^<]*</p>\n    <p class="diez">[^<]*</p>\n'
-                         r'    <div class="fecha">', h), slug
+                         r'    </div>\n    <nav class="links">', h), slug
     # con el aspecto de la frase citable, cuyas reglas no cambian, y la
     # línea de la semana igual de cerca
     h = _leer(sitio, "productos/marraqueta.html")

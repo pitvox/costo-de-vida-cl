@@ -3075,8 +3075,6 @@ __CSS_MARCA__
     min-height:34px; padding:0 6px; color-scheme:dark; cursor:pointer; }
   .unidad.compacta .ubtns { display:none; }
   .unidad.compacta .usel { display:block; }
-  .utxt { font:400 12px/1.5 var(--sans); color:var(--ash); margin-top:8px;
-    text-wrap:pretty; }
   /* alto reservado por CSS antes de que monte cualquiera de los dos
      motores: la página no salta al renderizar. Escritorio: 0,6 veces el
      ancho, entre 520 y 760px. Celular (bajo 760px): más alto que ancho (4
@@ -3102,14 +3100,16 @@ __CSS_MARCA__
     justify-content:center; padding:20px; background:var(--bg);
     font:400 12px/1.5 var(--sans); color:var(--ash); }
   .velo[hidden] { display:none; }
-  /* el texto del producto (frente a su historia, el resumen, hace diez
-     años, la semana de los datos, la línea de la unidad elegida y cómo
-     citar) va al final de la ficha, después de "Comparar con" y de los
-     otros productos: arriba del gráfico quedan el nombre, el precio, la
-     frase y los controles; bajo él, lo que se usa */
+  /* el texto del producto (frente a su historia, el resumen y hace diez
+     años) va al final de la ficha, después de "Comparar con" y de los otros
+     productos: arriba del gráfico quedan el nombre, el precio, la frase y
+     los controles; bajo él, lo que se usa. Lo que es igual en todas las
+     fichas no va: la semana de los datos ya la dice el resumen (la línea de
+     la semana queda solo para avisar que ODEPA no publicó, ver
+     fecha_ficha), la unidad se explica en Metodología y cómo citar, en
+     Prensa */
   .notas { margin-top:30px; padding-top:4px; border-top:1px solid var(--line); }
   .notas .pct2 { margin-top:14px; }
-  .notas .utxt { margin-top:4px; }
   .fecha { font:500 12px/1.6 var(--sans); color:var(--ash); margin-top:14px; text-wrap:pretty; }
   .fecha .sin-nuevos { color:var(--bone); }
   /* para citar: la frase con el precio de esta semana, antes de la línea de
@@ -3123,7 +3123,6 @@ __CSS_MARCA__
   .diez { font:400 13px/1.6 var(--sans); color:var(--ash); margin-top:4px;
     text-wrap:pretty; }
   .diez + .fecha { margin-top:4px; }
-__CSS_CITA__
   .ref-velas { font:400 12px/1.5 var(--sans); color:var(--dim); margin-top:10px; }
   /* Comparar con: el componente de Comparar de /graficos.html (CSS_COMPARAR)
      con las sugerencias del build, el buscador y, con algo elegido, la
@@ -3204,10 +3203,7 @@ __COMPARAR__
     __OTROS__
     <div class="notas">
     __HISTORIA__
-__CITABLE____DIEZ__    <div class="fecha">__SEMANA__ Serie desde __ANIO__.</div>
-    <p class="utxt" id="utxt">__UNIDAD_REAL__</p>
-    <p class="cita">__CITA__</p>
-    </div>
+__CITABLE____DIEZ____AVISO_SEMANA__    </div>
     <nav class="links">
       <a href="https://carestia.cl/">← todos los índices</a>
       <a href="https://carestia.cl/graficos.html#canasta=__CANASTA__">ármalo en una canasta →</a>
@@ -4804,7 +4800,8 @@ def leyenda_unidad(clase: str) -> str:
 # Prueba con los botones y, si la fila se desborda, pasa al desplegable
 JS_UNIDAD = r"""  /* ---------- selector de unidad ---------- */
   // Ajustado por inflación o Precio de la época: dos botones o, si no caben
-  // en su fila, un desplegable; bajo el selector, la línea de la unidad elegida
+  // en su fila, un desplegable; en /graficos.html, bajo el selector, la línea
+  // de la unidad elegida
   const UNIDAD_TXT = __UNIDAD_TXT__;
   const SUF = { real: '', epoca: '-epoca' };
   function selectorUnidad(alElegir) {
@@ -4829,7 +4826,8 @@ JS_UNIDAD = r"""  /* ---------- selector de unidad ---------- */
         b.setAttribute('aria-pressed', on ? 'true' : 'false');
       });
       lista.value = u;
-      linea.textContent = UNIDAD_TXT[u];
+      // en las fichas no va la línea de la unidad
+      if (linea) linea.textContent = UNIDAD_TXT[u];
     }
     botones.forEach(b => { b.onclick = () => alElegir(b.dataset.unidad); });
     lista.onchange = () => alElegir(lista.value);
@@ -5811,8 +5809,7 @@ def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
         ("__FECHA__", fecha_txt),
         # la semana de sus precios (o de su último dato), cuándo los publicó
         # ODEPA y la próxima actualización del sitio
-        ("__SEMANA__", linea_semana(fecha_fin, semana)),
-        ("__ANIO__", anio),
+        ("__AVISO_SEMANA__", fecha_ficha(linea_semana(fecha_fin, semana), anio)),
         ("__CANASTA__", f"{key}:{QDEF.get(p['unidad'], '1')}"),
         # Comparar con: la franja y lo que la captura dice sin comparados
         ("__COMPARAR__", franja_comparar(sugerencias)),
@@ -5833,7 +5830,6 @@ def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
         ("__VER_FICHA__", _ver(ficha_js())),
         # la unidad: el selector y su línea (su JS va en FICHA_JS)
         ("__SELECTOR_UNIDAD__", selector_unidad()),
-        ("__UNIDAD_REAL__", unidad_txt()["real"]),
         # el CSS de Comparar, común con /graficos.html
         ("__CSS_COMPARAR__", CSS_COMPARAR),
         # HTML ya renderizado (seccion_otros escapa labels y grupo), no
@@ -5848,11 +5844,9 @@ def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
         ("__NAV__", nav_sitio("productos", exacto=False)),
         ("__PIE__", pie_sitio()),
         # para buscadores: el Dataset, la frase citable y la línea de cita
-        ("__CSS_CITA__", CSS_CITA),
         ("__CITABLE__", citable),
         # bajo la frase citable, el precio de hace diez años (linea_diez_anios)
         ("__DIEZ__", diez),
-        ("__CITA__", html.escape(linea_cita(fecha_fin))),
         ("__JSONLD__", jsonld),
     ]:
         out = out.replace(token, valor)
@@ -7863,6 +7857,15 @@ def linea_semana(precios: datetime.date, ultima: datetime.date = None,
     partes.append(f"Próxima actualización: viernes "
                   f"{fecha_larga(proxima, proxima.year != precios.year)} en la tarde.")
     return " ".join(partes)
+
+
+def fecha_ficha(linea: str, anio) -> str:
+    """La línea de la semana en una ficha: solo cuando avisa que ODEPA no
+    publicó (sin_datos_nuevos). Una semana normal no va: la semana de los
+    datos ya la dice el resumen del producto."""
+    if 'class="sin-nuevos"' not in linea:
+        return ""
+    return f'    <div class="fecha">{linea} Serie desde {anio}.</div>\n'
 
 
 def semana_de_los_datos(catalogo: dict):
