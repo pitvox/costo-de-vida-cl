@@ -168,8 +168,9 @@ __CSS_CABECERA__
   #vista { opacity:1; transition:opacity .18s ease; }
   /* alto del gráfico, reservado por CSS antes de que monte cualquiera de
      los dos motores (CLS). Escritorio: 0,6 veces el ancho, entre 520 y
-     760px. Celular (bajo 760px): el ancho, sin pasar del 75% de la pantalla
-     (en svh donde exista: estable frente a la barra del navegador). Lo
+     760px. Celular (bajo 760px): más alto que ancho (4 por 5), sin pasar
+     del 75% de la pantalla (en svh donde exista: estable frente a la barra
+     del navegador). Lo
      lleva el lienzo de Lightweight (todo el hero) o la caja de Advanced
      Charts del modo. El ancho va fijo en el 100%: con el ancho automático,
      el navegador pasa el tope del alto al ancho por la proporción (760px
@@ -178,7 +179,7 @@ __CSS_CABECERA__
   .hero-wrap, .tvbox { width:100%; aspect-ratio:5 / 3; min-height:520px;
     max-height:760px; }
   @media (max-width:759px) {
-    .hero-wrap, .tvbox { aspect-ratio:1 / 1; min-height:0; max-height:75vh;
+    .hero-wrap, .tvbox { aspect-ratio:4 / 5; min-height:0; max-height:75vh;
       max-height:75svh; } }
   .hero-wrap { position:relative; background:var(--bg); }
   @media (max-width:759px) { .overlay .oname, .overlay .cstats, .overlay .caviso,
@@ -454,6 +455,37 @@ __CSS_COMPARAR__
   .carga:not(.error) button { display:none; }
   .carga button { pointer-events:auto; }
   @keyframes car-carga { from { opacity:.45; } to { opacity:1; } }
+__CSS_PANTALLA__
+  /* a pantalla completa: la caja del gráfico del modo ocupa lo que deja la
+     barra de arriba (en Lightweight, el lienzo parte bajo ella) y el texto
+     del modo no va: el nombre queda en la barra */
+  .hero-wrap.pc .tvbox { flex:1 1 0; aspect-ratio:auto; min-height:0;
+    max-height:none; }
+  .hero-wrap.pc #chart, .hero-wrap.pc #pchart, .hero-wrap.pc #cchart { top:49px; }
+  .hero-wrap.pc .overlay { display:none !important; }
+  /* el botón: en la fila de controles, con su texto desde 1200px (con menos
+     no cabe junto a la ayuda y los demás) y solo con su ícono hasta 760px;
+     en el celular esa fila va justa y el botón pasa al lienzo, arriba a la
+     derecha (con Advanced Charts, sobre la franja del texto, que le deja
+     lugar) */
+  .cbar .pc-abrir { padding-left:10px; padding-right:10px; }
+  .cbar .pc-abrir span { display:none; }
+  @media (min-width:1200px) {
+    .cbar .pc-abrir { padding-left:14px; padding-right:14px; }
+    .cbar .pc-abrir span { display:inline; }
+  }
+  .pc-lienzo { display:none; position:absolute; top:8px; right:8px; z-index:7;
+    width:36px; height:36px; padding:0; align-items:center;
+    justify-content:center; cursor:pointer; color:var(--bone);
+    background:var(--panel); border:1px solid var(--line); border-radius:999px; }
+  .pc-lienzo:hover, .pc-lienzo:focus-visible { border-color:var(--bone); }
+  @media (max-width:759px) {
+    .cbar .pc-abrir { display:none; }
+    .pc-lienzo { display:flex; }
+    .hero-wrap.pc .pc-lienzo { display:none; }
+    body.tv-ind .overlay.m-ind, body.tv-prod .overlay.m-prod,
+    body.tv-can .overlay.m-can { padding-right:52px; }
+  }
 __CSS_SITIO__
 </style>
 </head>
@@ -490,6 +522,7 @@ __CSS_SITIO__
           <button class="vbtn active" id="v-linea">LÍNEA</button>
           <button class="vbtn" id="v-velas">VELAS</button>
         </div>
+        __BOTON_PC__
         <button class="vbtn nomtoggle" id="shot">captura PNG</button>
       </div>
     </div>
@@ -503,6 +536,8 @@ __CSS_SITIO__
 
   <div id="vista">
     <section class="hero-wrap" id="hero">
+      __BARRA_PC__
+      __BOTON_PC_LIENZO__
       <div id="chart" class="m-ind"></div>
       <div id="pchart" class="m-prod"></div>
       <div id="cchart" class="m-can"></div>
@@ -674,6 +709,7 @@ __PIE__
 __JS_UNIDAD__
 __JS_COMPARAR__
 __JS_CAPTURA__
+__JS_PANTALLA__
   const MESES = ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   // dentro de una frase, el mes con su nombre completo; las abreviaturas
   // quedan solo como etiquetas de las barras
@@ -1736,6 +1772,20 @@ __JS_CAPTURA__
   }
   document.getElementById('shot').onclick = () => capturarPNG();
 
+  // pantalla completa: el lienzo del modo a la vista, con su motor; la barra
+  // de arriba dice qué se está mirando
+  pantallaCompleta({ caja: document.getElementById('hero'),
+    abrir: [...document.querySelectorAll('.pc-abrir')], cerrar: document.getElementById('pc-cerrar'),
+    alAbrir: () => {
+      document.getElementById('pc-tit').textContent = modo === 'canasta' ? 'Tu canasta' :
+        modo === 'productos' ? 'Comparar productos' : INDICES[cur].nombre;
+    },
+    tramo: () => {
+      const w = widgetActivo(), ch = w ? null : chartActivo();
+      return w ? tramoTV(TV, w, feed, document.getElementById(tv[modo].caja)) :
+        ch ? tramoLW(ch) : null;
+    } });
+
   // deep link: el modo ES la pantalla, sin scroll. #productos y #canasta
   // abren su modo directo; #canasta=... además aterriza con la canasta armada
   function modoDelHash() {
@@ -2036,7 +2086,7 @@ __CSS_CABECERA__
        cambio semanal; el selector de orden baja bajo los grupos */
     .prod-head { display:contents; }
     .prod-head .sec-tit { order:0; }
-    .chips { order:1; }
+    #pbh, .chips { order:1; }
     .orden { order:2; width:100%; }
     .orden select { flex:1; min-width:0; height:44px; }
     .tabla { order:3; background:none; border:0; border-radius:0; overflow:visible; }
@@ -2141,6 +2191,7 @@ __LISTAS__
           </select>
         </label>
       </div>
+      __HUECO_BUSCA__
       <div class="chips" role="group" aria-label="Filtrar por grupo">
 __CHIPS__
       </div>
@@ -2582,6 +2633,327 @@ JS_MENU = """<script>
 </script>"""
 
 
+# ---- Buscador de productos (todas las páginas) ----
+# Va entero en un archivo propio, carestia-busca.js (con su versión en la
+# URL: el navegador lo guarda entre páginas), para no sumarle peso a cada
+# página: la portada tiene un tope de 200 KB y las fichas no llevan nada del
+# catálogo. Las páginas llevan solo su etiqueta <script defer> (en el pie); la
+# portada y /productos/, además, el lugar reservado para su campo (HUECO_BUSCA,
+# para que la página no salte cuando llega). El archivo trae su CSS y arma:
+# 1. En el encabezado, una lupa (bajo 900px) o un campo: busca entre los
+#    productos de datos/catalogo.json (lo pide al primer uso) y los 4 índices,
+#    por todas las palabras escritas, sin tildes ni mayúsculas. Cada resultado
+#    lleva a su ficha (o al gráfico del índice); con Enter se abre el marcado
+#    con las flechas o, sin marcar, el primero.
+# 2. En la portada, un campo sobre la tabla de Productos: deja las filas cuyo
+#    nombre lleva lo escrito (en todos los grupos).
+# 3. En /productos/, lo mismo sobre la lista, sin los grupos que quedan vacíos.
+# En 2 y 3, con Enter y un solo producto a la vista, se abre su ficha.
+BUSCA_JS = "carestia-busca.js"
+HUECO_BUSCA = '<div id="pbh" style="min-height:44px"></div>'
+LUPA = ('<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/>'
+        '<path d="M10.5 10.5 14 14"/></svg>')
+BUSCA_CSS = r"""  /* encabezado: en pantallas anchas, un campo al final de la fila del menú;
+     bajo 900px, una lupa (al lado de "Menú" en el celular) que abre el campo
+     en un panel. El campo mide 30px con margen negativo y la lupa 34px, como
+     el botón del menú: el encabezado no crece */
+  .sitenav { display:flex; align-items:center; gap:0 22px; }
+  .snav-links { flex:1 1 auto; }
+  .sbusca { position:relative; order:3; flex:none; }
+  .sbusca[hidden] { display:none; }
+  .sb-abrir { display:flex; align-items:center; justify-content:center;
+    width:34px; height:34px; margin:-6px 0; padding:0; cursor:pointer;
+    color:var(--bone); background:var(--panel); border:1px solid var(--line);
+    border-radius:999px; }
+  .sb-abrir svg { width:15px; height:15px; fill:none; stroke:currentColor;
+    stroke-width:2; stroke-linecap:round; }
+  .sb-abrir:hover, .sb-abrir:focus-visible,
+  .sbusca.abierta .sb-abrir { border-color:var(--bone); }
+  .sb-caja { display:none; position:absolute; right:0; top:calc(100% + 12px);
+    z-index:60; width:min(360px, calc(100vw - 32px)); padding:10px;
+    background:var(--panel); border:1px solid var(--line);
+    box-shadow:0 14px 34px rgba(0,0,0,.55); }
+  .sbusca.abierta .sb-caja { display:block; }
+  /* 16px: con menos, Safari del iPhone acerca la página al enfocar el campo */
+  .sb-q { display:block; width:100%; height:44px; padding:0 12px;
+    font:400 16px var(--sans); color:var(--bone); background:var(--bg);
+    border:1px solid var(--line); border-radius:0; outline:none;
+    -webkit-appearance:none; appearance:none; }
+  .sb-q::placeholder { color:var(--dim); }
+  .sb-q:focus { border-color:var(--bone); }
+  .sb-res { list-style:none; margin-top:8px; max-height:min(60vh, 420px);
+    overflow-y:auto; overscroll-behavior:contain; }
+  .sb-res[hidden] { display:none; }
+  .sb-res li + li { border-top:1px solid var(--line); }
+  .sb-res a { display:flex; align-items:center; justify-content:space-between;
+    gap:12px; min-height:44px; padding:6px 10px; color:var(--bone);
+    text-decoration:none; font:500 14px var(--sans); }
+  .sb-res a:hover, .sb-res a:focus-visible, .sb-res a.activo { background:var(--hover); }
+  .sb-res small { font:400 12px var(--sans); color:var(--dim); margin-left:6px; }
+  .sb-res .sb-p { flex:none; font:500 14px var(--sans); }
+  .sb-res .sb-vacio { padding:12px 10px; font:400 13px var(--sans); color:var(--ash); }
+  @media (max-width:640px) {
+    .sitenav { gap:8px; }
+    .sbusca { position:static; order:0; }
+    header { position:relative; }
+    .sb-caja { left:clamp(16px,3vw,32px); right:clamp(16px,3vw,32px);
+      top:100%; width:auto; }
+  }
+  /* justo sobre el celular, los links y la lupa van más juntos para caber
+     en una fila */
+  @media (min-width:641px) and (max-width:759px) {
+    .sitenav { gap:0 14px; }
+    .snav-links { gap:0 16px; }
+  }
+  @media (min-width:900px) {
+    .sb-abrir { display:none; }
+    .sb-caja { display:block; position:relative; top:auto; right:auto;
+      z-index:auto; width:230px; padding:0; background:none; border:0;
+      box-shadow:none; }
+    .sb-q { height:30px; margin:-3px 0; padding:0 10px; font-size:13px;
+      background:var(--panel); }
+    .sb-res { position:absolute; right:0; top:calc(100% + 10px); z-index:60;
+      width:340px; margin-top:0; background:var(--panel);
+      border:1px solid var(--line); box-shadow:0 14px 34px rgba(0,0,0,.55); }
+  }
+  /* portada y /productos/: el campo sobre la tabla o la lista, en el alto
+     que la página le reserva (#pbh) */
+  .pbusca { display:block; width:100%; max-width:420px; height:44px;
+    padding:0 14px; font:400 16px var(--sans); color:var(--bone);
+    background:var(--panel); border:1px solid var(--line); border-radius:9px;
+    outline:none; -webkit-appearance:none; appearance:none; }
+  .pbusca::placeholder { color:var(--dim); }
+  .pbusca:focus { border-color:var(--bone); }
+  .pvacio { padding:18px 16px; font:400 14px/1.5 var(--sans); color:var(--ash); }
+  .pvacio[hidden], .nb { display:none !important; }
+  .pvacio a { color:var(--bone); text-decoration:underline;
+    text-decoration-color:var(--dim); text-underline-offset:3px; }
+  main.catalogo .pbusca { border-radius:0; }
+  main.catalogo .pvacio { padding:28px 0 0; }
+  @media (max-width:760px) {
+    .pbusca { max-width:none; }
+    .tabla .pvacio { padding:14px 0; }
+  }
+"""
+BUSCA_JS_TPL = r"""// carestia-busca.js: el buscador de productos de todas las páginas (ver
+// build_site.py). Lo arma el build; no se edita a mano.
+(function () {
+  if (!window.fetch || !document.querySelector) return;
+  var INDICES = __INDICES__;
+  var UNI = __UNIDADES__;
+  var estilo = document.createElement('style');
+  estilo.textContent = __CSS__;
+  document.head.appendChild(estilo);
+  var sinTildes = function (s) {
+    return String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  };
+  var esc = function (s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  };
+  var pesos = function (v) { return '$' + Math.round(v).toLocaleString('es-CL'); };
+  var palabrasDe = function (campo) {
+    var q = sinTildes(campo.value.trim());
+    return q ? q.split(/\s+/) : [];
+  };
+  var calza = function (texto, palabras) {
+    return palabras.every(function (w) { return texto.indexOf(w) !== -1; });
+  };
+  var CAMPO = 'type="search" placeholder="Busca un producto..." autocomplete="off" ' +
+    'autocapitalize="off" spellcheck="false" enterkeyhint="search"';
+
+  /* ---------- 1. encabezado ---------- */
+  var nav = document.querySelector('.sitenav');
+  if (nav) (function () {
+    var caja = document.createElement('div');
+    caja.className = 'sbusca';
+    caja.innerHTML = '<button type="button" class="sb-abrir" aria-label="Buscar un producto" ' +
+      'aria-expanded="false" aria-controls="sb-caja">__LUPA__</button>' +
+      '<div class="sb-caja" id="sb-caja" role="search">' +
+      '<input class="sb-q" id="sb-q" aria-label="Buscar un producto" ' + CAMPO + '>' +
+      '<ul class="sb-res" id="sb-res" hidden></ul></div>';
+    nav.insertBefore(caja, nav.firstChild);
+    var abrir = caja.querySelector('.sb-abrir'), q = caja.querySelector('.sb-q'),
+      res = caja.querySelector('.sb-res');
+    var lista = null, activo = -1;
+    function pedir() {
+      if (!lista) {
+        lista = fetch('/datos/catalogo.json__VER__').then(function (r) {
+          if (!r.ok) throw new Error('catalogo: ' + r.status);
+          return r.json();
+        }).then(function (c) {
+          return INDICES.concat((c.productos || []).map(function (p) {
+            return { n: p.nombre, u: UNI[p.unidad] || p.unidad,
+              h: '/productos/' + p.slug + '.html',
+              p: p.semana === c.semana ? p.precio_pesos_hoy : null };
+          })).map(function (x) { x.b = sinTildes(x.n); return x; });
+        });
+        lista.catch(function () { lista = null; });
+      }
+      return lista;
+    }
+    function links() { return res.querySelectorAll('a'); }
+    function marcar(i) {
+      var a = links();
+      if (!a.length) { activo = -1; return; }
+      activo = (i + a.length) % a.length;
+      for (var k = 0; k < a.length; k++) a[k].classList.toggle('activo', k === activo);
+      a[activo].scrollIntoView({ block: 'nearest' });
+    }
+    function buscar() {
+      var palabras = palabrasDe(q), texto = palabras.join(' ');
+      activo = -1;
+      if (!texto) { res.hidden = true; res.innerHTML = ''; return; }
+      pedir().then(function (todo) {
+        if (palabrasDe(q).join(' ') !== texto) return;
+        // primero los que empiezan con lo escrito ('k': el nombre corto de
+        // un índice, "asado")
+        var parte = function (x) { return x.b.indexOf(texto) === 0 || (x.k || '').indexOf(texto) === 0; };
+        var hallados = todo.filter(function (x) { return calza(x.b, palabras); })
+          .sort(function (a, b) { return (parte(a) ? 0 : 1) - (parte(b) ? 0 : 1); }).slice(0, 8);
+        res.innerHTML = hallados.length ? hallados.map(function (x) {
+          return '<li><a href="' + esc(x.h) + '"><span>' + esc(x.n) + '<small>' + esc(x.u) +
+            '</small></span>' + (x.p == null ? '' : '<span class="sb-p">' + pesos(x.p) + '</span>') +
+            '</a></li>';
+        }).join('') : '<li class="sb-vacio">Ningún producto con ese nombre.</li>';
+        res.hidden = false;
+      }, function () {
+        res.innerHTML = '<li class="sb-vacio">No se pudo cargar el catálogo.</li>';
+        res.hidden = false;
+      });
+    }
+    function cerrar() {
+      caja.classList.remove('abierta');
+      abrir.setAttribute('aria-expanded', 'false');
+      res.hidden = true;
+    }
+    abrir.addEventListener('click', function () {
+      if (caja.classList.contains('abierta')) { cerrar(); return; }
+      caja.classList.add('abierta');
+      abrir.setAttribute('aria-expanded', 'true');
+      q.focus();
+    });
+    q.addEventListener('focus', function () { pedir().catch(function () {}); buscar(); });
+    q.addEventListener('input', buscar);
+    q.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); marcar(activo + 1); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); marcar(activo - 1); }
+      else if (e.key === 'Enter') {
+        var a = links();
+        if (a.length) { e.preventDefault(); a[activo < 0 ? 0 : activo].click(); }
+      }
+    });
+    // un resultado de la misma página (un índice, en /graficos.html) no la
+    // recarga: el buscador se cierra
+    res.addEventListener('click', function (e) {
+      if (e.target.closest && e.target.closest('a')) { q.value = ''; cerrar(); }
+    });
+    document.addEventListener('click', function (e) {
+      if (!caja.contains(e.target)) cerrar();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape' || (res.hidden && !caja.classList.contains('abierta'))) return;
+      var compacto = caja.classList.contains('abierta');
+      cerrar();
+      if (compacto) abrir.focus();
+    });
+  })();
+
+  /* ---------- 2 y 3. el campo de la portada y el de /productos/ ---------- */
+  var hueco = document.getElementById('pbh');
+  var tabla = document.getElementById('filas'), listas = document.querySelectorAll('.plista li');
+  if (!hueco || (!tabla && !listas.length)) return;
+  var campo = document.createElement('div');
+  campo.innerHTML = '<input class="pbusca" aria-label="' + (tabla ? 'Buscar un producto en la tabla' :
+    'Buscar un producto en la lista') + '" ' + CAMPO + '>';
+  campo = campo.firstChild;
+  hueco.appendChild(campo);
+  var vacio = document.createElement('p');
+  vacio.className = 'pvacio';
+  vacio.hidden = true;
+  var items, alFiltrar = function () {}, visibles;
+  if (tabla) {
+    // portada: las filas de la tabla. El grupo lo sigue ocultando la página
+    // (hidden); lo escrito, la clase .nb. Al escribir se busca en todos
+    vacio.innerHTML = 'Ningún producto de esta tabla con ese nombre. Prueba en ' +
+      '<a href="/productos/">todos los productos</a>.';
+    tabla.parentNode.appendChild(vacio);
+    var chips = document.querySelector('.chips');
+    items = [].slice.call(tabla.children).map(function (f) {
+      var n = f.querySelector('.nm');
+      return { el: f, b: sinTildes(n ? n.textContent : f.textContent) };
+    });
+    alFiltrar = function (palabras) {
+      var todos = chips && chips.querySelector('button[data-g=""]');
+      if (palabras.length && todos && todos.getAttribute('aria-pressed') !== 'true') todos.click();
+    };
+    visibles = function () { return items.filter(function (x) { return !x.el.hidden && !x.el.classList.contains('nb'); }); };
+    // al elegir un grupo, el aviso de "ninguno" se vuelve a revisar
+    if (chips) chips.addEventListener('click', function () {
+      setTimeout(function () { vacio.hidden = visibles().length > 0; }, 0);
+    });
+  } else {
+    // /productos/: los productos de cada grupo, sin la nota "precio de la
+    // semana del..."
+    vacio.textContent = 'Ningún producto con ese nombre.';
+    document.querySelector('main').appendChild(vacio);
+    items = [].slice.call(listas).map(function (li) {
+      var n = li.querySelector('.pn');
+      return { el: li, b: sinTildes(n && n.firstChild ? n.firstChild.textContent : li.textContent) };
+    });
+    var grupos = [].slice.call(document.querySelectorAll('.pgrupo'));
+    alFiltrar = function () {
+      setTimeout(function () {
+        grupos.forEach(function (g) { g.classList.toggle('nb', !g.querySelector('.plista li:not(.nb)')); });
+      }, 0);
+    };
+    visibles = function () { return items.filter(function (x) { return !x.el.classList.contains('nb'); }); };
+  }
+  function filtrar() {
+    var palabras = palabrasDe(campo);
+    alFiltrar(palabras);
+    items.forEach(function (x) { x.el.classList.toggle('nb', !calza(x.b, palabras)); });
+    vacio.hidden = visibles().length > 0;
+    return palabras.length;
+  }
+  campo.addEventListener('input', filtrar);
+  campo.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter' || !filtrar()) return;
+    var v = visibles();
+    if (v.length !== 1) return;
+    var a = v[0].el.href ? v[0].el : v[0].el.querySelector('a');
+    if (a) location.href = a.href;
+  });
+})();
+"""
+
+
+def busca_js() -> str:
+    """carestia-busca.js: BUSCA_JS_TPL con su CSS, los 4 índices (cada uno
+    lleva a su gráfico; 'k', su nombre corto, para que salga entre los
+    primeros al escribirlo), las unidades y la versión de los datos en la
+    URL del catálogo."""
+    indices = [{"n": d.get("nombre") or code, "u": "índice", "k": code,
+                "h": f"/graficos.html#{code}", "p": None}
+               for code, d in DATA.get("indices", {}).items()]
+    ver = (globals().get("APP") or {}).get("ver")
+    return (BUSCA_JS_TPL.replace("__INDICES__", _json(indices))
+                        .replace("__UNIDADES__", _json(UNI_TXT))
+                        .replace("__CSS__", _json(BUSCA_CSS))
+                        .replace("__LUPA__", LUPA)
+                        .replace("__VER__", f"?v={ver}" if ver else ""))
+
+
+def etiqueta_busca() -> str:
+    """La etiqueta del buscador, al final de cada página (con el pie)."""
+    return f'<script defer src="/{BUSCA_JS}?v={_ver(busca_js())}"></script>'
+
+
+def generar_buscador() -> None:
+    with open(BUSCA_JS, "w", encoding="utf-8") as fh:
+        fh.write(busca_js())
+
+
 def nav_sitio(actual: str = "", exacto: bool = True) -> str:
     """Navegación del encabezado. 'actual' marca la sección con aria-current
     ('page' en esa misma página; 'true' dentro de ella, como una ficha bajo
@@ -2625,7 +2997,7 @@ def pie_sitio(actual: str = "") -> str:
             f'Contacto: <a href="mailto:pedro@carestia.cl">pedro@carestia.cl</a></p>\n'
             f'    <p class="pie-tv">{PIE_TV}</p>\n'
             f'  </footer>\n'
-            f'{JS_MENU}')
+            f'{JS_MENU}\n{etiqueta_busca()}')
 
 # ---------------- Páginas estáticas por producto (SEO) ----------------
 # Una página liviana por producto del catálogo, generada en el build con los
@@ -2685,12 +3057,13 @@ __CSS_MARCA__
   .pct2 { font:400 13px/1.6 var(--sans); color:var(--ash); margin-top:4px;
     text-wrap:pretty; }
   /* la unidad del gráfico: ajustado por inflación o precio de la época, en
-     dos botones o, si no caben, en un desplegable (JS_UNIDAD), y su línea.
-     A su lado la captura PNG, que baja a su propia fila si no cabe */
+     dos botones o, si no caben, en un desplegable (JS_UNIDAD). Su línea va
+     al final de la ficha, en .notas. A su lado, la pantalla completa y la
+     captura PNG, que bajan a su propia fila si no caben */
   .fctrl { display:flex; flex-wrap:wrap; align-items:flex-start; gap:10px 16px;
     margin-top:18px; max-width:none; }
   .unidad { flex:1 1 320px; min-width:0; max-width:916px; }
-  .fctrl #shot { margin-left:auto; }
+  .fctrl .pc-abrir { margin-left:auto; }
   .vtoggle { display:inline-flex; border:1px solid var(--line); background:var(--bg); }
   .vbtn { font:500 13px var(--sans); padding:8px 14px; border:none; cursor:pointer;
     background:transparent; color:var(--ash); min-height:34px; white-space:nowrap; }
@@ -2706,21 +3079,37 @@ __CSS_MARCA__
     text-wrap:pretty; }
   /* alto reservado por CSS antes de que monte cualquiera de los dos
      motores: la página no salta al renderizar. Escritorio: 0,6 veces el
-     ancho, entre 520 y 760px. Celular (bajo 760px): el ancho, sin pasar del
-     75% de la pantalla (svh: estable frente a la barra del navegador). El
+     ancho, entre 520 y 760px. Celular (bajo 760px): más alto que ancho (4
+     por 5), sin pasar del 75% de la pantalla (svh: estable frente a la
+     barra del navegador). El
      ancho va fijo en el 100%, igual que en /graficos.html: el gráfico llega
      hasta la captura PNG y el tope del alto no le recorta el ancho */
   .marco { position:relative; max-width:none; margin-top:16px; }
   #grafico { position:relative; width:100%; aspect-ratio:5 / 3;
     min-height:520px; max-height:760px; }
+  /* en el celular el gráfico va de borde a borde y más alto que ancho: el
+     área de la línea es lo que más pierde con las barras de la librería */
   @media (max-width:759px) {
-    #grafico { aspect-ratio:1 / 1; min-height:0; max-height:75vh;
+    .marco { margin-left:calc(-1 * clamp(16px,3vw,32px));
+      margin-right:calc(-1 * clamp(16px,3vw,32px)); }
+    #grafico { aspect-ratio:4 / 5; min-height:0; max-height:75vh;
       max-height:75svh; } }
+  /* a pantalla completa, el gráfico ocupa lo que deja la barra de arriba */
+  .marco.pc #grafico { flex:1 1 0; aspect-ratio:auto; min-height:0;
+    max-height:none; }
   /* mientras se prepara la captura PNG, un velo tapa el gráfico */
   .velo { position:absolute; inset:0; z-index:6; display:flex; align-items:center;
     justify-content:center; padding:20px; background:var(--bg);
     font:400 12px/1.5 var(--sans); color:var(--ash); }
   .velo[hidden] { display:none; }
+  /* el texto del producto (frente a su historia, el resumen, hace diez
+     años, la semana de los datos, la línea de la unidad elegida y cómo
+     citar) va al final de la ficha, después de "Comparar con" y de los
+     otros productos: arriba del gráfico quedan el nombre, el precio, la
+     frase y los controles; bajo él, lo que se usa */
+  .notas { margin-top:30px; padding-top:4px; border-top:1px solid var(--line); }
+  .notas .pct2 { margin-top:14px; }
+  .notas .utxt { margin-top:4px; }
   .fecha { font:500 12px/1.6 var(--sans); color:var(--ash); margin-top:14px; text-wrap:pretty; }
   .fecha .sin-nuevos { color:var(--bone); }
   /* para citar: la frase con el precio de esta semana, antes de la línea de
@@ -2780,6 +3169,7 @@ __CSS_COMPARAR__
   /* el gráfico llega después del primer pantallazo: mientras, un aviso tenue
      en el alto ya reservado */
   #grafico .cargando { color:var(--dim); }
+__CSS_PANTALLA__
 __CSS_SITIO__
 </style>
 __JSONLD__
@@ -2797,23 +3187,27 @@ __JSONLD__
     <div class="miga">__MIGA__</div>
     <h1>__LABEL__</h1>
 __OROW__    <p class="pct">__FRASE__</p>
-    __HISTORIA__
     <div class="fctrl">
       <div class="unidad" id="unidad">
         __SELECTOR_UNIDAD__
-        <p class="utxt" id="utxt">__UNIDAD_REAL__</p>
       </div>
+      __BOTON_PC__
       <button class="vbtn nomtoggle" id="shot" type="button">captura PNG</button>
     </div>
     <div class="marco" id="marco">
+      __BARRA_PC__
       <div id="grafico"><div class="nochart cargando">Cargando el gráfico...</div></div>
       <div class="velo" id="velo" role="status" hidden>Preparando la captura...</div>
     </div>
     <p class="ref-velas" id="ref-velas" hidden>Velas semanales. La mecha va del precio más bajo al más alto que ODEPA encontró entre los locales encuestados.</p>
-__CITABLE____DIEZ__    <div class="fecha">__SEMANA__ Serie desde __ANIO__.</div>
-    <p class="cita">__CITA__</p>
 __COMPARAR__
     __OTROS__
+    <div class="notas">
+    __HISTORIA__
+__CITABLE____DIEZ__    <div class="fecha">__SEMANA__ Serie desde __ANIO__.</div>
+    <p class="utxt" id="utxt">__UNIDAD_REAL__</p>
+    <p class="cita">__CITA__</p>
+    </div>
     <nav class="links">
       <a href="https://carestia.cl/">← todos los índices</a>
       <a href="https://carestia.cl/graficos.html#canasta=__CANASTA__">ármalo en una canasta →</a>
@@ -2894,6 +3288,7 @@ __JS_UNIDAD__
 __JS_COMPARAR__
 __JS_FRASE__
 __JS_CAPTURA__
+__JS_PANTALLA__
   // la unidad: en Advanced Charts es otro símbolo; en Lightweight, otra
   // serie. Sin carestia-tv.js (que calcula la época), solo ajustado por
   // inflación (unidadLW: la que está dibujada en Lightweight, que cambia al
@@ -3413,6 +3808,10 @@ __JS_CAPTURA__
     await componerCaptura(o);
   }
   $('shot').onclick = () => capturar();
+
+  // pantalla completa: el marco del gráfico, con el motor que esté a la vista
+  pantallaCompleta({ caja: $('marco'), abrir: [$('pc-abrir')], cerrar: $('pc-cerrar'),
+    tramo: () => widget ? tramoTV(TV, widget, feed, el) : lwChart ? tramoLW(lwChart) : null });
 
   // lo que traiga el link, ya con todo declarado
   window.addEventListener('hashchange', leerHash);
@@ -4838,6 +5237,100 @@ JS_FRASE = r"""  /* ---------- Comparar con: la escala y la frase ---------- */
 # ---------------- Captura PNG: la composición común ----------------
 # /graficos.html y las fichas componen la misma captura: aquí la foto de
 # cada motor, la marca y el dibujo; cada página dice qué va arriba.
+# ---- Pantalla completa (fichas y /graficos.html) ----
+# El botón "pantalla completa" deja el gráfico a toda la pantalla con CSS: la
+# caja queda fija sobre la página, con una barra arriba para cerrar. No usa
+# la pantalla completa del navegador: Safari del iPhone no se la da a una
+# página (ahí la librería ni muestra su botón), y es en el celular donde el
+# gráfico queda más chico. Girando el teléfono, el gráfico usa todo el ancho.
+ICONO_PC = ('<svg viewBox="0 0 16 16" aria-hidden="true">'
+            '<path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/></svg>')
+BOTON_PC = ('<button class="vbtn nomtoggle pc-abrir" id="pc-abrir" type="button" '
+            f'aria-expanded="false" aria-label="Ver el gráfico en pantalla completa">{ICONO_PC}'
+            '<span>pantalla completa</span></button>')
+# en /graficos.html, bajo 760px la fila de controles va justa: ahí el botón
+# va sobre el lienzo, arriba a la derecha, solo con su ícono
+BOTON_PC_LIENZO = ('<button class="pc-abrir pc-lienzo" type="button" aria-expanded="false" '
+                   f'aria-label="Ver el gráfico en pantalla completa">{ICONO_PC}</button>')
+BARRA_PC = ('<div class="pc-barra"><span class="pc-tit" id="pc-tit">__TITULO_PC__</span>'
+            '<button class="pc-cerrar" id="pc-cerrar" type="button">Cerrar</button></div>')
+CSS_PANTALLA = r"""  /* ---- pantalla completa ---- */
+  .pc-abrir { display:inline-flex; align-items:center; gap:7px; }
+  .pc-abrir svg { flex:none; width:13px; height:13px; fill:none;
+    stroke:currentColor; stroke-width:1.6; stroke-linecap:round;
+    stroke-linejoin:round; }
+  .pc-barra { display:none; }
+  html.pc-abierta, html.pc-abierta body { overflow:hidden; }
+  .pc { position:fixed !important; inset:0; z-index:200; display:flex;
+    flex-direction:column; width:auto !important; max-width:none !important;
+    margin:0 !important; aspect-ratio:auto !important; min-height:0 !important;
+    max-height:none !important; background:var(--bg);
+    overscroll-behavior:none; }
+  .pc .pc-barra { display:flex; flex:none; align-items:center;
+    justify-content:space-between; gap:12px; min-height:48px;
+    padding:0 clamp(8px,2vw,16px) 0 clamp(14px,3vw,24px);
+    border-bottom:1px solid var(--line); background:var(--bg); }
+  .pc-tit { min-width:0; overflow:hidden; text-overflow:ellipsis;
+    white-space:nowrap; font:600 14px var(--sans); color:var(--bone); }
+  .pc-cerrar { flex:none; min-height:36px; padding:0 16px; cursor:pointer;
+    font:500 13px var(--sans); color:var(--bone); background:var(--panel);
+    border:1px solid var(--line); border-radius:999px; }
+  .pc-cerrar:hover, .pc-cerrar:focus-visible { border-color:var(--bone); }"""
+JS_PANTALLA = r"""  /* ---------- pantalla completa ---------- */
+  // Se cierra con su botón, con Escape o con "atrás": al abrir se agrega un
+  // paso al historial, para que "atrás" cierre el gráfico y no salga de la
+  // página. El tramo a la vista se conserva al cambiar de tamaño.
+  // o: { caja, abrir: los botones que la abren, cerrar, tramo: () =>
+  //      { leer(), poner(t) } del gráfico a la vista (o null), alAbrir() }
+  function pantallaCompleta(o) {
+    const raiz = document.documentElement;
+    let abierta = false, paso = false, origen = null;
+    function poner(on, porHistorial) {
+      if (on === abierta) return;
+      const g = o.tramo ? o.tramo() : null;
+      let antes = null;
+      try { antes = g ? g.leer() : null; } catch (e) {}
+      abierta = on;
+      if (on && o.alAbrir) o.alAbrir();
+      o.caja.classList.toggle('pc', on);
+      raiz.classList.toggle('pc-abierta', on);
+      o.abrir.forEach(b => b.setAttribute('aria-expanded', on));
+      if (on) {
+        try { history.pushState({ pantalla: 1 }, ''); paso = true; } catch (e) { paso = false; }
+        o.cerrar.focus();
+      } else {
+        if (paso && !porHistorial) history.back();
+        paso = false;
+        if (origen) origen.focus();
+      }
+      // el motor toma el tamaño nuevo en sus propios cuadros: después, el
+      // tramo de antes
+      if (g && antes) setTimeout(() => { try { g.poner(antes); } catch (e) {} }, 300);
+    }
+    o.abrir.forEach(b => b.addEventListener('click', () => { origen = b; poner(true); }));
+    o.cerrar.addEventListener('click', () => poner(false));
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && abierta) poner(false); });
+    window.addEventListener('popstate', () => poner(false, true));
+    return { abierta: () => abierta, cerrar: () => poner(false) };
+  }
+  // el tramo a la vista de cada motor. En Advanced Charts, con toda la
+  // historia a la vista vale el encuadre de siempre (verTodo)
+  function tramoTV(TV, w, feed, caja) {
+    const c = w.activeChart(), SEMANA = 7 * 86400;
+    return { leer: () => c.getVisibleRange(),
+      poner: t => {
+        const r = feed.rango ? feed.rango(c.symbol(), c.resolution()) : null;
+        if (r && t.from <= r.from + SEMANA && t.to >= r.to - SEMANA) return TV.verTodo(w, feed, caja);
+        return Promise.resolve(c.setVisibleRange(t,
+          { applyDefaultRightMargin: false, rejectByTimeout: 3000 })).catch(() => {});
+      } };
+  }
+  function tramoLW(ch) {
+    const e = ch.timeScale();
+    return { leer: () => e.getVisibleLogicalRange(), poner: t => e.setVisibleLogicalRange(t) };
+  }
+"""
+
 JS_CAPTURA = r"""  /* ---------- captura PNG: la composición común ---------- */
   // cuadrada, de 1080 × 1080: arriba qué es, cuánto vale y de qué semana,
   // con la leyenda de las líneas y la frase si las hay; al medio el gráfico
@@ -5301,6 +5794,9 @@ def pagina_producto(key: str, p: dict, slug: str, otros_html: str = "",
 
     out = PRODUCT_HTML
     for token, valor in [
+        ("__BOTON_PC__", BOTON_PC),
+        ("__BARRA_PC__", BARRA_PC.replace("__TITULO_PC__", html.escape(mostrar))),
+        ("__CSS_PANTALLA__", CSS_PANTALLA),
         ("__TITLE__", html.escape(title, quote=True)),
         ("__DESC__", html.escape(desc, quote=True)),
         ("__OG__", og),
@@ -6201,7 +6697,11 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
       // la página), salvo lo que no va en el celular o en las páginas del
       // sitio. No se configura nada que guarde fuera del navegador: ni
       // charts_storage_url ni snapshot_url
-      enabled_features: ['study_templates', 'no_min_chart_width'],
+      enabled_features: ['study_templates', 'no_min_chart_width',
+        // en el celular la barra de dibujo parte cerrada (se abre con su
+        // flecha, abajo a la izquierda): abierta le quita al gráfico más de
+        // un décimo del ancho
+        ...(movil ? ['hide_left_toolbar_by_default'] : [])],
       disabled_features: [...fuera],
     };
     // la página de prueba guarda sola en el navegador y abre lo último guardado
@@ -6691,6 +7191,7 @@ def ficha_js() -> str:
         ("__JS_COMPARAR__", JS_COMPARAR),
         ("__JS_FRASE__", JS_FRASE),
         ("__JS_CAPTURA__", JS_CAPTURA),
+        ("__JS_PANTALLA__", JS_PANTALLA),
         ("__MAX_COMPARADOS__", str(MAX_COMPARADOS)),
         ("__INDICES__", indices_tv()),
         ("__TV_JS__", TV_JS),
@@ -7053,6 +7554,7 @@ def generar_indice_productos(fichas: dict) -> None:
         f'Metropolitana, {ajustado("os")}: el promedio de los puntos que ODEPA '
         f'encuesta cada semana (ferias libres, supermercados y carnicerías). '
         f'Semana del {fecha}. Cada producto enlaza a su serie semanal.</p>\n'
+        f'    {HUECO_BUSCA.replace("min-height:44px", "min-height:44px;margin-top:20px")}\n'
         f'    <nav aria-label="Grupos de productos"><ul class="grupos">\n'
         f'        {indice}\n'
         f'    </ul></nav>\n' + "\n".join(secciones))
@@ -8147,6 +8649,7 @@ def generar_portada(catalogo: dict, fichas: dict) -> None:
         ("__CINTA__", html_cinta(indices)),
         ("__TARJETAS__", html_tarjetas(indices)),
         ("__LISTAS__", html_listas(vigentes)),
+        ("__HUECO_BUSCA__", HUECO_BUSCA),
         ("__CHIPS__", chips),
         ("__AJUSTADOS__", ajustado("os")),
         ("__AJUSTADAS__", ajustado("as")),
@@ -8500,6 +9003,12 @@ with open("graficos.html", "w", encoding="utf-8") as fh:
                           .replace("__CSS_COMPARAR__", CSS_COMPARAR)
                           .replace("__JS_COMPARAR__", JS_COMPARAR)
                           .replace("__JS_CAPTURA__", JS_CAPTURA)
+                          # la pantalla completa: el botón, la barra, su CSS y su JS
+                          .replace("__BOTON_PC_LIENZO__", BOTON_PC_LIENZO)
+                          .replace("__BOTON_PC__", BOTON_PC)
+                          .replace("__BARRA_PC__", BARRA_PC.replace("__TITULO_PC__", ""))
+                          .replace("__CSS_PANTALLA__", CSS_PANTALLA)
+                          .replace("__JS_PANTALLA__", JS_PANTALLA)
                           # el mes del último IPC
                           .replace("__AJUSTADOS__", ajustado("os"))
                           .replace("__PESOS_CORTO__", pesos(corto=True))
@@ -8522,6 +9031,7 @@ generar_prensa(PAGINAS_INDICES)
 generar_sitemap(sorted(FICHAS), PAGINAS_INDICES + [r for r, _c in PAGINAS_CANASTAS])
 generar_resumen()
 generar_tradingview(APP, CATALOGO)
+generar_buscador()
 generar_marca()
 
 print(f"Listo: index.html + graficos.html + robots.txt + sitemap.xml + resumen.json + "

@@ -280,7 +280,7 @@ def test_frase_citable_con_el_precio_de_esta_semana(sitio, datos):
             assert cierre == frase, ruta
         assert _parrafo(h, "cita") == [f"Para citar: {CITA}, semana del {_fecha_larga(FIN)}."]
         assert f"Precios de la semana del {_fecha_larga(FIN)}," in h
-        # bajo el gráfico: frase, línea de la semana y línea de cita, en ese orden
+        # al final de la ficha: frase, línea de la semana y línea de cita, en ese orden
         assert (h.index('id="marco"') < h.index('<p class="citable">')
                 < h.index('<div class="fecha">') < h.index('<p class="cita">'))
     assert con_precio >= 25
