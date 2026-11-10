@@ -147,11 +147,10 @@ def test_franja_bajo_el_grafico(sitio):
     # aparte, las que no tienen precio reciente
     assert '<p class="cmp-sin" id="cmp-sin" hidden></p>' in franja
     # justo bajo el gráfico, antes de los otros productos del grupo; el texto
-    # del producto (resumen, semana de los datos y cita) va al final
+    # del producto (frente a su historia, resumen y hace diez años) va al final
     assert (h.index('<div id="grafico">') < h.index('<section class="comparar"') <
             h.index('<section class="otros"') < h.index('<div class="notas">') <
-            h.index('<p class="citable">') < h.index('<div class="fecha">') <
-            h.index('<p class="cita">') < h.index('<nav class="links">'))
+            h.index('<p class="citable">') < h.index('<nav class="links">'))
     # entre el gráfico y "Comparar con" solo queda la nota de las velas, oculta
     entre = h[h.index('<div class="velo"'):h.index('<section class="comparar"')]
     assert entre.count("<p") == 1 and '<p class="ref-velas" id="ref-velas" hidden>' in entre

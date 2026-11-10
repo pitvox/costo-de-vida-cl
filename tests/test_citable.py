@@ -278,11 +278,13 @@ def test_frase_citable_con_el_precio_de_esta_semana(sitio, datos):
                                 cierre), ruta
         else:
             assert cierre == frase, ruta
-        assert _parrafo(h, "cita") == [f"Para citar: {CITA}, semana del {_fecha_larga(FIN)}."]
-        assert f"Precios de la semana del {_fecha_larga(FIN)}," in h
-        # al final de la ficha: frase, línea de la semana y línea de cita, en ese orden
-        assert (h.index('id="marco"') < h.index('<p class="citable">')
-                < h.index('<div class="fecha">') < h.index('<p class="cita">'))
+        # al final de la ficha, en .notas. Lo que es igual en todas las fichas
+        # no va: ni la línea de la semana (la semana la dice la frase) ni la
+        # de cita (cómo citar está en /prensa.html)
+        assert (h.index('id="marco"') < h.index('<div class="notas">')
+                < h.index('<p class="citable">') < h.index('<nav class="links">'))
+        assert 'class="cita"' not in h and "Para citar" not in h, ruta
+        assert '<div class="fecha">' not in h and "Precios de la semana del" not in h, ruta
     assert con_precio >= 25
     # con veredicto por temporada, la frase de temporada
     assert re.search(r"<p class=\"citable\">Tomate en la Región Metropolitana: \$1\.\d{3} por "
@@ -321,9 +323,10 @@ def test_ficha_sin_precio_esta_semana(sitio, slug, fin):
     assert "Sin precio de ODEPA esta semana." in h
     # sin frase citable: un precio viejo nunca se presenta como de esta semana
     assert 'class="citable"' not in h and 'class="oprice"' not in h
-    # la línea de cita, con la semana de su último dato
-    assert _parrafo(h, "cita") == [f"Para citar: {CITA}, semana del {_fecha_larga(fin)}."]
-    assert f"Precios de la semana del {_fecha_larga(fin)}," in h
+    # la semana de su último dato la dice la frase de arriba; sin línea de
+    # cita ni de la semana
+    assert _parrafo(h, "pct")[0].endswith(f"semana del {fin:%d-%m-%Y}.")
+    assert 'class="cita"' not in h and '<div class="fecha">' not in h
 
 
 def test_linea_de_cita_en_las_paginas_de_indice(sitio, datos):

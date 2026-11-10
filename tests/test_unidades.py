@@ -185,8 +185,12 @@ def test_textos_de_la_unidad_literales(con_uf):
         h = _con_js(d, p)
         unidad_txt = json.loads(re.search(r"const UNIDAD_TXT = (\{.*?\});", h).group(1))
         assert unidad_txt == UNIDAD_TXT, p
-        # la de ajustado por inflación ya va en el HTML, antes del JS
-        assert f'id="utxt">{UNIDAD_TXT["real"]}</p>' in h, p
+        # la de ajustado por inflación ya va en el HTML de /graficos.html,
+        # antes del JS; en las fichas la línea de la unidad no va
+        if p.startswith("productos/"):
+            assert 'id="utxt"' not in h and "if (linea) linea.textContent = UNIDAD_TXT[u];" in h, p
+        else:
+            assert f'id="utxt">{UNIDAD_TXT["real"]}</p>' in h, p
         # los nombres de las opciones, en este orden
         assert re.findall(r'aria-pressed="(?:true|false)">([^<]+)</button>', h) == \
             ["Ajustado por inflación", "Precio de la época"], p
