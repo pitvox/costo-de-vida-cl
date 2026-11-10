@@ -3101,6 +3101,10 @@ __CSS_MARCA__
     justify-content:center; padding:20px; background:var(--bg);
     font:400 12px/1.5 var(--sans); color:var(--ash); }
   .velo[hidden] { display:none; }
+  /* el texto del producto (el resumen, hace diez años, la semana de los
+     datos y cómo citar) va al final de la ficha, después de "Comparar con"
+     y de los otros productos: bajo el gráfico queda lo que se usa */
+  .notas { margin-top:30px; padding-top:4px; border-top:1px solid var(--line); }
   .fecha { font:500 12px/1.6 var(--sans); color:var(--ash); margin-top:14px; text-wrap:pretty; }
   .fecha .sin-nuevos { color:var(--bone); }
   /* para citar: la frase con el precio de esta semana, antes de la línea de
@@ -3193,10 +3197,12 @@ __OROW__    <p class="pct">__FRASE__</p>
       <div class="velo" id="velo" role="status" hidden>Preparando la captura...</div>
     </div>
     <p class="ref-velas" id="ref-velas" hidden>Velas semanales. La mecha va del precio más bajo al más alto que ODEPA encontró entre los locales encuestados.</p>
-__CITABLE____DIEZ__    <div class="fecha">__SEMANA__ Serie desde __ANIO__.</div>
-    <p class="cita">__CITA__</p>
 __COMPARAR__
     __OTROS__
+    <div class="notas">
+__CITABLE____DIEZ__    <div class="fecha">__SEMANA__ Serie desde __ANIO__.</div>
+    <p class="cita">__CITA__</p>
+    </div>
     <nav class="links">
       <a href="https://carestia.cl/">← todos los índices</a>
       <a href="https://carestia.cl/graficos.html#canasta=__CANASTA__">ármalo en una canasta →</a>
