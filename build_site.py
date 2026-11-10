@@ -3057,8 +3057,9 @@ __CSS_MARCA__
   .pct2 { font:400 13px/1.6 var(--sans); color:var(--ash); margin-top:4px;
     text-wrap:pretty; }
   /* la unidad del gráfico: ajustado por inflación o precio de la época, en
-     dos botones o, si no caben, en un desplegable (JS_UNIDAD), y su línea.
-     A su lado la captura PNG, que baja a su propia fila si no cabe */
+     dos botones o, si no caben, en un desplegable (JS_UNIDAD). Su línea va
+     al final de la ficha, en .notas. A su lado, la pantalla completa y la
+     captura PNG, que bajan a su propia fila si no caben */
   .fctrl { display:flex; flex-wrap:wrap; align-items:flex-start; gap:10px 16px;
     margin-top:18px; max-width:none; }
   .unidad { flex:1 1 320px; min-width:0; max-width:916px; }
@@ -3101,10 +3102,14 @@ __CSS_MARCA__
     justify-content:center; padding:20px; background:var(--bg);
     font:400 12px/1.5 var(--sans); color:var(--ash); }
   .velo[hidden] { display:none; }
-  /* el texto del producto (el resumen, hace diez años, la semana de los
-     datos y cómo citar) va al final de la ficha, después de "Comparar con"
-     y de los otros productos: bajo el gráfico queda lo que se usa */
+  /* el texto del producto (frente a su historia, el resumen, hace diez
+     años, la semana de los datos, la línea de la unidad elegida y cómo
+     citar) va al final de la ficha, después de "Comparar con" y de los
+     otros productos: arriba del gráfico quedan el nombre, el precio, la
+     frase y los controles; bajo él, lo que se usa */
   .notas { margin-top:30px; padding-top:4px; border-top:1px solid var(--line); }
+  .notas .pct2 { margin-top:14px; }
+  .notas .utxt { margin-top:4px; }
   .fecha { font:500 12px/1.6 var(--sans); color:var(--ash); margin-top:14px; text-wrap:pretty; }
   .fecha .sin-nuevos { color:var(--bone); }
   /* para citar: la frase con el precio de esta semana, antes de la línea de
@@ -3182,11 +3187,9 @@ __JSONLD__
     <div class="miga">__MIGA__</div>
     <h1>__LABEL__</h1>
 __OROW__    <p class="pct">__FRASE__</p>
-    __HISTORIA__
     <div class="fctrl">
       <div class="unidad" id="unidad">
         __SELECTOR_UNIDAD__
-        <p class="utxt" id="utxt">__UNIDAD_REAL__</p>
       </div>
       __BOTON_PC__
       <button class="vbtn nomtoggle" id="shot" type="button">captura PNG</button>
@@ -3200,7 +3203,9 @@ __OROW__    <p class="pct">__FRASE__</p>
 __COMPARAR__
     __OTROS__
     <div class="notas">
+    __HISTORIA__
 __CITABLE____DIEZ__    <div class="fecha">__SEMANA__ Serie desde __ANIO__.</div>
+    <p class="utxt" id="utxt">__UNIDAD_REAL__</p>
     <p class="cita">__CITA__</p>
     </div>
     <nav class="links">
