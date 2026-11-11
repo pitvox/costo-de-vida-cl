@@ -578,9 +578,14 @@ def test_graficos_controles_y_captura(sitio):
     # la captura de Advanced Charts es la del cliente; nunca la del servidor
     assert "TV.capturaCliente(w, tok, caja)" in js
     assert not re.search(r"\bw\.takeScreenshot\(", js)
-    # la captura dice la unidad cuando es el precio de la época
-    assert "const TITULO_UNIDAD = { epoca: ', PRECIO DE LA ÉPOCA' };" in js
-    assert "titulo += TITULO_UNIDAD[unidad];" in js
+    # la captura dice la unidad de la serie en su título, en las dos (la
+    # imagen circula sola): los índices, Tu canasta (siempre ajustada) y, en
+    # las fichas, el producto sin comparados
+    assert ("const TITULO_UNIDAD = { real: ', PRECIO AJUSTADO POR INFLACIÓN', "
+            "epoca: ', PRECIO DE LA ÉPOCA' };") in js
+    assert "toUpperCase() + (TITULO_UNIDAD[unidad] || '');" in js
+    assert "titulo = 'TU CANASTA' + TITULO_UNIDAD.real;" in js
+    assert "} else o.titulo += TITULO_UNIDAD[u] || '';" in _leer(sitio, "carestia-ficha.js")
     assert "EN UF" not in js
     tvjs = _leer(sitio, "carestia-tv.js")
     assert "widget.takeClientScreenshot({" in tvjs
