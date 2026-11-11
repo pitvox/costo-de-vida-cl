@@ -1742,11 +1742,12 @@ __JS_PANTALLA__
       lineas = elegidosEnOrden().map(k => Object.assign({ texto: PRODS[k].label }, cmp.estilo(k)));
     }
     // contexto arriba a la izquierda: qué es, cuánto vale, de cuándo;
-    // productos no tiene un costo único y lleva su etiqueta en vez del monto.
-    // Un índice a precio de la época dice su unidad
+    // productos no tiene un costo único y lleva su etiqueta en vez del monto
+    // (que dice la unidad). Un índice y Tu canasta dicen su unidad en el
+    // título (la canasta va siempre ajustada por inflación)
     let titulo, precio, chico = false;
     if (modo === 'canasta') {
-      titulo = 'TU CANASTA';
+      titulo = 'TU CANASTA' + TITULO_UNIDAD.real;
       precio = document.getElementById('ccosto').textContent || '·';
     } else if (modo === 'productos') {
       titulo = 'PRODUCTOS';
@@ -1754,10 +1755,9 @@ __JS_PANTALLA__
       chico = true;
     } else {
       const d = INDICES[cur];
-      titulo = d.nombre.replace(/^Índice /i, '').toUpperCase();
+      titulo = d.nombre.replace(/^Índice /i, '').toUpperCase() + (TITULO_UNIDAD[unidad] || '');
       precio = fmt(d.costo_real);
       if (unidad !== 'real') {
-        titulo += TITULO_UNIDAD[unidad];
         const x = await ultimoCierre(cur, unidad).catch(() => null);
         if (x != null) precio = fmt(x);
       }
@@ -3800,7 +3800,7 @@ __JS_PANTALLA__
       o.frase = (ultimaFrase || []).filter(x => !x.muestra);
       if (ultimaNota) o.frase = o.frase.concat(o.frase.length ? [{ salto: true }] : [],
         [{ texto: ultimaNota, clase: 'nota' }]);
-    } else if (TITULO_UNIDAD[u]) o.titulo += TITULO_UNIDAD[u];
+    } else o.titulo += TITULO_UNIDAD[u] || '';
     await componerCaptura(o);
   }
   $('shot').onclick = () => capturar();
@@ -5334,7 +5334,9 @@ JS_CAPTURA = r"""  /* ---------- captura PNG: la composición común ---------- 
   // cuadrada, de 1080 × 1080: arriba qué es, cuánto vale y de qué semana,
   // con la leyenda de las líneas y la frase si las hay; al medio el gráfico
   // y abajo la marca
-  const TITULO_UNIDAD = { epoca: ', PRECIO DE LA ÉPOCA' };
+  // el título dice la unidad de la serie, en las dos: la imagen circula sola
+  // y sin eso un gráfico ajustado por inflación se lee como precios de cada año
+  const TITULO_UNIDAD = { real: ', PRECIO AJUSTADO POR INFLACIÓN', epoca: ', PRECIO DE LA ÉPOCA' };
   // la marca va en tres segmentos medidos para pintar SOLO la í en brasa,
   // en la tipografía del wordmark
   function marcaDeAgua(ctx, xDer, yBase, size) {
