@@ -3821,8 +3821,9 @@ __JS_PANTALLA__
       feed = TV.crearDatafeed({ base: '/datos/', ver: VER, indices: INDICES,
         // los mismos pedidos de la franja: un archivo de datos/ se baja una vez
         pedir: pedirJSON,
-        // su Comparar superpone el producto en otras unidades: el nombre la dice
-        nombreConUnidad: true,
+        // la etiqueta del eje dice solo el producto, en las dos unidades: con
+        // la unidad ("Yogur, precio de la época") tapaba el último precio.
+        // La unidad la dicen el selector y la leyenda del gráfico
         // el producto de la ficha y sus sugerencias: compararlas no espera el catálogo
         productos: [{ slug: SLUG, nombre: NOMBRE, unidad: UNIDAD }].concat([...chips.querySelectorAll('[data-medida]')]
           .map(b => ({ slug: b.dataset.cmp, nombre: b.textContent, unidad: b.dataset.medida }))),
@@ -6235,9 +6236,10 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
   // que la página ya conoce (la ficha, el suyo): se resuelven sin esperar el
   // catálogo. 'precargados' son archivos de datos/ que la página trae inline.
   // 'uf': el build trae datos/uf.json; sin él no hay símbolos en UF.
-  // 'nombreConUnidad': el nombre que la librería muestra en Comparar lleva la
-  // unidad (la ficha superpone su producto en otras unidades); sin él, solo
-  // el producto (en /graficos.html todas las series van en una unidad)
+  // 'nombreConUnidad': el nombre que la librería muestra en la etiqueta del
+  // eje y en Comparar lleva la unidad; sin él, solo el producto. Ninguna
+  // página del sitio lo usa: en /graficos.html todas las series van en una
+  // unidad y en las fichas la etiqueta con la unidad tapaba el último precio
   function crearDatafeed(opciones) {
     const base = opciones.base || '/datos/';
     const ver = opciones.ver ? '?v=' + encodeURIComponent(opciones.ver) : '';
@@ -6365,9 +6367,11 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
     function info(s) {
       const enUF = s.unidad === 'uf';
       return {
-        // el nombre que la librería muestra en Comparar (leyenda y eje): el
-        // del producto o del índice, con la unidad solo si la página mezcla
-        // unidades. Los pedidos y c.symbol() usan el ticker, con la unidad
+        // el nombre que la librería muestra en la etiqueta del eje y en
+        // Comparar: el del producto o del índice (con la unidad solo con
+        // 'nombreConUnidad'). La leyenda de la serie principal usa la
+        // descripción, que sí dice la unidad. Los pedidos y c.symbol() usan
+        // el ticker, con la unidad
         name: s.etiqueta,
         ticker: s.ticker,
         description: s.corto,

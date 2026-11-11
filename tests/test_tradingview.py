@@ -621,8 +621,10 @@ def test_ficha_con_advanced_charts_despues_del_primer_pantallazo(sitio):
     # sus otras unidades, para superponer desde Comparar
     assert "comparar: unidadesHay().map(u => ({ symbol: SLUG + SUF[u], title: NOMBRE + EN[u] })) });" in js
     assert "const EN = { real: ', en pesos de agosto 2026', epoca: ', precio de la época' };" in js
-    # su Comparar superpone el producto en otras unidades: el nombre la dice
-    assert "nombreConUnidad: true," in js
+    # la etiqueta del eje dice solo el producto en las dos unidades (con la
+    # unidad tapaba el último precio): ni la ficha ni /graficos.html piden
+    # el nombre con la unidad
+    assert "nombreConUnidad: true" not in js
     assert "nombreConUnidad" not in _script(_leer(sitio, "graficos.html"))
     # el selector de unidad cambia el símbolo (la serie principal de Comparar
     # con: el producto de la ficha en la unidad elegida); la cifra grande es
