@@ -846,8 +846,11 @@ def prueba() -> None:
     assert all(i["estables"] == [SIN_TIPO] for i in sin_tipo["info"].values())
     assert np.allclose(sin_tipo["semanal"]["anterior"], sin_tipo["semanal"]["oficial"])
 
-    # la comparación con el sitio: misma semana y mismos conteos
+    # la comparación con el sitio: misma semana y mismos conteos (en una
+    # carpeta temporal: comparar deja ahí la lista de los mayores cambios)
     import indices as ind
+    aqui = os.getcwd()
+    os.chdir(tempfile.mkdtemp())
     with contextlib.redirect_stdout(io.StringIO()):
         nuevo = {"indices": {}, "productos": ind.series_productos(df, ipc)}
         for code, meta in BASKETS.items():
@@ -874,6 +877,8 @@ def prueba() -> None:
         cmp_ = comparar(nuevo, sitio, viejo)
         sitio["indices"]["fruta"]["semanas_historia"] -= 1
         mal = comparar(nuevo, sitio, viejo)
+    assert os.path.exists(f"{PREFIJO}_mayores.json")
+    os.chdir(aqui)
     assert cmp_["semanas_iguales"] and cmp_["avance"] == 1 and not cmp_["retroceden"]
     assert not mal["semanas_iguales"]
 
