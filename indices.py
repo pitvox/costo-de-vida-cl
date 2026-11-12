@@ -632,13 +632,19 @@ def por_tipo(sub: pd.DataFrame, col: str = "Precio promedio") -> pd.DataFrame:
     return t.resample("W-MON").mean()
 
 
-def tipos_estables(semanal: pd.DataFrame, corte: pd.Timestamp = CORTE_MUESTRA) -> list:
-    """Los tipos estables de un producto (regla 1) desde su por_tipo: las
-    semanas del producto son las que tienen precio de algún tipo."""
-    hay = semanal.notna()
+def _estables(semanal: pd.DataFrame, corte: pd.Timestamp = CORTE_MUESTRA) -> tuple:
+    """(tipos estables, respaldo) de un producto (regla 1) desde su
+    por_tipo. Las semanas del producto son las que tienen precio de algún
+    tipo de punto; las filas sin tipo (SIN_TIPO) no entran a la regla: un
+    producto sin ningún tipo es un solo estrato, como antes, y las semanas
+    sin filas con tipo se completan en combinar_tipos. respaldo es True si
+    ningún tipo cumple y entra el de más semanas con precio (empate: el
+    primero por nombre)."""
+    con_tipo = [c for c in semanal.columns if c != SIN_TIPO]
+    if not con_tipo:
+        return ([SIN_TIPO] if SIN_TIPO in semanal.columns else []), False
+    hay = semanal[con_tipo].notna()
     hay = hay[hay.any(axis=1)]
-    if hay.empty:
-        return []
     antes, desde = hay[hay.index < corte], hay[hay.index >= corte]
     if antes.empty or desde.empty:
         ok = hay.mean().round(9) >= TIPO_ESTABLE
@@ -646,22 +652,40 @@ def tipos_estables(semanal: pd.DataFrame, corte: pd.Timestamp = CORTE_MUESTRA) -
         ok = (antes.mean().round(9) >= TIPO_ESTABLE) & (desde.mean().round(9) >= TIPO_ESTABLE)
     estables = sorted(ok.index[ok])
     if estables:
-        return estables
+        return estables, False
     cuenta = hay.sum()
-    return [sorted(cuenta.index[cuenta == cuenta.max()])[0]]
+    return [sorted(cuenta.index[cuenta == cuenta.max()])[0]], True
+
+
+def tipos_estables(semanal: pd.DataFrame, corte: pd.Timestamp = CORTE_MUESTRA) -> list:
+    """Los tipos estables de un producto (regla 1) desde su por_tipo."""
+    return _estables(semanal, corte)[0]
 
 
 def combinar_tipos(semanal: pd.DataFrame, estables: list) -> tuple:
-    """Regla 2 sobre el precio semanal por tipo: promedio simple entre los
+    """Regla 2 sobre el precio semanal por tipo (por_tipo, con todos sus
+    tipos): en cada semana con filas de ODEPA, promedio simple entre los
     tipos estables, cada uno con su último precio hasta TIPO_FFILL semanas.
-    Devuelve (serie, pesos): pesos es el peso de cada tipo estable en cada
-    semana con precio (1/k entre los k que entran, 0 el resto)."""
+    Una semana con filas solo de tipos no estables usa así el último precio
+    de los estables; sin ninguno en esas 4 semanas, o sin filas de ODEPA,
+    queda sin precio, como antes. Una semana con filas pero ninguna con tipo
+    de punto lleva el promedio de sus filas, como antes. Devuelve (serie,
+    pesos): pesos es el peso de cada tipo en cada semana con precio (1/k
+    entre los k estables que entran, 0 el resto; SIN_TIPO pesa 1 en las
+    semanas sin filas con tipo)."""
     p = semanal.reindex(columns=estables)
-    hay = p.notna().any(axis=1)
+    filas = semanal.notna().any(axis=1)
     lleno = p.ffill(limit=TIPO_FFILL)
-    entra = lleno.notna()
-    pesos = entra.div(entra.sum(axis=1), axis=0)[hay]
-    return lleno.mean(axis=1).where(hay), pesos
+    serie = lleno.mean(axis=1).where(filas)
+    entra = lleno.notna() & filas.to_numpy()[:, None]
+    pesos = entra.div(entra.sum(axis=1).replace(0, np.nan), axis=0).fillna(0.0)
+    if SIN_TIPO in semanal.columns and SIN_TIPO not in estables:
+        con_tipo = semanal.drop(columns=SIN_TIPO).notna().any(axis=1)
+        solo = ~con_tipo & semanal[SIN_TIPO].notna()
+        serie = serie.mask(solo, semanal[SIN_TIPO])
+        pesos = pesos.mask(solo, 0.0)
+        pesos[SIN_TIPO] = solo.astype(float)
+    return serie, pesos[serie.notna()]
 
 
 def precio_oficial(sub: pd.DataFrame, col: str = "Precio promedio",
@@ -706,6 +730,11 @@ def calcular(df: pd.DataFrame, ipc: pd.Series, items):
         if mismatch:
             print(f"    [UNIDAD!] '{lab}': pediste {uni} pero ODEPA vende [{odu}] — revisar canasta")
         serie = precio_semanal(df, match) * f
+        est, respaldo = _estables(por_tipo(de_su_unidad(
+            df[df["ProductoBase"].str.contains(match, case=False, na=False)])))
+        if respaldo:
+            print(f"    [RESPALDO] '{lab}': ningún tipo de punto llega al "
+                  f"{TIPO_ESTABLE:.0%} de las semanas; entra solo {est[0]}")
         comp.append({"label": lab, "qty": qty, "unidad": uni, "odepa_unit": odu,
                      "factor": round(f, 4), "mismatch": mismatch,
                      "precio_ult": None, "aporte": None, "_serie": serie})
@@ -889,12 +918,16 @@ def series_productos(df: pd.DataFrame, ipc: pd.Series, descartes: list = None,
     JSON)."""
     ipc_hoy = float(ipc.iloc[-1])
     der = ipc.rename("ipc").rename_axis("fecha").reset_index().sort_values("fecha")
-    out, excluidos, otra_unidad, convertidas = {}, [], [], []
+    out, excluidos, otra_unidad, convertidas, respaldo = {}, [], [], [], []
 
     def propias(slug, sub):
         """Las filas de su unidad (de_su_unidad); anota las que quedan fuera
         y las que entran convertidas."""
         filas = de_su_unidad(sub)
+        if not filas.empty:
+            est, resp = _estables(por_tipo(filas))
+            if resp:
+                respaldo.append((slug, est[0]))
         fuera = sub.drop(filas.index)
         if not fuera.empty:
             otra_unidad.append((slug, sorted(set(fuera["Unidad"].astype(str))), len(fuera),
@@ -999,7 +1032,11 @@ def series_productos(df: pd.DataFrame, ipc: pd.Series, descartes: list = None,
     for slug, u, f, n, desde, hasta in convertidas:
         print(f"OTRO ENVASE (entra convertido, precio x {f:.4g}): {slug}: {n} filas en {u}, "
               f"{desde:%Y-%m-%d} a {hasta:%Y-%m-%d}")
-    print(f"Catálogo: {len(out)} incluidos, {len(excluidos)} excluidos")
+    for slug, tipo in respaldo:
+        print(f"RESPALDO (ningún tipo de punto llega al {TIPO_ESTABLE:.0%} de las semanas, "
+              f"entra solo {tipo}): {slug}")
+    print(f"Catálogo: {len(out)} incluidos, {len(excluidos)} excluidos, "
+          f"{len(respaldo)} con un tipo de punto por respaldo")
     return out
 
 

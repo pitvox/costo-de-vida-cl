@@ -551,15 +551,35 @@ def _ultimo(p: dict):
     return (pd.Timestamp(p["t0"]) + pd.Timedelta(weeks=i)).strftime("%Y-%m-%d"), v[i]
 
 
+def _en(p: dict, semana: str):
+    """El precio real de un producto en una semana (aaaa-mm-dd), o None."""
+    i = (pd.Timestamp(semana) - pd.Timestamp(p["t0"])).days // 7
+    v = p.get("v") or []
+    return v[i] if 0 <= i < len(v) else None
+
+
 def comparar(nuevo: dict, resumen_sitio: dict, indices_sitio: dict) -> dict:
     """La tabla antes y después de los 4 índices (CAMPOS, del resumen.json
     publicado contra el que armaría build_site con el indices.json nuevo) y
-    los cambios del catálogo contra el indices.json publicado. Imprime y
-    devuelve {"semanas_iguales", "entran", "salen", "productos"}."""
+    los cambios del catálogo contra el indices.json publicado, en la última
+    semana del sitio. Si la semana o el mes del IPC no son los del sitio, lo
+    dice: entonces la tabla mezcla el cambio de método con la semana nueva o
+    con el deflactor. semanas_historia tiene que ser la del sitio más las
+    semanas que avanzó la semana (como en validar.py). Imprime y devuelve
+    {"semanas_iguales", "avance", "entran", "salen", "retroceden", "cambios"}."""
     import validar
     r_nuevo = validar.resumen_desde_indices(nuevo)
+    s_sitio, s_nuevo = resumen_sitio.get("semana"), r_nuevo["semana"]
+    avance = (pd.Timestamp(s_nuevo) - pd.Timestamp(s_sitio)).days // 7
+    ipc_sitio, ipc_nuevo = indices_sitio.get("ipc_mes"), nuevo.get("ipc_mes")
     print("\nÍNDICES: sitio publicado -> metodología por tipo de punto")
-    print(f"Semana: {resumen_sitio.get('semana')} -> {r_nuevo['semana']}")
+    print(f"Semana: {s_sitio} -> {s_nuevo}; IPC: {ipc_sitio} -> {ipc_nuevo}")
+    if avance:
+        print(f"  AVISO: la semana avanzó {avance}; la tabla mezcla el cambio de método con "
+              "la semana nueva")
+    if ipc_sitio != ipc_nuevo:
+        print("  AVISO: otro mes de IPC; los precios en pesos de hoy cambian también por el "
+              "deflactor")
     print("| Índice | " + " | ".join(CAMPOS) + " |")
     print("|---|" + "---|" * len(CAMPOS))
     iguales = True
@@ -569,31 +589,38 @@ def comparar(nuevo: dict, resumen_sitio: dict, indices_sitio: dict) -> dict:
         for c in CAMPOS:
             x, y = a.get(c), n.get(c)
             celdas.append(f"{x} -> {y}" if x != y else f"{y} (igual)")
-        iguales &= a.get("semanas_historia") == n.get("semanas_historia")
+        iguales &= (a.get("semanas_historia") is not None
+                    and n.get("semanas_historia") == a["semanas_historia"] + avance)
         print(f"| {n['nombre']} | " + " | ".join(celdas) + " |")
-    print(f"semanas_historia de los 4 índices igual a la del sitio: {'sí' if iguales else 'NO'}")
+    print("semanas_historia de los 4 índices " + ("igual a la del sitio" if not avance else
+          f"igual a la del sitio más {avance}") + f": {'sí' if iguales else 'NO'}")
 
     viejo, prod = indices_sitio.get("productos", {}), nuevo.get("productos", {})
     entran, salen = sorted(set(prod) - set(viejo)), sorted(set(viejo) - set(prod))
     print(f"\nCATÁLOGO: {len(viejo)} productos en el sitio -> {len(prod)}")
     print(f"  entran: {', '.join(entran) or 'ninguno'}")
     print(f"  salen: {', '.join(salen) or 'ninguno'}")
-    cambios = []
+    cambios, retroceden = [], []
     for slug in sorted(set(prod) & set(viejo)):
-        (sv, xv), (sn, xn) = _ultimo(viejo[slug]), _ultimo(prod[slug])
+        sv, xv = _ultimo(viejo[slug])
+        sn, _xn = _ultimo(prod[slug])
+        if sv and (sn is None or sn < sv):
+            retroceden.append(f"{slug} ({sv} a {sn})")
+        xn = _en(prod[slug], sv) if sv else None
         if xv and xn:
-            cambios.append((abs(xn / xv - 1), slug, sv, xv, sn, xn))
+            cambios.append((abs(xn / xv - 1), slug, sv, xv, xn))
+    print(f"  última semana con precio que retrocede: {', '.join(retroceden) or 'ninguno'}")
     cambios.sort(reverse=True)
-    print("  los 10 con mayor cambio en su último precio real:")
-    print("| Producto | unidad | sitio (semana) | nuevo (semana) | cambio |")
-    print("|---|---|---|---|---|")
-    for _d, slug, sv, xv, sn, xn in cambios[:10]:
-        print(f"| {slug} | {prod[slug]['unidad']} | {xv:,} ({sv}) | {xn:,} ({sn}) | "
+    print("  los 10 con mayor cambio en su último precio real (misma semana del sitio):")
+    print("| Producto | unidad | semana | sitio | nuevo | cambio |")
+    print("|---|---|---|---|---|---|")
+    for _d, slug, sv, xv, xn in cambios[:10]:
+        print(f"| {slug} | {prod[slug]['unidad']} | {sv} | {xv:,} | {xn:,} | "
               f"{(xn / xv - 1) * 100:+.1f}% |")
     sin_cambio = sum(1 for c in cambios if c[0] == 0)
     print(f"  {sin_cambio} de {len(cambios)} productos comunes con el mismo último precio")
-    return {"semanas_iguales": iguales, "entran": entran, "salen": salen,
-            "productos": len(prod), "cambios": cambios}
+    return {"semanas_iguales": iguales, "avance": avance, "entran": entran, "salen": salen,
+            "retroceden": retroceden, "productos": len(prod), "cambios": cambios}
 
 
 def main_comparar(ruta: str) -> None:
@@ -607,7 +634,7 @@ def main_comparar(ruta: str) -> None:
     print(f"Referencia: {url_r} y {url_i}")
     out = comparar(nuevo, rs, ix)
     if not out["semanas_iguales"]:
-        raise SystemExit("semanas_historia distinta de la del sitio: no seguir")
+        raise SystemExit("semanas_historia no cuadra con la del sitio: no seguir")
 
 
 # ---------------- prueba sintética (sin red) ----------------
@@ -784,8 +811,23 @@ def prueba() -> None:
         viejo["productos"]["tomate"]["v"][-1] += 100
         viejo["productos"]["borrado"] = viejo["productos"].pop("pera")
         cmp_ = comparar(nuevo, sitio, viejo)
-    assert cmp_["semanas_iguales"] and cmp_["entran"] == ["pera"]
+    assert cmp_["semanas_iguales"] and cmp_["avance"] == 0 and cmp_["entran"] == ["pera"]
     assert cmp_["salen"] == ["borrado"] and cmp_["cambios"][0][1] == "tomate"
+    assert not cmp_["retroceden"] and sum(1 for c in cmp_["cambios"] if c[0]) == 1
+    # el sitio va una semana atrás con el mismo método: cuadra con avance 1 y
+    # el último precio se compara en la semana del sitio
+    with contextlib.redirect_stdout(io.StringIO()):
+        atras = df[df["fecha"] < df["fecha"].max()]
+        viejo = {"indices": {}, "productos": ind.series_productos(atras, ipc)}
+        for code, meta in BASKETS.items():
+            d, comp = calcular(atras, ipc, meta["items"])
+            viejo["indices"][code] = resumen(d, meta, comp)
+        sitio = validar.resumen_desde_indices(viejo)
+        cmp_ = comparar(nuevo, sitio, viejo)
+        sitio["indices"]["fruta"]["semanas_historia"] -= 1
+        mal = comparar(nuevo, sitio, viejo)
+    assert cmp_["semanas_iguales"] and cmp_["avance"] == 1 and not cmp_["retroceden"]
+    assert not mal["semanas_iguales"]
 
     # un año de ODEPA que no se bajó detiene la corrida (main)
     falta = df_prueba(sin_cambio=True)

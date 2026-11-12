@@ -147,18 +147,27 @@ def test_huecos_de_3_y_6_semanas():
     assert (pesos.drop(largo[4:])["Supermercado"] == 0.5).all()
 
 
-def test_semana_sin_ningun_tipo_estable_queda_sin_precio():
-    """Una semana con filas solo de un tipo que no es estable (o sin filas)
-    queda sin precio, como hoy; el arrastre de 4 semanas de un tipo no crea
-    semanas que no tienen precio propio de ningún tipo estable."""
+def test_semana_solo_con_tipos_no_estables():
+    """Una semana con filas solo de un tipo que no es estable usa el último
+    precio de los estables hasta 4 semanas, como dice la regla; más allá, o
+    en una semana sin ninguna fila, queda sin precio, como antes. Sin filas
+    no se inventa precio: el arrastre de la canasta y del catálogo es el de
+    siempre."""
     rs = []
+    solo_linea = set(SEMANAS[10:16])          # 6 semanas solo con la en línea
+    sin_filas = SEMANAS[20]
     for f in SEMANAS[:30]:
+        if f == sin_filas:
+            continue
+        if f in solo_linea:
+            rs.append(fila("Pera", "$/kilo", f, "Oriente | Supermercado en Línea", 5000))
+            continue
         for p in FERIAS:
-            if f != SEMANAS[10]:
-                rs.append(fila("Pera", "$/kilo", f, p, 1000))
-    rs.append(fila("Pera", "$/kilo", SEMANAS[10], "Oriente | Supermercado en Línea", 5000))
+            rs.append(fila("Pera", "$/kilo", f, p, 1000))
     s = indices.precio_semanal(pd.DataFrame(rs), "Pera")
-    assert SEMANAS[10] not in s.index and len(s) == 29 and (s == 1000).all()
+    assert list(s.index) == [f for f in SEMANAS[:30]
+                             if f not in (SEMANAS[14], SEMANAS[15], sin_filas)]
+    assert (s == 1000).all()
 
 
 # ---------------- 4. un producto sin tipo de punto se comporta como hoy ----------------
@@ -208,17 +217,25 @@ def test_producto_que_parte_despues_del_corte():
 
 def test_estable_antes_y_desde_el_corte():
     """Con semanas a los dos lados del corte, el tipo tiene que llegar al 80%
-    en los dos: un tipo que cubre casi todo el período antes pero poco
-    después no entra, aunque en el total pase del 80%."""
+    en los dos. El supermercado falta en 50 de las 165 semanas antes del
+    corte (70%) y está en todas desde el corte: pasa del 80% en el total
+    (86%) pero no es estable. La carnicería, al revés."""
     rs = []
-    for i, f in enumerate(SEMANAS):
+    antes = [f for f in SEMANAS if f < indices.CORTE_MUESTRA]
+    despues = [f for f in SEMANAS if f >= indices.CORTE_MUESTRA]
+    sin_super, sin_carne = set(antes[::3][:50]), set(despues[::3][:60])
+    for f in SEMANAS:
         rs.append(fila("Tomate", "$/kilo", f, "Norte | Feria libre", 1000))
-        if f < indices.CORTE_MUESTRA or i % 4 == 0:
+        if f not in sin_super:
             rs.append(fila("Tomate", "$/kilo", f, "Sur | Supermercado", 2000))
+        if f not in sin_carne:
+            rs.append(fila("Tomate", "$/kilo", f, "Sur | Carnicería", 3000))
     df = pd.DataFrame(rs)
-    hay = indices.por_tipo(df).notna().mean()
-    assert hay["Supermercado"] > 0.5
-    assert indices.tipos_estables(indices.por_tipo(df)) == ["Feria libre"]
+    t = indices.por_tipo(df)
+    assert len(antes) == 165 and t.notna().mean()["Supermercado"] > 0.85
+    assert t.notna().mean()["Carnicería"] > 0.8
+    assert indices.tipos_estables(t) == ["Feria libre"]
+    assert (indices.precio_semanal(df, "Tomate") == 1000).all()
 
 
 def test_ningun_tipo_cumple_entra_el_de_mas_semanas():
@@ -227,13 +244,36 @@ def test_ningun_tipo_cumple_entra_el_de_mas_semanas():
     rs = [fila("Pepino", "$/unidad", f, "Norte | Feria libre", 400) for f in semanas[:12]]
     rs += [fila("Pepino", "$/unidad", f, "Sur | Supermercado", 600) for f in semanas[9:]]
     df = pd.DataFrame(rs)
-    assert indices.tipos_estables(indices.por_tipo(df)) == ["Feria libre"]
+    assert indices._estables(indices.por_tipo(df)) == (["Feria libre"], True)
+    # el supermercado sigue las semanas 12 a 19 solo: la feria arrastra su
+    # último precio 4 semanas y después no hay precio
     s = indices.precio_semanal(df, "Pepino")
-    assert list(s.index) == list(semanas[:12]) and (s == 400).all()
+    assert list(s.index) == list(semanas[:16]) and (s == 400).all()
     # empate: el primero por nombre
     rs = [fila("Pepino", "$/unidad", f, "Sur | Supermercado", 600) for f in semanas[:10]]
     rs += [fila("Pepino", "$/unidad", f, "Norte | Feria libre", 400) for f in semanas[10:]]
     assert indices.tipos_estables(indices.por_tipo(pd.DataFrame(rs))) == ["Feria libre"]
+
+
+def test_semanas_sin_tipo_de_punto_en_un_producto_con_tipos():
+    """Si un año de ODEPA llega sin las columnas de sector y tipo de punto,
+    esas semanas llevan el promedio de sus filas, como antes, y no cuentan
+    para la regla de los tipos estables: el producto no pierde ese año."""
+    rs = []
+    for f in SEMANAS:
+        sin_tipo = f.year == 2016
+        for p in FERIAS[:2]:
+            rs.append(fila("Tomate", "$/kilo", f, "" if sin_tipo else p, 1000))
+        rs.append(fila("Tomate", "$/kilo", f, "" if sin_tipo else "Centro | Supermercado", 1600))
+    df = pd.DataFrame(rs)
+    t = indices.por_tipo(df)
+    assert indices._estables(t) == (["Feria libre", "Supermercado"], False)
+    s = indices.precio_semanal(df, "Tomate")
+    assert list(s.index) == list(SEMANAS)
+    assert (s[s.index.year < 2016] == 1300).all() and (s[s.index.year == 2016] == 1200).all()
+    _serie, pesos = indices.combinar_tipos(t, ["Feria libre", "Supermercado"])
+    assert (pesos.loc[pesos.index.year == 2016, indices.SIN_TIPO] == 1).all()
+    assert (pesos.loc[pesos.index.year < 2016, indices.SIN_TIPO] == 0).all()
 
 
 # ---------------- una sola función, en indices.py ----------------

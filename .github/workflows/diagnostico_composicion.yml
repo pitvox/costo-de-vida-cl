@@ -51,6 +51,7 @@ jobs:
         id: validar
         continue-on-error: true
         run: |
+          set +e
           python validar.py; rc=$?
           cat "$GITHUB_STEP_SUMMARY"
           exit $rc
