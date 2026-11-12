@@ -1,74 +1,63 @@
 """
-diagnostico_composicion.py - ¿Parte de la historia de los índices es cambio de muestra?
-========================================================================================
-Diagnóstico one-off, solo lectura. NO toca indices.py, build_site.py, el sitio
-ni el workflow de Pages, y nada de esto se publica: importa las funciones de
-indices.py sin cambiarlas (mismo match, misma conversión de unidad, mismas
-canastas, mismo min_count, mismo deflactor IPC).
+diagnostico_composicion.py - La serie anterior contra la oficial por tipo de punto
+==================================================================================
+Diagnóstico de solo lectura: no toca el sitio ni el workflow de Pages y nada
+de esto se publica.
 
-Contexto: precio_semanal promedia todas las filas RM de un producto sin
-ponderar por tipo de punto de monitoreo (feria libre, supermercado,
-carnicería...), y ODEPA amplió productos y puntos en marzo de 2013. Si cambia
-la mezcla de tipos, el promedio se mueve aunque no cambie ningún precio.
+Historia: el diagnóstico preregistrado (PR #88 y #90, corrida real
+40625766095 del 28-10-2026) comparó el promedio simple de las filas de cada
+producto (la serie de entonces) con una serie estratificada por tipo de punto
+de monitoreo y dio QUIEBRE MATERIAL. El 12-11-2026 el dueño autorizó cambiar
+la metodología: la serie oficial pasa a ser la de indices.precio_oficial
+(tipos estables, promedio dentro de cada tipo y luego simple entre ellos).
+Este script importa esa regla de indices.py, sin copiarla, y compara:
+
+  anterior  el promedio simple entre filas: de cada fecha y luego de esas
+            fechas en la semana W-MON (lo que hacía precio_semanal hasta el
+            12-11-2026), rearmado aquí solo para comparar;
+  oficial   precio_semanal de indices.py, la que se publica.
 
 Por cada ingrediente de las 4 canastas, semanal W-MON, RM, 2008 a 2026:
-  1. Filas, puntos distintos (sector | tipo) y participación de cada tipo de
-     punto en las filas (el peso implícito de cada tipo en precio_semanal).
-     Por año (año de la fecha de la fila), marca los años en que algún tipo
-     cambia más de 15 pp respecto del año anterior (si ese año no tiene
-     filas, el último antes de él: anio_base). Las filas sin tipo de punto no
-     entran a esa cuenta: se informan aparte, y un año con filas pero ninguna
-     con tipo dentro del período de un índice queda sin evaluar.
-  2. Serie agrupada (precio_semanal, la actual) y serie estratificada:
-     promedio de las filas de cada fecha dentro de cada tipo de punto, de
-     esas fechas en la semana W-MON (los dos pasos del pipeline, dentro del
-     tipo) y luego promedio simple entre los tipos comunes, los que tienen
-     filas antes y después del corte (1 de marzo de 2013). Un ingrediente
-     sin filas antes del corte (empieza después) usa como "antes" su primer
-     año de datos. Los tipos que no son comunes (un tipo que aparece después,
-     como el supermercado en línea) quedan fuera de la estratificada.
-     Semanas donde falta un tipo común: se usa el último precio de ese tipo
-     de hasta 4 semanas antes (el mismo ffill(limit=4) del pipeline); si
-     falta hace más de 4 semanas, el promedio va con los tipos comunes que
-     tienen precio y la semana queda marcada (tipos_con_precio menor que
-     tipos_comunes). Una semana sin filas de ningún tipo común no tiene
-     estratificada, y el ffill de la canasta la completa como a cualquier
-     semana sin dato.
-  3. Con la estratificada, cada índice igual que el pipeline (_serie_canasta:
-     cantidades, resample W-MON, ffill(limit=4), min_count; deflactado como
-     calcular) y, lado a lado con lo que calcula el pipeline en esta misma
-     corrida: percentil vigente, semana del máximo real y z-score. La
-     agrupada se rearma con el mismo código y se exige que dé exactamente lo
-     del pipeline: si no, la corrida se detiene. Si la estratificada de un
-     índice no cubre las mismas semanas que el pipeline, ese índice no entra
-     a la regla (bases distintas). Si falta un año de ODEPA, la corrida se
-     detiene.
+  1. Filas, puntos, tipos estables y no estables, cobertura de cada tipo
+     antes y desde el corte (1 de marzo de 2013) y semanas en que algún tipo
+     estable usa su último precio o queda fuera.
+  2. Participación de cada tipo de punto por año, de dos maneras: en las
+     filas de ODEPA (el peso implícito de cada tipo en la serie anterior,
+     solo contexto) y en la serie oficial (el peso de cada tipo estable en
+     el promedio de cada semana, promediado en el año). Marca los años en que
+     algún tipo cambia más de 15 pp respecto del año anterior.
+  3. Cada índice con las dos series (cantidades, resample W-MON,
+     ffill(limit=4), min_count y deflactor de calcular): percentil vigente,
+     semana del máximo real y z-score. La oficial se rearma con la regla
+     importada y se exige que dé exactamente lo de calcular(): si no, la
+     corrida se detiene. Si falta un año de ODEPA, también.
 
-Regla preregistrada: QUIEBRE MATERIAL si algún índice mueve su percentil
-vigente 5 puntos o más, si cambia la semana del máximo real o si algún tipo
-de punto cambia más de 15 pp de participación entre años. Si no, ROBUSTO. Si
-nada marca quiebre pero algo no se pudo evaluar (estratificada que no se
-arma o con otras semanas que el pipeline, años sin tipo de punto), NO
-VERIFICABLE. Cualquiera sea el resultado, solo se reporta: cero cambios de
-metodología. El detalle del log trae además una descomposición (contexto, no
-entra a la regla): la agrupada con solo los tipos comunes, la brecha por año
-y, si cambia la semana del máximo, lo que trae cada tipo esas semanas.
+Criterio para seguir (el de participación del diagnóstico, ahora sobre la
+serie oficial): CUMPLE si ningún tipo de punto cambia más de 15 pp de peso
+entre años en la serie oficial de ningún ingrediente; si no, NO CUMPLE. Las
+diferencias de percentil y de máximo entre anterior y oficial se informan:
+son el efecto del cambio, no un criterio.
 
 Salida (en la carpeta actual):
-  diagnostico_composicion_semanal.csv  ingrediente y semana: filas, puntos,
-                                       mezcla, agrupada, estratificada
-  diagnostico_composicion_anual.csv    ingrediente, año y tipo: filas,
-                                       participación y cambio en pp
-  diagnostico_composicion_indices.csv  índice y semana: nominal y real,
-                                       agrupada y estratificada
-  y en la consola el detalle y, al final, un resumen de máximo 15 líneas con
-  el veredicto (el workflow no guarda copia del log: ver el .yml).
+  diagnostico_composicion_semanal.csv   ingrediente y semana: filas, puntos,
+                                        mezcla, anterior, oficial
+  diagnostico_composicion_anual.csv     ingrediente, año y tipo: participación
+                                        en las filas y en la serie oficial
+  diagnostico_composicion_indices.csv   índice y semana: nominal y real,
+                                        anterior y oficial
+  y en la consola el detalle y, al final, un resumen de máximo 15 líneas.
+
+Con --comparar indices.json no baja ODEPA: compara el indices.json recién
+calculado con el resumen.json y el indices.json publicados en carestia.cl
+(tabla antes y después de los 4 índices y cambios del catálogo).
 
 Correr (mismo entorno que indices.py; BCCH_USER y BCCH_PASS para el IPC):
   python diagnostico_composicion.py
+  python diagnostico_composicion.py --comparar indices.json
   python diagnostico_composicion.py --prueba   (sintética, sin red)
 """
 
+import json
 import os
 import sys
 import tempfile
@@ -77,14 +66,14 @@ import numpy as np
 import pandas as pd
 import requests
 
-from indices import (BASKETS, RESOURCES, YEARS, calcular, cargar_ipc, cargar_odepa,
-                     de_su_unidad, factor_precio, precio_semanal, resumen, unidad_modal)
+from indices import (BASKETS, CORTE_MUESTRA, RESOURCES, SIN_TIPO, TIPO_ESTABLE, TIPO_FFILL,
+                     YEARS, calcular, cargar_ipc, cargar_odepa, combinar_tipos, de_su_unidad,
+                     factor_precio, por_tipo, precio_semanal, resumen, tipo_punto,
+                     tipos_estables, unidad_modal)
 
-CORTE = pd.Timestamp("2013-03-01")    # ODEPA amplía productos y puntos
+CORTE = CORTE_MUESTRA                 # ODEPA amplía productos y puntos
 UMBRAL_PP = 15.0                      # participación: más de 15 pp entre años
-UMBRAL_PERCENTIL = 5                  # percentil vigente: 5 puntos o más
-FFILL = 4                             # semanas, el ffill(limit=4) del pipeline
-SIN_TIPO = "(sin tipo)"
+FFILL = 4                             # semanas, el ffill(limit=4) de la canasta
 SITIO = "https://carestia.cl/indices.json"
 PREFIJO = "diagnostico_composicion"
 MAX_RESUMEN = 15
@@ -103,24 +92,22 @@ def ingredientes() -> dict:
 
 
 def filas_ingrediente(df: pd.DataFrame, match: str, uni: str):
-    """Las filas que promedia precio_semanal (mismo match, de_su_unidad), con
-    el precio llevado a la unidad del ítem con el factor de _serie_canasta, y
-    su punto y tipo de punto. Devuelve (filas, factor)."""
+    """Las filas que usa precio_semanal (mismo match, de_su_unidad), con el
+    precio llevado a la unidad del ítem con el factor de _serie_canasta, su
+    punto y su tipo de punto (tipo_punto). Devuelve (filas, factor)."""
     f, _ = factor_precio(unidad_modal(df, match), uni)
     sub = de_su_unidad(df[df["ProductoBase"].str.contains(match, case=False, na=False)])
     if sub.empty:
-        return pd.DataFrame(columns=["fecha", "precio", "punto", "tipo", "producto"]), f
+        return pd.DataFrame(columns=["fecha", "precio", "Punto", "tipo", "producto"]), f
     if "Punto" in sub.columns:
         punto = sub["Punto"].fillna("").astype(str).str.strip()
     else:
         punto = pd.Series("", index=sub.index)
-    con_tipo = punto.str.contains(" | ", regex=False)
-    tipo = punto.str.rpartition(" | ")[2].str.strip().where(con_tipo, "")
     out = pd.DataFrame({
         "fecha": sub["fecha"].to_numpy(),
         "precio": sub["Precio promedio"].to_numpy(dtype=float) * f,
-        "punto": punto.to_numpy(),
-        "tipo": tipo.replace("", SIN_TIPO).to_numpy(),
+        "Punto": punto.to_numpy(),
+        "tipo": tipo_punto(sub).to_numpy(),
         "producto": sub["ProductoBase"].astype(str).to_numpy(),
     })
     return out.sort_values("fecha", kind="stable").reset_index(drop=True), f
@@ -133,53 +120,35 @@ def semana_de(fechas: pd.Series) -> pd.Series:
     return f + pd.to_timedelta((-f.dt.day_of_week) % 7, unit="D")
 
 
-# ---------------- 2. agrupada y estratificada ----------------
-def por_tipo(filas: pd.DataFrame) -> pd.DataFrame:
-    """Precio semanal W-MON de cada tipo de punto: promedio de las filas de
-    cada fecha y tipo, y de esas fechas en la semana."""
-    t = filas.groupby(["fecha", "tipo"])["precio"].mean().unstack("tipo")
-    return t.resample("W-MON").mean()
+# ---------------- las dos series ----------------
+def anterior(filas: pd.DataFrame) -> pd.Series:
+    """La serie de antes del 12-11-2026: promedio simple de las filas de cada
+    fecha y luego de esas fechas en la semana W-MON."""
+    return filas.groupby("fecha")["precio"].mean().resample("W-MON").mean()
 
 
-def tipos_comunes(filas: pd.DataFrame):
-    """Tipos con filas antes y después del corte, sin las filas sin tipo.
-    Sin filas antes del corte, el "antes" es el primer año de datos del
-    ingrediente. Devuelve (comunes, corte usado, solo antes, solo después)."""
-    corte = CORTE
-    if len(filas) and not (filas["fecha"] < CORTE).any():
-        corte = filas["fecha"].min() + pd.Timedelta(weeks=52)
-    antes = set(filas.loc[filas["fecha"] < corte, "tipo"]) - {SIN_TIPO}
-    despues = set(filas.loc[filas["fecha"] >= corte, "tipo"]) - {SIN_TIPO}
-    return sorted(antes & despues), corte, sorted(antes - despues), sorted(despues - antes)
-
-
-def estratificada(semanal: pd.DataFrame, comunes: list):
-    """Promedio simple entre los tipos comunes de su precio semanal. Un tipo
-    sin precio en la semana usa el suyo de hasta FFILL semanas antes; si no,
-    el promedio va con los que hay. Sin precio de ningún tipo común esa
-    semana: sin dato. Devuelve (serie, tipos con precio por semana)."""
-    if not comunes:
-        vacia = pd.Series(np.nan, index=semanal.index, dtype=float)
-        return vacia, vacia
-    p = semanal.reindex(columns=comunes)
-    hay = p.notna().any(axis=1)
-    lleno = p.ffill(limit=FFILL)
-    return lleno.mean(axis=1).where(hay), lleno.notna().sum(axis=1).where(hay)
+def oficial(filas: pd.DataFrame):
+    """La serie oficial con la regla de indices.py: (precio semanal por tipo,
+    tipos estables, serie, pesos de cada tipo estable por semana)."""
+    tipos = por_tipo(filas, "precio")
+    estables = tipos_estables(tipos)
+    serie, pesos = combinar_tipos(tipos, estables)
+    return tipos, estables, serie, pesos
 
 
 # ---------------- 1. filas, puntos y mezcla ----------------
-def tabla_semanal(lab: str, filas: pd.DataFrame, agr: pd.Series, est: pd.Series,
-                  n_est: pd.Series, n_comunes: int) -> pd.DataFrame:
-    """Una fila por semana con filas de ODEPA: filas, puntos distintos
-    (sector | tipo), mezcla (participación de cada tipo en las filas), las
-    dos series en pesos nominales por la unidad del ítem (sin cantidad ni
-    ffill), y cuántos tipos comunes tienen precio."""
+def tabla_semanal(lab: str, filas: pd.DataFrame, ant: pd.Series, ofi: pd.Series,
+                  pesos: pd.DataFrame, propios: pd.Series, n_estables: int) -> pd.DataFrame:
+    """Una fila por semana con filas de ODEPA: filas, puntos distintos,
+    mezcla (participación de cada tipo en las filas), las dos series en pesos
+    nominales por la unidad del ítem (sin cantidad ni ffill), cuántos tipos
+    estables entran al promedio y cuántos con precio propio esa semana."""
     s = filas.assign(semana=semana_de(filas["fecha"]))
     n = s.groupby("semana").size()
     idx = n.index
-    if set(agr.dropna().index) != set(idx):
-        raise RuntimeError(f"{lab}: las semanas de la agrupada no son las de sus filas")
-    puntos = (s[s["punto"] != ""].groupby("semana")["punto"].nunique()
+    if set(ant.dropna().index) != set(idx):
+        raise RuntimeError(f"{lab}: las semanas de la serie anterior no son las de sus filas")
+    puntos = (s[s["Punto"] != ""].groupby("semana")["Punto"].nunique()
               .reindex(idx, fill_value=0))
     cuenta = s.groupby(["semana", "tipo"]).size().unstack(fill_value=0)
     part = cuenta.div(cuenta.sum(axis=1), axis=0)
@@ -188,53 +157,61 @@ def tabla_semanal(lab: str, filas: pd.DataFrame, agr: pd.Series, est: pd.Series,
     return pd.DataFrame({
         "ingrediente": lab, "semana": idx.strftime("%Y-%m-%d"),
         "filas": n.to_numpy(), "puntos": puntos.to_numpy(), "mezcla": mezcla,
-        "agrupada": agr.reindex(idx).round(2).to_numpy(),
-        "estratificada": est.reindex(idx).round(2).to_numpy(),
-        "tipos_con_precio": n_est.reindex(idx).astype("Int64").to_numpy(),
-        "tipos_comunes": n_comunes,
+        "anterior": ant.reindex(idx).round(2).to_numpy(),
+        "oficial": ofi.reindex(idx).round(2).to_numpy(),
+        "tipos_en_promedio": (pesos > 0).sum(axis=1).reindex(idx).astype("Int64").to_numpy(),
+        "tipos_con_precio_propio": propios.reindex(idx).astype("Int64").to_numpy(),
+        "tipos_estables": n_estables,
     })
 
 
+# ---------------- 2. participación por año ----------------
+def _marcar(lab: str, part: pd.DataFrame, fuente: str, extra: dict = None) -> list:
+    """Filas de participación (en %) por año y tipo con su cambio en pp
+    respecto del año anterior con datos y la marca de más de 15 pp."""
+    cambio = part.diff()
+    base = pd.Series(part.index, index=part.index).shift(1)
+    reg = []
+    for a in part.index:
+        for t in part.columns:
+            c = cambio.loc[a, t]
+            r = {"ingrediente": lab, "fuente": fuente, "anio": int(a), "tipo": t,
+                 "anio_base": None if pd.isna(base.loc[a]) else int(base.loc[a]),
+                 "participacion": round(float(part.loc[a, t]), 2),
+                 "cambio_pp": None if pd.isna(c) else round(float(c), 2),
+                 # redondeado: el error de punto flotante no decide el borde
+                 "marca": bool(pd.notna(c) and round(abs(c), 6) > UMBRAL_PP)}
+            if extra:
+                r.update({k: v(a, t) for k, v in extra.items()})
+            reg.append(r)
+    return reg
+
+
 def participacion_anual(lab: str, filas: pd.DataFrame) -> pd.DataFrame:
-    """Participación de cada tipo de punto en las filas con tipo, por año de
-    la fecha, y su cambio en pp respecto del año anterior con filas con tipo
-    (anio_base: el anterior, o el último antes de él si ese año no tiene
-    filas, como la mandarina en 2012). 'marca': cambio de más de 15 pp. Las
-    filas sin tipo van aparte (filas_sin_tipo) y no entran a la cuenta; un
-    año con filas pero ninguna con tipo no se evalúa (ver anios_sin_tipo)."""
-    anio = filas["fecha"].dt.year
+    """Participación de cada tipo de punto en las filas de ODEPA, por año de
+    la fecha (el peso implícito de cada tipo en la serie anterior). Las
+    filas sin tipo de punto no entran a la cuenta."""
     con = filas[filas["tipo"] != SIN_TIPO]
     if con.empty:
         return pd.DataFrame()
     cuenta = con.groupby([con["fecha"].dt.year, "tipo"]).size().unstack(fill_value=0)
     part = cuenta.div(cuenta.sum(axis=1), axis=0) * 100
-    cambio = part.diff()                               # contra el año con tipo anterior
-    base = pd.Series(part.index, index=part.index).shift(1)
-    puntos = filas[filas["punto"] != ""].groupby(anio)["punto"].nunique()
-    sin_tipo = (filas["tipo"] == SIN_TIPO).groupby(anio).sum()
-    productos = filas.groupby(anio)["producto"].agg(lambda p: "; ".join(sorted(set(p))))
-    filas_anio = filas.groupby(anio).size()
-    reg = []
-    for a in part.index:
-        for t in part.columns:
-            c = cambio.loc[a, t]
-            reg.append({"ingrediente": lab, "anio": int(a), "tipo": t,
-                        "anio_base": None if pd.isna(base.loc[a]) else int(base.loc[a]),
-                        "filas": int(cuenta.loc[a, t]),
-                        "participacion": round(float(part.loc[a, t]), 2),
-                        "cambio_pp": None if pd.isna(c) else round(float(c), 2),
-                        # redondeado: el error de punto flotante no decide el borde
-                        "marca": bool(pd.notna(c) and round(abs(c), 6) > UMBRAL_PP),
-                        "filas_anio": int(filas_anio.get(a, 0)),
-                        "filas_sin_tipo": int(sin_tipo.get(a, 0)),
-                        "puntos_anio": int(puntos.get(a, 0)),
-                        "productos": productos.get(a, "")})
-    return pd.DataFrame(reg)
+    return pd.DataFrame(_marcar(lab, part, "filas",
+                                {"filas": lambda a, t: int(cuenta.loc[a, t])}))
+
+
+def participacion_oficial(lab: str, pesos: pd.DataFrame) -> pd.DataFrame:
+    """Peso de cada tipo estable en la serie oficial, por año: el promedio
+    en las semanas del año de su peso en el promedio de la semana (1/k entre
+    los k que entran, 0 si queda fuera por más de 4 semanas sin precio)."""
+    if pesos.empty:
+        return pd.DataFrame()
+    part = pesos.groupby(pesos.index.year).mean() * 100
+    return pd.DataFrame(_marcar(lab, part, "oficial"))
 
 
 def anios_sin_tipo(filas: pd.DataFrame) -> list:
-    """Años con filas del ingrediente pero ninguna con tipo de punto: su
-    participación no se puede evaluar."""
+    """Años con filas del ingrediente pero ninguna con tipo de punto."""
     anio = filas["fecha"].dt.year
     return sorted(set(anio) - set(anio[filas["tipo"] != SIN_TIPO]))
 
@@ -294,38 +271,13 @@ def _igual(a: pd.Series, b: pd.Series) -> bool:
                                                    rtol=1e-9, atol=1e-6)
 
 
-def brecha(agr: pd.Series, est: pd.Series, corte: pd.Timestamp):
-    """Diferencia media (%) de la estratificada sobre la agrupada, real,
-    antes y después del corte (None si no hay semanas de ese lado)."""
-    d = ((est / agr) - 1).dropna() * 100
+def brecha(ant: pd.Series, ofi: pd.Series, corte: pd.Timestamp):
+    """Diferencia media (%) de la oficial sobre la anterior, real, antes y
+    después del corte (None si no hay semanas de ese lado)."""
+    d = ((ofi / ant) - 1).dropna() * 100
     antes, despues = d[d.index < corte], d[d.index >= corte]
     return (None if antes.empty else float(antes.mean()),
             None if despues.empty else float(despues.mean()))
-
-
-# ---------------- descomposición (contexto, no entra a la regla) ----------------
-def solo_comunes(filas: pd.DataFrame, comunes: list, indice: pd.Index) -> pd.Series:
-    """La agrupada con solo las filas de los tipos comunes, ponderada por
-    filas como precio_semanal: frente a la agrupada aísla el efecto de los
-    tipos que no son comunes (los que entran después, como el supermercado en
-    línea); frente a la estratificada, el de reponderar los tipos comunes."""
-    sub = filas[filas["tipo"].isin(comunes)]
-    if sub.empty:
-        return pd.Series(np.nan, index=indice, dtype=float)
-    return sub.groupby("fecha")["precio"].mean().resample("W-MON").mean().reindex(indice)
-
-
-def imprimir_participacion(anual: pd.DataFrame) -> None:
-    """Participación de cada tipo por año (aa:% de las filas con tipo) y
-    puntos distintos por año."""
-    if anual.empty:
-        return
-    for t, g in anual.groupby("tipo"):
-        print(f"    {t}: " + " ".join(f"{int(r.anio) % 100:02d}:{r.participacion:.0f}"
-                                     for r in g.itertuples()))
-    pts = anual.drop_duplicates("anio")
-    print("    puntos distintos: " + " ".join(f"{int(r.anio) % 100:02d}:{r.puntos_anio}"
-                                           for r in pts.itertuples()))
 
 
 def _por_anio(x: pd.Series, base: pd.Series) -> str:
@@ -333,11 +285,18 @@ def _por_anio(x: pd.Series, base: pd.Series) -> str:
     return " ".join(f"{a % 100:02d}:{v:+.1f}" for a, v in d.groupby(d.index.year).mean().items())
 
 
+def imprimir_participacion(anual: pd.DataFrame) -> None:
+    """Participación de cada tipo por año (aa:%)."""
+    for t, g in anual.groupby("tipo"):
+        print(f"      {t}: " + " ".join(f"{int(r.anio) % 100:02d}:{r.participacion:.0f}"
+                                       for r in g.itertuples()))
+
+
 def imprimir_semana(semana: pd.Timestamp, items: list, ing: dict) -> None:
-    """Lo que trae cada ingrediente en una semana: agrupada, estratificada y
-    el precio de cada tipo de punto con sus filas y la mediana de ese tipo en
-    las 4 semanas antes y después (para ver si un tipo saltó solo esa
-    semana). Pesos nominales por la unidad del ítem."""
+    """Lo que trae cada ingrediente en una semana: anterior, oficial y el
+    precio de cada tipo de punto con sus filas (estable o no) y la mediana de
+    ese tipo en las 4 semanas antes y después. Pesos nominales por la unidad
+    del ítem."""
     print(f"    en {semana:%Y-%m-%d}:")
     for (lab, m, _q, _u) in items:
         x = ing[m]
@@ -350,61 +309,17 @@ def imprimir_semana(semana: pd.Timestamp, items: list, ing: dict) -> None:
             vecinas = tipos[t].loc[semana - pd.Timedelta(weeks=4):semana + pd.Timedelta(weeks=4)]
             med = vecinas.drop(semana, errors="ignore").median()
             n = int(cuenta[t].get(semana, 0)) if t in cuenta.columns else 0
-            partes.append(f"{t} {p:,.0f} ({n} filas, mediana vecina {med:,.0f})")
-        print(f"      {lab}: agrupada {x['agr'].get(semana, np.nan):,.0f}, estratificada "
-              f"{x['est'].get(semana, np.nan):,.0f} | " + " | ".join(partes))
+            marca = "" if t in x["estables"] else ", no estable"
+            partes.append(f"{t} {p:,.0f} ({n} filas{marca}, mediana vecina {med:,.0f})")
+        print(f"      {lab}: anterior {x['ant'].get(semana, np.nan):,.0f}, oficial "
+              f"{x['ofi'].get(semana, np.nan):,.0f} | " + " | ".join(partes))
 
 
-def imprimir_descomposicion(items, com_ing, ipc, real_agr, real_est, agr, est,
-                            ing: dict = None) -> None:
-    """Tres versiones del índice: agrupada (todas las filas, la del
-    pipeline), solo tipos comunes por filas, y estratificada; la brecha media
-    por año de las dos últimas sobre la agrupada, qué tan lejos queda cada
-    máximo en la otra serie y, si cambia la semana del máximo, lo que trae
-    cada ingrediente en las dos semanas."""
-    nom_com = canasta({m: com_ing[m] for (_l, m, _q, _u) in items}, items)
-    real_com = deflactar(nom_com, ipc) if nom_com.notna().any() else nom_com
-    com = metricas(real_com)
-    if com is not None:
-        print(f"    solo tipos comunes, por filas: percentil {com['percentil']}, máximo "
-              f"{com['maximo']:%Y-%m-%d}, z {com['z']} ({com['n']} semanas)")
-        print(f"    comunes por filas sobre agrupada, por año (%): {_por_anio(real_com, real_agr)}")
-    if est is None:
-        return
-    print(f"    estratificada sobre agrupada, por año (%): {_por_anio(real_est, real_agr)}")
-    ma, me = agr["maximo"], est["maximo"]
-    print(f"    máximos: en {ma:%Y-%m-%d} (el de la agrupada) la estratificada queda "
-          f"{(real_est.get(ma, np.nan) / real_est.max() - 1) * 100:+.1f}% de su máximo; en "
-          f"{me:%Y-%m-%d} (el de la estratificada) la agrupada queda "
-          f"{(real_agr.get(me, np.nan) / real_agr.max() - 1) * 100:+.1f}% del suyo")
-    if ing is not None and ma != me:
-        for semana in (ma, me):
-            imprimir_semana(semana, items, ing)
-
-
-# ---------------- veredicto ----------------
-def veredicto(indices_res: dict, saltos: list, sin_evaluar: list = ()) -> dict:
-    """La regla preregistrada sobre los resultados por índice
-    ({codigo: {"agr": metricas, "est": metricas o None, "comparable": bool}})
-    y los saltos de participación de más de 15 pp. Un índice cuya
-    estratificada no se arma o no cubre las mismas semanas que el pipeline
-    no entra a (a) ni a (b): queda no verificable, igual que un año con filas
-    sin tipo de punto dentro del período de un índice ('sin_evaluar')."""
-    calc = {k: v for k, v in indices_res.items()
-            if v["est"] is not None and v.get("comparable", True)}
-    deltas = {k: v["est"]["percentil"] - v["agr"]["percentil"] for k, v in calc.items()}
-    a = [k for k, d in deltas.items() if abs(d) >= UMBRAL_PERCENTIL]
-    b = [k for k, v in calc.items() if v["est"]["maximo"] != v["agr"]["maximo"]]
-    c = bool(saltos)
-    falta = sorted(set(indices_res) - set(calc))
-    if a or b or c:
-        v = "QUIEBRE MATERIAL"
-    elif falta or sin_evaluar:
-        v = "NO VERIFICABLE"
-    else:
-        v = "ROBUSTO"
-    return {"veredicto": v, "percentil": a, "maximo": b, "participacion": c,
-            "deltas": deltas, "no_verificable": falta, "sin_evaluar": list(sin_evaluar)}
+# ---------------- criterio ----------------
+def criterio(saltos_oficial: list) -> str:
+    """El criterio de participación sobre la serie oficial: ningún tipo de
+    punto cambia más de 15 pp de peso entre años."""
+    return "NO CUMPLE" if saltos_oficial else "CUMPLE"
 
 
 # ---------------- el diagnóstico ----------------
@@ -414,137 +329,130 @@ def diagnostico(df: pd.DataFrame, ipc: pd.Series, carpeta: str = ".",
     cargar_odepa) y el IPC de cargar_ipc, escribe los CSV en 'carpeta' e
     imprime el detalle y, al final, el resumen. Devuelve los resultados."""
     print("\n" + "=" * 72)
-    print("DETALLE POR INGREDIENTE (tipos comunes, cobertura, productos)")
-    semanal, anual, agr_ing, est_ing, com_ing, ing, info = [], [], {}, {}, {}, {}, {}
+    print("TIPOS ESTABLES POR INGREDIENTE (regla de indices.py: precio en al menos "
+          f"{TIPO_ESTABLE:.0%} de las semanas antes y desde {CORTE:%Y-%m-%d})")
+    semanal, anual, ant_ing, ofi_ing, ing, info = [], [], {}, {}, {}, {}
     for match, (lab, uni) in ingredientes().items():
         filas, f = filas_ingrediente(df, match, uni)
         if filas.empty:
             raise RuntimeError(f"{lab}: sin filas en ODEPA para '{match}'")
-        # la agrupada es la del pipeline: precio_semanal, por el factor
-        agr_fecha = precio_semanal(df, match) * f
-        if not _igual(filas.groupby("fecha")["precio"].mean(), agr_fecha):
-            raise RuntimeError(f"{lab}: las filas no rearman precio_semanal")
-        agr = agr_fecha.resample("W-MON").mean()
-        tipos = por_tipo(filas)
-        comunes, corte, solo_antes, solo_despues = tipos_comunes(filas)
-        est, n_est = estratificada(tipos, comunes)
-        agr_ing[match], est_ing[match] = agr, est
-        com_ing[match] = solo_comunes(filas, comunes, agr.index)
-        semanal.append(tabla_semanal(lab, filas, agr, est, n_est, len(comunes)))
-        anual.append(participacion_anual(lab, filas))
-        # cobertura sobre las semanas con agrupada: una semana sin
-        # estratificada cuenta como incompleta
-        con_agr = agr.dropna().index
-        n_completas = int((n_est.reindex(con_agr) == len(comunes)).sum()) if comunes else 0
-        completas = 100.0 * n_completas / len(con_agr) if len(con_agr) else 0.0
+        tipos, estables, ofi, pesos = oficial(filas)
+        # la oficial rearmada aquí es la de indices.py: precio_semanal, por el factor
+        if not _igual(ofi, precio_semanal(df, match) * f):
+            raise RuntimeError(f"{lab}: las filas no rearman la serie oficial de indices.py")
+        ant = anterior(filas)
+        ant_ing[match], ofi_ing[match] = ant, ofi
+        propios = tipos.reindex(columns=estables).notna().sum(axis=1)
+        semanal.append(tabla_semanal(lab, filas, ant, ofi, pesos, propios, len(estables)))
+        a_filas, a_ofi = participacion_anual(lab, filas), participacion_oficial(lab, pesos)
+        anual += [a_filas, a_ofi]
+        con = ofi.dropna().index
+        arrastre = int(((propios.reindex(con) < len(estables))
+                        & ((pesos.reindex(con) > 0).sum(axis=1) == len(estables))).sum())
+        fuera = int(((pesos.reindex(con) > 0).sum(axis=1) < len(estables)).sum())
         s = filas.assign(semana=semana_de(filas["fecha"]))
-        ing[match] = {"agr": agr, "est": est, "tipos": tipos,
+        ing[match] = {"ant": ant, "ofi": ofi, "tipos": tipos, "estables": estables,
                       "cuenta": s.groupby(["semana", "tipo"]).size().unstack(fill_value=0)}
-        primera = filas[filas["tipo"] != SIN_TIPO].groupby("tipo")["fecha"].min()
-        info[lab] = {"comunes": comunes, "completas": completas, "semanas": len(con_agr),
-                     "n_completas": n_completas, "sin_tipo_anios": anios_sin_tipo(filas)}
-        print(f"{lab} [{match}]: {len(filas)} filas {filas['fecha'].min():%Y-%m-%d} a "
-              f"{filas['fecha'].max():%Y-%m-%d}; corte {corte:%Y-%m-%d}; "
-              f"comunes {comunes or 'NINGUNO'}; solo antes {solo_antes or '-'}; "
-              f"solo después {solo_despues or '-'}; sin tipo "
-              f"{int((filas['tipo'] == SIN_TIPO).sum())} filas; semanas con todos los "
-              f"comunes {completas:.1f}% de {len(con_agr)} con precio")
-        print("    primera fila de cada tipo: " + ", ".join(
-            f"{t} {d:%Y-%m-%d}" for t, d in primera.sort_values().items()))
+        info[lab] = {"estables": estables, "semanas": len(con), "arrastre": arrastre,
+                     "fuera": fuera, "sin_tipo_anios": anios_sin_tipo(filas)}
+        hay = tipos.notna()[tipos.notna().any(axis=1)]
+        antes, desde = hay[hay.index < CORTE], hay[hay.index >= CORTE]
+
+        def pct(x, t):
+            return "s/s" if x.empty else f"{100 * x[t].mean():.0f}%"
+        print(f"{lab} [{match}]: estables {estables}; {len(filas)} filas "
+              f"{filas['fecha'].min():%Y-%m-%d} a {filas['fecha'].max():%Y-%m-%d}; "
+              f"sin tipo {int((filas['tipo'] == SIN_TIPO).sum())} filas")
+        print("    semanas con precio de cada tipo (antes / desde el corte): " + "; ".join(
+            f"{t} {pct(antes, t)} / {pct(desde, t)}{'' if t in estables else ' (no estable)'}"
+            for t in hay.columns))
+        print(f"    {len(con)} semanas con precio oficial; {arrastre} con algún tipo estable "
+              f"usando su último precio (hasta {TIPO_FFILL} semanas) y {fuera} con algún "
+              "tipo estable fuera del promedio")
         prods = filas.groupby("producto")["fecha"].agg(["min", "max", "size"])
         print("    productos: " + "; ".join(
             f"{p} ({r['min']:%Y} a {r['max']:%Y}, {r['size']} filas)" for p, r in prods.iterrows()))
-        imprimir_participacion(anual[-1])
+        if not a_filas.empty:
+            print("    participación en las filas de ODEPA (serie anterior):")
+            imprimir_participacion(a_filas)
+        if not a_ofi.empty:
+            print("    participación en la serie oficial:")
+            imprimir_participacion(a_ofi)
 
     tabla = pd.concat(semanal, ignore_index=True)
     anual = [a for a in anual if not a.empty]
     anual = (pd.concat(anual, ignore_index=True) if anual else pd.DataFrame(
-        {"ingrediente": [], "anio": [], "tipo": [], "anio_base": [], "filas": [],
+        {"ingrediente": [], "fuente": [], "anio": [], "tipo": [], "anio_base": [],
          "participacion": [], "cambio_pp": [], "marca": pd.Series([], dtype=bool)}))
     anual["anio_base"] = anual["anio_base"].astype("Int64")      # sin el .0 del concat
-    print("\nÍNDICES: pipeline de esta corrida y estratificada")
+
+    print("\nÍNDICES: serie anterior (promedio entre filas) y oficial (por tipo de punto)")
     res, filas_idx = {}, []
     for code, meta in BASKETS.items():
         items = meta["items"]
         d, comp = calcular(df, ipc, items)
         r = resumen(d, meta, comp)
-        nom_agr = canasta({m: agr_ing[m] for (_l, m, _q, _u) in items}, items)
-        real_agr = deflactar(nom_agr, ipc)
-        if not (_igual(nom_agr, d["nominal"]) and _igual(real_agr, d["real"])):
-            raise RuntimeError(f"{meta['nombre']}: la agrupada rearmada no es la del pipeline")
-        agr = metricas(d["real"])
-        if (agr["percentil"], agr["z"]) != (r["percentil"], r["zscore"]):
+        nom_ofi = canasta({m: ofi_ing[m] for (_l, m, _q, _u) in items}, items)
+        real_ofi = deflactar(nom_ofi, ipc)
+        if not (_igual(nom_ofi, d["nominal"]) and _igual(real_ofi, d["real"])):
+            raise RuntimeError(f"{meta['nombre']}: la oficial rearmada no es la de calcular()")
+        ofi = metricas(d["real"])
+        if (ofi["percentil"], ofi["z"]) != (r["percentil"], r["zscore"]):
             raise RuntimeError(f"{meta['nombre']}: percentil o z distinto de resumen()")
-        nom_est = canasta({m: est_ing[m] for (_l, m, _q, _u) in items}, items)
-        real_est = deflactar(nom_est, ipc) if nom_est.notna().any() else nom_est
-        est = metricas(real_est)
-        # la regla compara las dos series sobre las mismas semanas: si la
-        # estratificada no cubre las del pipeline, el índice no se evalúa
-        comparable = est is not None and real_est.dropna().index.equals(d["real"].dropna().index)
-        antes, despues = brecha(d["real"], real_est, CORTE) if est else (None, None)
-        motivo = None
-        if est is None:
-            motivo = "estratificada sin datos: algún ingrediente sin tipos comunes"
-        elif not comparable:
-            motivo = (f"bases distintas: estratificada {est['n']} semanas de "
-                      f"{est['inicio']:%Y-%m-%d} a {est['semana']:%Y-%m-%d}, pipeline "
-                      f"{agr['n']} de {agr['inicio']:%Y-%m-%d} a {agr['semana']:%Y-%m-%d}")
-        res[code] = {"nombre": meta["nombre"], "agr": agr, "est": est, "comparable": comparable,
-                     "motivo": motivo, "brecha": (antes, despues)}
-        tabla_idx = pd.DataFrame({"nominal_agrupada": nom_agr, "real_agrupada": d["real"],
-                                  "nominal_estratificada": nom_est,
-                                  "real_estratificada": real_est.reindex(nom_est.index)
-                                  if est else np.nan}).dropna(how="all")
+        nom_ant = canasta({m: ant_ing[m] for (_l, m, _q, _u) in items}, items)
+        real_ant = deflactar(nom_ant, ipc)
+        ant = metricas(real_ant)
+        comparable = real_ant.dropna().index.equals(d["real"].dropna().index)
+        antes, despues = brecha(real_ant, d["real"], CORTE)
+        res[code] = {"nombre": meta["nombre"], "ant": ant, "ofi": ofi,
+                     "comparable": comparable, "brecha": (antes, despues)}
+        tabla_idx = pd.DataFrame({"nominal_anterior": nom_ant, "real_anterior": real_ant,
+                                  "nominal_oficial": d["nominal"],
+                                  "real_oficial": d["real"]}).dropna(how="all")
         tabla_idx.insert(0, "indice", code)
         filas_idx.append(tabla_idx.round(2).rename_axis("semana").reset_index())
-        if est is None:
-            print(f"  {meta['nombre']}: {motivo}")
-            continue
-        if not comparable:
-            comun = d["real"].dropna().index.intersection(real_est.dropna().index)
-            ac, ec = metricas(d["real"].reindex(comun)), metricas(real_est.reindex(comun))
-            print(f"  {meta['nombre']}: NO ENTRA A LA REGLA ({motivo})")
-            if ac and ec:
-                print(f"    en las {ac['n']} semanas comunes: percentil {ac['percentil']} -> "
-                      f"{ec['percentil']}; máximo {ac['maximo']:%Y-%m-%d} -> "
-                      f"{ec['maximo']:%Y-%m-%d}; z {ac['z']} -> {ec['z']}")
         f_ = lambda x: "s/d" if x is None else f"{x:+.1f}%"  # noqa: E731
-        print(f"  {meta['nombre']}: semana {agr['semana']:%Y-%m-%d}, {agr['n']} semanas "
-              f"desde {agr['inicio']:%Y-%m-%d} (estratificada {est['n']} desde "
-              f"{est['inicio']:%Y-%m-%d}); percentil {agr['percentil']} -> "
-              f"{est['percentil']}; máximo {agr['maximo']:%Y-%m-%d} -> "
-              f"{est['maximo']:%Y-%m-%d}; z {agr['z']} -> {est['z']}; estratificada sobre "
-              f"agrupada: antes del corte {f_(antes)}, después {f_(despues)}")
-        imprimir_descomposicion(items, com_ing, ipc, d["real"], real_est, agr, est, ing)
+        print(f"  {meta['nombre']}: semana {ofi['semana']:%Y-%m-%d}; semanas {ant['n']} desde "
+              f"{ant['inicio']:%Y-%m-%d} -> {ofi['n']} desde {ofi['inicio']:%Y-%m-%d}"
+              f"{'' if comparable else ' (BASES DISTINTAS)'}; percentil {ant['percentil']} -> "
+              f"{ofi['percentil']}; máximo {ant['maximo']:%Y-%m-%d} -> {ofi['maximo']:%Y-%m-%d}; "
+              f"z {ant['z']} -> {ofi['z']}; oficial sobre anterior: antes del corte "
+              f"{f_(antes)}, después {f_(despues)}")
+        print(f"    oficial sobre anterior, por año (%): {_por_anio(d['real'], real_ant)}")
+        if ant["maximo"] != ofi["maximo"]:
+            for semana in (ant["maximo"], ofi["maximo"]):
+                imprimir_semana(semana, items, ing)
         if publicado and code in publicado:
             p = publicado[code]
-            igual = (p.get("percentil"), p.get("zscore"), p.get("fecha")) == (
-                r["percentil"], r["zscore"], r["fecha"])
+            igual = (p.get("percentil"), p.get("zscore"), p.get("n")) == (
+                ant["percentil"], ant["z"], ant["n"])
             print(f"    publicado en carestia.cl: semana {p.get('fecha')}, percentil "
-                  f"{p.get('percentil')}, z {p.get('zscore')} "
-                  f"({'igual a esta corrida' if igual else 'DISTINTO de esta corrida'})")
+                  f"{p.get('percentil')}, z {p.get('zscore')}, {p.get('n')} semanas "
+                  f"({'igual a la serie anterior de esta corrida' if igual else 'DISTINTO de la serie anterior de esta corrida'})")
 
-    # contexto, no cambia la regla: el año cae dentro del período de algún
-    # índice que usa el ingrediente (el índice tiene datos el año anterior)
+    # el año cae dentro del período de algún índice que usa el ingrediente
     usa = {lab: [code for code, meta in BASKETS.items()
                  if match in [i[1] for i in meta["items"]]]
            for match, (lab, _u) in ingredientes().items()}
-    anual["en_indice"] = [any(res[c]["agr"]["inicio"].year <= a - 1 for c in usa[i])
+    anual["en_indice"] = [any(res[c]["ofi"]["inicio"].year <= a - 1 for c in usa[i])
                           for i, a in zip(anual["ingrediente"], anual["anio"])]
-    saltos = anual[anual["marca"].astype(bool)].sort_values("cambio_pp", key=abs,
-                                                            ascending=False)
-    sin_evaluar = [f"{lab} {y}" for lab, i in info.items() for y in i["sin_tipo_anios"]
-                   if any(res[c]["agr"]["inicio"].year <= y for c in usa[lab])]
-    if sin_evaluar:
-        print("\nAÑOS CON FILAS SIN TIPO DE PUNTO dentro del período de su índice (no se "
-              "evalúa su participación): " + ", ".join(sin_evaluar))
-    print("\nSALTOS DE PARTICIPACIÓN (más de 15 pp respecto del año anterior)")
-    for _, r in saltos.iterrows():
-        print(f"  {r['ingrediente']} {r['anio']}: {r['tipo']} {r['cambio_pp']:+.1f} pp "
-              f"respecto de {r['anio_base']} (queda en {r['participacion']:.1f}%)"
-              f"{'' if r['en_indice'] else ', fuera del período de su índice'}")
-    if saltos.empty:
-        print("  ninguno")
+    marcados = anual[anual["marca"].astype(bool)].sort_values("cambio_pp", key=abs,
+                                                              ascending=False)
+    saltos_filas = marcados[marcados["fuente"] == "filas"]
+    saltos = marcados[marcados["fuente"] == "oficial"]
+    sin_tipo = [f"{lab} {y}" for lab, i in info.items() for y in i["sin_tipo_anios"]]
+    if sin_tipo:
+        print("\nAÑOS CON FILAS SIN TIPO DE PUNTO (estrato propio en la oficial): "
+              + ", ".join(sin_tipo))
+    for titulo, tabla_s in (("EN LAS FILAS DE ODEPA (serie anterior, contexto)", saltos_filas),
+                            ("EN LA SERIE OFICIAL (criterio)", saltos)):
+        print(f"\nSALTOS DE PARTICIPACIÓN {titulo}: más de 15 pp respecto del año anterior")
+        for _, x in tabla_s.iterrows():
+            print(f"  {x['ingrediente']} {x['anio']}: {x['tipo']} {x['cambio_pp']:+.1f} pp "
+                  f"respecto de {x['anio_base']} (queda en {x['participacion']:.1f}%)"
+                  f"{'' if x['en_indice'] else ', fuera del período de su índice'}")
+        if tabla_s.empty:
+            print("  ninguno")
 
     os.makedirs(carpeta, exist_ok=True)
     tabla.to_csv(os.path.join(carpeta, f"{PREFIJO}_semanal.csv"), index=False)
@@ -555,77 +463,56 @@ def diagnostico(df: pd.DataFrame, ipc: pd.Series, carpeta: str = ".",
     print(f"\nEscritos {PREFIJO}_semanal.csv ({len(tabla)} filas), {PREFIJO}_anual.csv "
           f"({len(anual)} filas) y {PREFIJO}_indices.csv")
 
-    v = veredicto(res, saltos.to_dict("records"), sin_evaluar)
+    c = criterio(saltos.to_dict("records"))
     rango = f"{df['fecha'].min():%Y} a {df['fecha'].max():%Y}"
-    lineas = lineas_resumen(res, saltos, info, v, rango)
+    lineas = lineas_resumen(res, saltos, saltos_filas, info, c, rango)
     print("\n" + "\n".join(lineas))
-    return {"indices": res, "saltos": saltos, "info": info, "veredicto": v,
-            "semanal": tabla, "anual": anual, "resumen": lineas, "ing": ing}
+    return {"indices": res, "saltos": saltos, "saltos_filas": saltos_filas, "info": info,
+            "criterio": c, "semanal": tabla, "anual": anual, "resumen": lineas, "ing": ing}
 
 
-def lineas_resumen(res: dict, saltos: pd.DataFrame, info: dict, v: dict,
-                   rango: str = "2008 a 2026") -> list:
+def _salto(t: pd.DataFrame) -> str:
+    x = t.iloc[0]
+    return (f"{len(t)} casos en {t['ingrediente'].nunique()} ingredientes (mayor: "
+            f"{x['ingrediente']} {x['anio']}, {x['tipo']} {x['cambio_pp']:+.1f} pp)")
+
+
+def lineas_resumen(res: dict, saltos: pd.DataFrame, saltos_filas: pd.DataFrame, info: dict,
+                   c: str, rango: str = "2008 a 2026") -> list:
     """El resumen del final del log, de máximo 15 líneas."""
-    ok = {lab: i for lab, i in info.items() if i["comunes"]}
-    sem = sum(i["semanas"] for i in ok.values())
-    comp = 100.0 * sum(i["n_completas"] for i in ok.values()) / sem if sem else 0.0
-    peor = min(ok, key=lambda lab: ok[lab]["completas"]) if ok else None
+    sem = sum(i["semanas"] for i in info.values())
+    fuera = sum(i["fuera"] for i in info.values())
+    un_tipo = [lab for lab, i in info.items() if len(i["estables"]) == 1]
     lineas = [
-        "=" * 20 + " RESUMEN: composición de puntos ODEPA " + "=" * 20,
-        f"RM, semanal W-MON, {rango}. Corte {CORTE:%Y-%m-%d}. Estratificada: promedio "
-        "por tipo de punto y luego simple entre los tipos con filas antes y después del corte.",
-        f"Tipo común sin precio: su último precio hasta {FFILL} semanas; más, los tipos que "
-        f"hay ({comp:.1f}% de las semanas con todos los tipos comunes"
-        + (f"; mínimo {peor} {ok[peor]['completas']:.1f}%)." if peor else ")."),
-        "Índice: percentil vigente agrupada/estratificada (dif.) | semana del máximo real | "
-        "z-score",
+        "=" * 16 + " RESUMEN: serie anterior y oficial por tipo de punto " + "=" * 16,
+        f"RM, semanal W-MON, {rango}. Oficial: promedio por tipo de punto y luego simple "
+        f"entre los tipos estables (al menos {TIPO_ESTABLE:.0%} de las semanas antes y desde "
+        f"{CORTE:%Y-%m-%d}).",
+        f"Tipo estable sin precio: su último precio hasta {TIPO_FFILL} semanas; más, los que "
+        f"hay ({fuera} de {sem} semanas-ingrediente con algún tipo estable fuera). Un solo "
+        f"tipo estable: {', '.join(un_tipo) or 'ninguno'}.",
+        "Índice: percentil vigente anterior/oficial (dif.) | semana del máximo real | z-score "
+        "| semanas",
     ]
-    for code, r in res.items():
-        a, e = r["agr"], r["est"]
-        if e is None:
-            lineas.append(f"{r['nombre']}: {a['percentil']}/s/d | {a['maximo']:%Y-%m-%d}/s/d "
-                          f"| {a['z']}/s/d (sin tipos comunes)")
-            continue
-        lineas.append(f"{r['nombre']}: {a['percentil']}/{e['percentil']} "
-                      f"({e['percentil'] - a['percentil']:+d}) | {a['maximo']:%Y-%m-%d}/"
-                      f"{e['maximo']:%Y-%m-%d} | {a['z']}/{e['z']}"
-                      + ("" if r.get("comparable", True) else
-                         " (bases distintas: no entra a la regla)"))
-    d = v["deltas"]
-    mayor = max(d, key=lambda k: abs(d[k])) if d else None
-    lineas.append(f"(a) percentil 5 puntos o más: {'sí, ' + ', '.join(res[k]['nombre'] for k in v['percentil']) if v['percentil'] else 'no'}"
-                  + (f" (mayor diferencia {d[mayor]:+d}, {res[mayor]['nombre']})" if mayor else ""))
-    lineas.append(f"(b) cambia la semana del máximo real: "
-                  f"{'sí, ' + ', '.join(res[k]['nombre'] for k in v['maximo']) if v['maximo'] else 'no'}")
-    if len(saltos):
-        top = saltos.iloc[0]
-        lineas.append(f"(c) tipo con más de 15 pp entre años: sí, {len(saltos)} casos en "
-                      f"{saltos['ingrediente'].nunique()} ingredientes, "
-                      f"{int(saltos['en_indice'].sum())} dentro del período de su índice "
-                      f"(mayor: {top['ingrediente']} {top['anio']}, {top['tipo']} "
-                      f"{top['cambio_pp']:+.1f} pp)")
-    else:
-        lineas.append("(c) tipo con más de 15 pp entre años: no")
-    if v["no_verificable"] or v["sin_evaluar"]:
-        partes = [f"{res[k]['nombre']} ({res[k]['motivo'].split(':')[0]})"
-                  for k in v["no_verificable"]]
-        if v["sin_evaluar"]:
-            ing = {x.rsplit(" ", 1)[0] for x in v["sin_evaluar"]}
-            anios = [int(x.rsplit(" ", 1)[1]) for x in v["sin_evaluar"]]
-            partes.append(f"(c) sin evaluar por filas sin tipo: {len(v['sin_evaluar'])} casos "
-                          f"de ingrediente y año ({len(ing)} ingredientes, {min(anios)} a "
-                          f"{max(anios)})")
-        lineas.append("No verificable: " + "; ".join(partes) + ".")
-    lineas.append(f"VEREDICTO: {v['veredicto']}")
-    lineas.append("Solo diagnóstico: cero cambios de metodología. Decide Pedro.")
+    for r in res.values():
+        a, o = r["ant"], r["ofi"]
+        lineas.append(f"{r['nombre']}: {a['percentil']}/{o['percentil']} "
+                      f"({o['percentil'] - a['percentil']:+d}) | {a['maximo']:%Y-%m-%d}/"
+                      f"{o['maximo']:%Y-%m-%d} | {a['z']}/{o['z']} | {a['n']}/{o['n']}"
+                      + ("" if r["comparable"] else " (bases distintas)"))
+    lineas.append("Saltos de más de 15 pp en las filas de ODEPA (contexto): "
+                  + (_salto(saltos_filas) if len(saltos_filas) else "ninguno"))
+    lineas.append("Saltos de más de 15 pp en la serie oficial (criterio): "
+                  + (_salto(saltos) if len(saltos) else "ninguno"))
+    lineas.append(f"CRITERIO DE PARTICIPACIÓN EN LA SERIE OFICIAL: {c}")
     if len(lineas) > MAX_RESUMEN:
         raise RuntimeError(f"el resumen tiene {len(lineas)} líneas (máximo {MAX_RESUMEN})")
     return lineas
 
 
 def leer_publicado() -> dict:
-    """Los 4 índices de indices.json en carestia.cl, para contrastar con esta
-    corrida. Vacío si no se puede leer (no es parte del veredicto)."""
+    """Los 4 índices de indices.json en carestia.cl, para contrastar con la
+    serie anterior de esta corrida. Vacío si no se puede leer."""
     try:
         r = requests.get(SITIO, timeout=60)
         r.raise_for_status()
@@ -642,7 +529,174 @@ def main() -> None:
         raise RuntimeError(f"ODEPA sin filas RM en {faltan} (cargar_odepa los saltó): el "
                            "diagnóstico no es verificable con datos incompletos; volver a correrlo")
     ipc = cargar_ipc()
+    t = tipo_punto(df)
+    mixtos = sorted(set(df.loc[t == SIN_TIPO, "ProductoBase"])
+                    & set(df.loc[t != SIN_TIPO, "ProductoBase"]))
+    print(f"Filas RM sin tipo de punto: {int((t == SIN_TIPO).sum())} de {len(df)}; productos "
+          f"con filas con y sin tipo: {', '.join(mixtos) or 'ninguno'}")
     diagnostico(df, ipc, ".", leer_publicado())
+    ruta = f"{PREFIJO}_mayores.json"
+    if os.path.exists(ruta):
+        with open(ruta, encoding="utf-8") as fh:
+            detalle_productos(df, json.load(fh))
+
+
+def filas_producto(df: pd.DataFrame, slug: str) -> pd.DataFrame:
+    """Las filas de un producto del catálogo por su slug, agrupadas como en
+    series_productos: los de las canastas por su texto de match; el resto,
+    por ProductoBase en minúsculas y sin espacios, y gana el primer grupo
+    con ese slug (como 'if slug in out' allá)."""
+    import re
+    import indices as ind
+    consumidos = pd.Series(False, index=df.index)
+    for match, (lab, _u) in ingredientes().items():
+        mask = df["ProductoBase"].str.contains(match, case=False, na=False)
+        if ind._slug(lab) == slug:
+            return df[mask]
+        consumidos |= mask
+    resto = df[~consumidos]
+    clave = resto["ProductoBase"].astype(str).str.lower().str.replace(r"\s+", "", regex=True)
+    for _k, sub in resto.groupby(clave):
+        label = re.sub(r"\s+", " ", ind._modal(sub["ProductoBase"]))
+        if label and ind._slug(label) == slug:
+            return sub
+    return df.iloc[0:0]
+
+
+def detalle_productos(df: pd.DataFrame, productos: list) -> None:
+    """Para los productos del catálogo que más cambian: tipos estables,
+    semanas con precio de cada tipo antes y desde el corte, y el precio
+    nominal de cada tipo y de las dos series en la semana comparada."""
+    import indices as ind
+    print("\nPRODUCTOS DEL CATÁLOGO CON MAYOR CAMBIO: por qué cambian (pesos nominales)")
+    for x in productos:
+        sub = ind.de_su_unidad(filas_producto(df, x["slug"]))
+        if sub.empty:
+            print(f"  {x['slug']}: sin filas")
+            continue
+        t = por_tipo(sub)
+        est, resp = ind._estables(t)
+        semana = pd.Timestamp(x["semana"])
+        hay = t.notna()[t.notna().any(axis=1)]
+        antes, desde = hay[hay.index < CORTE], hay[hay.index >= CORTE]
+        ant = sub.groupby("fecha")["Precio promedio"].mean().resample("W-MON").mean()
+        ofi = ind.precio_oficial(sub)
+        filas = sub.assign(_t=tipo_punto(sub), _s=semana_de(sub["fecha"]))
+        n = filas[filas["_s"] == semana].groupby("_t").size()
+
+        def pct(h, c):
+            return "s/s" if h.empty else f"{100 * h[c].mean():.0f}%"
+        print(f"  {x['slug']}: estables {est}{' (respaldo)' if resp else ''}; en {x['semana']}: "
+              f"anterior {ant.get(semana, np.nan):,.0f}, oficial {ofi.get(semana, np.nan):,.0f}")
+        print("    " + "; ".join(
+            f"{c} {pct(antes, c)} / {pct(desde, c)}, {t[c].get(semana, np.nan):,.0f} "
+            f"({int(n.get(c, 0))} filas){'' if c in est else ', no estable'}" for c in t.columns))
+
+
+# ---------------- comparación con el sitio publicado ----------------
+CAMPOS = ("costo_pesos_hoy", "percentil", "veredicto", "percentil_temporada",
+          "semanas_historia")
+
+
+def _ultimo(p: dict):
+    """(semana, valor) del último precio real con dato de un producto."""
+    v = p.get("v") or []
+    i = max((k for k, x in enumerate(v) if x is not None), default=None)
+    if i is None:
+        return None, None
+    return (pd.Timestamp(p["t0"]) + pd.Timedelta(weeks=i)).strftime("%Y-%m-%d"), v[i]
+
+
+def _en(p: dict, semana: str):
+    """El precio real de un producto en una semana (aaaa-mm-dd), o None."""
+    i = (pd.Timestamp(semana) - pd.Timestamp(p["t0"])).days // 7
+    v = p.get("v") or []
+    return v[i] if 0 <= i < len(v) else None
+
+
+def comparar(nuevo: dict, resumen_sitio: dict, indices_sitio: dict) -> dict:
+    """La tabla antes y después de los 4 índices (CAMPOS, del resumen.json
+    publicado contra el que armaría build_site con el indices.json nuevo) y
+    los cambios del catálogo contra el indices.json publicado, en la última
+    semana del sitio. Si la semana o el mes del IPC no son los del sitio, lo
+    dice: entonces la tabla mezcla el cambio de método con la semana nueva o
+    con el deflactor. semanas_historia tiene que ser la del sitio más las
+    semanas que avanzó la semana (como en validar.py). Imprime y devuelve
+    {"semanas_iguales", "avance", "entran", "salen", "retroceden", "cambios"}."""
+    import validar
+    r_nuevo = validar.resumen_desde_indices(nuevo)
+    s_sitio, s_nuevo = resumen_sitio.get("semana"), r_nuevo["semana"]
+    avance = (pd.Timestamp(s_nuevo) - pd.Timestamp(s_sitio)).days // 7
+    ipc_sitio, ipc_nuevo = indices_sitio.get("ipc_mes"), nuevo.get("ipc_mes")
+    print("\nÍNDICES: sitio publicado -> metodología por tipo de punto")
+    print(f"Semana: {s_sitio} -> {s_nuevo}; IPC: {ipc_sitio} -> {ipc_nuevo}")
+    if avance:
+        print(f"  AVISO: la semana avanzó {avance}; la tabla mezcla el cambio de método con "
+              "la semana nueva")
+    if ipc_sitio != ipc_nuevo:
+        print("  AVISO: otro mes de IPC; los precios en pesos de hoy cambian también por el "
+              "deflactor")
+    print("| Índice | " + " | ".join(CAMPOS) + " |")
+    print("|---|" + "---|" * len(CAMPOS))
+    iguales = True
+    for code, n in r_nuevo["indices"].items():
+        a = resumen_sitio["indices"].get(code, {})
+        celdas = []
+        for c in CAMPOS:
+            x, y = a.get(c), n.get(c)
+            celdas.append(f"{x} -> {y}" if x != y else f"{y} (igual)")
+        iguales &= (a.get("semanas_historia") is not None
+                    and n.get("semanas_historia") == a["semanas_historia"] + avance)
+        print(f"| {n['nombre']} | " + " | ".join(celdas) + " |")
+    print("semanas_historia de los 4 índices " + ("igual a la del sitio" if not avance else
+          f"igual a la del sitio más {avance}") + f": {'sí' if iguales else 'NO'}")
+
+    viejo, prod = indices_sitio.get("productos", {}), nuevo.get("productos", {})
+    entran, salen = sorted(set(prod) - set(viejo)), sorted(set(viejo) - set(prod))
+    print(f"\nCATÁLOGO: {len(viejo)} productos en el sitio -> {len(prod)}")
+    print(f"  entran: {', '.join(entran) or 'ninguno'}")
+    print(f"  salen: {', '.join(salen) or 'ninguno'}")
+    cambios, retroceden, sin_precio = [], [], []
+    for slug in sorted(set(prod) & set(viejo)):
+        sv, xv = _ultimo(viejo[slug])
+        sn, _xn = _ultimo(prod[slug])
+        if sv and (sn is None or sn < sv):
+            retroceden.append(f"{slug} ({sv} a {sn})")
+        xn = _en(prod[slug], sv) if sv else None
+        if xv and xn:
+            cambios.append((abs(xn / xv - 1), slug, sv, xv, xn))
+        elif xv and not xn:
+            sin_precio.append(f"{slug} ({sv})")
+    print(f"  última semana con precio que retrocede: {', '.join(retroceden) or 'ninguno'}")
+    print("  sin precio en la última semana del sitio: " + (', '.join(sin_precio) or 'ninguno'))
+    cambios.sort(reverse=True)
+    print("  los 10 con mayor cambio en su último precio real (misma semana del sitio):")
+    print("| Producto | unidad | semana | sitio | nuevo | cambio |")
+    print("|---|---|---|---|---|---|")
+    for _d, slug, sv, xv, xn in cambios[:10]:
+        print(f"| {slug} | {prod[slug]['unidad']} | {sv} | {xv:,} | {xn:,} | "
+              f"{(xn / xv - 1) * 100:+.1f}% |")
+    sin_cambio = sum(1 for c in cambios if c[0] == 0)
+    print(f"  {sin_cambio} de {len(cambios)} productos comunes con el mismo último precio")
+    with open(f"{PREFIJO}_mayores.json", "w", encoding="utf-8") as fh:
+        json.dump([{"slug": c[1], "semana": c[2]} for c in cambios[:10]], fh)
+    return {"semanas_iguales": iguales, "avance": avance, "entran": entran, "salen": salen,
+            "retroceden": retroceden, "sin_precio": sin_precio, "productos": len(prod),
+            "cambios": cambios}
+
+
+def main_comparar(ruta: str) -> None:
+    import validar
+    with open(ruta, encoding="utf-8") as fh:
+        nuevo = json.load(fh)
+    rs, url_r, err_r = validar.descargar_json(validar.URLS_RESUMEN, validar._forma_resumen)
+    ix, url_i, err_i = validar.descargar_json(validar.URLS_INDICES, validar._forma_indices)
+    if rs is None or ix is None:
+        raise RuntimeError("no se pudo bajar el sitio publicado: " + "; ".join(err_r + err_i))
+    print(f"Referencia: {url_r} y {url_i}")
+    out = comparar(nuevo, rs, ix)
+    if not out["semanas_iguales"]:
+        raise SystemExit("semanas_historia no cuadra con la del sitio: no seguir")
 
 
 # ---------------- prueba sintética (sin red) ----------------
@@ -686,14 +740,11 @@ def _puntos_prueba(semana: pd.Timestamp, sin_cambio: bool = False) -> list:
     return ferias + sup + linea
 
 
-def df_prueba(huecos: dict = None, sin_tipo_antes: set = frozenset(), sin_cambio: bool = False,
-              sin_tipo_hasta: str = None) -> pd.DataFrame:
+def df_prueba(huecos: dict = None, sin_cambio: bool = False) -> pd.DataFrame:
     """Filas como las de cargar_odepa para los 19 ingredientes. Cada tipo
     tiene un precio fijo relativo a la feria (MULT) por una tendencia común,
-    así que la estratificada no salta en el corte y la agrupada sí.
-    huecos: {match: [semanas sin filas de supermercado]}; sin_tipo_antes:
-    productos sin tipo de punto antes del corte; sin_tipo_hasta: todos sin
-    tipo de punto antes de esa fecha."""
+    así que la oficial no salta en el corte y la anterior sí. huecos:
+    {match: [semanas sin filas de supermercado]}."""
     huecos = huecos or {}
     reg = []
     for i, semana in enumerate(SEMANAS_PRUEBA):
@@ -706,10 +757,6 @@ def df_prueba(huecos: dict = None, sin_tipo_antes: set = frozenset(), sin_cambio
                 if tipo == "Supermercado" and semana in huecos.get(match, ()):
                     continue
                 p = base * tendencia * MULT[tipo]
-                if match in sin_tipo_antes and semana < CORTE:
-                    punto = ""
-                if sin_tipo_hasta and semana < pd.Timestamp(sin_tipo_hasta):
-                    punto = ""
                 reg.append({"ProductoBase": prod, "Precio promedio": p, "Precio minimo": p * 0.9,
                             "Precio maximo": p * 1.1, "Unidad": unidad, "Grupo": "Prueba",
                             "fecha": semana, "region_rm": True, "Punto": punto})
@@ -718,6 +765,8 @@ def df_prueba(huecos: dict = None, sin_tipo_antes: set = frozenset(), sin_cambio
 
 def prueba() -> None:
     """Propiedades del diagnóstico con datos sintéticos, sin red."""
+    import contextlib
+    import io
     ipc = pd.Series(1.003 ** np.arange(90), index=pd.date_range("2009-12-01", periods=90,
                                                                   freq="MS"))
     hueco_corto = list(SEMANAS_PRUEBA[300:303])           # 3 semanas sin supermercado
@@ -729,112 +778,141 @@ def prueba() -> None:
             assert os.path.exists(os.path.join(tmp, f"{PREFIJO}_{nombre}.csv")), nombre
         leido = pd.read_csv(os.path.join(tmp, f"{PREFIJO}_semanal.csv"))
     assert list(leido.columns[:7]) == ["ingrediente", "semana", "filas", "puntos", "mezcla",
-                                       "agrupada", "estratificada"]
+                                       "anterior", "oficial"]
     t = out["semanal"]
     tom = t[t["ingrediente"] == "Tomate"].set_index("semana")
     tend = {f"{s:%Y-%m-%d}": 1 + 0.002 * i for i, s in enumerate(SEMANAS_PRUEBA)}
     esperado = 1000 * tom.index.map(tend).to_numpy() * (1.0 + 1.3) / 2
-    # la estratificada no ve el cambio de muestra: feria y supermercado, mitad y mitad
-    assert np.allclose(tom["estratificada"].to_numpy(float), esperado, atol=0.01)
-    # la agrupada sí: 1 de 4 filas en supermercado antes, 4 de 7 después (y la en línea)
+    # la oficial no ve el cambio de muestra: feria y supermercado, mitad y mitad
+    assert np.allclose(tom["oficial"].to_numpy(float), esperado, atol=0.01)
+    # la anterior sí: 1 de 4 filas en supermercado antes, 4 de 7 después (y la en línea)
     antes, despues = tom.loc["2012-12-31"], tom.loc["2013-03-04"]
-    assert np.isclose(antes["agrupada"], 1000 * tend["2012-12-31"] * (3 + 1.3) / 4, atol=0.01)
-    assert np.isclose(despues["agrupada"], 1000 * tend["2013-03-04"] * (3 + 4 * 1.3) / 7,
+    assert np.isclose(antes["anterior"], 1000 * tend["2012-12-31"] * (3 + 1.3) / 4, atol=0.01)
+    assert np.isclose(despues["anterior"], 1000 * tend["2013-03-04"] * (3 + 4 * 1.3) / 7,
                       atol=0.01)
     assert antes["filas"] == 4 and despues["puntos"] == 7
     assert despues["mezcla"] == "Feria libre=0.429;Supermercado=0.571"
-    assert out["info"]["Tomate"]["comunes"] == ["Feria libre", "Supermercado"]
-    # sin filas antes del corte: el "antes" es su primer año; la en línea (2015) no entra
-    assert out["info"]["Huevos"]["comunes"] == ["Feria libre", "Supermercado"]
-    assert out["info"]["Asado de tira"]["comunes"] == ["Feria libre", "Supermercado"]
-    # huecos: 3 semanas se cubren con el último precio; de 6, las 2 últimas van sin él
+    # la en línea (2015 y 2016) no llega al 80% de las semanas desde el corte;
+    # Asado de tira y Huevos parten después del corte: 80% de todas sus semanas
+    for lab in ("Tomate", "Huevos", "Asado de tira", "Palta"):
+        assert out["info"][lab]["estables"] == ["Feria libre", "Supermercado"], lab
+    # huecos: 3 semanas se cubren con el último precio; de 6, las 2 últimas sin él
     pal = t[t["ingrediente"] == "Palta"].set_index("semana")
     corto = [f"{s:%Y-%m-%d}" for s in hueco_corto]
     largo = [f"{s:%Y-%m-%d}" for s in hueco_largo]
-    assert (pal.loc[corto, "tipos_con_precio"] == 2).all()
-    assert (pal.loc[largo[:4], "tipos_con_precio"] == 2).all()
-    assert (pal.loc[largo[4:], "tipos_con_precio"] == 1).all()
-    assert np.allclose(pal.loc[largo[4:], "estratificada"].to_numpy(float),
-                       [round(3000 * tend[s] * MULT["Feria libre"], 2) for s in largo[4:]])
-    # participación: el supermercado salta en 2013 (25% a 54%); la en línea entra
-    # en 2015 con 12,5% (no llega a 15 pp)
+    assert (pal.loc[corto + largo[:4], "tipos_en_promedio"] == 2).all()
+    assert (pal.loc[corto + largo[:4], "tipos_con_precio_propio"] == 1).all()
+    assert (pal.loc[largo[4:], "tipos_en_promedio"] == 1).all()
+    assert np.allclose(pal.loc[largo[4:], "oficial"].to_numpy(float),
+                       [round(3000 * tend[s], 2) for s in largo[4:]])
+    assert out["info"]["Palta"]["arrastre"] == 7 and out["info"]["Palta"]["fuera"] == 2
+    # participación en las filas: el supermercado salta en 2013 (25% a 54%);
+    # en la oficial, mitad y mitad todos los años (la palta, casi: 2 semanas
+    # de 2015 van solo con la feria)
     a = out["anual"]
-    tom_a = a[a["ingrediente"] == "Tomate"]
-    marcados = tom_a[tom_a["marca"]]
-    assert set(zip(marcados["anio"], marcados["tipo"])) == {(2013, "Feria libre"),
-                                                            (2013, "Supermercado")}
-    assert not a[(a["anio"] == 2015) & (a["tipo"] == "Supermercado en Línea")]["marca"].any()
-    sal = out["saltos"].groupby("ingrediente")["en_indice"].all()
-    assert sal["Tomate"] and sal["Manzana"] and not sal["Mantequilla"] and not sal["Asado carnicero"]
-    # los índices: la estratificada sigue la tendencia; Ensalada y Fruta cruzan el corte
-    v = out["veredicto"]
-    assert v["veredicto"] == "QUIEBRE MATERIAL" and v["participacion"]
-    assert all(r["est"] is not None for r in out["indices"].values())
+    filas_tom = a[(a["ingrediente"] == "Tomate") & (a["fuente"] == "filas") & a["marca"]]
+    assert set(zip(filas_tom["anio"], filas_tom["tipo"])) == {(2013, "Feria libre"),
+                                                             (2013, "Supermercado")}
+    ofi = a[a["fuente"] == "oficial"]
+    assert set(ofi["tipo"]) == {"Feria libre", "Supermercado"}
+    assert np.allclose(ofi[ofi["ingrediente"] != "Palta"]["participacion"], 50.0)
+    assert out["saltos"].empty and out["criterio"] == "CUMPLE"
+    assert not out["saltos_filas"].empty
+    # los índices: la anterior sube en el corte (más supermercados), así que
+    # la oficial queda sobre ella antes y bajo ella después
+    ens = out["indices"]["ensalada"]
+    assert ens["comparable"] and ens["brecha"][0] > 0 > ens["brecha"][1]
+    assert all(r["comparable"] for r in out["indices"].values())
     assert len(out["resumen"]) <= MAX_RESUMEN
 
     # la composición de una semana, también con el supermercado ausente
-    import contextlib
-    import io
     texto = io.StringIO()
     with contextlib.redirect_stdout(texto):
         for semana in (SEMANAS_PRUEBA[200], hueco_largo[-1]):
             imprimir_semana(semana, BASKETS["asado"]["items"], out["ing"])
     texto = texto.getvalue()
     # semana 200 (tendencia 1,4): palta 4.200 en feria y 5.460 en supermercado
-    assert ("Palta: agrupada 4,920, estratificada 4,830 | Feria libre 4,200 (3 filas, "
+    assert ("Palta: anterior 4,920, oficial 4,830 | Feria libre 4,200 (3 filas, "
             "mediana vecina 4,200) | Supermercado 5,460 (4 filas" in texto)
-    # en el hueco largo la palta no trae supermercado y la estratificada es la feria
-    palta = [l for l in texto.splitlines() if "Palta:" in l][-1]
-    assert "estratificada 4,950 | Feria libre 4,950" in palta
-    assert palta.count("| Supermercado") == 1 and "| Supermercado en Línea" in palta
+    # en el hueco largo la palta no trae supermercado y la oficial es la feria
+    palta = [x for x in texto.splitlines() if "Palta:" in x][-1]
+    assert "oficial 4,950 | Feria libre 4,950" in palta
+    assert "Supermercado en Línea 7,920 (1 filas, no estable" in palta
 
-    # la regla, en sus bordes
-    m = {"percentil": 50, "maximo": pd.Timestamp("2020-01-06")}
-    caso = lambda p, mx: {"x": {"agr": m, "est": {"percentil": p, "maximo": mx}}}  # noqa: E731
-    assert veredicto(caso(55, m["maximo"]), [])["veredicto"] == "QUIEBRE MATERIAL"
-    assert veredicto(caso(45, m["maximo"]), [])["veredicto"] == "QUIEBRE MATERIAL"
-    assert veredicto(caso(54, m["maximo"]), [])["veredicto"] == "ROBUSTO"
-    assert veredicto(caso(50, pd.Timestamp("2020-01-13")), [])["veredicto"] == "QUIEBRE MATERIAL"
-    assert veredicto(caso(50, m["maximo"]), [{"x": 1}])["veredicto"] == "QUIEBRE MATERIAL"
-    assert veredicto({"x": {"agr": m, "est": None}}, [])["veredicto"] == "NO VERIFICABLE"
-    # 15 pp justos no marcan; más de 15 sí
-    dos = pd.DataFrame({"fecha": pd.to_datetime(["2011-01-03"] * 20 + ["2012-01-02"] * 20),
-                        "precio": 1.0, "punto": "x | y", "producto": "p",
-                        "tipo": ["A"] * 10 + ["B"] * 10 + ["A"] * 13 + ["B"] * 7})
-    assert not participacion_anual("p", dos)["marca"].any()                     # 15 pp
-    dos.loc[dos.index[-1], "tipo"] = "A"                                         # 14/6: 20 pp
-    assert participacion_anual("p", dos)["marca"].any()
+    # un tipo estable (81,7% de las semanas antes del corte) sin precio en
+    # 30 semanas de 2011 pesa 75% ese año en la oficial: marca 2011 y 2012
+    huecos = {"Tomate": list(SEMANAS_PRUEBA[(SEMANAS_PRUEBA.year == 2011)][:30])}
+    sal = diagnostico(df_prueba(huecos), ipc, tempfile.mkdtemp())
+    assert sal["criterio"] == "NO CUMPLE"
+    assert set(sal["saltos"]["ingrediente"]) == {"Tomate"}
+    assert set(sal["saltos"]["anio"]) == {2011, 2012}
 
-    # sin tipo de punto antes del corte: no hay tipos comunes y la estratificada
-    # no se arma (no se inventa); la participación no cuenta las filas sin tipo
-    sin = diagnostico(df_prueba(sin_tipo_antes={"Tomate"}), ipc, tempfile.mkdtemp())
-    assert sin["info"]["Tomate"]["comunes"] == []
-    assert sin["indices"]["ensalada"]["est"] is None and sin["indices"]["asado"]["est"] is None
-    assert sin["indices"]["fruta"]["est"] is not None
-
-    # sin cambio de muestra: mezcla fija, sin tipos nuevos; da ROBUSTO
+    # sin cambio de muestra: las dos series son la misma
     rob = diagnostico(df_prueba(sin_cambio=True), ipc, tempfile.mkdtemp())
-    assert rob["veredicto"]["veredicto"] == "ROBUSTO", rob["resumen"]
-    assert rob["saltos"].empty and all(r["comparable"] for r in rob["indices"].values())
+    assert rob["saltos"].empty and rob["saltos_filas"].empty and rob["criterio"] == "CUMPLE"
+    for r in rob["indices"].values():
+        assert (r["ant"]["percentil"], r["ant"]["maximo"]) == (r["ofi"]["percentil"],
+                                                               r["ofi"]["maximo"])
 
-    # sin tipo de punto hasta 2012: la estratificada de Ensalada y Fruta parte
-    # en 2012 y la del pipeline en 2010; no se comparan (bases distintas) y
-    # los años sin tipo no se evalúan: NO VERIFICABLE, no QUIEBRE
-    bas = diagnostico(df_prueba(sin_cambio=True, sin_tipo_hasta="2012-01-02"), ipc,
-                      tempfile.mkdtemp())
-    assert bas["veredicto"]["veredicto"] == "NO VERIFICABLE", bas["resumen"]
-    assert set(bas["veredicto"]["no_verificable"]) == {"ensalada", "fruta"}
-    assert "Tomate 2010" in bas["veredicto"]["sin_evaluar"]
-    assert bas["indices"]["asado"]["comparable"] and bas["indices"]["desayuno"]["comparable"]
-    assert any(l.startswith("No verificable") and "casos de ingrediente y año" in l
-               for l in bas["resumen"])
-
-    # ninguna fila con tipo: NO VERIFICABLE, sin caerse, y escribe los CSV
+    # ninguna fila con tipo: la oficial es la anterior (un solo estrato)
     nada = df_prueba(sin_cambio=True).assign(Punto="")
-    with tempfile.TemporaryDirectory() as tmp:
-        sin_tipo = diagnostico(nada, ipc, tmp)
-        assert len(os.listdir(tmp)) == 3
-    assert sin_tipo["veredicto"]["veredicto"] == "NO VERIFICABLE"
+    sin_tipo = diagnostico(nada, ipc, tempfile.mkdtemp())
+    assert all(i["estables"] == [SIN_TIPO] for i in sin_tipo["info"].values())
+    assert np.allclose(sin_tipo["semanal"]["anterior"], sin_tipo["semanal"]["oficial"])
+
+    # la comparación con el sitio: misma semana y mismos conteos (en una
+    # carpeta temporal: comparar deja ahí la lista de los mayores cambios)
+    import indices as ind
+    aqui = os.getcwd()
+    os.chdir(tempfile.mkdtemp())
+    with contextlib.redirect_stdout(io.StringIO()):
+        nuevo = {"indices": {}, "productos": ind.series_productos(df, ipc)}
+        for code, meta in BASKETS.items():
+            d, comp = calcular(df, ipc, meta["items"])
+            nuevo["indices"][code] = resumen(d, meta, comp)
+        import validar
+        sitio = validar.resumen_desde_indices(nuevo)
+        viejo = json.loads(json.dumps({"productos": nuevo["productos"]}))
+        viejo["productos"]["tomate"]["v"][-1] += 100
+        viejo["productos"]["borrado"] = viejo["productos"].pop("pera")
+        cmp_ = comparar(nuevo, sitio, viejo)
+    assert cmp_["semanas_iguales"] and cmp_["avance"] == 0 and cmp_["entran"] == ["pera"]
+    assert cmp_["salen"] == ["borrado"] and cmp_["cambios"][0][1] == "tomate"
+    assert not cmp_["retroceden"] and sum(1 for c in cmp_["cambios"] if c[0]) == 1
+    # el sitio va una semana atrás con el mismo método: cuadra con avance 1 y
+    # el último precio se compara en la semana del sitio
+    with contextlib.redirect_stdout(io.StringIO()):
+        atras = df[df["fecha"] < df["fecha"].max()]
+        viejo = {"indices": {}, "productos": ind.series_productos(atras, ipc)}
+        for code, meta in BASKETS.items():
+            d, comp = calcular(atras, ipc, meta["items"])
+            viejo["indices"][code] = resumen(d, meta, comp)
+        sitio = validar.resumen_desde_indices(viejo)
+        cmp_ = comparar(nuevo, sitio, viejo)
+        sitio["indices"]["fruta"]["semanas_historia"] -= 1
+        mal = comparar(nuevo, sitio, viejo)
+    assert os.path.exists(f"{PREFIJO}_mayores.json")
+    os.chdir(aqui)
+    assert cmp_["semanas_iguales"] and cmp_["avance"] == 1 and not cmp_["retroceden"]
+    # mismo método: en la semana del sitio ningún producto cambia
+    assert cmp_["cambios"] and not any(c[0] for c in cmp_["cambios"]) and not cmp_["sin_precio"]
+    assert not mal["semanas_iguales"]
+
+    # el detalle por producto agrupa como el catálogo: "Lentejas 6 mm" y
+    # "Lentejas 6mm" son un solo producto, y los de canasta van por su match
+    extra = df_prueba(sin_cambio=True)
+    extra = extra[extra["ProductoBase"] == "Tomate"].assign(ProductoBase="Lentejas 6 mm")
+    otro = extra.iloc[::3].assign(ProductoBase="Lentejas 6mm")
+    con = pd.concat([df, extra, otro], ignore_index=True)
+    assert len(filas_producto(con, "lentejas_6_mm")) == len(extra) + len(otro)
+    assert len(filas_producto(con, "tomate")) == int((con["ProductoBase"] == "Tomate").sum())
+    texto = io.StringIO()
+    with contextlib.redirect_stdout(texto):
+        detalle_productos(con, [{"slug": "lentejas_6_mm", "semana": "2016-12-26"},
+                                {"slug": "palta", "semana": "2016-12-26"}])
+    texto = texto.getvalue()
+    assert "lentejas_6_mm: estables ['Feria libre', 'Supermercado']" in texto
+    assert "palta: estables ['Feria libre', 'Supermercado']; en 2016-12-26: anterior 6,350" in texto
 
     # un año de ODEPA que no se bajó detiene la corrida (main)
     falta = df_prueba(sin_cambio=True)
@@ -856,5 +934,7 @@ def prueba() -> None:
 if __name__ == "__main__":
     if "--prueba" in sys.argv[1:]:
         prueba()
+    elif "--comparar" in sys.argv[1:]:
+        main_comparar(sys.argv[sys.argv.index("--comparar") + 1])
     else:
         main()

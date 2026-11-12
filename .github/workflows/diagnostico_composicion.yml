@@ -1,10 +1,12 @@
 name: Diagnostico composicion (one-off)
 
-# Diagnostico de composicion de puntos ODEPA (tipo de punto de monitoreo) en
-# los ingredientes de los 4 indices. Solo lectura: SOLO workflow_dispatch (sin
-# cron), no toca Pages ni usa el grupo de concurrencia "pages", no commitea
-# nada y no publica nada. Los CSV quedan como artifact del run; el detalle y el
-# resumen, en el log del job.
+# Validacion con datos reales del precio por tipo de punto (12-11-2026): la
+# serie anterior (promedio entre filas) contra la oficial nueva y lo que
+# cambiaria en el sitio. Solo lectura: SOLO workflow_dispatch (sin cron), no
+# toca Pages ni usa el grupo de concurrencia "pages", no commitea nada y no
+# publica nada. indices.json se calcula en el runner, se compara con el sitio
+# publicado y queda como artifact del run junto a los CSV; el detalle y las
+# tablas, en el log del job.
 on:
   workflow_dispatch: {}
 
@@ -14,7 +16,7 @@ permissions:
 jobs:
   diagnostico:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 90
     steps:
       - name: Clonar repo
         uses: actions/checkout@v7
@@ -25,20 +27,90 @@ jobs:
           python-version: "3.12"
 
       - name: Instalar dependencias
-        run: pip install pandas numpy requests
+        run: pip install pandas numpy requests pillow pytest
+
+      - name: Tests
+        run: python -m pytest -q tests
 
       # sin red: datos sinteticos con un cambio de muestra conocido
       - name: Prueba sintetica
         run: python diagnostico_composicion.py --prueba
 
-      - name: Ejecutar diagnostico
+      # Sin copia del log en el artifact: si el Banco Central falla, indices.py
+      # imprime el error de requests, que trae la URL con BCCH_USER y
+      # BCCH_PASS. GitHub los enmascara en el log del job, no en un archivo.
+      - name: Calcular indices con la metodologia nueva
         env:
           BCCH_USER: ${{ secrets.BCCH_USER }}
           BCCH_PASS: ${{ secrets.BCCH_PASS }}
-        # Sin copia del log en el artifact: si el Banco Central falla, indices.py
-        # imprime el error de requests, que trae la URL con BCCH_USER y
-        # BCCH_PASS. GitHub los enmascara en el log del job, no en un archivo.
-        run: python diagnostico_composicion.py
+        run: python -u indices.py
+
+      # la compuerta pre-deploy de siempre, contra el sitio publicado; su
+      # resumen va tambien al log. Si falla, el job sigue y falla al final
+      - name: validar.py
+        id: validar
+        continue-on-error: true
+        run: |
+          set +e
+          python validar.py; rc=$?
+          cat "$GITHUB_STEP_SUMMARY"
+          exit $rc
+
+      # el sitio armado con el indices.json nuevo (sin la libreria de
+      # TradingView: los graficos van en Lightweight Charts) y recorrido en
+      # Chromium: portada, Comparar, Arma tu canasta, un link de canasta y la
+      # captura PNG. Nada de esto se publica
+      - name: Sitio con los datos nuevos
+        id: sitio
+        continue-on-error: true
+        run: |
+          python build_site.py
+          npm install --no-save --silent playwright@1.49.1
+          npx playwright install chromium
+          python -m http.server 8765 >/dev/null 2>&1 &
+          sleep 2
+          cat > /tmp/navegar.js <<'JS'
+          const { chromium } = require('playwright');
+          (async () => {
+            const b = await chromium.launch();
+            const ctx = await b.newContext({ viewport: { width: 1280, height: 900 }, acceptDownloads: true });
+            const p = await ctx.newPage();
+            const errores = [];
+            p.on('pageerror', e => errores.push('pageerror ' + e.message));
+            p.on('response', r => { if (r.status() >= 400 && !r.url().includes('charting_library')) errores.push(r.status() + ' ' + r.url()); });
+            for (const [nombre, url] of [['portada', '/'], ['comparar', '/graficos.html#comparar'],
+                ['canasta', '/graficos.html#canasta'],
+                ['link de canasta', '/graficos.html#canasta=tomate:2,palta:1,marraqueta:0.5']]) {
+              // carga nueva en cada una: el link de canasta se abre como un link compartido
+              await p.goto('about:blank');
+              await p.goto('http://localhost:8765' + url, { waitUntil: 'networkidle' });
+              await p.waitForTimeout(3000);
+              const lienzos = await p.locator('canvas').count();
+              const texto = (await p.locator('main, body').first().innerText()).replace(/\s+/g, ' ');
+              const i = texto.indexOf('ACERCA DE');
+              console.log(`${nombre}: ${lienzos} canvas | ${texto.slice(i + 9, i + 509)}`);
+            }
+            const desc = p.waitForEvent('download', { timeout: 30000 }).catch(() => null);
+            await p.click('#shot');
+            const d = await desc;
+            console.log('captura PNG: ' + (d ? d.suggestedFilename() : 'SIN DESCARGA'));
+            console.log('errores: ' + (errores.length ? errores.join(' | ') : 'ninguno'));
+            await b.close();
+            if (!d || errores.length) process.exit(1);
+          })();
+          JS
+          NODE_PATH="$PWD/node_modules" node /tmp/navegar.js
+
+      - name: Antes y despues contra el sitio publicado
+        id: comparar
+        continue-on-error: true
+        run: python diagnostico_composicion.py --comparar indices.json
+
+      - name: Serie anterior y oficial por ingrediente
+        env:
+          BCCH_USER: ${{ secrets.BCCH_USER }}
+          BCCH_PASS: ${{ secrets.BCCH_PASS }}
+        run: python -u diagnostico_composicion.py
 
       - name: Subir resultados como artifact
         if: ${{ !cancelled() }}
@@ -46,7 +118,18 @@ jobs:
         with:
           name: diagnostico_composicion
           path: |
+            indices.json
             diagnostico_composicion_semanal.csv
             diagnostico_composicion_anual.csv
             diagnostico_composicion_indices.csv
           retention-days: 30
+
+      - name: Resultado de validar.py y de la comparacion
+        if: ${{ !cancelled() }}
+        run: |
+          echo "validar.py: ${{ steps.validar.outcome }}"
+          echo "comparacion con el sitio: ${{ steps.comparar.outcome }}"
+          echo "sitio con los datos nuevos: ${{ steps.sitio.outcome }}"
+          test "${{ steps.validar.outcome }}" = success
+          test "${{ steps.sitio.outcome }}" = success
+          test "${{ steps.comparar.outcome }}" = success

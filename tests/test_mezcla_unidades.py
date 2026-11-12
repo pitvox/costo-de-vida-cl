@@ -84,9 +84,11 @@ def test_entran_las_que_miden_lo_mismo_y_los_envases_de_peso_o_volumen():
 
 def test_botella_de_900_ml_entra_por_litro():
     """El aceite en "$/botella 900 ml" entra al precio por litro dividido por
-    0,9, con su mínimo y su máximo, y sin tocar las filas que recibe."""
+    0,9, con su mínimo y su máximo, y sin tocar las filas que recibe. Las
+    dos unidades van en ferias: el precio por tipo de punto (precio_oficial)
+    tiene sus propios tests en test_tipo_punto.py."""
     rs = filas("Aceite maravilla", "$/litro", 2000, SEMANAS[:14], grupo="Abarrotes y otros")
-    rs += filas("Aceite maravilla", "$/botella 900 ml", 2700, SEMANAS[12:], puntos=SUPER,
+    rs += filas("Aceite maravilla", "$/botella 900 ml", 2700, SEMANAS[12:], puntos=FERIAS[:3],
                 grupo="Abarrotes y otros")
     df = pd.DataFrame(rs)
     copia = df.copy()
@@ -184,7 +186,8 @@ def test_catalogo_no_mezcla_unidades(capsys):
     rs += filas("Aceite maravilla", "$/litro", 2000, SEMANAS[:14], grupo="Abarrotes y otros")
     rs += filas("Aceite maravilla", "$/botella 900 ml", 2600, SEMANAS[14:],
                 grupo="Abarrotes y otros")
-    # lentejas: a granel y en saco, las dos por kilo: siguen promediándose
+    # lentejas: a granel (ferias) y en saco (supermercados), las dos por
+    # kilo: siguen promediándose, por tipo de punto (precio_oficial)
     rs += filas("Lentejas 6 mm", "$/kilo", 2000, grupo="Legumbres")
     rs += filas("Lentejas 6 mm", "$/kilo (en saco de 25 kilos)", 1500, puntos=SUPER,
                 grupo="Legumbres")
@@ -204,7 +207,7 @@ def test_catalogo_no_mezcla_unidades(capsys):
     assert out["aceite_maravilla"]["v"] == [2000] * 14 + [2889] * 6
     assert out["aceite_maravilla"]["min"] == [1600] * 14 + [2311] * 6
     assert out["aceite_maravilla"]["max"] == [2400] * 14 + [3467] * 6
-    assert out["lentejas_6_mm"]["v"] == [round((4 * 2000 + 3 * 1500) / 7)] * n
+    assert out["lentejas_6_mm"]["v"] == [round((2000 + 1500) / 2)] * n
     log = capsys.readouterr().out
     assert "OTRA UNIDAD (no entra): cebolla: 60 filas en $/kilo, 2025-01-06 a 2025-05-19" in log
     assert ("OTRA UNIDAD (no entra): huevos: 60 filas en $/bandeja 30 unidades, "
