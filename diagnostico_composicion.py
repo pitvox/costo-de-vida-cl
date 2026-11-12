@@ -535,6 +535,52 @@ def main() -> None:
     print(f"Filas RM sin tipo de punto: {int((t == SIN_TIPO).sum())} de {len(df)}; productos "
           f"con filas con y sin tipo: {', '.join(mixtos) or 'ninguno'}")
     diagnostico(df, ipc, ".", leer_publicado())
+    ruta = f"{PREFIJO}_mayores.json"
+    if os.path.exists(ruta):
+        with open(ruta, encoding="utf-8") as fh:
+            detalle_productos(df, json.load(fh))
+
+
+def filas_producto(df: pd.DataFrame, slug: str) -> pd.DataFrame:
+    """Las filas de un producto del catálogo por su slug, como las agrupa
+    series_productos: por el texto de match si es de una canasta, o por su
+    nombre sin espacios ni mayúsculas."""
+    import indices as ind
+    for match, (lab, _u) in ingredientes().items():
+        if ind._slug(lab) == slug:
+            return df[df["ProductoBase"].str.contains(match, case=False, na=False)]
+    nombre = df["ProductoBase"].astype(str).str.replace(r"\s+", " ", regex=True)
+    return df[nombre.map(ind._slug) == slug]
+
+
+def detalle_productos(df: pd.DataFrame, productos: list) -> None:
+    """Para los productos del catálogo que más cambian: tipos estables,
+    semanas con precio de cada tipo antes y desde el corte, y el precio
+    nominal de cada tipo y de las dos series en la semana comparada."""
+    import indices as ind
+    print("\nPRODUCTOS DEL CATÁLOGO CON MAYOR CAMBIO: por qué cambian (pesos nominales)")
+    for x in productos:
+        sub = ind.de_su_unidad(filas_producto(df, x["slug"]))
+        if sub.empty:
+            print(f"  {x['slug']}: sin filas")
+            continue
+        t = por_tipo(sub)
+        est, resp = ind._estables(t)
+        semana = pd.Timestamp(x["semana"])
+        hay = t.notna()[t.notna().any(axis=1)]
+        antes, desde = hay[hay.index < CORTE], hay[hay.index >= CORTE]
+        ant = sub.groupby("fecha")["Precio promedio"].mean().resample("W-MON").mean()
+        ofi = ind.precio_oficial(sub)
+        filas = sub.assign(_t=tipo_punto(sub), _s=semana_de(sub["fecha"]))
+        n = filas[filas["_s"] == semana].groupby("_t").size()
+
+        def pct(h, c):
+            return "s/s" if h.empty else f"{100 * h[c].mean():.0f}%"
+        print(f"  {x['slug']}: estables {est}{' (respaldo)' if resp else ''}; en {x['semana']}: "
+              f"anterior {ant.get(semana, np.nan):,.0f}, oficial {ofi.get(semana, np.nan):,.0f}")
+        print("    " + "; ".join(
+            f"{c} {pct(antes, c)} / {pct(desde, c)}, {t[c].get(semana, np.nan):,.0f} "
+            f"({int(n.get(c, 0))} filas){'' if c in est else ', no estable'}" for c in t.columns))
 
 
 # ---------------- comparación con el sitio publicado ----------------
@@ -619,6 +665,8 @@ def comparar(nuevo: dict, resumen_sitio: dict, indices_sitio: dict) -> dict:
               f"{(xn / xv - 1) * 100:+.1f}% |")
     sin_cambio = sum(1 for c in cambios if c[0] == 0)
     print(f"  {sin_cambio} de {len(cambios)} productos comunes con el mismo último precio")
+    with open(f"{PREFIJO}_mayores.json", "w", encoding="utf-8") as fh:
+        json.dump([{"slug": c[1], "semana": c[2]} for c in cambios[:10]], fh)
     return {"semanas_iguales": iguales, "avance": avance, "entran": entran, "salen": salen,
             "retroceden": retroceden, "productos": len(prod), "cambios": cambios}
 
