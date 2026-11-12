@@ -56,6 +56,49 @@ jobs:
           cat "$GITHUB_STEP_SUMMARY"
           exit $rc
 
+      # el sitio armado con el indices.json nuevo (sin la libreria de
+      # TradingView: los graficos van en Lightweight Charts) y recorrido en
+      # Chromium: portada, Comparar, Arma tu canasta, un link de canasta y la
+      # captura PNG. Nada de esto se publica
+      - name: Sitio con los datos nuevos
+        id: sitio
+        continue-on-error: true
+        run: |
+          python build_site.py
+          npm install --no-save --silent playwright@1.49.1
+          npx playwright install chromium
+          python -m http.server 8765 >/dev/null 2>&1 &
+          sleep 2
+          cat > /tmp/navegar.js <<'JS'
+          const { chromium } = require('playwright');
+          (async () => {
+            const b = await chromium.launch();
+            const ctx = await b.newContext({ viewport: { width: 1280, height: 900 }, acceptDownloads: true });
+            const p = await ctx.newPage();
+            const errores = [];
+            p.on('pageerror', e => errores.push('pageerror ' + e.message));
+            p.on('response', r => { if (r.status() >= 400 && !r.url().includes('charting_library')) errores.push(r.status() + ' ' + r.url()); });
+            for (const [nombre, url] of [['portada', '/'], ['comparar', '/graficos.html#comparar'],
+                ['canasta', '/graficos.html#canasta'],
+                ['link de canasta', '/graficos.html#canasta=tomate:2,palta:1,marraqueta:0.5']]) {
+              await p.goto('http://localhost:8765' + url, { waitUntil: 'networkidle' });
+              await p.waitForTimeout(3000);
+              const lienzos = await p.locator('canvas').count();
+              const texto = (await p.locator('main, body').first().innerText()).replace(/\s+/g, ' ');
+              const i = texto.indexOf('ACERCA DE');
+              console.log(`${nombre}: ${lienzos} canvas | ${texto.slice(i + 9, i + 509)}`);
+            }
+            const desc = p.waitForEvent('download', { timeout: 30000 }).catch(() => null);
+            await p.click('#shot');
+            const d = await desc;
+            console.log('captura PNG: ' + (d ? d.suggestedFilename() : 'SIN DESCARGA'));
+            console.log('errores: ' + (errores.length ? errores.join(' | ') : 'ninguno'));
+            await b.close();
+            if (!d || errores.length) process.exit(1);
+          })();
+          JS
+          NODE_PATH="$PWD/node_modules" node /tmp/navegar.js
+
       - name: Antes y despues contra el sitio publicado
         id: comparar
         continue-on-error: true
@@ -84,5 +127,7 @@ jobs:
         run: |
           echo "validar.py: ${{ steps.validar.outcome }}"
           echo "comparacion con el sitio: ${{ steps.comparar.outcome }}"
+          echo "sitio con los datos nuevos: ${{ steps.sitio.outcome }}"
           test "${{ steps.validar.outcome }}" = success
+          test "${{ steps.sitio.outcome }}" = success
           test "${{ steps.comparar.outcome }}" = success
