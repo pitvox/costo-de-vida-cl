@@ -7,11 +7,6 @@ name: Precio pagado por el Estado (piloto, manual)
 # para no sobrecargar el sistema de ChileCompra.
 
 on:
-  # TEMPORAL: corre al empujar la rama del piloto, porque workflow_dispatch
-  # solo funciona desde main. Se quita antes del merge.
-  push:
-    branches: [claude/piloto-precio-pagado]
-    paths: [mercado_publico.py, .github/workflows/precio_pagado.yml]
   workflow_dispatch:
     inputs:
       desde:
@@ -32,7 +27,7 @@ jobs:
     steps:
       - id: anios
         run: |
-          python3 -c "import json; print('anios=' + json.dumps(list(range(int('${{ inputs.desde || '2008' }}'), int('${{ inputs.hasta || '2026' }}') + 1))))" >> "$GITHUB_OUTPUT"
+          python3 -c "import json; print('anios=' + json.dumps(list(range(int('${{ inputs.desde }}'), int('${{ inputs.hasta }}') + 1))))" >> "$GITHUB_OUTPUT"
 
   anio:
     needs: plan
