@@ -1,0 +1,66 @@
+# TEMPORAL: verifica con el indices.json real de carestia.cl la nota del
+# cambio por tipo de punto (el entorno de Claude no alcanza el sitio). Corre
+# solo en esta rama, no publica nada y se borra junto con la rama.
+name: Verificar nota del quiebre (temporal)
+on:
+  push:
+    branches: [claude/verificar-nota-quiebre]
+permissions:
+  contents: read
+jobs:
+  verificar:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Dependencias
+        run: pip install pandas numpy requests pillow pytest
+      - name: Tests
+        run: python -m pytest -q -p no:cacheprovider tests
+      - name: indices.json real
+        run: |
+          curl -fsS -o /tmp/indices.json https://carestia.cl/indices.json
+          ls -la /tmp/indices.json
+      - name: Build de la rama
+        run: |
+          cp /tmp/indices.json indices.json
+          python build_site.py
+          mkdir -p /tmp/rama
+          rsync -a --exclude .git --exclude .github --exclude __pycache__ ./ /tmp/rama/
+      - name: Build de main
+        run: |
+          git worktree add -q /tmp/wt origin/main
+          cp /tmp/indices.json /tmp/wt/indices.json
+          cd /tmp/wt
+          python build_site.py > /tmp/build_main.log 2>&1
+          tail -3 /tmp/build_main.log
+          mkdir -p /tmp/main
+          rsync -a --exclude .git --exclude .github --exclude __pycache__ ./ /tmp/main/
+      - name: Diferencias entre main y la rama
+        run: |
+          diff -rq /tmp/main /tmp/rama | head -40 || true
+          echo "archivos distintos: $(diff -rq /tmp/main /tmp/rama | wc -l)"
+      - name: Nota en el HTML
+        run: |
+          for f in $(grep -rl "Corrección del 12 de noviembre" /tmp/rama --include=*.html); do
+            echo "== ${f#/tmp/rama/}"
+            grep -o "Corrección del 12 de noviembre[^<]*<[^>]*>[^<]*" "$f" | head -1 | cut -c1-1200 > /tmp/nota.txt
+            cat /tmp/nota.txt
+            echo "prohibidos en la nota: $(grep -cE '—|–| · | vs ' /tmp/nota.txt || true)"
+          done
+      - name: Cifras de la semana del 2026-11-02
+        run: |
+          python - <<'EOF'
+          import json
+          d = json.load(open("/tmp/indices.json", encoding="utf-8"))
+          print("ipc_mes:", d.get("ipc_mes"))
+          for code, r in d.get("indices", {}).items():
+              serie = r.get("real") or []
+              sem = [p for p in serie if str(p.get("time", ""))[:10] == "2026-11-02"]
+              print(code, sem[:1], "veredicto:", r.get("veredicto"), "percentil_temporada:", r.get("percentil_temporada"))
+          EOF
