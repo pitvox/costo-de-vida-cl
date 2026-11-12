@@ -29,6 +29,13 @@ Desde el 20-10-2026, las filas de un envase con su peso o volumen declarado
 entran convertidas con ese número (el aceite en $/botella 900 ml, por litro
 dividido por 0,9); las de otra unidad siguen fuera.
 
+Precio por tipo de punto (12-11-2026, autorizado por el dueño): el precio
+semanal de un producto ya no es el promedio simple de todas sus filas, que se
+movía cuando ODEPA cambiaba la mezcla de puntos (feria, supermercado,
+carnicería...) aunque no cambiara ningún precio. Ahora se calcula dentro de
+cada tipo de punto estable y luego como promedio simple entre ellos (ver
+precio_oficial). Vale para los 4 índices y para el catálogo completo.
+
 Correr:
   pip install pandas numpy requests statsmodels
   python indices.py
@@ -186,8 +193,9 @@ def _norm(df: pd.DataFrame, year: int) -> pd.DataFrame:
         out["region_rm"] = True
 
     # punto de monitoreo de la fila: sector y tipo de punto ("Oriente |
-    # Supermercado"). Solo lo usa el mínimo de puntos de series_productos;
-    # sin esas columnas queda vacío y ese control no se aplica
+    # Supermercado"). Lo usan el precio por tipo de punto (precio_oficial)
+    # y el mínimo de puntos de series_productos; sin esas columnas queda
+    # vacío: el producto es un solo estrato y ese control no se aplica
     c_sec = pick("sector")
     c_tipo = pick("tipo de punto monitoreo", "tipo_punto_monitoreo", "tipo de punto")
     if c_sec and c_tipo:
@@ -575,14 +583,109 @@ def de_su_unidad(sub: pd.DataFrame) -> pd.DataFrame:
     return sub
 
 
+# ---------------- Precio por tipo de punto ----------------
+# Regla del 12-11-2026 (autorizada por el dueño tras el diagnóstico de
+# composición, diagnostico_composicion.py): ODEPA cambia con los años la
+# mezcla de puntos de monitoreo de un producto (en marzo de 2013 amplía
+# puntos, desde octubre de 2014 el supermercado cotiza la cebolla por kilo,
+# desde mayo de 2020 entran las ferias a los huevos) y el promedio simple de
+# todas las filas se movía con la mezcla aunque no cambiara ningún precio.
+#   1. Tipos estables: los tipos de punto con precio en al menos 80% de las
+#      semanas W-MON del producto antes del corte (1 de marzo de 2013) y en
+#      al menos 80% de sus semanas desde el corte. Si el producto tiene
+#      semanas de un solo lado del corte, 80% de todas sus semanas. Si ningún
+#      tipo cumple, el tipo con más semanas con precio (empate: el primero
+#      por nombre).
+#   2. Precio semanal: dentro de cada tipo estable, promedio de las filas de
+#      cada fecha y luego de esas fechas en la semana W-MON; después,
+#      promedio simple entre los tipos estables. Un tipo estable sin precio
+#      en una semana usa su último precio hasta 4 semanas; más allá, el
+#      promedio va con los tipos estables que tengan precio. Una semana sin
+#      precio propio de ningún tipo estable queda sin precio, como hoy (y el
+#      ffill de la canasta o del catálogo la completa como siempre).
+# Las filas sin tipo de punto forman su propio estrato (SIN_TIPO): un
+# producto sin tipo de punto en ninguna fila queda igual que antes.
+CORTE_MUESTRA = pd.Timestamp("2013-03-01")   # ODEPA amplía productos y puntos
+TIPO_ESTABLE = 0.8                           # fracción mínima de semanas con precio
+TIPO_FFILL = 4                               # semanas que un tipo arrastra su precio
+SIN_TIPO = "(sin tipo)"
+
+
+def tipo_punto(sub: pd.DataFrame) -> pd.Series:
+    """Tipo de punto de cada fila: lo que va después de " | " en Punto
+    ("Oriente | Feria libre" es "Feria libre"); SIN_TIPO si no lo trae."""
+    if "Punto" not in sub.columns:
+        return pd.Series(SIN_TIPO, index=sub.index, dtype=object)
+    p = sub["Punto"].fillna("").astype(str).str.strip()
+    t = p.str.rpartition(" | ")[2].str.strip()
+    return t.where(p.str.contains(" | ", regex=False) & (t != ""), SIN_TIPO)
+
+
+def por_tipo(sub: pd.DataFrame, col: str = "Precio promedio") -> pd.DataFrame:
+    """Precio semanal W-MON de cada tipo de punto (una columna por tipo):
+    promedio de las filas de cada fecha y tipo, y luego de esas fechas en la
+    semana (las dos etapas de siempre, dentro del tipo)."""
+    if sub.empty:
+        return pd.DataFrame(index=pd.DatetimeIndex([], name="fecha"), dtype=float)
+    t = (sub.assign(_tipo=tipo_punto(sub)).groupby(["fecha", "_tipo"])[col].mean()
+         .unstack("_tipo").rename_axis(columns=None))
+    return t.resample("W-MON").mean()
+
+
+def tipos_estables(semanal: pd.DataFrame, corte: pd.Timestamp = CORTE_MUESTRA) -> list:
+    """Los tipos estables de un producto (regla 1) desde su por_tipo: las
+    semanas del producto son las que tienen precio de algún tipo."""
+    hay = semanal.notna()
+    hay = hay[hay.any(axis=1)]
+    if hay.empty:
+        return []
+    antes, desde = hay[hay.index < corte], hay[hay.index >= corte]
+    if antes.empty or desde.empty:
+        ok = hay.mean().round(9) >= TIPO_ESTABLE
+    else:
+        ok = (antes.mean().round(9) >= TIPO_ESTABLE) & (desde.mean().round(9) >= TIPO_ESTABLE)
+    estables = sorted(ok.index[ok])
+    if estables:
+        return estables
+    cuenta = hay.sum()
+    return [sorted(cuenta.index[cuenta == cuenta.max()])[0]]
+
+
+def combinar_tipos(semanal: pd.DataFrame, estables: list) -> tuple:
+    """Regla 2 sobre el precio semanal por tipo: promedio simple entre los
+    tipos estables, cada uno con su último precio hasta TIPO_FFILL semanas.
+    Devuelve (serie, pesos): pesos es el peso de cada tipo estable en cada
+    semana con precio (1/k entre los k que entran, 0 el resto)."""
+    p = semanal.reindex(columns=estables)
+    hay = p.notna().any(axis=1)
+    lleno = p.ffill(limit=TIPO_FFILL)
+    entra = lleno.notna()
+    pesos = entra.div(entra.sum(axis=1), axis=0)[hay]
+    return lleno.mean(axis=1).where(hay), pesos
+
+
+def precio_oficial(sub: pd.DataFrame, col: str = "Precio promedio",
+                   estables: list = None) -> pd.Series:
+    """Precio semanal W-MON oficial de las filas de un producto (ya en su
+    unidad, de_su_unidad), solo las semanas con precio. Los tipos estables
+    salen del precio promedio, así el mínimo y el máximo usan los mismos."""
+    if sub.empty:
+        return pd.Series(dtype=float)
+    if estables is None:
+        estables = tipos_estables(por_tipo(sub))
+    return combinar_tipos(por_tipo(sub, col), estables)[0].dropna()
+
+
 # ---------------- Calculo de un indice ----------------
 def precio_semanal(df: pd.DataFrame, texto: str, col: str = "Precio promedio") -> pd.Series:
+    """Precio semanal oficial (precio_oficial) del producto que calza con
+    'texto', en la unidad que declara (de_su_unidad)."""
     sub = de_su_unidad(df[df["ProductoBase"].str.contains(texto, case=False, na=False)])
     if sub.empty:
         if col == "Precio promedio":
             print(f"    [aviso] sin datos para '{texto}'")
         return pd.Series(dtype=float)
-    return sub.groupby("fecha")[col].mean().sort_index()
+    return precio_oficial(sub, col)
 
 
 def _serie_canasta(df, items, col):
@@ -724,11 +827,13 @@ def pocos_puntos(s: pd.Series, puntos: pd.Series):
 
 
 def _precios(sub: pd.DataFrame) -> tuple:
-    """Promedio, mínimo y máximo por fecha (promedio entre filas, como
-    precio_semanal) de las filas de un producto. Sin columnas de mínimo o
-    máximo, el promedio (como _norm)."""
-    g = sub.groupby("fecha")
-    return tuple(g[c if c in sub.columns else "Precio promedio"].mean().sort_index()
+    """Promedio, mínimo y máximo semanales oficiales (precio_oficial, como
+    precio_semanal) de las filas de un producto, con los mismos tipos
+    estables. Sin columnas de mínimo o máximo, el promedio (como _norm)."""
+    if sub.empty:
+        return (pd.Series(dtype=float),) * 3
+    estables = tipos_estables(por_tipo(sub))
+    return tuple(precio_oficial(sub, c if c in sub.columns else "Precio promedio", estables)
                  for c in ("Precio promedio", "Precio minimo", "Precio maximo"))
 
 

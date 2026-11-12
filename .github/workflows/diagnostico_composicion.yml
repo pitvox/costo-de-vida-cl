@@ -1,10 +1,12 @@
 name: Diagnostico composicion (one-off)
 
-# Diagnostico de composicion de puntos ODEPA (tipo de punto de monitoreo) en
-# los ingredientes de los 4 indices. Solo lectura: SOLO workflow_dispatch (sin
-# cron), no toca Pages ni usa el grupo de concurrencia "pages", no commitea
-# nada y no publica nada. Los CSV quedan como artifact del run; el detalle y el
-# resumen, en el log del job.
+# Validacion con datos reales del precio por tipo de punto (12-11-2026): la
+# serie anterior (promedio entre filas) contra la oficial nueva y lo que
+# cambiaria en el sitio. Solo lectura: SOLO workflow_dispatch (sin cron), no
+# toca Pages ni usa el grupo de concurrencia "pages", no commitea nada y no
+# publica nada. indices.json se calcula en el runner, se compara con el sitio
+# publicado y queda como artifact del run junto a los CSV; el detalle y las
+# tablas, en el log del job.
 on:
   workflow_dispatch: {}
 
@@ -14,7 +16,7 @@ permissions:
 jobs:
   diagnostico:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - name: Clonar repo
         uses: actions/checkout@v7
@@ -25,20 +27,44 @@ jobs:
           python-version: "3.12"
 
       - name: Instalar dependencias
-        run: pip install pandas numpy requests
+        run: pip install pandas numpy requests pillow pytest
+
+      - name: Tests
+        run: python -m pytest -q tests
 
       # sin red: datos sinteticos con un cambio de muestra conocido
       - name: Prueba sintetica
         run: python diagnostico_composicion.py --prueba
 
-      - name: Ejecutar diagnostico
+      # Sin copia del log en el artifact: si el Banco Central falla, indices.py
+      # imprime el error de requests, que trae la URL con BCCH_USER y
+      # BCCH_PASS. GitHub los enmascara en el log del job, no en un archivo.
+      - name: Calcular indices con la metodologia nueva
         env:
           BCCH_USER: ${{ secrets.BCCH_USER }}
           BCCH_PASS: ${{ secrets.BCCH_PASS }}
-        # Sin copia del log en el artifact: si el Banco Central falla, indices.py
-        # imprime el error de requests, que trae la URL con BCCH_USER y
-        # BCCH_PASS. GitHub los enmascara en el log del job, no en un archivo.
-        run: python diagnostico_composicion.py
+        run: python -u indices.py
+
+      # la compuerta pre-deploy de siempre, contra el sitio publicado; su
+      # resumen va tambien al log. Si falla, el job sigue y falla al final
+      - name: validar.py
+        id: validar
+        continue-on-error: true
+        run: |
+          python validar.py; rc=$?
+          cat "$GITHUB_STEP_SUMMARY"
+          exit $rc
+
+      - name: Antes y despues contra el sitio publicado
+        id: comparar
+        continue-on-error: true
+        run: python diagnostico_composicion.py --comparar indices.json
+
+      - name: Serie anterior y oficial por ingrediente
+        env:
+          BCCH_USER: ${{ secrets.BCCH_USER }}
+          BCCH_PASS: ${{ secrets.BCCH_PASS }}
+        run: python -u diagnostico_composicion.py
 
       - name: Subir resultados como artifact
         if: ${{ !cancelled() }}
@@ -46,7 +72,16 @@ jobs:
         with:
           name: diagnostico_composicion
           path: |
+            indices.json
             diagnostico_composicion_semanal.csv
             diagnostico_composicion_anual.csv
             diagnostico_composicion_indices.csv
           retention-days: 30
+
+      - name: Resultado de validar.py y de la comparacion
+        if: ${{ !cancelled() }}
+        run: |
+          echo "validar.py: ${{ steps.validar.outcome }}"
+          echo "comparacion con el sitio: ${{ steps.comparar.outcome }}"
+          test "${{ steps.validar.outcome }}" = success
+          test "${{ steps.comparar.outcome }}" = success
