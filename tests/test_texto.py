@@ -408,6 +408,18 @@ def test_metodologia_usa_el_texto_del_dueno_y_las_canastas(sitio):
         "semana del 12 de octubre de 2026, el Índice Asado pasa de $26.467 a $25.924, el Índice "
         "Ensalada de $7.840 a $7.297 (de caro a normal para la época) y el Índice Desayuno de "
         "$10.451 a $9.966. El Índice Fruta no cambia.")
+    quiebre = (
+        "<strong>Corrección del 12 de noviembre de 2026.</strong> ODEPA cotiza cada producto "
+        "en varios tipos de punto (ferias libres, supermercados y carnicerías) y la proporción "
+        "de cada tipo en su encuesta cambió con los años. El sitio promediaba todos los puntos "
+        "juntos, así que parte del movimiento de algunas series venía de ese cambio de mezcla y "
+        "no del precio. Desde ahora el precio de cada producto se calcula por separado en cada "
+        "tipo de punto que ODEPA cotiza en la gran mayoría de las semanas, antes y después de "
+        "marzo de 2013, y el precio de la semana es el promedio simple de esos tipos. Toda la "
+        "historia se recalculó con este criterio. En la semana del 2 de noviembre de 2026, el "
+        "Índice Asado pasa de $27.127 a $25.939, el Índice Ensalada de $7.378 a $7.716, el "
+        "Índice Fruta de $6.794 a $7.127 y el Índice Desayuno de $9.855 a $10.294. Ensalada, "
+        "Fruta y Desayuno pasan de normal a caro para la época.")
     assert notas.endswith(
         '<li><strong><span class="nw">05-10-2026</span>.</strong> El veredicto pasa a '
         "compararse con el mismo mes de "
@@ -415,6 +427,7 @@ def test_metodologia_usa_el_texto_del_dueno_y_las_canastas(sitio):
         "con un alza ni marcar casi todo como caro por la tendencia de largo plazo. Los "
         "veredictos publicados antes de esta fecha no son comparables con los nuevos.</li>\n"
         f"<li>{correccion}</li>\n"
+        f"<li>{quiebre}</li>\n"
         "</ul>\n    </section>")
 
 
