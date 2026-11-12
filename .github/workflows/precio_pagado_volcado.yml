@@ -1,0 +1,32 @@
+name: Precio pagado, volcado temporal
+
+# TEMPORAL: imprime en el log el CSV del artifact de la corrida 43290293021
+# para traerlo a la sesión de Claude (el entorno no alcanza el almacenamiento
+# de artifacts). El log se borra después de leerlo y este archivo se quita
+# antes del merge.
+
+on:
+  push:
+    branches: [claude/piloto-precio-pagado]
+    paths: [.github/workflows/precio_pagado_volcado.yml]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  volcar:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Bajar el artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: precio_pagado
+          run-id: 43290293021
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Imprimir
+        run: |
+          echo "INICIO_CSV"
+          cat precio_pagado.csv
+          echo "FIN_CSV"
