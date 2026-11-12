@@ -542,15 +542,25 @@ def main() -> None:
 
 
 def filas_producto(df: pd.DataFrame, slug: str) -> pd.DataFrame:
-    """Las filas de un producto del catálogo por su slug, como las agrupa
-    series_productos: por el texto de match si es de una canasta, o por su
-    nombre sin espacios ni mayúsculas."""
+    """Las filas de un producto del catálogo por su slug, agrupadas como en
+    series_productos: los de las canastas por su texto de match; el resto,
+    por ProductoBase en minúsculas y sin espacios, y gana el primer grupo
+    con ese slug (como 'if slug in out' allá)."""
+    import re
     import indices as ind
+    consumidos = pd.Series(False, index=df.index)
     for match, (lab, _u) in ingredientes().items():
+        mask = df["ProductoBase"].str.contains(match, case=False, na=False)
         if ind._slug(lab) == slug:
-            return df[df["ProductoBase"].str.contains(match, case=False, na=False)]
-    nombre = df["ProductoBase"].astype(str).str.replace(r"\s+", " ", regex=True)
-    return df[nombre.map(ind._slug) == slug]
+            return df[mask]
+        consumidos |= mask
+    resto = df[~consumidos]
+    clave = resto["ProductoBase"].astype(str).str.lower().str.replace(r"\s+", "", regex=True)
+    for _k, sub in resto.groupby(clave):
+        label = re.sub(r"\s+", " ", ind._modal(sub["ProductoBase"]))
+        if label and ind._slug(label) == slug:
+            return sub
+    return df.iloc[0:0]
 
 
 def detalle_productos(df: pd.DataFrame, productos: list) -> None:
@@ -646,7 +656,7 @@ def comparar(nuevo: dict, resumen_sitio: dict, indices_sitio: dict) -> dict:
     print(f"\nCATÁLOGO: {len(viejo)} productos en el sitio -> {len(prod)}")
     print(f"  entran: {', '.join(entran) or 'ninguno'}")
     print(f"  salen: {', '.join(salen) or 'ninguno'}")
-    cambios, retroceden = [], []
+    cambios, retroceden, sin_precio = [], [], []
     for slug in sorted(set(prod) & set(viejo)):
         sv, xv = _ultimo(viejo[slug])
         sn, _xn = _ultimo(prod[slug])
@@ -655,7 +665,10 @@ def comparar(nuevo: dict, resumen_sitio: dict, indices_sitio: dict) -> dict:
         xn = _en(prod[slug], sv) if sv else None
         if xv and xn:
             cambios.append((abs(xn / xv - 1), slug, sv, xv, xn))
+        elif xv and not xn:
+            sin_precio.append(f"{slug} ({sv})")
     print(f"  última semana con precio que retrocede: {', '.join(retroceden) or 'ninguno'}")
+    print("  sin precio en la última semana del sitio: " + (', '.join(sin_precio) or 'ninguno'))
     cambios.sort(reverse=True)
     print("  los 10 con mayor cambio en su último precio real (misma semana del sitio):")
     print("| Producto | unidad | semana | sitio | nuevo | cambio |")
@@ -668,7 +681,8 @@ def comparar(nuevo: dict, resumen_sitio: dict, indices_sitio: dict) -> dict:
     with open(f"{PREFIJO}_mayores.json", "w", encoding="utf-8") as fh:
         json.dump([{"slug": c[1], "semana": c[2]} for c in cambios[:10]], fh)
     return {"semanas_iguales": iguales, "avance": avance, "entran": entran, "salen": salen,
-            "retroceden": retroceden, "productos": len(prod), "cambios": cambios}
+            "retroceden": retroceden, "sin_precio": sin_precio, "productos": len(prod),
+            "cambios": cambios}
 
 
 def main_comparar(ruta: str) -> None:
@@ -880,7 +894,25 @@ def prueba() -> None:
     assert os.path.exists(f"{PREFIJO}_mayores.json")
     os.chdir(aqui)
     assert cmp_["semanas_iguales"] and cmp_["avance"] == 1 and not cmp_["retroceden"]
+    # mismo método: en la semana del sitio ningún producto cambia
+    assert cmp_["cambios"] and not any(c[0] for c in cmp_["cambios"]) and not cmp_["sin_precio"]
     assert not mal["semanas_iguales"]
+
+    # el detalle por producto agrupa como el catálogo: "Lentejas 6 mm" y
+    # "Lentejas 6mm" son un solo producto, y los de canasta van por su match
+    extra = df_prueba(sin_cambio=True)
+    extra = extra[extra["ProductoBase"] == "Tomate"].assign(ProductoBase="Lentejas 6 mm")
+    otro = extra.iloc[::3].assign(ProductoBase="Lentejas 6mm")
+    con = pd.concat([df, extra, otro], ignore_index=True)
+    assert len(filas_producto(con, "lentejas_6_mm")) == len(extra) + len(otro)
+    assert len(filas_producto(con, "tomate")) == int((con["ProductoBase"] == "Tomate").sum())
+    texto = io.StringIO()
+    with contextlib.redirect_stdout(texto):
+        detalle_productos(con, [{"slug": "lentejas_6_mm", "semana": "2016-12-26"},
+                                {"slug": "palta", "semana": "2016-12-26"}])
+    texto = texto.getvalue()
+    assert "lentejas_6_mm: estables ['Feria libre', 'Supermercado']" in texto
+    assert "palta: estables ['Feria libre', 'Supermercado']; en 2016-12-26: anterior 6,350" in texto
 
     # un año de ODEPA que no se bajó detiene la corrida (main)
     falta = df_prueba(sin_cambio=True)

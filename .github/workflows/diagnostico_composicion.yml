@@ -81,6 +81,8 @@ jobs:
             for (const [nombre, url] of [['portada', '/'], ['comparar', '/graficos.html#comparar'],
                 ['canasta', '/graficos.html#canasta'],
                 ['link de canasta', '/graficos.html#canasta=tomate:2,palta:1,marraqueta:0.5']]) {
+              // carga nueva en cada una: el link de canasta se abre como un link compartido
+              await p.goto('about:blank');
               await p.goto('http://localhost:8765' + url, { waitUntil: 'networkidle' });
               await p.waitForTimeout(3000);
               const lienzos = await p.locator('canvas').count();

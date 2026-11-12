@@ -276,6 +276,21 @@ def test_semanas_sin_tipo_de_punto_en_un_producto_con_tipos():
     assert (pesos.loc[pesos.index.year < 2016, indices.SIN_TIPO] == 0).all()
 
 
+def test_minimo_y_maximo_salen_de_los_mismos_estratos_que_el_promedio():
+    """Una semana con una fila de feria (con el mínimo vacío) y una fila sin
+    tipo de punto: es una semana con tipo, así que el mínimo no sale de la
+    fila sin tipo; la feria usa su último mínimo, como su promedio."""
+    semanas = pd.date_range("2024-01-01", periods=10, freq="W-MON")
+    rs = [fila("Papa", "$/kilo", f, "Norte | Feria libre", 1000) for f in semanas]
+    rs[5]["Precio minimo"] = np.nan
+    rs.append(fila("Papa", "$/kilo", semanas[5] - pd.Timedelta(days=1), "", 3000))
+    df = pd.DataFrame(rs)
+    prom = indices.precio_semanal(df, "Papa")
+    minimo = indices.precio_semanal(df, "Papa", "Precio minimo")
+    assert (prom == 1000).all() and (minimo == 800).all()
+    assert list(minimo.index) == list(semanas)
+
+
 # ---------------- una sola función, en indices.py ----------------
 def _definidas(archivo):
     src = open(os.path.join(RAIZ, archivo), encoding="utf-8").read()

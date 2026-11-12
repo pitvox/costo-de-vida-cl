@@ -662,7 +662,8 @@ def tipos_estables(semanal: pd.DataFrame, corte: pd.Timestamp = CORTE_MUESTRA) -
     return _estables(semanal, corte)[0]
 
 
-def combinar_tipos(semanal: pd.DataFrame, estables: list) -> tuple:
+def combinar_tipos(semanal: pd.DataFrame, estables: list,
+                   presencia: pd.DataFrame = None) -> tuple:
     """Regla 2 sobre el precio semanal por tipo (por_tipo, con todos sus
     tipos): en cada semana con filas de ODEPA, promedio simple entre los
     tipos estables, cada uno con su último precio hasta TIPO_FFILL semanas.
@@ -672,16 +673,22 @@ def combinar_tipos(semanal: pd.DataFrame, estables: list) -> tuple:
     de punto lleva el promedio de sus filas, como antes. Devuelve (serie,
     pesos): pesos es el peso de cada tipo en cada semana con precio (1/k
     entre los k estables que entran, 0 el resto; SIN_TIPO pesa 1 en las
-    semanas sin filas con tipo)."""
+    semanas sin filas con tipo). 'presencia' dice qué tipos tienen filas en
+    cada semana (por defecto, los que tienen valor en 'semanal'): con el
+    precio promedio, el mínimo y el máximo salen de los mismos estratos."""
+    if presencia is None:
+        presencia = semanal.notna()
+    presencia = presencia.reindex(index=semanal.index, columns=semanal.columns,
+                                  fill_value=False).astype(bool)
     p = semanal.reindex(columns=estables)
-    filas = semanal.notna().any(axis=1)
+    filas = presencia.any(axis=1)
     lleno = p.ffill(limit=TIPO_FFILL)
     serie = lleno.mean(axis=1).where(filas)
     entra = lleno.notna() & filas.to_numpy()[:, None]
     pesos = entra.div(entra.sum(axis=1).replace(0, np.nan), axis=0).fillna(0.0)
     if SIN_TIPO in semanal.columns and SIN_TIPO not in estables:
-        con_tipo = semanal.drop(columns=SIN_TIPO).notna().any(axis=1)
-        solo = ~con_tipo & semanal[SIN_TIPO].notna()
+        con_tipo = presencia.drop(columns=SIN_TIPO).any(axis=1)
+        solo = ~con_tipo & presencia[SIN_TIPO]
         serie = serie.mask(solo, semanal[SIN_TIPO])
         pesos = pesos.mask(solo, 0.0)
         pesos[SIN_TIPO] = solo.astype(float)
@@ -695,9 +702,11 @@ def precio_oficial(sub: pd.DataFrame, col: str = "Precio promedio",
     salen del precio promedio, así el mínimo y el máximo usan los mismos."""
     if sub.empty:
         return pd.Series(dtype=float)
+    base = por_tipo(sub)
     if estables is None:
-        estables = tipos_estables(por_tipo(sub))
-    return combinar_tipos(por_tipo(sub, col), estables)[0].dropna()
+        estables = tipos_estables(base)
+    semanal = base if col == "Precio promedio" else por_tipo(sub, col)
+    return combinar_tipos(semanal, estables, base.notna())[0].dropna()
 
 
 # ---------------- Calculo de un indice ----------------
@@ -1032,11 +1041,13 @@ def series_productos(df: pd.DataFrame, ipc: pd.Series, descartes: list = None,
     for slug, u, f, n, desde, hasta in convertidas:
         print(f"OTRO ENVASE (entra convertido, precio x {f:.4g}): {slug}: {n} filas en {u}, "
               f"{desde:%Y-%m-%d} a {hasta:%Y-%m-%d}")
-    for slug, tipo in respaldo:
+    for slug, tipo in dict(respaldo).items():
+        if slug not in out:
+            continue
         print(f"RESPALDO (ningún tipo de punto llega al {TIPO_ESTABLE:.0%} de las semanas, "
               f"entra solo {tipo}): {slug}")
     print(f"Catálogo: {len(out)} incluidos, {len(excluidos)} excluidos, "
-          f"{len(respaldo)} con un tipo de punto por respaldo")
+          f"{len(set(dict(respaldo)) & set(out))} con un tipo de punto por respaldo")
     return out
 
 
