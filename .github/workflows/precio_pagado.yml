@@ -1,0 +1,119 @@
+name: Precio pagado por el Estado (piloto, manual)
+
+# Corre mercado_publico.py año por año sobre la descarga masiva de órdenes de
+# compra de ChileCompra y deja el resultado como artifact de 3 días. No
+# publica nada, no toca el sitio ni datos/ y no hace commit: es material para
+# ventas. Los meses se bajan de a uno por job y como máximo 3 jobs a la vez,
+# para no sobrecargar el sistema de ChileCompra.
+
+on:
+  # TEMPORAL: corre al empujar la rama del piloto, porque workflow_dispatch
+  # solo funciona desde main. Se quita antes del merge.
+  push:
+    branches: [claude/piloto-precio-pagado]
+    paths: [mercado_publico.py, .github/workflows/precio_pagado.yml]
+  workflow_dispatch:
+    inputs:
+      desde:
+        description: "Primer año"
+        default: "2008"
+      hasta:
+        description: "Último año"
+        default: "2026"
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    outputs:
+      anios: ${{ steps.anios.outputs.anios }}
+    steps:
+      - id: anios
+        run: |
+          python3 -c "import json; print('anios=' + json.dumps(list(range(int('${{ inputs.desde || '2008' }}'), int('${{ inputs.hasta || '2026' }}') + 1))))" >> "$GITHUB_OUTPUT"
+
+  anio:
+    needs: plan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        anio: ${{ fromJSON(needs.plan.outputs.anios) }}
+    steps:
+      - name: Clonar repo
+        uses: actions/checkout@v7
+
+      - name: Instalar Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependencias
+        run: pip install requests pytest
+
+      - name: Tests del piloto
+        run: python -m pytest -q tests/test_mercado_publico.py
+
+      - name: Procesar el año
+        run: python -u mercado_publico.py --anio ${{ matrix.anio }} --salida precio_pagado_${{ matrix.anio }}.csv
+
+      - name: Subir el año
+        uses: actions/upload-artifact@v7
+        with:
+          name: precio_pagado_${{ matrix.anio }}
+          path: precio_pagado_${{ matrix.anio }}.csv
+          retention-days: 3
+
+  unir:
+    needs: anio
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Bajar los años
+        uses: actions/download-artifact@v7
+        with:
+          pattern: precio_pagado_*
+          merge-multiple: true
+
+      - name: Unir y resumir
+        run: |
+          python3 - <<'EOF'
+          import csv, glob
+          from collections import defaultdict
+          filas = []
+          for ruta in sorted(glob.glob("precio_pagado_*.csv")):
+              with open(ruta, encoding="utf-8") as fh:
+                  filas += list(csv.DictReader(fh))
+          filas.sort(key=lambda r: (r["mes"], r["producto"], r["zona"]))
+          with open("precio_pagado.csv", "w", newline="", encoding="utf-8") as fh:
+              w = csv.DictWriter(fh, fieldnames=list(filas[0]))
+              w.writeheader()
+              w.writerows(filas)
+          print(f"{len(filas)} celdas, de {filas[0]['mes']} a {filas[-1]['mes']}")
+          print("\nMeses utilizables por producto (nacional | RM | Centro | Norte | Sur), primer mes utilizable nacional:")
+          util = defaultdict(lambda: defaultdict(int))
+          primero = {}
+          for r in filas:
+              if r["utilizable"] == "si":
+                  util[r["producto"]][r["zona"]] += 1
+                  if r["zona"] == "Nacional":
+                      primero.setdefault(r["producto"], r["mes"])
+          for p in sorted(util):
+              u = util[p]
+              print(f"  {p:10s} {u['Nacional']:4d} | {u['RM']:4d} | {u['Centro']:4d} | {u['Norte']:4d} | {u['Sur']:4d}   desde {primero.get(p, '-')}")
+          print("\nOctubre de 2026, nacional (líneas, mediana neta por kilo):")
+          for r in filas:
+              if r["mes"] == "2026-10" and r["zona"] == "Nacional":
+                  print(f"  {r['producto']:10s} {r['lineas']:>5s}  ${int(r['mediana']):,}".replace(",", "."))
+          EOF
+
+      - name: Subir el resultado
+        uses: actions/upload-artifact@v7
+        with:
+          name: precio_pagado
+          path: precio_pagado.csv
+          retention-days: 3
