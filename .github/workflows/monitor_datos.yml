@@ -1,0 +1,30 @@
+# TEMPORAL: arma los datos del monitor de minuta privado (el entorno de Claude
+# no alcanza carestia.cl ni ODEPA). Corre solo en esta rama, no publica nada y
+# se borra junto con la rama.
+name: Datos del monitor (temporal)
+on:
+  push:
+    branches: [claude/datos-monitor]
+permissions:
+  contents: read
+jobs:
+  datos:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Dependencias
+        run: pip install pandas numpy requests
+      - name: Sitio
+        run: |
+          curl -fsS -o indices.json https://carestia.cl/indices.json
+          curl -fsS -o catalogo.json https://carestia.cl/datos/catalogo.json
+          python -u .github/monitor_datos.py sitio
+      - name: Mayoristas
+        continue-on-error: true
+        run: python -u mayoristas.py 2>&1 | tail -15
+      - name: Salida
+        run: python -u .github/monitor_datos.py salida
