@@ -649,7 +649,7 @@ def test_ficha_con_advanced_charts_despues_del_primer_pantallazo(sitio):
     assert "    }, () => { selector.limitar(unidadesHay()); lightweight(); });" in js
     # la referencia de las velas se muestra mientras estén a la vista
     assert "c.onChartTypeChanged().subscribe(null, ver);" in js
-    assert "chart.addLineSeries({ color: tok('serie'), lineWidth: 2, priceLineVisible: false })" in js
+    assert "chart.addLineSeries({ color: tok('producto'), lineWidth: 2, priceLineVisible: false })" in js
     assert "localization: { locale: 'es-CL', priceFormatter: fmt, percentageFormatter: fmtPct }," in js
 
 
@@ -732,26 +732,38 @@ def test_tema_del_iframe_con_los_tokens(sitio):
     assert css.startswith("/* Tema de Carestía para Advanced Charts")
     assert ('@import url("https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800'
             '&display=swap");') in css
-    # el tema claro de la librería (theme: 'light'), con los tokens
-    assert ".theme-light:root {" in css and ".theme-dark" not in css
-    for var, valor in [("platform-background", "#ffffff"), ("pane-background", "#ffffff"),
-                       ("popup-background", "#f5f5f5"), ("toolbar-divider-background", "#d9d9d9"),
-                       ("popup-element-text", "#111111"), ("toolbar-button-text", "#4d4d4d")]:
-        assert f"--tv-color-{var}: {valor};" in css, var
+    # el tema claro de la librería (theme: 'light') y el oscuro (el modo
+    # oscuro de la página, theme: 'dark'), cada uno con sus tokens
+    claro = css[css.index(".theme-light:root {"):css.index("}", css.index(".theme-light:root {"))]
+    oscuro = css[css.index(".theme-dark:root {"):css.index("}", css.index(".theme-dark:root {"))]
+    for var, valor, v_oscuro in [("platform-background", "#ffffff", "#0f0f0e"),
+                                 ("pane-background", "#ffffff", "#0f0f0e"),
+                                 ("popup-background", "#f5f5f5", "#171716"),
+                                 ("toolbar-divider-background", "#d9d9d9", "#2b2a27"),
+                                 ("popup-element-text", "#111111", "#e4dacc"),
+                                 ("toolbar-button-text", "#4d4d4d", "#a39e95")]:
+        assert f"--tv-color-{var}: {valor};" in claro, var
+        assert f"--tv-color-{var}: {v_oscuro};" in oscuro, var
     assert 'html, body { font-family: "Archivo","Archivo Fallback",system-ui,sans-serif; }' in css
 
 
 def test_pagina_de_prueba_lee_los_colores_de_los_tokens(sitio):
     h = _leer(sitio, "prueba-graficos.html")
-    assert h.count(":root {") == 1
+    assert h.count(":root {") == 1 and h.count(':root[data-tema="oscuro"] {') == 1
     # el semáforo y el gris de las canastas, solo en sus tokens (la tinta,
-    # en --tinta y en --serie, que valen lo mismo)
-    for color in ["#1a7f47", "#c8321c", "#767676"]:
+    # en --tinta, --serie, --producto, --marca y --sobre-ambar, que valen lo
+    # mismo)
+    for color in ["#1a7f47", "#c8321c", "#767676", "#5bbf7a", "#e0552f"]:
         assert h.count(color) == 1, color
-    assert h.count("#111111") == 2
+    assert h.count("#111111") == 5
+    # la brasa, solo en el modo oscuro: en --serie y en --marca
+    assert h.count("#e8743b") == 2
     js = _leer(sitio, "carestia-tv.js")
-    for color in ["#1a7f47", "#c8321c", "#767676", "#111111", "#ffffff"]:
+    for color in ["#1a7f47", "#c8321c", "#767676", "#111111", "#ffffff",
+                  "#e8743b", "#0f0f0e", "#e4dacc"]:
         assert color not in js, color
+    # el tema de la librería sigue al de la página
+    assert "theme: temaOscuro() ? 'dark' : 'light'," in js
 
 
 # ---------- datafeed ----------

@@ -25,6 +25,9 @@ verde si bajó), con la flecha al lado en gris. Las líneas de los índices y
 de los productos van en --serie (tinta) y las de las canastas de usuario,
 en --canasta (gris). Una sola familia, Archivo: el texto en 400 y 500, las
 etiquetas cortas en 600, las cifras grandes en 700 y el wordmark en 800.
+El modo oscuro va a pedido (el botón de la luna, JS_MENU): solo cambia la
+paleta, a la anterior (carbón, hueso y brasa), en el bloque
+:root[data-tema="oscuro"] de CSS_BASE.
 
 /graficos.html trae inline solo el primer pantallazo; las series completas
 van a datos/ y se piden a demanda (ver generar_datos). La portada no lleva
@@ -2393,7 +2396,10 @@ ICONO = ("<meta name=\"theme-color\" content=\"#ffffff\">\n"
          "%3Crect x='26' y='30' width='12' height='25' rx='2' fill='%23ffffff'/%3E"
          "%3Cpolyline points='16,26 25,17 31,21 47,7' fill='none' stroke='%23ffffff' "
          "stroke-width='8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\">\n"
-         "<link rel=\"apple-touch-icon\" href=\"/apple-touch-icon.png\">")
+         "<link rel=\"apple-touch-icon\" href=\"/apple-touch-icon.png\">\n"
+         # el modo oscuro elegido, antes de pintar: sin destello del claro
+         "<script>try{if(localStorage.getItem('carestia-tema')==='oscuro')"
+         "document.documentElement.dataset.tema='oscuro'}catch(e){}</script>")
 
 # Wordmark: la Í de CARESTÍA lleva, en vez de la tilde, la línea de precio
 # que sube (en tinta, como las letras). Es la misma en todas las páginas;
@@ -2407,7 +2413,8 @@ MASCARA_LINEA = ("url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/
 CSS_MARCA = r"""  /* la Í de la marca: el texto del nodo sigue siendo la Í única (innerText
      y copy-paste leen CARESTÍA). El clip-path del span interior recorta la
      tilde del glifo y el ::after del envoltorio dibuja la línea: el color es
-     el de las letras (--tinta) y la forma va como máscara. Envoltorio y span
+     --marca (en el claro, la tinta de las letras; en el oscuro, la brasa) y
+     la forma va como máscara. Envoltorio y span
      son inline-block con line-height normal y un margen negativo que los
      deja dentro de la línea: el wordmark no cambia de alto ni se mueve (CLS).
      Inline-block y no inline: en un span inline, Chrome no mueve el recorte
@@ -2426,7 +2433,7 @@ CSS_MARCA = r"""  /* la Í de la marca: el texto del nodo sigue siendo la Í ún
     margin:-.25em 0; }
   .wordmark .i > span { display:inline-block; clip-path:inset(.163em 0 0 0); }
   .wordmark .i::after { content:""; position:absolute; left:.035em; top:0;
-    width:.26em; height:.164em; pointer-events:none; background:var(--tinta);
+    width:.26em; height:.164em; pointer-events:none; background:var(--marca);
     --linea:__MASCARA__;
     -webkit-mask:var(--linea) 0 0/100% 100% no-repeat;
     mask:var(--linea) 0 0/100% 100% no-repeat;
@@ -2470,6 +2477,10 @@ CSS_BASE = r"""
     --hover:#ebebeb; --grid:#ececec;
     /* la línea de los índices oficiales y de los productos, en tinta */
     --serie:#111111;
+    /* la línea de los productos: en el claro, la misma tinta */
+    --producto:#111111;
+    /* la línea de la Í del wordmark: en el claro, la tinta de las letras */
+    --marca:#111111;
     /* canastas de usuario: la línea de Arma tu canasta y de las canastas
        de ejemplo (4,5:1 sobre --bg) */
     --canasta:#767676;
@@ -2480,6 +2491,8 @@ CSS_BASE = r"""
        (5,5:1 sobre --bg y 5,1:1 sobre --panel) */
     --verde:#1a7f47; --ambar:#f0b429; --rojo:#c8321c; --verdict:var(--rojo);
     --ambar-texto:#8a6100;
+    /* el texto de la etiqueta NORMAL, sobre el ámbar */
+    --sobre-ambar:#111111;
     /* variaciones de precio, con criterio de consumidor: el número va en
        rojo si el precio subió y en verde si bajó (ver .v-sube y .v-baja).
        Sobre --bg, rojo 5,4:1 y verde 5,0:1; sobre --panel, 4,9 y 4,6 (AA) */
@@ -2489,7 +2502,7 @@ CSS_BASE = r"""
        OKLCH de 304 a 8 y de 56 a 100); del 5º al 8º producto se repiten
        punteados. Entre sí quedan a 20 o más (OKLab x100) con visión normal
        y con protanopía y deuteranopía simuladas (con tritanopía, a 8 o más),
-       y a 28 o más de la línea de la ficha (--serie) con las cuatro. Las
+       y a 28 o más de la línea de la ficha (--producto) con las cuatro. Las
        distancias mínimas de cada par (normal, protan, deutan): 1-2 24,5,
        20,7, 25,3; 1-3 30,0, 27,2, 22,4; 1-4 33,3, 27,1, 26,8; 2-3 38,3,
        36,5, 35,6; 2-4 25,9, 22,8, 20,9; 3-4 20,9, 20,2, 21,2. Sobre --bg,
@@ -2497,9 +2510,31 @@ CSS_BASE = r"""
     --cmp1:#e05ddf; --cmp2:#8101a4; --cmp3:#b4902e; --cmp4:#6d5732;
     /* crosshair de los gráficos: tinta tenue */
     --cruz:rgba(17,17,17,.35);
+    /* sombra de los menús y del buscador */
+    --sombra:rgba(17,17,17,.12);
     /* una sola familia: Archivo. Las cifras van con tabular-nums */
     --sans:"Archivo","Archivo Fallback",system-ui,sans-serif;
     --display:"Archivo","Archivo Fallback",system-ui,sans-serif;
+  }
+  /* modo oscuro, a pedido (el botón de la luna del encabezado, ver JS_TEMA):
+     solo cambia la paleta, a la anterior al look claro (carbón, hueso y
+     brasa); tipografía y forma son las mismas. Sobre --bg, hueso 13,9:1,
+     secundario 7,2:1 y terciario 5,0:1; sobre --panel, 13,0, 6,7 y 4,6 (AA).
+     Rojo 5,0:1 y verde 8,4:1 sobre --bg. Las etiquetas del veredicto llevan
+     el texto en el fondo (carbón) sobre rojo, verde y ámbar. Los tonos de
+     Comparar son los de antes, pensados para fondo oscuro. Como antes, la
+     brasa va solo en la línea de los índices y en la Í del wordmark; los
+     productos y las canastas, en hueso */
+  :root[data-tema="oscuro"] {
+    color-scheme:dark;
+    --bg:#0f0f0e; --panel:#171716; --line:#2b2a27;
+    --tinta:#e4dacc; --tinta2:#a39e95; --tinta3:#86817a;
+    --hover:#201f1d; --grid:#1c1c1a;
+    --serie:#e8743b; --producto:#e4dacc; --marca:#e8743b; --canasta:#e4dacc;
+    --verde:#5bbf7a; --ambar:#e0a83c; --rojo:#e0552f;
+    --ambar-texto:#e0a83c; --sobre-ambar:#0f0f0e;
+    --cmp1:#f28cc0; --cmp2:#b04fb5; --cmp3:#9d8519; --cmp4:#f2d74e;
+    --cruz:rgba(228,218,204,.35); --sombra:rgba(0,0,0,.55);
   }
   * { box-sizing:border-box; margin:0; padding:0; }
   body { background:var(--bg); color:var(--tinta); font-family:var(--sans);
@@ -2587,6 +2622,32 @@ CSS_SITIO = r"""
   /* móvil: el <summary> mide 44px de alto (el blanco de toque del celular)
      pero el margen negativo deja su caja en 22px, el alto de la fila del
      wordmark: el encabezado no crece */
+  /* el botón del tema: 44px de alto con margen negativo, como el del menú y
+     la lupa (el encabezado no crece); en pantallas anchas, después del
+     buscador */
+  .tema { display:flex; align-items:center; justify-content:center; order:4;
+    flex:none; width:44px; height:44px; margin:-11px 0; padding:0; cursor:pointer;
+    color:var(--tinta); background:var(--panel); border:1px solid var(--line);
+    border-radius:2px; }
+  .tema[hidden] { display:none; }
+  .tema svg { width:16px; height:16px; fill:none; stroke:currentColor;
+    stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
+  .tema .sol, :root[data-tema="oscuro"] .tema .luna { display:none; }
+  :root[data-tema="oscuro"] .tema .sol { display:block; }
+  .tema:hover, .tema:focus-visible { border-color:var(--tinta); }
+  /* en pantallas anchas, del alto del campo del buscador */
+  @media (min-width:900px) { .tema { width:30px; height:30px; margin:-3px 0; } }
+  /* la opción del menú del celular, como los links del panel */
+  .tema-menu { display:flex; align-items:center; gap:10px; width:100%;
+    min-height:44px; padding:0 18px; cursor:pointer; background:none; border:0;
+    font:600 12px var(--sans); letter-spacing:.04em; text-transform:uppercase;
+    color:var(--tinta); text-align:left; }
+  .tema-menu[hidden] { display:none; }
+  .tema-menu svg { width:15px; height:15px; fill:none; stroke:currentColor;
+    stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
+  .tema-menu .sol, :root[data-tema="oscuro"] .tema-menu .luna { display:none; }
+  :root[data-tema="oscuro"] .tema-menu .sol { display:block; }
+  .tema-menu:hover, .tema-menu:focus-visible { background:var(--hover); }
   .snav-menu { display:none; position:relative; }
   .snav-menu > summary { display:flex; align-items:center; gap:8px;
     min-height:44px; margin:-11px 0; padding:0 14px; cursor:pointer;
@@ -2600,7 +2661,7 @@ CSS_SITIO = r"""
   .snav-panel { position:absolute; right:0; top:calc(100% + 12px); z-index:60;
     min-width:230px; max-width:calc(100vw - 32px); padding:4px 0;
     background:var(--panel); border:1px solid var(--line);
-    box-shadow:0 8px 24px rgba(17,17,17,.12); }
+    box-shadow:0 8px 24px var(--sombra); }
   .snav-panel li + li { border-top:1px solid var(--line); }
   .snav-panel a { display:flex; align-items:center; min-height:44px;
     padding:0 18px; font-size:12px; color:var(--tinta); }
@@ -2616,6 +2677,7 @@ CSS_SITIO = r"""
     header .semana { margin-top:2px; }
     .snav-links { display:none; }
     .snav-menu { display:block; }
+    .sitenav > .tema { display:none; }
   }
 
   /* ---- pie común ---- */
@@ -2658,12 +2720,56 @@ CSS_SITIO = r"""
      (10,1:1) */
   .ver-rojo { background:var(--rojo); color:var(--bg); }
   .ver-verde { background:var(--verde); color:var(--bg); }
-  .ver-ambar { background:var(--ambar); color:var(--tinta); }
+  .ver-ambar { background:var(--ambar); color:var(--sobre-ambar); }
 """
 
+# El botón del modo oscuro (la luna; en el oscuro, el sol). Va dos veces:
+# como ícono en la fila de la navegación (pantallas anchas) y como última
+# opción del menú del celular, donde la fila del wordmark no tiene lugar
+# para un tercer botón. Sin JS no hace nada: van ocultos y JS_MENU los
+# muestra.
+ICONOS_TEMA = ('<svg class="luna" viewBox="0 0 16 16" aria-hidden="true">'
+               '<path d="M13.5 9.6A5.6 5.6 0 0 1 6.4 2.5a5.6 5.6 0 1 0 7.1 7.1z"/></svg>'
+               '<svg class="sol" viewBox="0 0 16 16" aria-hidden="true">'
+               '<circle cx="8" cy="8" r="3"/><path d="M8 1v1.6M8 13.4V15M1 8h1.6M13.4 8H15'
+               'M3 3l1.1 1.1M11.9 11.9 13 13M3 13l1.1-1.1M11.9 4.1 13 3"/></svg>')
+BOTON_TEMA = ('<button class="tema" type="button" hidden aria-pressed="false" '
+              f'aria-label="Modo oscuro" title="Modo oscuro">{ICONOS_TEMA}</button>')
+BOTON_TEMA_MENU = ('<button class="tema-menu" type="button" hidden aria-pressed="false">'
+                   f'{ICONOS_TEMA}<span>Modo oscuro</span></button>')
+
+
 # menú móvil: se cierra al tocar fuera o con Escape (sin JS abre y cierra
-# igual con su propio botón)
+# igual con su propio botón). El botón del tema: guarda la elección en el
+# navegador y la aplica; en una página con gráficos (Advanced Charts o
+# Lightweight) la recarga, para que los gráficos se monten con la paleta
+# nueva (leen los colores al montarse).
 JS_MENU = """<script>
+  (function () {
+    var bs = [].slice.call(document.querySelectorAll('.tema, .tema-menu'));
+    var raiz = document.documentElement;
+    var meta = document.querySelector('meta[name="theme-color"]');
+    function pintar() {
+      var oscuro = raiz.dataset.tema === 'oscuro';
+      var txt = oscuro ? 'Modo claro' : 'Modo oscuro';
+      bs.forEach(function (b) {
+        b.setAttribute('aria-pressed', oscuro ? 'true' : 'false');
+        var t = b.querySelector('span');
+        if (t) t.textContent = txt;
+        else { b.setAttribute('aria-label', txt); b.title = txt; }
+      });
+      if (meta) meta.content = getComputedStyle(raiz).getPropertyValue('--bg').trim() || '#ffffff';
+    }
+    pintar();
+    bs.forEach(function (b) { b.hidden = false; b.addEventListener('click', cambiar); });
+    function cambiar() {
+      var oscuro = raiz.dataset.tema !== 'oscuro';
+      if (oscuro) raiz.dataset.tema = 'oscuro'; else delete raiz.dataset.tema;
+      try { localStorage.setItem('carestia-tema', oscuro ? 'oscuro' : 'claro'); } catch (e) {}
+      pintar();
+      if (window.CarestiaTV || window.LightweightCharts) location.reload();
+    }
+  })();
   (function () {
     var m = document.querySelector('.snav-menu');
     if (!m) return;
@@ -2719,7 +2825,7 @@ BUSCA_CSS = r"""  /* encabezado: en pantallas anchas, un campo al final de la fi
   .sb-caja { display:none; position:absolute; right:0; top:calc(100% + 12px);
     z-index:60; width:min(360px, calc(100vw - 32px)); padding:10px;
     background:var(--panel); border:1px solid var(--line);
-    box-shadow:0 8px 24px rgba(17,17,17,.12); }
+    box-shadow:0 8px 24px var(--sombra); }
   .sbusca.abierta .sb-caja { display:block; }
   /* 16px: con menos, Safari del iPhone acerca la página al enfocar el campo */
   .sb-q { display:block; width:100%; height:44px; padding:0 12px;
@@ -2761,7 +2867,7 @@ BUSCA_CSS = r"""  /* encabezado: en pantallas anchas, un campo al final de la fi
       background:var(--panel); }
     .sb-res { position:absolute; right:0; top:calc(100% + 10px); z-index:60;
       width:340px; margin-top:0; background:var(--panel);
-      border:1px solid var(--line); box-shadow:0 8px 24px rgba(17,17,17,.12); }
+      border:1px solid var(--line); box-shadow:0 8px 24px var(--sombra); }
   }
   /* portada y /productos/: el campo sobre la tabla o la lista, en el alto
      que la página le reserva (#pbh) */
@@ -3016,9 +3122,11 @@ def nav_sitio(actual: str = "", exacto: bool = True) -> str:
     return (f'<nav class="sitenav" aria-label="Secciones del sitio">\n'
             f'      <details class="snav-menu">\n'
             f'        <summary>Menú</summary>\n'
-            f'        <ul class="snav-panel">\n        {lis}\n        </ul>\n'
+            f'        <ul class="snav-panel">\n        {lis}\n'
+            f'        <li>{BOTON_TEMA_MENU}</li>\n        </ul>\n'
             f'      </details>\n'
             f'      <ul class="snav-links">\n        {lis}\n      </ul>\n'
+            f'      {BOTON_TEMA}\n'
             f'    </nav>')
 
 
@@ -3291,7 +3399,7 @@ FICHA_JS_TPL = r"""// carestia-ficha.js: el JS de las fichas de producto (produc
 // de cada ficha van en su página, antes de este archivo: T0, V, MIN, MAX,
 // REP, SLUG, NOMBRE, UNIDAD, VER, FECHA, AL_DIA y CAPTURA. La cifra y el
 // texto ya están en el HTML: el gráfico se arma después del primer
-// pantallazo, en Advanced Charts (en línea, en --serie; las velas a un clic) o,
+// pantallazo, en Advanced Charts (en línea, en --producto; las velas a un clic) o,
 // si la librería no está o no inicia en 8 segundos, en Lightweight como
 // siempre. En los dos, la unidad del selector y lo que se elija en "Comparar
 // con"
@@ -3349,7 +3457,7 @@ __JS_PANTALLA__
   const selector = selectorUnidad(ponerUnidad);
 
   /* ---------- Comparar con ---------- */
-  // hasta 4 series sobre el producto de la ficha, que sigue en --serie: las
+  // hasta 4 series sobre el producto de la ficha, que sigue en --producto: las
   // sugerencias del build (productos de su grupo e índices que lo llevan),
   // lo que se busque en el catálogo y lo que traiga el link
   // (#comparar=pera,asado). Es el componente de Comparar de /graficos.html
@@ -3678,7 +3786,7 @@ __JS_PANTALLA__
       setTimeout(programarFrase, 2000);
     } else if (t) reintentos = 0;
     const escala = $('cmp-escala'), frase = $('cmp-frase'), nota = $('cmp-sin');
-    const series = [{ nombre: NOMBRE, color: tok('serie') }].concat(ks.map(k =>
+    const series = [{ nombre: NOMBRE, color: tok('producto') }].concat(ks.map(k =>
       ({ nombre: nombres.get(k) || k, color: cmp.estilo(k).color })));
     escala.hidden = !e;
     if (e) escala.innerHTML = conFechas(esc(textoEscala(e, series.map(s => s.nombre))));
@@ -3761,8 +3869,8 @@ __JS_PANTALLA__
           vertLine: { color: tok('cruz'), labelBackgroundColor: tok('line') },
           horzLine: { color: tok('cruz'), labelBackgroundColor: tok('line') } },
       });
-      // la línea del producto, en --serie como la de los índices
-      const linea = chart.addLineSeries({ color: tok('serie'), lineWidth: 2, priceLineVisible: false });
+      // la línea del producto, en --producto (en el claro, la tinta de los índices)
+      const linea = chart.addLineSeries({ color: tok('producto'), lineWidth: 2, priceLineVisible: false });
       linea.setData(serie);
       chart.timeScale().fitContent();
       lwChart = chart;
@@ -3840,7 +3948,7 @@ __JS_PANTALLA__
       o.titulo = NOMBRE.toUpperCase();
       o.precio = ONOTE[u];
       o.chico = true;
-      o.lineas = [{ texto: NOMBRE, color: tok('serie'), punteada: false }].concat(ks.map(k =>
+      o.lineas = [{ texto: NOMBRE, color: tok('producto'), punteada: false }].concat(ks.map(k =>
         Object.assign({ texto: nombres.get(k) || k }, cmp.estilo(k))));
       // la frase y, en otra línea, la nota de las que no tienen precio reciente
       o.frase = (ultimaFrase || []).filter(x => !x.muestra);
@@ -5951,7 +6059,8 @@ def generar_productos(slugs: dict, catalogo: dict) -> None:
         sug = sugerencias_comparar(key, prods[key], tabla)
         with open(os.path.join("productos", f"{slug}.html"), "w",
                   encoding="utf-8") as fh:
-            fh.write(pagina_producto(key, prods[key], slug, otros, semana, og, sug))
+            fh.write(css_sin_comentarios(
+                pagina_producto(key, prods[key], slug, otros, semana, og, sug)))
 
 
 def tarjeta_producto(p: dict, slug: str, semana: datetime.date = None) -> str:
@@ -6626,8 +6735,8 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
   }
 
   // colores de la librería con los tokens del sitio: velas verde y rojo; la
-  // línea en --serie para los índices oficiales y los productos, y en
-  // --canasta para Tu canasta.
+  // línea en --serie para los índices oficiales, en --producto para los
+  // productos y en --canasta para Tu canasta.
   // Todos los gráficos parten en línea; las velas quedan a un clic
   // la leyenda sin los parámetros de comparaciones e indicadores: el "close"
   // de cada comparada (la librería no lo traduce) y el largo de cada
@@ -6669,7 +6778,7 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
     return o;
   }
   const colorLinea = (tok, clase) => {
-    const c = tok(clase === 'canasta' ? 'canasta' : 'serie');
+    const c = tok(clase === 'canasta' ? 'canasta' : clase === 'indice' ? 'serie' : 'producto');
     return { 'mainSeriesProperties.lineStyle.colorType': 'solid', 'mainSeriesProperties.lineStyle.color': c };
   };
 
@@ -6689,6 +6798,10 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
   // acercan
   const FUERA_DEL_SITIO = ['header_symbol_search', 'symbol_search_hot_key', 'header_saveload',
     'vert_touch_drag_scroll'];
+
+  // el modo oscuro de la página (el botón de la luna)
+  const temaOscuro = () => typeof document !== 'undefined' && !!document.documentElement &&
+    document.documentElement.dataset.tema === 'oscuro';
 
   // la configuración común de todas las páginas.
   // o: { contenedor, libreria, simbolo, datafeed, tok, css, movil, sitio,
@@ -6710,7 +6823,8 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
       interval: RESOLUCION,
       timezone: ZONA,
       locale: 'es',
-      theme: 'light',
+      // el tema de la librería sigue al de la página (data-tema)
+      theme: temaOscuro() ? 'dark' : 'light',
       autosize: true,
       custom_css_url: o.css,
       custom_font_family: "'Archivo', system-ui, sans-serif",
@@ -6757,8 +6871,8 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
   }
 
   // con el gráfico listo: estilo según el símbolo (la línea en --serie para
-  // los índices y los productos, en --canasta para Tu canasta) y guardado automático en el
-  // navegador
+  // los índices, en --producto para los productos y en --canasta para Tu
+  // canasta) y guardado automático en el navegador
   function alistarWidget(widget, feed, tok) {
     sinParametros(widget);
     estiloPorSimbolo(widget, feed, tok);
@@ -7189,8 +7303,9 @@ __PIE__
 
 
 # variables de color de la interfaz de la librería (toolbars, menús y
-# diálogos) para el tema claro, con los tokens del sitio
-TV_COLORES = """.theme-light:root {{
+# diálogos), con los tokens del sitio: una vez para el tema claro y otra
+# para el oscuro (el modo oscuro de la página)
+TV_COLORES = """{selector} {{
   --tv-color-platform-background: {bg};
   --tv-color-pane-background: {bg};
   --tv-color-toolbar-button-background-hover: {hover};
@@ -7255,10 +7370,20 @@ def feed_js() -> str:
     return FEED_JS.replace("__PESOS__", pesos(corto=True))
 
 
-def tokens_css() -> dict:
-    """Los tokens de color de CSS_BASE ({nombre: valor}): el tema del iframe
+TEMA_OSCURO = ':root[data-tema="oscuro"] {'
+
+
+def tokens_css(oscuro: bool = False) -> dict:
+    """Los tokens de color de CSS_BASE ({nombre: valor}): los del claro (el
+    primer :root, el que usan las tarjetas y la captura por defecto) o, con
+    oscuro, los del claro pisados por los del modo oscuro. El tema del iframe
     de la librería sale de los mismos valores que el resto del sitio."""
-    return dict(re.findall(r"--([a-z0-9]+):(#[0-9a-f]{6}|rgba\([^)]*\))", CSS_BASE))
+    patron = r"--([a-z0-9]+):(#[0-9a-f]{6}|rgba\([^)]*\))"
+    i = CSS_BASE.index(TEMA_OSCURO)
+    t = dict(re.findall(patron, CSS_BASE[:i]))
+    if oscuro:
+        t.update(re.findall(patron, CSS_BASE[i:CSS_BASE.index("}", i)]))
+    return t
 
 
 def tv_css() -> str:
@@ -7266,9 +7391,9 @@ def tv_css() -> str:
     (custom_css_url). Archivo con la misma llamada a Google Fonts del sitio
     (el iframe es otro documento: no hereda las fuentes de la página) y los
     colores de la interfaz de la librería con los tokens."""
-    t = tokens_css()
     fuentes = re.search(r'https://fonts\.googleapis\.com/css2\?[^"]+', FUENTES).group(0)
-    colores = TV_COLORES.format(**t)
+    colores = (TV_COLORES.format(selector=".theme-light:root", **tokens_css()) +
+               TV_COLORES.format(selector=".theme-dark:root", **tokens_css(oscuro=True)))
     return (f'/* Tema de Carestía para Advanced Charts: tokens de build_site.py */\n'
             f'@import url("{fuentes}");\n'
             f'{colores}'
@@ -7286,6 +7411,17 @@ def indices_tv() -> str:
     """Los 4 índices para el datafeed (código y nombre), en JSON para el JS."""
     return _json([{"codigo": c, "nombre": d["nombre"]}
                   for c, d in DATA["indices"].items()]).replace("</", "<\\/")
+
+
+def css_sin_comentarios(pagina: str) -> str:
+    """La página sin los comentarios de su CSS (los <style>): explican el
+    código aquí, en build_site.py, pero no le sirven al navegador, y en la
+    portada pesan unos 9 KB de su tope de 200 KB. Se van también las líneas
+    que quedan vacías."""
+    def limpiar(m):
+        css = re.sub(r"/\*.*?\*/", "", m.group(1), flags=re.S)
+        return "<style>" + re.sub(r"\n[ \t]*(?=\n)", "", css) + "</style>"
+    return re.sub(r"<style>(.*?)</style>", limpiar, pagina, flags=re.S)
 
 
 def _ver(texto: str) -> str:
@@ -7322,7 +7458,7 @@ def generar_tradingview(app: dict, catalogo: dict) -> None:
     ]:
         out = out.replace(token, valor)
     with open(TV_PRUEBA, "w", encoding="utf-8") as fh:
-        fh.write(out)
+        fh.write(css_sin_comentarios(out))
 
 
 # ---------------- Páginas del sitio ----------------
@@ -7512,7 +7648,7 @@ def escribir_pagina(archivo: str, url: str, titulo: str, desc: str, cuerpo: str,
     if carpeta:
         os.makedirs(carpeta, exist_ok=True)
     with open(archivo, "w", encoding="utf-8") as fh:
-        fh.write(out)
+        fh.write(css_sin_comentarios(out))
 
 
 def _orden(s: str) -> str:
@@ -8719,7 +8855,7 @@ def generar_portada(catalogo: dict, fichas: dict) -> None:
     ]:
         out = out.replace(token, valor)
     with open("index.html", "w", encoding="utf-8") as fh:
-        fh.write(out)
+        fh.write(css_sin_comentarios(out))
 
 
 # ---- textos/*.md (del dueño) ----
@@ -9037,7 +9173,7 @@ CATALOGO = generar_catalogo(DATA.get("productos", {}), SLUGS)
 APP = generar_datos(SLUGS, CATALOGO)
 
 with open("graficos.html", "w", encoding="utf-8") as fh:
-    fh.write(GRAFICOS_HTML.replace("__ICONO__", ICONO)
+    fh.write(css_sin_comentarios(GRAFICOS_HTML.replace("__ICONO__", ICONO)
                           .replace("__FUENTES__", FUENTES)
                           .replace("__CSS_BASE__", CSS_BASE)
                           .replace("__CSS_CABECERA__", CSS_CABECERA)
@@ -9075,7 +9211,7 @@ with open("graficos.html", "w", encoding="utf-8") as fh:
                           .replace("__AJUSTADOS__", ajustado("os"))
                           .replace("__PESOS_CORTO__", pesos(corto=True))
                           # "</" escapado: un label nunca puede cerrar el <script>
-                          .replace("__DATA__", _json(APP).replace("</", "<\\/")))
+                          .replace("__DATA__", _json(APP).replace("</", "<\\/"))))
 
 generar_portada(CATALOGO, FICHAS)
 

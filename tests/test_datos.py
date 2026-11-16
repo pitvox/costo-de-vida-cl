@@ -24,6 +24,16 @@ from indices import BASKETS, COLORES, resumen_temporada  # noqa: E402
 
 FIN = datetime.date(2026, 9, 21)   # lunes
 LIMITE_PORTADA = 200_000           # bytes, sin comprimir
+# el bloque del modo oscuro (a pedido, con el botón de la luna) en el CSS de
+# las páginas, y su par en el tema del iframe de Advanced Charts
+OSCURO = re.compile(r':root\[data-tema="oscuro"\] \{[^}]*\}|\.theme-dark:root \{[^}]*\}')
+TOKENS_OSCURO = ["color-scheme:dark;", "--bg:#0f0f0e;", "--panel:#171716;", "--line:#2b2a27;",
+                 "--tinta:#e4dacc;", "--tinta2:#a39e95;", "--tinta3:#86817a;", "--hover:#201f1d;",
+                 "--grid:#1c1c1a;", "--serie:#e8743b;", "--producto:#e4dacc;", "--marca:#e8743b;",
+                 "--canasta:#e4dacc;",
+                 "--verde:#5bbf7a;", "--ambar:#e0a83c;", "--rojo:#e0552f;",
+                 "--cmp1:#f28cc0; --cmp2:#b04fb5; --cmp3:#9d8519; --cmp4:#f2d74e;",
+                 "--cruz:rgba(228,218,204,.35);"]
 
 
 def _semanas(ini: datetime.date) -> list:
@@ -266,7 +276,8 @@ def test_tokens_en_un_solo_lugar_y_sin_color_de_marca(sitio):
         assert h.count(":root {") == 1, p
         for token in ["--bg:#ffffff", "--panel:#f5f5f5", "--line:#d9d9d9", "--hover:#ebebeb",
                       "--grid:#ececec", "--tinta:#111111", "--tinta2:#4d4d4d",
-                      "--tinta3:#6b6b6b", "--serie:#111111", "--canasta:#767676",
+                      "--tinta3:#6b6b6b", "--serie:#111111", "--producto:#111111",
+                      "--canasta:#767676",
                       "--verde:#1a7f47", "--ambar:#f0b429", "--rojo:#c8321c",
                       "--ambar-texto:#8a6100", "--cruz:rgba(17,17,17,.35)", "color-scheme:light;"]:
             assert token in h, (p, token)
@@ -274,7 +285,14 @@ def test_tokens_en_un_solo_lugar_y_sin_color_de_marca(sitio):
         # el semáforo se escribe una sola vez (su token); el resto lo usa por var()
         for color in ["#1a7f47", "#f0b429", "#c8321c"]:
             assert h.count(color) == 1, (p, color)
-        assert "--mono" not in h and "color-scheme:dark" not in h, p
+        assert "--mono" not in h, p
+        # el modo oscuro: un solo bloque, con la paleta anterior, y nada de
+        # ella fuera de él
+        oscuros = OSCURO.findall(h)
+        assert len(oscuros) == 1, p
+        for token in TOKENS_OSCURO:
+            assert token in oscuros[0], (p, token)
+        assert "color-scheme:dark" not in OSCURO.sub("", h), p
         # ni la paleta anterior ni los azules de Comparar
         for viejo in ["#17120e", "#8b8276", "#5a5348", "#1f1913", "#6ea8dc",
                       "#58c5c0", "#9a8ec4", "#8f9bb3", '"IBM Plex Mono",monospace']:
@@ -288,7 +306,7 @@ def test_colores_de_indices_json_con_los_tokens_del_semaforo(sitio):
     indices.json tal cual, con el mismo valor."""
     d, _data = sitio
     h = (d / "graficos.html").read_text(encoding="utf-8")
-    tok = dict(re.findall(r"--([a-z]+):(#[0-9a-f]{6})", h))
+    tok = dict(re.findall(r"--([a-z]+):(#[0-9a-f]{6})", OSCURO.sub("", h)))
     assert COLORES == {"BARATO": tok["verde"], "NORMAL": tok["ambar"], "CARO": tok["rojo"]}
     assert '"color":' not in h
     for p in (d / "datos" / "indices").glob("*.json"):
@@ -296,23 +314,45 @@ def test_colores_de_indices_json_con_los_tokens_del_semaforo(sitio):
         assert j["color"] == COLORES[j["veredicto"]], p
 
 
+def test_boton_del_modo_oscuro_en_todas_las_paginas(sitio):
+    """El claro es el predeterminado. El modo oscuro va a pedido: el botón de
+    la luna en la navegación (y como opción del menú en el celular), ocultos
+    sin JS; la elección se guarda en el navegador y se aplica en el <head>,
+    antes de los estilos (sin destello del claro)."""
+    d, _data = sitio
+    paginas = [p for p in d.rglob("*.html") if p.name != "prueba-graficos.html"] + \
+        [d / "prueba-graficos.html"]
+    assert len(paginas) > 20
+    for p in paginas:
+        h = p.read_text(encoding="utf-8")
+        assert '<html lang="es">' in h and "data-tema" not in h.split("<head>")[0], p
+        cabeza = h[h.index("<head>"):h.index("<style>")]
+        assert ("<script>try{if(localStorage.getItem('carestia-tema')==='oscuro')"
+                "document.documentElement.dataset.tema='oscuro'}catch(e){}</script>") in cabeza, p
+        assert h.count('<button class="tema" type="button" hidden') == 1, p
+        assert h.count('<button class="tema-menu" type="button" hidden') == 1, p
+        assert "localStorage.setItem('carestia-tema', oscuro ? 'oscuro' : 'claro')" in h, p
+        assert "if (window.CarestiaTV || window.LightweightCharts) location.reload();" in h, p
+
+
 def test_sin_restos_del_look_oscuro(sitio):
     """Ni la brasa, ni el fondo carbón, ni el hueso, ni las familias
-    anteriores en nada de lo que genera el build: el HTML de todas las
-    páginas, el CSS y el JS."""
+    anteriores en nada de lo que genera el build (el HTML de todas las
+    páginas, el CSS y el JS), salvo la paleta del modo oscuro, que vive solo
+    en su bloque."""
     d, _data = sitio
     archivos = ([p for p in d.rglob("*.html")] + [p for p in d.glob("*.css")] +
                 [p for p in d.glob("*.js")])
     assert len(archivos) > 20 and any(p.suffix == ".css" for p in archivos)
     for p in archivos:
-        texto = p.read_text(encoding="utf-8")
+        texto = OSCURO.sub("", p.read_text(encoding="utf-8"))
         for viejo in ["#e8743b", "#0f0f0e", "#e4dacc", "Space Grotesk", "IBM Plex"]:
             assert viejo.lower() not in texto.lower(), (p, viejo)
 
 
 def test_comparar_cuatro_tonos_por_orden_de_seleccion_y_locale(sitio):
     d, _data = sitio
-    h = (d / "graficos.html").read_text(encoding="utf-8")
+    h = OSCURO.sub("", (d / "graficos.html").read_text(encoding="utf-8"))
     assert "--cmp1:#e05ddf; --cmp2:#8101a4; --cmp3:#b4902e; --cmp4:#6d5732;" in h
     assert "--cmp5" not in h
     # paleta de 8 anterior y el blanco cálido que se confundía con el hueso
