@@ -10,13 +10,17 @@ menos de 5 años de ese mes "Más caro que en 8 de cada 10 semanas desde 2008,
 descontada la inflación"), la fecha de la semana y la marca. Las de
 producto, de índice y de canasta llevan además, a la derecha, el gráfico de
 su serie ajustada por inflación de los últimos años, con el punto de esta
-semana (si la serie es muy corta, van sin él). La línea va en brasa; en las
-canastas de ejemplo, en hueso, el color de las canastas de usuario.
+semana (si la serie es muy corta, van sin él). Tinta sobre blanco, como el
+sitio: la línea va en --serie y, en las canastas de ejemplo, en --canasta,
+el color de las canastas de usuario. El único color es el del veredicto de
+los índices, una etiqueta rellena.
 
 Aquí solo se dibuja: las frases y las cifras las arma build_site.py (ahí las
 revisa la guardia de texto). Colores: los tokens de CSS_BASE, que build_site
-pasa en 'tok'. Fuentes: las del sitio, en fuentes/ (IBM Plex y Space
-Grotesk, licencia SIL Open Font License, ver fuentes/OFL-*.txt).
+pasa en 'tok'. Fuente: la del sitio, Archivo (Omnibus-Type, licencia SIL
+Open Font License, ver fuentes/OFL-Archivo.txt), en el TTF variable de
+github.com/google/fonts (ofl/archivo), con el peso de cada uso fijado en el
+eje wght. Las Plex Sans que quedan en fuentes/ son de analisis/vacuno.
 
 Requiere Pillow.
 """
@@ -29,13 +33,18 @@ from PIL import Image, ImageChops, ImageDraw, ImageFont
 ANCHO, ALTO = 1200, 630
 MARGEN = 64
 # La marca: la Í de CARESTÍA lleva, en vez de la tilde, una línea de precio
-# que sube. Sus puntos van en una caja de 52 por 30 y su trazo es 7. Respecto
-# de la I, en em del wordmark: la caja mide 0.46 por 0.27 y su esquina de
-# arriba a la izquierda va 0.07 a la izquierda de la I y 0.21 sobre el tope de
-# su caja (la de line-height 1).
+# que sube. Sus puntos van en una caja de 52 por 30 y su trazo es 7 (10 en el
+# wordmark, como en el sitio). La línea del wordmark es la de CSS_MARCA: la
+# caja del dibujo (viewBox -1 -3 54 34) mide .26em de ancho, va .035em a la
+# derecha del origen de la I y su borde de abajo queda .027em sobre la tapa
+# de la I (CAP, la altura de mayúscula de Archivo).
 LINEA = ((4, 26), (18, 12), (28, 19), (48, 2))
 LINEA_CAJA = (52, 30)
 LINEA_TRAZO = 7
+MARCA_TRAZO = 10
+MARCA_VISTA = (-1, -3, 54, 34)
+MARCA_ANCHO, MARCA_IZQ, MARCA_AIRE = 0.26, 0.035, 0.027
+CAP = 0.686
 # dibujos a 8x que después se reducen: bordes suaves en el trazo y la barra
 SUPER = 8
 # La tarjeta con gráfico: el texto en una columna de COLUMNA px a la
@@ -50,20 +59,32 @@ MIN_PUNTOS = 26
 HUECO_DIAS = 63
 GRAF_SUPER = 4
 CARPETA_FUENTES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fuentes")
-ARCHIVOS = {
-    "display": "SpaceGrotesk-Bold.ttf",
-    "sans": "IBMPlexSans-Regular.ttf",
-    "sans-semi": "IBMPlexSans-SemiBold.ttf",
-    "mono": "IBMPlexMono-Medium.ttf",
+ARCHIVO = "Archivo[wdth,wght].ttf"
+# el peso de cada uso, como en el sitio: el wordmark en 800, las cifras
+# grandes en 700, las etiquetas cortas y los nombres en 600 y el texto en 400
+PESOS = {
+    "display": 800,
+    "cifra": 700,
+    "sans": 400,
+    "sans-semi": 600,
+    "etiqueta": 600,
 }
+# las etiquetas en mayúsculas llevan .04em de letter-spacing, como en el sitio
+ESPACIO_ETIQUETA = 0.04
 _cache = {}
 
 
 def fuente(familia: str, tam: int) -> ImageFont.FreeTypeFont:
     clave = (familia, tam)
     if clave not in _cache:
-        _cache[clave] = ImageFont.truetype(
-            os.path.join(CARPETA_FUENTES, ARCHIVOS[familia]), tam)
+        # el motor básico de Pillow: con raqm (HarfBuzz) los avances no siguen
+        # el eje wght y el texto chico queda apretado y desparejo
+        f = ImageFont.truetype(os.path.join(CARPETA_FUENTES, ARCHIVO), tam,
+                               layout_engine=ImageFont.Layout.BASIC)
+        # los ejes del TTF variable: el peso del uso y el ancho normal
+        f.set_variation_by_axes([PESOS[familia] if e["name"] == b"Weight" else e["default"]
+                                 for e in f.get_variation_axes()])
+        _cache[clave] = f
     return _cache[clave]
 
 
@@ -141,11 +162,12 @@ class Lienzo:
         return f, ls[:max_lineas]
 
     # ---- piezas comunes ----
-    def linea(self, x: float, y: float, escala: float, color: str = "serie"):
+    def linea(self, x: float, y: float, escala: float, color: str = "tinta",
+              grosor: float = LINEA_TRAZO):
         """La línea de la marca con la esquina de arriba a la izquierda de su
         caja en (x, y) y 'escala' píxeles por unidad. Se dibuja a 8x en una
         capa del tamaño de la línea y se reduce: bordes suaves."""
-        r = LINEA_TRAZO * escala / 2
+        r = grosor * escala / 2
         pts = [(x + px * escala, y + py * escala) for px, py in LINEA]
         izq = math.floor(min(p[0] for p in pts) - r) - 1
         arr = math.floor(min(p[1] for p in pts) - r) - 1
@@ -153,54 +175,55 @@ class Lienzo:
         alto = math.ceil(max(p[1] for p in pts) + r) + 1 - arr
         capa = Image.new("L", (ancho * SUPER, alto * SUPER), 0)
         trazo(ImageDraw.Draw(capa), [((px - izq) * SUPER, (py - arr) * SUPER) for px, py in pts],
-              LINEA_TRAZO * escala * SUPER, 255)
+              grosor * escala * SUPER, 255)
         capa = capa.reduce(SUPER)
         self.img.paste(Image.new("RGB", capa.size, self.tok[color]), (izq, arr), capa)
 
     def marca(self, tam: int = 34, y: int = 92, x: float = MARGEN):
-        """El wordmark CARESTÍA en hueso, con la línea de precio que sube en
-        brasa en vez de la tilde de la Í (como el sitio y el favicon): la I va
-        sin tilde y la línea, en su lugar (ver LINEA)."""
+        """El wordmark CARESTÍA en tinta, con la línea de precio que sube en
+        el mismo color en vez de la tilde de la Í (como el sitio y el
+        favicon): la I va sin tilde y la línea, en su lugar, con las medidas
+        de CSS_MARCA (ver MARCA_ANCHO)."""
         f = fuente("display", tam)
         esp = tam * 0.06
+        vx, vy, vw, vh = MARCA_VISTA
         for c in "CARESTIA":
             self.d.text((x, y), c, font=f, fill=self.tok["tinta"], anchor="ls")
             if c == "I":
-                # tope de la caja de la I con line-height 1: el medio de la
-                # fuente (ascendente más descendente) queda al medio de la caja
-                asc, desc = f.getmetrics()
-                tope = y - (asc - desc + tam) / 2
-                # la caja de 0.46 por 0.27 em con la línea centrada adentro
-                escala = 0.46 * tam / LINEA_CAJA[0]
-                self.linea(x - 0.07 * tam,
-                           tope - 0.21 * tam + (0.27 * tam - LINEA_CAJA[1] * escala) / 2, escala)
+                escala = MARCA_ANCHO * tam / vw
+                # el borde de abajo de la caja, MARCA_AIRE sobre la tapa de la I
+                abajo = y - (CAP + MARCA_AIRE) * tam
+                self.linea(x + MARCA_IZQ * tam - vx * escala, abajo - (vh + vy) * escala,
+                           escala, grosor=MARCA_TRAZO)
             x += self.d.textlength(c, font=f) + esp
 
     def fecha(self, texto: str, y: int = 92):
-        self.texto((ANCHO - MARGEN, y), texto.upper(), fuente("mono", 20), "tinta2",
-                   espacio=2.4, ancla="rs")
+        self.texto((ANCHO - MARGEN, y), texto.upper(), fuente("etiqueta", 20), "tinta2",
+                   espacio=20 * ESPACIO_ETIQUETA, ancla="rs")
 
     def pie(self, fuente_txt: str, sitio: str):
         self.d.line([(MARGEN, 548), (ANCHO - MARGEN, 548)], fill=self.tok["line"], width=2)
         self.texto((MARGEN, 590), fuente_txt, fuente("sans", 22), "tinta2")
-        self.texto((ANCHO - MARGEN, 590), sitio, fuente("display", 26), "tinta", ancla="rs")
+        self.texto((ANCHO - MARGEN, 590), sitio, fuente("cifra", 26), "tinta", ancla="rs")
 
     def pildora(self, x: float, y_base: float, texto: str, color: str, tam: int = 22) -> float:
-        """Píldora del veredicto (solo índices), con la línea base de su texto
-        en y_base. Devuelve su ancho."""
-        f = fuente("mono", tam)
-        esp = tam * 0.08
-        w = self.ancho(texto, f, esp) + 2 * tam * 0.8
-        alto = tam * 1.7
-        arriba = y_base - tam * 1.18
-        self.d.rounded_rectangle([x, arriba, x + w, arriba + alto], radius=alto / 2,
+        """La etiqueta del veredicto (solo índices), rellena con el tono del
+        semáforo y con la línea base de su texto en y_base: blanco sobre rojo
+        y sobre verde, tinta sobre ámbar. Devuelve su ancho."""
+        f = fuente("etiqueta", tam)
+        esp = tam * ESPACIO_ETIQUETA
+        w = self.ancho(texto, f, esp) + 2 * tam * 0.6
+        alto = tam * 1.6
+        arriba = y_base - tam * 1.13
+        self.d.rounded_rectangle([x, arriba, x + w, arriba + alto], radius=2,
                                  fill=self.tok[color])
-        self.texto((x + tam * 0.8, y_base), texto, f, "bg", espacio=esp)
+        self.texto((x + tam * 0.6, y_base), texto, f, "tinta" if color == "ambar" else "bg",
+                   espacio=esp)
         return w
 
     def ancho_pildora(self, texto: str, tam: int = 22) -> float:
-        """El ancho que tendrá la píldora, sin dibujarla."""
-        return self.ancho(texto, fuente("mono", tam), tam * 0.08) + 2 * tam * 0.8
+        """El ancho que tendrá la etiqueta, sin dibujarla."""
+        return self.ancho(texto, fuente("etiqueta", tam), tam * ESPACIO_ETIQUETA) + 2 * tam * 0.6
 
     def punto(self, x: float, y: float, r: float, color: str):
         """Un círculo de radio r con centro en (x, y), dibujado a 8x en una capa
@@ -216,8 +239,8 @@ class Lienzo:
     def grafico(self, puntos: list, leyenda: str = "", caja: tuple = GRAFICO,
                 color: str = "serie"):
         """El gráfico de la tarjeta, en 'caja': la serie de 'puntos' (pares
-        [fecha ISO, valor], en orden) en el token 'color' (brasa, como en el
-        sitio; hueso en las canastas de ejemplo), con un área suave debajo;
+        [fecha ISO, valor], en orden) en el token 'color' (--serie, como en el
+        sitio; --canasta en las canastas de ejemplo), con un área suave debajo;
         una línea punteada a la altura de la última semana, para ver de un
         vistazo cuánto de la historia queda bajo el precio de hoy; y el punto
         de esa semana. Abajo, el eje con una marca por año y el primero y el
@@ -245,13 +268,14 @@ class Lienzo:
             tramos[-1].append(px(f, v))
             previa = f
         if leyenda:
-            self.texto((x0, 178), leyenda.upper(), fuente("mono", 18), "tinta2", espacio=2.2)
+            self.texto((x0, 178), leyenda.upper(), fuente("etiqueta", 18), "tinta2",
+                       espacio=18 * ESPACIO_ETIQUETA)
         # el eje, una marca por cada 1 de enero y los años de los extremos
         self.d.line([(x0, y1), (x1, y1)], fill=self.tok["line"], width=2)
         for anio in range(fechas[0].year + 1, fechas[-1].year + 1):
             xm = round(px(datetime.date(anio, 1, 1), bajo)[0])
             self.d.line([(xm, y1), (xm, y1 + 8)], fill=self.tok["line"], width=2)
-        f_anio = fuente("mono", 20)
+        f_anio = fuente("etiqueta", 20)
         self.texto((x0, y1 + 36), str(fechas[0].year), f_anio, "tinta2")
         if fechas[-1].year != fechas[0].year:
             self.texto((x1, y1 + 36), str(fechas[-1].year), f_anio, "tinta2", ancla="rs")
@@ -268,9 +292,10 @@ class Lienzo:
                 d_area.polygon(pts + [(pts[-1][0], piso), (pts[0][0], piso)], fill=255)
             trazo(d_linea, pts, 4 * s, 255)
         area, linea = area.reduce(s), linea.reduce(s)
-        # el área se desvanece hacia abajo: un 32% del color arriba, nada en el eje
+        # el área se desvanece hacia abajo: un 12% del color arriba, nada en
+        # el eje (sobre blanco, la tinta al 12% es un gris suave)
         degradado = Image.linear_gradient("L").rotate(180).resize(area.size)
-        alfa = ImageChops.multiply(area, degradado.point(lambda a: round(a * 0.32)))
+        alfa = ImageChops.multiply(area, degradado.point(lambda a: round(a * 0.12)))
         tinta = Image.new("RGB", area.size, self.tok[color])
         self.img.paste(tinta, (x0 - m, y0 - m), alfa)
         # la punteada a la altura de esta semana, bajo la línea
@@ -301,8 +326,8 @@ def ficha(ruta: str, tok: dict, *, antetitulo: str, nombre: str, precio: str,
     semanas) y el pie con la fuente y la marca. Con 'serie' (pares [fecha
     ISO, valor] de la serie ajustada por inflación) y al menos MIN_PUNTOS
     semanas, el texto va en una columna a la izquierda y el gráfico a la
-    derecha, con 'leyenda' encima y la línea en el token 'linea' (brasa;
-    hueso en las canastas de ejemplo); si no, el texto ocupa todo el ancho,
+    derecha, con 'leyenda' encima y la línea en el token 'linea' (--serie;
+    --canasta en las canastas de ejemplo); si no, el texto ocupa todo el ancho,
     como antes del gráfico."""
     c = Lienzo(tok)
     c.marca()
@@ -340,11 +365,11 @@ def _columna(c: Lienzo, t: dict, k: float, dibujar: bool = False) -> float:
     x, y = MARGEN, 178
     ante = t["antetitulo"].upper()
     for tam in (20, 18, 16):
-        f_ant = fuente("mono", tam)
-        if c.ancho(ante, f_ant, tam * 0.14) <= COLUMNA:
+        f_ant = fuente("etiqueta", tam)
+        if c.ancho(ante, f_ant, tam * ESPACIO_ETIQUETA) <= COLUMNA:
             break
     if dibujar:
-        c.texto((x, y), ante, f_ant, "tinta2", espacio=tam * 0.14)
+        c.texto((x, y), ante, f_ant, "tinta2", espacio=tam * ESPACIO_ETIQUETA)
     escala = lambda tams: tuple(round(s * k) for s in tams)  # noqa: E731
     f_nom, l_nom = c.ajustar(t["nombre"], "sans-semi", escala((56, 50, 44)), COLUMNA, 1)
     if len(c.lineas(t["nombre"], f_nom, COLUMNA)) > 1:
@@ -354,7 +379,7 @@ def _columna(c: Lienzo, t: dict, k: float, dibujar: bool = False) -> float:
         y += int(f_nom.size * 1.12)
         if dibujar:
             c.texto((x, y), linea, f_nom, "tinta")
-    f_pre = fuente("display", round((104 if len(l_nom) == 1 else 88) * k))
+    f_pre = fuente("cifra", round((104 if len(l_nom) == 1 else 88) * k))
     y += int(f_pre.size * 1.08)
     if dibujar:
         c.texto((x, y), t["precio"], f_pre, "tinta")
@@ -401,7 +426,8 @@ def _ancho_completo(c: Lienzo, t: dict) -> None:
     frase, veredicto, color_veredicto, nota = (t["frase"], t["veredicto"],
                                                t["color_veredicto"], t["nota"])
     ancho = ANCHO - 2 * MARGEN
-    c.texto((MARGEN, 178), antetitulo.upper(), fuente("mono", 20), "tinta2", espacio=2.8)
+    c.texto((MARGEN, 178), antetitulo.upper(), fuente("etiqueta", 20), "tinta2",
+            espacio=20 * ESPACIO_ETIQUETA)
     f_nom, l_nom = c.ajustar(nombre, "sans-semi", (64, 56, 48), ancho, 2)
     dos = len(l_nom) > 1
     y = 178 + 18
@@ -409,7 +435,7 @@ def _ancho_completo(c: Lienzo, t: dict) -> None:
         y += int(f_nom.size * 1.12)
         c.texto((MARGEN, y), linea, f_nom, "tinta")
     tam_precio = 84 if dos else 112
-    f_pre = fuente("display", tam_precio)
+    f_pre = fuente("cifra", tam_precio)
     y += int(tam_precio * 1.08)
     c.texto((MARGEN, y), precio, f_pre, "tinta")
     x = MARGEN + c.ancho(precio, f_pre) + 22
@@ -448,16 +474,17 @@ def portada(ruta: str, tok: dict, *, indices: list, fecha: str,
     for i, d in enumerate(indices[:4]):
         x = MARGEN + (i % 2) * (col + 32)
         y0 = 136 + (i // 2) * (alto + 18)
-        c.d.rounded_rectangle([x, y0, x + col, y0 + alto], radius=14,
-                              fill=c.tok["panel"], outline=c.tok["line"], width=2)
-        xi = x + 26
-        f_n = fuente("mono", 20)
-        c.texto((xi, y0 + 44), d["nombre"].upper(), f_n, "tinta2", espacio=2.4)
-        c.pildora(xi + c.ancho(d["nombre"].upper(), f_n, 2.4) + 16, y0 + 44,
+        # sin caja: una regla de 2px en tinta arriba de cada índice
+        c.d.rectangle([x, y0, x + col, y0 + 1], fill=c.tok["tinta"])
+        xi = x
+        f_n = fuente("etiqueta", 20)
+        esp = 20 * ESPACIO_ETIQUETA
+        c.texto((xi, y0 + 44), d["nombre"].upper(), f_n, "tinta2", espacio=esp)
+        c.pildora(xi + c.ancho(d["nombre"].upper(), f_n, esp) + 16, y0 + 44,
                   d["veredicto"], d["color"], tam=17)
-        f_p = fuente("display", 54)
+        f_p = fuente("cifra", 54)
         c.texto((xi, y0 + 108), d["precio"], f_p, "tinta")
-        f_f, l_f = c.ajustar(d["frase"], "sans", (20, 19, 18), col - 52, 2)
+        f_f, l_f = c.ajustar(d["frase"], "sans", (20, 19, 18), col - 26, 2)
         for k, linea in enumerate(l_f):
             c.texto((xi, y0 + 142 + k * int(f_f.size * 1.3)), linea, f_f, "tinta")
     c.pie(pie_txt, sitio)
@@ -469,14 +496,15 @@ def generica(ruta: str, tok: dict, *, tagline: str, sitio: str) -> None:
     grande, la línea del sitio y, abajo a la derecha, el sitio."""
     c = Lienzo(tok)
     c.marca(tam=160, y=337, x=MARGEN + 32)
-    c.texto((MARGEN + 32, 407), tagline, fuente("mono", 28), "tinta2")
-    c.texto((ANCHO - MARGEN, 590), sitio, fuente("display", 30), "tinta3", ancla="rs")
+    c.texto((MARGEN + 32, 407), tagline, fuente("sans", 30), "tinta2")
+    c.texto((ANCHO - MARGEN, 590), sitio, fuente("cifra", 30), "tinta3", ancla="rs")
     c.guardar(ruta)
 
 
 def icono(ruta: str, tok: dict, lado: int = 180) -> None:
-    """apple-touch-icon.png: el símbolo del favicon (la I en hueso y la línea
-    en brasa) sobre el fondo, a sangre: iOS redondea las esquinas. Es el SVG
+    """apple-touch-icon.png: el símbolo del favicon (la I y la línea en
+    blanco, el fondo del sitio) sobre tinta, a sangre: es la única pieza en
+    negativo. iOS redondea las esquinas. Es el SVG
     de viewBox -3.5 -5.5 70 70 con la barra en x=27 y=30 (10 por 24, radio 2)
     y la línea 17,25 25,17 31,21 46,8 de trazo 6, dibujado a 8x y reducido
     (como en trazo, la caja del rectángulo incluye su último píxel)."""
@@ -485,10 +513,10 @@ def icono(ruta: str, tok: dict, lado: int = 180) -> None:
     def a(x, y):   # unidades del viewBox a píxeles
         return (x + 3.5) * k, (y + 5.5) * k
 
-    img = Image.new("RGB", (lado * SUPER, lado * SUPER), _rgb(tok["bg"]))
+    img = Image.new("RGB", (lado * SUPER, lado * SUPER), _rgb(tok["tinta"]))
     d = ImageDraw.Draw(img)
     (x0, y0), (x1, y1) = a(27, 30), a(37, 54)
-    d.rounded_rectangle([x0, y0, x1 - 1, y1 - 1], radius=2 * k, fill=_rgb(tok["tinta"]))
-    trazo(d, [a(17, 25), a(25, 17), a(31, 21), a(46, 8)], 6 * k, _rgb(tok["serie"]))
+    d.rounded_rectangle([x0, y0, x1 - 1, y1 - 1], radius=2 * k, fill=_rgb(tok["bg"]))
+    trazo(d, [a(17, 25), a(25, 17), a(31, 21), a(46, 8)], 6 * k, _rgb(tok["bg"]))
     _carpeta(ruta)
     img.reduce(SUPER).save(ruta, "PNG", optimize=True)

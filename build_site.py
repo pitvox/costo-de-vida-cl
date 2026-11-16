@@ -15,16 +15,16 @@ Lee 'indices.json' (lo produce indices.py) y escribe dos páginas principales:
   spaghetti, Arma tu canasta), con una franja de contexto que acompaña a
   cada modo. #asado, #ensalada, #fruta y #desayuno abren ese índice.
 
-Identidad (tokens en CSS_BASE, iguales en todas las páginas): base neutra
-con texto hueso; la brasa #e8743b solo vive en la í del wordmark y en la
-línea de los índices oficiales; hueso es el color de las canastas de
-usuario. El verde/ámbar/rojo del semáforo queda reservado a los 4 índices
-(veredicto, zonas del percentil de sus tarjetas y velas); los productos van
-sin semáforo. El número de cada variación de precio va en color con criterio
-de consumidor (rojo si subió, verde si bajó), con la flecha al lado en gris.
-IBM Plex Sans para la interfaz y el texto, IBM Plex Mono para etiquetas
-cortas en mayúsculas y Space Grotesk para el wordmark, los títulos de
-sección de la portada y las cifras grandes.
+Identidad (tokens en CSS_BASE, iguales en todas las páginas): un boletín
+estadístico, tinta sobre blanco y sin color de marca. El único color del
+sitio es el dato. El verde/ámbar/rojo del semáforo queda reservado a los 4
+índices (el veredicto, una etiqueta rellena; las zonas del percentil de sus
+tarjetas y las velas); los productos van sin semáforo. El número de cada
+variación de precio va en color con criterio de consumidor (rojo si subió,
+verde si bajó), con la flecha al lado en gris. Las líneas de los índices y
+de los productos van en --serie (tinta) y las de las canastas de usuario,
+en --canasta (gris). Una sola familia, Archivo: el texto en 400 y 500, las
+etiquetas cortas en 600, las cifras grandes en 700 y el wordmark en 800.
 
 /graficos.html trae inline solo el primer pantallazo; las series completas
 van a datos/ y se piden a demanda (ver generar_datos). La portada no lleva
@@ -115,7 +115,7 @@ __CSS_CABECERA__
     scrollbar-width:none; -webkit-overflow-scrolling:touch; }
   .tabs::-webkit-scrollbar { display:none; }
   /* afordancia: las pills inactivas se leen como botón (fondo panel, borde
-     de línea, texto hueso) y el hover/focus responde con borde hueso */
+     de línea, texto en tinta) y el hover/focus responde con borde en tinta */
   .tab { flex:none; font:600 13px var(--sans); letter-spacing:.01em;
     padding:8px 16px; min-height:34px; cursor:pointer; white-space:nowrap;
     background:var(--panel); border:1px solid var(--line); border-radius:999px;
@@ -137,7 +137,7 @@ __CSS_CABECERA__
      fila se reparte el ancho y NUNCA nace una tercera fila; en pantallas muy
      angostas el texto elipsa en vez de reflowar. min-height =
      12+34+8+1+8+34+12 más el borde inferior: la reserva exacta de las dos
-     filas antes de que JS las pueble (CLS). El punto brasa de las
+     filas antes de que JS las pueble (CLS). El punto de las
      herramientas queda intacto */
   @media (max-width:640px) {
     .tabs { flex-wrap:wrap; overflow-x:visible; min-height:110px; }
@@ -224,8 +224,8 @@ __CSS_CABECERA__
   body.tv-can .overlay.m-can > :empty { display:none; }
   .overlay { position:absolute; left:clamp(12px,2.5vw,32px); top:clamp(12px,2.5vw,26px);
     pointer-events:none; z-index:5; max-width:88%; }
-  .overlay .oname { font:500 clamp(10px,1.4vw,12px) var(--mono);
-    letter-spacing:.16em; color:var(--tinta2); text-transform:uppercase; }
+  .overlay .oname { font:600 clamp(10px,1.4vw,12px) var(--sans);
+    letter-spacing:.04em; color:var(--tinta2); text-transform:uppercase; }
   .overlay .oname span { color:var(--tinta3); text-transform:none; }
   /* el nombre del índice es una etiqueta corta: mono y en mayúsculas, como
      en el ticker; el subtítulo y el rango de años van en texto normal */
@@ -238,12 +238,13 @@ __CSS_CABECERA__
   .oprice { font:700 clamp(34px,6vw,68px)/1 var(--display);
     letter-spacing:-.01em; color:var(--tinta); }
   /* la variación semanal: el número en color (ver .v-sube y .v-baja) y el
-     resto en hueso */
+     resto en tinta */
   .odelta { font:600 clamp(13px,1.6vw,18px) var(--sans); color:var(--tinta); }
   .odelta small { font:400 12px var(--sans); color:var(--tinta); }
   .overd { display:flex; align-items:center; gap:12px; margin-top:12px; flex-wrap:wrap; }
-  .badge { font:600 clamp(11px,1.4vw,13px) var(--mono); letter-spacing:.14em;
+  .badge { font:600 clamp(11px,1.4vw,13px) var(--sans); letter-spacing:.04em;
     padding:5px 12px; background:var(--verdict); color:var(--bg);
+    border-radius:2px;
     animation:car-pulse 2.4s ease-in-out infinite; }
   /* la frase del veredicto por temporada junto a la píldora y, debajo, el
      percentil de toda la historia como dato secundario */
@@ -282,7 +283,7 @@ __CSS_CABECERA__
   .vtoggle .ubtn { font:500 13px var(--sans); letter-spacing:0; }
   .usel { display:none; font:500 13px var(--sans); color:var(--tinta);
     background:var(--bg); border:1px solid var(--line); border-radius:0;
-    min-height:34px; padding:0 6px; color-scheme:dark; cursor:pointer; }
+    min-height:34px; padding:0 6px; color-scheme:light; cursor:pointer; }
   .unidad.compacta .ubtns { display:none; }
   .unidad.compacta .usel { display:block; }
   .midiendo { flex-wrap:nowrap !important; }
@@ -304,7 +305,7 @@ __CSS_CABECERA__
   /* LÍNEA / VELAS son etiquetas cortas en mayúsculas (mono); los botones
      de texto normal (captura PNG) van en la tipografía de la
      interfaz */
-  .vbtn { font:600 11px var(--mono); letter-spacing:.1em; padding:8px 14px;
+  .vbtn { font:600 11px var(--sans); letter-spacing:.04em; padding:8px 14px;
     border:none; cursor:pointer; background:transparent; color:var(--tinta2); min-height:34px;
     white-space:nowrap; }
   .vbtn + .vbtn { border-left:1px solid var(--line); }
@@ -315,7 +316,7 @@ __CSS_CABECERA__
      LÍNEA / VELAS y la captura van en la fila con botones más justos */
   @media (max-width:640px) {
     .cbar, .cbar-right, .cbar-ctrl { gap:8px 6px; }
-    .cbar .vbtn { padding:8px 7px; letter-spacing:.06em; }
+    .cbar .vbtn { padding:8px 7px; letter-spacing:.04em; }
     .cbar .nomtoggle { font-size:12px; }
     .cbar .vtoggle .ubtn { letter-spacing:0; padding:8px 10px; }
     .usel { font-size:11px; padding:0 2px; }
@@ -364,7 +365,7 @@ __CSS_CABECERA__
   .ctx-box { padding:clamp(16px,3vw,24px) clamp(16px,3vw,32px); min-height:190px; }
   @media (min-width:900px) { .ctx-box + .ctx-box { border-left:1px solid var(--line); } }
   @media (max-width:899px) { .ctx-box + .ctx-box { border-top:1px solid var(--line); } }
-  .ctx-h { font:600 11px var(--mono); letter-spacing:.16em; color:var(--tinta2); }
+  .ctx-h { font:600 11px var(--sans); letter-spacing:.04em; color:var(--tinta2); }
   .ctx-h span { font:400 12px var(--sans); color:var(--tinta3); letter-spacing:0; }
   .bars { display:flex; align-items:flex-end; gap:6px; height:76px; margin-top:16px; }
   .bars .mcol { flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; }
@@ -397,7 +398,7 @@ __CSS_CABECERA__
 __CSS_COMPARAR__
   .pgroup { border-top:1px solid var(--line); }
   .pg-head { display:flex; align-items:center; gap:8px; width:100%; text-align:left;
-    font:600 11px var(--mono); letter-spacing:.14em; color:var(--tinta2);
+    font:600 11px var(--sans); letter-spacing:.04em; color:var(--tinta2);
     text-transform:uppercase; background:none; border:none; padding:11px 2px;
     min-height:38px; cursor:pointer; }
   .pg-head:hover { color:var(--tinta); }
@@ -410,7 +411,7 @@ __CSS_COMPARAR__
      y al borrar la búsqueda vuelve el colapso que dejó el usuario */
   .pgroup:not(.abierto):not(.buscando) .pg-body { display:none; }
   .can-reg { font:400 12px/1.6 var(--sans); color:var(--tinta2); margin-top:10px; }
-  /* acción principal de la vista: pill como los tabs, en hueso para que
+  /* acción principal de la vista: pill como los tabs, en tinta para que
      se lea como botón protagonista */
   .ccopy { font:600 13px var(--sans); padding:8px 16px;
     min-height:34px; cursor:pointer; background:transparent; border:1px solid var(--tinta);
@@ -719,6 +720,8 @@ __JS_PANTALLA__
   const GRUPO_TXT = __GRUPOS__;
   const grupoTxt = g => GRUPO_TXT[g] || g;
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // el tono del semáforo de cada veredicto (tokens --verde, --ambar y --rojo)
+  const TONO_VEREDICTO = __TONO_VEREDICTO__;
 
   // los colores de los gráficos y de la captura salen de los tokens de :root
   const VARS = getComputedStyle(document.documentElement);
@@ -728,7 +731,7 @@ __JS_PANTALLA__
     .forEach(n => { COL[n] = tok(n); });
   // opciones comunes de los tres lienzos: la rueda acerca y mueve el
   // gráfico, como en Advanced Charts; el deslizamiento vertical en táctil
-  // queda para la página y dos dedos acercan. El crosshair va en hueso tenue
+  // queda para la página y dos dedos acercan. El crosshair va en tinta tenue
   function opcionesChart(extra) {
     extra = extra || {};
     return Object.assign({
@@ -801,7 +804,7 @@ __JS_PANTALLA__
       css: location.origin + TV_CSS,
       simbolo: m === 'indices' ? simboloIndice(cur) : m === 'canasta' ? tickerCanasta() :
         PRODS[primero].slug + SUF[unidad],
-      // Comparar pone sus propios colores; Tu canasta, una línea en hueso
+      // Comparar pone sus propios colores; Tu canasta, una línea en --canasta
       estilo: m !== 'productos' })
       .then(w => {
         e.w = w;
@@ -1005,7 +1008,7 @@ __JS_PANTALLA__
     }
     chart = LightweightCharts.createChart(el, opcionesChart({ localization: {
       priceFormatter: fmt } }));
-    // la línea de los índices oficiales: el único lugar de la brasa en los gráficos
+    // la línea de los índices oficiales, en --serie
     sLinea = chart.addLineSeries({ color: COL.serie, lineWidth: 2, priceLineVisible: false });
     // C2: convención estándar de trading, verde sube y rojo baja
     sCandle = chart.addCandlestickSeries({
@@ -1157,7 +1160,8 @@ __JS_PANTALLA__
   let fechaSemana = '';
   function aplicar(code) {
     const d = INDICES[code];
-    document.documentElement.style.setProperty('--verdict', d.color);
+    // el color sale del nombre del veredicto (tokens), no del campo color
+    document.documentElement.style.setProperty('--verdict', 'var(--' + (TONO_VEREDICTO[d.veredicto] || 'ambar') + ')');
     fechaSemana = d.fecha;
     document.getElementById('oname').textContent = d.nombre.replace(/^Índice /i, '');
     document.getElementById('osub').textContent = d.subtitulo;
@@ -1170,7 +1174,7 @@ __JS_PANTALLA__
     document.getElementById('odelta4').innerHTML = fmtDelta(d4);
     document.getElementById('odelta4-caja').hidden = d4 == null;
     document.getElementById('obadge').textContent = d.veredicto;
-    document.getElementById('obadge').style.background = d.color;
+    document.getElementById('obadge').className = 'badge ver-' + (TONO_VEREDICTO[d.veredicto] || 'ambar');
     // la frase del veredicto por temporada y el percentil de toda la
     // historia como dato secundario: los arma el build
     document.getElementById('opct').textContent = d.frase;
@@ -1509,8 +1513,8 @@ __JS_PANTALLA__
       return;
     }
     // mismos gestos del hero (rueda y swipe vertical scrollean la página,
-    // zoom en ejes y pinch) pero la línea va en HUESO: la brasa queda para
-    // los índices oficiales; las canastas de usuario se dibujan en hueso
+    // zoom en ejes y pinch) pero la línea va en --canasta: --serie queda
+    // para los índices oficiales y los productos
     cchart = LightweightCharts.createChart(el,
       opcionesChart({ localization: { priceFormatter: fmt } }));
     // el label de precio del eje toma el color de la serie: acompaña
@@ -1657,7 +1661,7 @@ __JS_PANTALLA__
       const paint = () => {
         const on = canasta.has(k);
         b.classList.toggle('active', on);
-        // la canasta de usuario va en hueso, como su línea
+        // la canasta de usuario va en --canasta, como su línea
         dot.style.background = on ? 'var(--canasta)' : 'var(--tinta3)';
         b.style.borderColor = on ? 'var(--canasta)' : 'var(--line)';
         b.style.opacity = (!on && canasta.size >= CMAX) ? '.4' : '';
@@ -1910,9 +1914,9 @@ __CSS_CABECERA__
   .icard:hover, .icard:focus-visible { border-color:var(--tinta); background:var(--hover); }
   .ic-top { display:flex; flex-wrap:wrap; justify-content:space-between;
     align-items:center; gap:6px 8px; }
-  .ic-ey { font:500 11px var(--mono); letter-spacing:.14em; color:var(--tinta2); }
-  .ic-pill { font:500 11px var(--mono); letter-spacing:.08em; padding:3px 9px;
-    border-radius:999px; color:var(--bg); }
+  .ic-ey { font:600 11px var(--sans); letter-spacing:.04em; color:var(--tinta2); }
+  .ic-pill { font:600 11px var(--sans); letter-spacing:.04em; padding:3px 9px;
+    border-radius:2px; }
   .ic-mid { display:flex; flex-direction:column; gap:4px; }
   .ic-sub { font:400 13px var(--sans); color:var(--tinta2); }
   /* el precio de esta semana, sin etiqueta: en su semana, ajustado y de la
@@ -2126,8 +2130,8 @@ __CSS_CABECERA__
     .icard { gap:8px; padding:14px; border-radius:12px; }
     .ic-ind, .ic-sub, .ic-pie { display:none; }
     .ic-fr { font-size:12px; }
-    .ic-ey { font-size:10px; letter-spacing:.12em; }
-    .ic-pill { font-size:10px; letter-spacing:.06em; padding:2px 7px; }
+    .ic-ey { font-size:10px; letter-spacing:.04em; }
+    .ic-pill { font-size:10px; letter-spacing:.04em; padding:2px 7px; }
     .ic-precio { font-size:24px; line-height:1.1; }
     .zonas { height:6px; }
     .zonas .marca { top:-3px; height:12px; }
@@ -2368,27 +2372,30 @@ PIE_ATTR = ('Fuente: precios al consumidor de ODEPA (<a href="https://datos.odep
             'datos.odepa.gob.cl</a>, licencia CC-BY), deflactados con el IPC.')
 
 # ---------------- Identidad común: fuentes, tokens y base ----------------
-# Una sola llamada a Google Fonts, igual en todas las páginas, con los pesos
-# que se usan: IBM Plex Sans para la interfaz y el texto, IBM Plex Mono solo
-# para etiquetas cortas en mayúsculas y Space Grotesk solo para el wordmark,
-# los títulos de sección de la portada y las cifras grandes.
+# Una sola llamada a Google Fonts, igual en todas las páginas: Archivo
+# (Omnibus-Type, licencia OFL), la única familia del sitio, en los pesos que
+# se usan. 400 y 500 para el texto, 600 para las etiquetas cortas y los
+# controles, 700 para las cifras grandes y los títulos, 800 para el wordmark.
 FUENTES = """<link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">"""
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">"""
 
-# Favicon: el símbolo (la I en hueso y la línea de precio que sube, en brasa)
-# sobre el fondo. El ícono de iOS (apple-touch-icon.png, 180 x 180, a sangre:
-# iOS redondea las esquinas) lo dibuja tarjetas.icono en cada build.
-ICONO = ("<link rel=\"icon\" href=\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' "
-         "viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f0f0e'/%3E"
-         "%3Crect x='26' y='30' width='12' height='25' rx='2' fill='%23e4dacc'/%3E"
-         "%3Cpolyline points='16,26 25,17 31,21 47,7' fill='none' stroke='%23e8743b' "
+# Favicon: el símbolo (la I y la línea de precio que sube, en blanco) sobre
+# tinta: es la única pieza en negativo del sitio. El ícono de iOS
+# (apple-touch-icon.png, 180 x 180, a sangre: iOS redondea las esquinas) lo
+# dibuja tarjetas.icono en cada build. Va con el color de la barra del
+# navegador (theme-color), el fondo blanco de las páginas.
+ICONO = ("<meta name=\"theme-color\" content=\"#ffffff\">\n"
+         "<link rel=\"icon\" href=\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' "
+         "viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23111111'/%3E"
+         "%3Crect x='26' y='30' width='12' height='25' rx='2' fill='%23ffffff'/%3E"
+         "%3Cpolyline points='16,26 25,17 31,21 47,7' fill='none' stroke='%23ffffff' "
          "stroke-width='8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\">\n"
          "<link rel=\"apple-touch-icon\" href=\"/apple-touch-icon.png\">")
 
 # Wordmark: la Í de CARESTÍA lleva, en vez de la tilde, la línea de precio
-# que sube (en brasa). Es la misma en todas las páginas; cada una fija solo el
-# tamaño del wordmark. La forma de la línea es la de la marca (caja de 52 por
+# que sube (en tinta, como las letras). Es la misma en todas las páginas;
+# cada una fija solo el tamaño del wordmark. La forma de la línea es la de la marca (caja de 52 por
 # 30) con trazo 10 en vez de 7 para que se lea a 20 y 26px; el viewBox se
 # agranda a -1 -3 54 34 para que entren los extremos redondeados.
 MASCARA_LINEA = ("url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' "
@@ -2398,22 +2405,26 @@ MASCARA_LINEA = ("url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/
 CSS_MARCA = r"""  /* la Í de la marca: el texto del nodo sigue siendo la Í única (innerText
      y copy-paste leen CARESTÍA). El clip-path del span interior recorta la
      tilde del glifo y el ::after del envoltorio dibuja la línea: el color es
-     el token --serie y la forma va como máscara. Envoltorio y span son
-     inline-block con line-height normal y un margen negativo que los deja
-     dentro de la línea: el wordmark no cambia de alto ni se mueve (CLS).
+     el de las letras (--tinta) y la forma va como máscara. Envoltorio y span
+     son inline-block con line-height normal y un margen negativo que los
+     deja dentro de la línea: el wordmark no cambia de alto ni se mueve (CLS).
      Inline-block y no inline: en un span inline, Chrome no mueve el recorte
      cuando llega la fuente web y la I queda fuera. El recorte y la línea se
-     miden desde la tapa de la I (1cap) sobre la línea base, que queda a
-     round(.292em, 1px) del borde de abajo: el descendente de Space Grotesk
-     y de su respaldo métrico, que el navegador redondea a px. Así el corte
-     cae entre la tapa y la tilde en cualquier tamaño, y la línea queda con
-     el aire que tenía la tilde sobre la I y cabe en los 22px de las fichas
-     (overflow:hidden). Sin round() ni cap, valen las medidas fijas en em */
+     miden desde la tapa de la I (1cap, .686em en Archivo) sobre la línea
+     base, que queda a round(.21em, 1px) del borde de abajo: el descendente
+     de Archivo y de su respaldo métrico, que el navegador redondea a px. En
+     Archivo 800 la tapa de la I llega a .687em y la tilde empieza en .745em:
+     el corte (.029em sobre la tapa) cae entre las dos en cualquier tamaño, y
+     la línea queda con el aire de .027em sobre la I y cabe en los 22px de
+     las fichas (overflow:hidden). La caja de la línea mide .26 por .164em,
+     corrida .035em a la derecha: queda centrada sobre el asta de la I
+     (.075 a .254em). Sin round() ni cap, valen las medidas fijas en em,
+     desde el tope del span (el ascendente, .878em) */
   .wordmark .i { position:relative; display:inline-block; line-height:normal;
     margin:-.25em 0; }
-  .wordmark .i > span { display:inline-block; clip-path:inset(.265em 0 0 0); }
-  .wordmark .i::after { content:""; position:absolute; left:0; top:.12em;
-    width:.243em; height:.153em; pointer-events:none; background:var(--serie);
+  .wordmark .i > span { display:inline-block; clip-path:inset(.163em 0 0 0); }
+  .wordmark .i::after { content:""; position:absolute; left:.035em; top:0;
+    width:.26em; height:.164em; pointer-events:none; background:var(--tinta);
     --linea:__MASCARA__;
     -webkit-mask:var(--linea) 0 0/100% 100% no-repeat;
     mask:var(--linea) 0 0/100% 100% no-repeat;
@@ -2421,8 +2432,8 @@ CSS_MARCA = r"""  /* la Í de la marca: el texto del nodo sigue siendo la Í ún
     -webkit-print-color-adjust:exact; print-color-adjust:exact; }
   @supports (top:calc(round(1em, 1px) + 1cap)) {
     .wordmark .i > span {
-      clip-path:inset(calc(100% - round(.292em, 1px) - 1cap - .029em) 0 0 0); }
-    .wordmark .i::after { top:auto; bottom:calc(round(.292em, 1px) + 1cap + .027em); }
+      clip-path:inset(calc(100% - round(.21em, 1px) - 1cap - .029em) 0 0 0); }
+    .wordmark .i::after { top:auto; bottom:calc(round(.21em, 1px) + 1cap + .027em); }
   }
   /* temas de contraste: el fondo de la línea se forzaría al del lienzo y no
      se vería; va en el color de sistema del texto, como las letras */
@@ -2434,44 +2445,59 @@ CSS_MARCA = r"""  /* la Í de la marca: el texto del nodo sigue siendo la Í ún
 # Los tokens de color y de familia viven SOLO aquí (cada página los recibe en
 # su :root); los gráficos y la captura PNG los leen con getComputedStyle.
 CSS_BASE = r"""
-  /* fallbacks métricos: Arial ajustada a las métricas de cada webfont para
-     que el swap no reacomode el wordmark, las cifras ni el texto (CLS) */
-  @font-face { font-family:"Space Grotesk Fallback"; src:local("Arial");
-    size-adjust:101.7%; ascent-override:96.9%; descent-override:29.2%;
-    line-gap-override:0%; }
-  @font-face { font-family:"IBM Plex Sans Fallback"; src:local("Arial");
-    size-adjust:99.5%; ascent-override:103%; descent-override:27.6%;
-    line-gap-override:0%; }
+  /* respaldo métrico: Arial ajustada a las métricas de Archivo (1000
+     unidades por em, ascendente 878, descendente 210, sin interlineado
+     extra) para que el cambio de fuente no reacomode el wordmark, las cifras
+     ni el texto (CLS). size-adjust es el ancho de Archivo sobre el de Arial
+     en un texto de muestra del sitio (400 sobre Arial, 700 sobre Arial
+     Bold); los override son las métricas divididas por size-adjust */
+  @font-face { font-family:"Archivo Fallback"; src:local("Arial");
+    font-weight:100 500; size-adjust:98.8%; ascent-override:88.9%;
+    descent-override:21.3%; line-gap-override:0%; }
+  @font-face { font-family:"Archivo Fallback"; src:local("Arial Bold");
+    font-weight:600 900; size-adjust:99.2%; ascent-override:88.5%;
+    descent-override:21.2%; line-gap-override:0%; }
   :root {
-    /* base neutra. Sobre --bg, hueso 13,9:1, secundario 7,2:1 y
-       terciario 5,0:1 (AA); sobre --panel, 13,0, 6,7 y 4,6 */
-    --bg:#0f0f0e; --panel:#171716; --line:#2b2a27;
-    --tinta:#e4dacc; --tinta2:#a39e95; --tinta3:#86817a;
+    color-scheme:light;
+    /* tinta sobre blanco, sin color de marca: el único color del sitio es
+       el dato. Sobre --bg, tinta 18,9:1, secundario 8,5:1 y terciario
+       5,3:1 (AA); sobre --panel, 17,3, 7,8 y 4,9 */
+    --bg:#ffffff; --panel:#f5f5f5; --line:#d9d9d9;
+    --tinta:#111111; --tinta2:#4d4d4d; --tinta3:#6b6b6b;
     /* derivados de la base: hover de los controles y grilla de gráficos */
-    --hover:#201f1d; --grid:#1c1c1a;
-    /* brasa: solo la í del wordmark y la línea de los índices oficiales */
-    --serie:#e8743b;
+    --hover:#ebebeb; --grid:#ececec;
+    /* la línea de los índices oficiales y de los productos, en tinta */
+    --serie:#111111;
     /* canastas de usuario: la línea de Arma tu canasta y de las canastas
-       de ejemplo */
-    --canasta:#e4dacc;
-    /* semáforo: solo el veredicto y las velas de los 4 índices */
-    --verde:#5bbf7a; --ambar:#e0a83c; --rojo:#e0552f; --verdict:var(--rojo);
+       de ejemplo (4,5:1 sobre --bg) */
+    --canasta:#767676;
+    /* semáforo: el veredicto de los 4 índices (etiqueta rellena: blanco
+       sobre rojo 5,4:1 y sobre verde 5,0:1, tinta sobre ámbar 10,1:1), las
+       zonas del percentil y las velas. El ámbar no cumple como texto sobre
+       blanco (1,9:1): cuando va de texto o de trazo fino, --ambar-texto
+       (5,5:1 sobre --bg y 5,1:1 sobre --panel) */
+    --verde:#1a7f47; --ambar:#f0b429; --rojo:#c8321c; --verdict:var(--rojo);
+    --ambar-texto:#8a6100;
     /* variaciones de precio, con criterio de consumidor: el número va en
        rojo si el precio subió y en verde si bajó (ver .v-sube y .v-baja).
-       Sobre --bg, rojo 5,0:1 y verde 8,4:1; sobre --panel, 4,7 y 7,8 (AA) */
+       Sobre --bg, rojo 5,4:1 y verde 5,0:1; sobre --panel, 4,9 y 4,6 (AA) */
     --sube:var(--rojo); --baja:var(--verde);
     /* Comparar: cuatro tonos muy distintos, sin azules ni violetas
-       azulados, sin verde, naranjo ni rojo (rosa, magenta, mostaza y
-       amarillo); del 5º al 8º producto se repiten punteados. Entre sí quedan
-       a 18 o más (OKLab x100) con visión normal y con protanopía y
-       deuteranopía simuladas (con tritanopía, a 8 o más), y la mostaza a 28
-       o más del hueso de las fichas. Sobre --bg, 4,2:1 o más */
-    --cmp1:#f28cc0; --cmp2:#b04fb5; --cmp3:#9d8519; --cmp4:#f2d74e;
-    /* crosshair de los gráficos: hueso tenue */
-    --cruz:rgba(228,218,204,.35);
-    --sans:"IBM Plex Sans","IBM Plex Sans Fallback",system-ui,sans-serif;
-    --mono:"IBM Plex Mono",ui-monospace,monospace;
-    --display:"Space Grotesk","Space Grotesk Fallback",sans-serif;
+       azulados, sin verdes ni rojos (magenta, morado, mostaza y café: tono
+       OKLCH de 304 a 8 y de 56 a 100); del 5º al 8º producto se repiten
+       punteados. Entre sí quedan a 20 o más (OKLab x100) con visión normal
+       y con protanopía y deuteranopía simuladas (con tritanopía, a 8 o más),
+       y a 28 o más de la línea de la ficha (--serie) con las cuatro. Las
+       distancias mínimas de cada par (normal, protan, deutan): 1-2 24,5,
+       20,7, 25,3; 1-3 30,0, 27,2, 22,4; 1-4 33,3, 27,1, 26,8; 2-3 38,3,
+       36,5, 35,6; 2-4 25,9, 22,8, 20,9; 3-4 20,9, 20,2, 21,2. Sobre --bg,
+       3,0:1 o más (1: 3,1; 2: 8,5; 3: 3,0; 4: 6,9) */
+    --cmp1:#e05ddf; --cmp2:#8101a4; --cmp3:#b4902e; --cmp4:#6d5732;
+    /* crosshair de los gráficos: tinta tenue */
+    --cruz:rgba(17,17,17,.35);
+    /* una sola familia: Archivo. Las cifras van con tabular-nums */
+    --sans:"Archivo","Archivo Fallback",system-ui,sans-serif;
+    --display:"Archivo","Archivo Fallback",system-ui,sans-serif;
   }
   * { box-sizing:border-box; margin:0; padding:0; }
   body { background:var(--bg); color:var(--tinta); font-family:var(--sans);
@@ -2486,8 +2512,8 @@ CSS_CABECERA = r"""  /* ---- ticker ---- */
   .ticker { position:sticky; top:0; z-index:50; display:flex; align-items:stretch;
     background:var(--bg); border-bottom:1px solid var(--line); min-height:44px; }
   .ticker .tag { display:none; align-items:center; padding:0 18px;
-    border-right:1px solid var(--line); font:600 10px var(--mono);
-    letter-spacing:.18em; color:var(--tinta2); white-space:nowrap; }
+    border-right:1px solid var(--line); font:600 10px var(--sans);
+    letter-spacing:.04em; color:var(--tinta2); white-space:nowrap; }
   .ticker-scroll { flex:1; overflow-x:auto; overflow-y:hidden;
     scrollbar-width:none; -webkit-overflow-scrolling:touch; }
   .ticker-scroll::-webkit-scrollbar { display:none; }
@@ -2508,10 +2534,10 @@ CSS_CABECERA = r"""  /* ---- ticker ---- */
     white-space:nowrap; border-right:1px solid var(--grid); background:none; border-top:0;
     border-bottom:0; border-left:0; min-height:44px; }
   .titem:hover { background:var(--hover); }
-  .titem .tn { font:600 11px var(--mono); letter-spacing:.1em; color:var(--tinta); }
+  .titem .tn { font:600 11px var(--sans); letter-spacing:.04em; color:var(--tinta); }
   .titem .tp { font:500 13px var(--sans); color:var(--tinta); }
   /* la variación semanal y la de 4 semanas: el número en color (ver
-     .v-sube y .v-baja) y su etiqueta en hueso */
+     .v-sube y .v-baja) y su etiqueta en tinta */
   .titem .td { font:500 12px var(--sans); color:var(--tinta); }
   .titem .tv, .titem .tv small { font:400 11px var(--sans); color:var(--tinta); }
   @media (min-width:760px) {
@@ -2531,7 +2557,7 @@ CSS_CABECERA = r"""  /* ---- ticker ---- */
   .brand { display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 18px; }
   /* line-height y alto explícitos: el alto del wordmark depende solo del
      font-size, no de la métrica de la fuente que esté cargada (CLS) */
-  .wordmark { font:700 clamp(20px,4vw,26px)/1.15 var(--display);
+  .wordmark { font:800 clamp(20px,4vw,26px)/1.15 var(--display);
     letter-spacing:.06em; color:var(--tinta); display:flex; align-items:baseline;
     height:1.15em; }
 __CSS_MARCA__
@@ -2549,8 +2575,8 @@ CSS_SITIO = r"""
   .sitenav { flex-basis:100%; }
   .sitenav ul { list-style:none; }
   .snav-links { display:flex; flex-wrap:wrap; gap:0 22px; }
-  .snav-links a, .snav-panel a { font:500 11px var(--mono);
-    letter-spacing:.08em; text-transform:uppercase; text-decoration:none; }
+  .snav-links a, .snav-panel a { font:600 11px var(--sans);
+    letter-spacing:.04em; text-transform:uppercase; text-decoration:none; }
   .snav-links a { display:inline-block; padding:6px 0 5px; color:var(--tinta2);
     border-bottom:1px solid transparent; }
   .snav-links a:hover, .snav-links a:focus-visible { color:var(--tinta);
@@ -2563,7 +2589,7 @@ CSS_SITIO = r"""
   .snav-menu > summary { display:flex; align-items:center; gap:8px;
     min-height:34px; margin:-6px 0; padding:0 14px; cursor:pointer;
     list-style:none; -webkit-user-select:none; user-select:none;
-    font:600 11px var(--mono); letter-spacing:.1em;
+    font:600 11px var(--sans); letter-spacing:.04em;
     text-transform:uppercase; color:var(--tinta); background:var(--panel);
     border:1px solid var(--line); border-radius:999px; }
   .snav-menu > summary::-webkit-details-marker { display:none; }
@@ -2572,7 +2598,7 @@ CSS_SITIO = r"""
   .snav-panel { position:absolute; right:0; top:calc(100% + 12px); z-index:60;
     min-width:230px; max-width:calc(100vw - 32px); padding:4px 0;
     background:var(--panel); border:1px solid var(--line);
-    box-shadow:0 14px 34px rgba(0,0,0,.55); }
+    box-shadow:0 8px 24px rgba(17,17,17,.12); }
   .snav-panel li + li { border-top:1px solid var(--line); }
   .snav-panel a { display:flex; align-items:center; min-height:44px;
     padding:0 18px; font-size:12px; color:var(--tinta); }
@@ -2591,8 +2617,8 @@ CSS_SITIO = r"""
   }
 
   /* ---- pie común ---- */
-  /* todo el texto del pie cumple AA sobre --bg: secundario 7,2:1 y
-     hueso 13,9:1 */
+  /* todo el texto del pie cumple AA sobre --bg: secundario 8,5:1 y
+     tinta 18,9:1 */
   .sitefoot { border-top:1px solid var(--line); background:var(--bg);
     padding:18px clamp(16px,3vw,32px) 24px; display:flex;
     flex-direction:column; gap:8px; }
@@ -2611,10 +2637,17 @@ CSS_SITIO = r"""
   /* ---- variaciones de precio (todas las páginas) ---- */
   /* el número va en color con criterio de consumidor: rojo si el precio
      subió, verde si bajó y el color del texto si no cambió. La flecha va al
-     lado, en gris, y el resto del texto en hueso */
+     lado, en gris, y el resto del texto en tinta */
   .f { font-style:normal; color:var(--tinta3); }
   .v-sube { color:var(--sube); }
   .v-baja { color:var(--baja); }
+
+  /* ---- veredicto de los 4 índices: etiqueta rellena ---- */
+  /* blanco sobre rojo (5,4:1) y sobre verde (5,0:1), tinta sobre ámbar
+     (10,1:1) */
+  .ver-rojo { background:var(--rojo); color:var(--bg); }
+  .ver-verde { background:var(--verde); color:var(--bg); }
+  .ver-ambar { background:var(--ambar); color:var(--tinta); }
 """
 
 # menú móvil: se cierra al tocar fuera o con Escape (sin JS abre y cierra
@@ -2675,7 +2708,7 @@ BUSCA_CSS = r"""  /* encabezado: en pantallas anchas, un campo al final de la fi
   .sb-caja { display:none; position:absolute; right:0; top:calc(100% + 12px);
     z-index:60; width:min(360px, calc(100vw - 32px)); padding:10px;
     background:var(--panel); border:1px solid var(--line);
-    box-shadow:0 14px 34px rgba(0,0,0,.55); }
+    box-shadow:0 8px 24px rgba(17,17,17,.12); }
   .sbusca.abierta .sb-caja { display:block; }
   /* 16px: con menos, Safari del iPhone acerca la página al enfocar el campo */
   .sb-q { display:block; width:100%; height:44px; padding:0 12px;
@@ -2717,7 +2750,7 @@ BUSCA_CSS = r"""  /* encabezado: en pantallas anchas, un campo al final de la fi
       background:var(--panel); }
     .sb-res { position:absolute; right:0; top:calc(100% + 10px); z-index:60;
       width:340px; margin-top:0; background:var(--panel);
-      border:1px solid var(--line); box-shadow:0 14px 34px rgba(0,0,0,.55); }
+      border:1px solid var(--line); box-shadow:0 8px 24px rgba(17,17,17,.12); }
   }
   /* portada y /productos/: el campo sobre la tabla o la lista, en el alto
      que la página le reserva (#pbh) */
@@ -3005,7 +3038,7 @@ def pie_sitio(actual: str = "") -> str:
 # ---------------- Páginas estáticas por producto (SEO) ----------------
 # Una página liviana por producto del catálogo, generada en el build con los
 # datos de ESE producto inline (nunca el catálogo completo). Versión reducida
-# de la estética del sitio: carbón/hueso/ceniza/brasa, wordmark chico con la
+# de la estética del sitio: tinta sobre blanco, wordmark chico con la
 # tilde, sin ticker. La serie va compacta (t0 + enteros semanales) y se
 # expande en el navegador igual que en el index.
 PRODUCT_HTML = r"""<!DOCTYPE html>
@@ -3029,7 +3062,7 @@ __CSS_BASE__
   header { display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 14px;
     padding:14px clamp(16px,3vw,32px); border-bottom:1px solid var(--line);
     min-height:51px; }
-  .wordmark { font:700 20px/1.1 var(--display); letter-spacing:.06em;
+  .wordmark { font:800 20px/1.1 var(--display); letter-spacing:.06em;
     color:var(--tinta); text-decoration:none; display:inline-flex;
     align-items:baseline; height:22px; overflow:hidden; }
 __CSS_MARCA__
@@ -3040,7 +3073,7 @@ __CSS_MARCA__
   main { margin:0 auto;
     padding:clamp(20px,4vw,36px) clamp(16px,3vw,32px) clamp(28px,4vw,44px); }
   main > * { max-width:916px; }
-  .miga { font:500 10px var(--mono); letter-spacing:.16em;
+  .miga { font:600 10px var(--sans); letter-spacing:.04em;
     color:var(--tinta2); text-transform:uppercase; }
   h1 { font:600 clamp(26px,5vw,40px)/1.15 var(--sans);
     letter-spacing:-.005em; margin-top:6px; }
@@ -3050,7 +3083,7 @@ __CSS_MARCA__
     letter-spacing:-.01em; color:var(--tinta); }
   .ouni { font:400 13px var(--sans); color:var(--tinta2); }
   /* la variación semanal: el número en color (ver .v-sube y .v-baja) y el
-     resto en hueso */
+     resto en tinta */
   .odelta { font:600 15px var(--sans); color:var(--tinta); }
   .odelta small { font:400 12px var(--sans); color:var(--tinta); }
   /* la frase del veredicto por temporada y, debajo, el percentil de toda la
@@ -3075,7 +3108,7 @@ __CSS_MARCA__
   .nomtoggle { border:1px solid var(--line); background:var(--bg); }
   .usel { display:none; font:500 13px var(--sans); color:var(--tinta);
     background:var(--bg); border:1px solid var(--line); border-radius:0;
-    min-height:34px; padding:0 6px; color-scheme:dark; cursor:pointer; }
+    min-height:34px; padding:0 6px; color-scheme:light; cursor:pointer; }
   .unidad.compacta .ubtns { display:none; }
   .unidad.compacta .usel { display:block; }
   /* alto reservado por CSS antes de que monte cualquiera de los dos
@@ -3150,9 +3183,9 @@ __CSS_COMPARAR__
     text-wrap:pretty; }
   .cmp-nota[hidden], .cmp-escala[hidden], .cmp-frase[hidden], .cmp-sin[hidden] { display:none; }
   /* otros productos del grupo: interlinking sobrio al pie, misma paleta
-     del sitio (panel/línea/hueso, hover con borde hueso como .links) */
+     del sitio (panel/línea/tinta, hover con borde en tinta como .links) */
   .otros { margin-top:26px; }
-  .otros-h { font:600 11px var(--mono); letter-spacing:.16em;
+  .otros-h { font:600 11px var(--sans); letter-spacing:.04em;
     color:var(--tinta2); text-transform:uppercase; }
   .otros-links { display:flex; flex-wrap:wrap; gap:10px; margin-top:12px; }
   .otros-links a { font:500 13px var(--sans); padding:9px 14px;
@@ -3247,7 +3280,7 @@ FICHA_JS_TPL = r"""// carestia-ficha.js: el JS de las fichas de producto (produc
 // de cada ficha van en su página, antes de este archivo: T0, V, MIN, MAX,
 // REP, SLUG, NOMBRE, UNIDAD, VER, FECHA, AL_DIA y CAPTURA. La cifra y el
 // texto ya están en el HTML: el gráfico se arma después del primer
-// pantallazo, en Advanced Charts (en línea, en hueso; las velas a un clic) o,
+// pantallazo, en Advanced Charts (en línea, en --serie; las velas a un clic) o,
 // si la librería no está o no inicia en 8 segundos, en Lightweight como
 // siempre. En los dos, la unidad del selector y lo que se elija en "Comparar
 // con"
@@ -3305,7 +3338,7 @@ __JS_PANTALLA__
   const selector = selectorUnidad(ponerUnidad);
 
   /* ---------- Comparar con ---------- */
-  // hasta 4 series sobre el producto de la ficha, que sigue en hueso: las
+  // hasta 4 series sobre el producto de la ficha, que sigue en --serie: las
   // sugerencias del build (productos de su grupo e índices que lo llevan),
   // lo que se busque en el catálogo y lo que traiga el link
   // (#comparar=pera,asado). Es el componente de Comparar de /graficos.html
@@ -3634,7 +3667,7 @@ __JS_PANTALLA__
       setTimeout(programarFrase, 2000);
     } else if (t) reintentos = 0;
     const escala = $('cmp-escala'), frase = $('cmp-frase'), nota = $('cmp-sin');
-    const series = [{ nombre: NOMBRE, color: tok('tinta') }].concat(ks.map(k =>
+    const series = [{ nombre: NOMBRE, color: tok('serie') }].concat(ks.map(k =>
       ({ nombre: nombres.get(k) || k, color: cmp.estilo(k).color })));
     escala.hidden = !e;
     if (e) escala.innerHTML = conFechas(esc(textoEscala(e, series.map(s => s.nombre))));
@@ -3717,9 +3750,8 @@ __JS_PANTALLA__
           vertLine: { color: tok('cruz'), labelBackgroundColor: tok('line') },
           horzLine: { color: tok('cruz'), labelBackgroundColor: tok('line') } },
       });
-      // un producto no es un índice oficial: su línea va en hueso (la brasa
-      // queda para los índices)
-      const linea = chart.addLineSeries({ color: tok('tinta'), lineWidth: 2, priceLineVisible: false });
+      // la línea del producto, en --serie como la de los índices
+      const linea = chart.addLineSeries({ color: tok('serie'), lineWidth: 2, priceLineVisible: false });
       linea.setData(serie);
       chart.timeScale().fitContent();
       lwChart = chart;
@@ -3797,7 +3829,7 @@ __JS_PANTALLA__
       o.titulo = NOMBRE.toUpperCase();
       o.precio = ONOTE[u];
       o.chico = true;
-      o.lineas = [{ texto: NOMBRE, color: tok('tinta'), punteada: false }].concat(ks.map(k =>
+      o.lineas = [{ texto: NOMBRE, color: tok('serie'), punteada: false }].concat(ks.map(k =>
         Object.assign({ texto: nombres.get(k) || k }, cmp.estilo(k))));
       // la frase y, en otra línea, la nota de las que no tienen precio reciente
       o.frase = (ultimaFrase || []).filter(x => !x.muestra);
@@ -4470,7 +4502,7 @@ def linea_cita(semana: datetime.date) -> str:
 
 
 # la línea de cita de las fichas y de las páginas de índice: texto chico,
-# ceniza, como .fecha
+# en el gris secundario, como .fecha
 CSS_CITA = """  .cita { font:400 12px/1.6 var(--sans); color:var(--tinta2); margin-top:4px; text-wrap:pretty; }"""
 
 
@@ -5340,18 +5372,13 @@ JS_CAPTURA = r"""  /* ---------- captura PNG: la composición común ---------- 
   // el título dice la unidad de la serie, en las dos: la imagen circula sola
   // y sin eso un gráfico ajustado por inflación se lee como precios de cada año
   const TITULO_UNIDAD = { real: ', PRECIO AJUSTADO POR INFLACIÓN', epoca: ', PRECIO DE LA ÉPOCA' };
-  // la marca va en tres segmentos medidos para pintar SOLO la í en brasa,
-  // en la tipografía del wordmark
+  // la marca, en la tipografía del wordmark y en tinta: sin color de marca
   function marcaDeAgua(ctx, xDer, yBase, size) {
-    ctx.font = '700 ' + size + 'px "Space Grotesk", sans-serif';
+    ctx.font = '800 ' + size + 'px "Archivo", sans-serif';
     ctx.textBaseline = 'alphabetic';
-    const seg = ['carest', 'í', 'a.cl'];
-    const w = seg.map(s => ctx.measureText(s).width);
-    let x = xDer - (w[0] + w[1] + w[2]);
-    ctx.globalAlpha = 0.4; ctx.fillStyle = tok('tinta');  ctx.fillText(seg[0], x, yBase);
-    ctx.globalAlpha = 1;   ctx.fillStyle = tok('serie'); ctx.fillText(seg[1], x + w[0], yBase);
-    ctx.globalAlpha = 0.4; ctx.fillStyle = tok('tinta');  ctx.fillText(seg[2], x + w[0] + w[1], yBase);
-    ctx.globalAlpha = 1;
+    const texto = 'carestía.cl';
+    ctx.fillStyle = tok('tinta');
+    ctx.fillText(texto, xDer - ctx.measureText(texto).width, yBase);
   }
 
   // el gráfico fotografiado con la proporción de su recuadro en la captura
@@ -5434,9 +5461,10 @@ JS_CAPTURA = r"""  /* ---------- captura PNG: la composición común ---------- 
     // costo, fecha y marca de agua) antes de componer
     try {
       await Promise.all([
-        document.fonts.load('400 16px "IBM Plex Sans"'),
-        document.fonts.load('500 16px "IBM Plex Mono"'),
-        document.fonts.load('700 16px "Space Grotesk"'),
+        document.fonts.load('400 16px "Archivo"'),
+        document.fonts.load('600 16px "Archivo"'),
+        document.fonts.load('700 16px "Archivo"'),
+        document.fonts.load('800 16px "Archivo"'),
       ]);
       await document.fonts.ready;
     } catch (e) {}
@@ -5451,7 +5479,7 @@ JS_CAPTURA = r"""  /* ---------- captura PNG: la composición común ---------- 
     const muestra = Math.round(compSize * 1.8), hueco = Math.round(compSize * 0.5),
       entre = Math.round(compSize * 1.4);
     const mctx = document.createElement('canvas').getContext('2d');
-    mctx.font = '400 ' + compSize + 'px "IBM Plex Sans", sans-serif';
+    mctx.font = '400 ' + compSize + 'px "Archivo", sans-serif';
     let fila = [], ancho = 0;
     (o.lineas || []).forEach(it => {
       const w = muestra + hueco + mctx.measureText(it.texto).width;
@@ -5512,8 +5540,8 @@ JS_CAPTURA = r"""  /* ---------- captura PNG: la composición común ---------- 
     }
     // contexto arriba a la izquierda: qué es, cuánto vale (o un texto en vez
     // del monto), de cuándo
-    const precioFont = o.chico ? '400 ' + Math.round(W * 0.02) + 'px "IBM Plex Sans", sans-serif' :
-      '700 ' + Math.round(W * 0.037) + 'px "Space Grotesk", sans-serif';
+    const precioFont = o.chico ? '400 ' + Math.round(W * 0.02) + 'px "Archivo", sans-serif' :
+      '700 ' + Math.round(W * 0.037) + 'px "Archivo", sans-serif';
     const compH = (compLineas.length + prodLineas.length + fraseLineas.length) * compAlto;
     const headH = Math.round(W * 0.13) + compH, footH = Math.round(W * 0.07);
     const chartH = H - headH - footH;
@@ -5528,13 +5556,13 @@ JS_CAPTURA = r"""  /* ---------- captura PNG: la composición común ---------- 
     ctx.fillRect(0, 0, W, H);
     ctx.textBaseline = 'top';
     ctx.fillStyle = tok('tinta2');
-    ctx.font = '500 ' + Math.round(W * 0.014) + 'px "IBM Plex Mono", monospace';
+    ctx.font = '600 ' + Math.round(W * 0.014) + 'px "Archivo", sans-serif';
     ctx.fillText(o.titulo, pad, Math.round(W * 0.028));
     ctx.fillStyle = tok('tinta');
     ctx.font = precioFont;
     ctx.fillText(o.precio, pad, Math.round(W * 0.05));
     ctx.fillStyle = tok('tinta2');
-    ctx.font = '400 ' + compSize + 'px "IBM Plex Sans", sans-serif';
+    ctx.font = '400 ' + compSize + 'px "Archivo", sans-serif';
     const yLinea = i => Math.round(W * 0.098) + i * compAlto;
     compLineas.forEach((l, i) => ctx.fillText(l, pad, yLinea(i)));
     const grosor = Math.max(2, Math.round(compSize * 0.16));
@@ -5564,7 +5592,7 @@ JS_CAPTURA = r"""  /* ---------- captura PNG: la composición común ---------- 
       });
     });
     ctx.fillStyle = tok('tinta2');
-    ctx.font = '400 ' + Math.round(W * 0.012) + 'px "IBM Plex Sans", sans-serif';
+    ctx.font = '400 ' + Math.round(W * 0.012) + 'px "Archivo", sans-serif';
     ctx.fillText('semana del ' + o.fecha, pad, Math.round(W * 0.098) + compH);
     // el gráfico entero en su recuadro, centrado si la proporción no quedó exacta
     const esc = Math.min(chartW / shot.width, chartH / shot.height);
@@ -6585,7 +6613,8 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
   }
 
   // colores de la librería con los tokens del sitio: velas verde y rojo; la
-  // línea en brasa para los índices oficiales y en hueso para los productos.
+  // línea en --serie para los índices oficiales y los productos, y en
+  // --canasta para Tu canasta.
   // Todos los gráficos parten en línea; las velas quedan a un clic
   // la leyenda sin los parámetros de comparaciones e indicadores: el "close"
   // de cada comparada (la librería no lo traduce) y el largo de cada
@@ -6604,7 +6633,7 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
       'paneProperties.background': tok('bg'),
       'paneProperties.vertGridProperties.color': tok('grid'),
       'paneProperties.horzGridProperties.color': tok('grid'),
-      'paneProperties.crossHairProperties.color': tok('tinta3'),
+      'paneProperties.crossHairProperties.color': tok('cruz'),
       'paneProperties.separatorColor': tok('line'),
       'scalesProperties.textColor': tok('tinta2'),
       'scalesProperties.lineColor': tok('line'),
@@ -6627,7 +6656,7 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
     return o;
   }
   const colorLinea = (tok, clase) => {
-    const c = tok(clase === 'indice' ? 'serie' : clase === 'canasta' ? 'canasta' : 'tinta');
+    const c = tok(clase === 'canasta' ? 'canasta' : 'serie');
     return { 'mainSeriesProperties.lineStyle.colorType': 'solid', 'mainSeriesProperties.lineStyle.color': c };
   };
 
@@ -6668,10 +6697,10 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
       interval: RESOLUCION,
       timezone: ZONA,
       locale: 'es',
-      theme: 'dark',
+      theme: 'light',
       autosize: true,
       custom_css_url: o.css,
-      custom_font_family: "'IBM Plex Sans', system-ui, sans-serif",
+      custom_font_family: "'Archivo', system-ui, sans-serif",
       loading_screen: { backgroundColor: o.tok('bg'), foregroundColor: o.tok('serie') },
       toolbar_bg: o.tok('panel'),
       overrides: ov,
@@ -6714,8 +6743,8 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
     return opciones;
   }
 
-  // con el gráfico listo: estilo según el símbolo (la línea en brasa para los
-  // índices y en hueso para los productos) y guardado automático en el
+  // con el gráfico listo: estilo según el símbolo (la línea en --serie para
+  // los índices y los productos, en --canasta para Tu canasta) y guardado automático en el
   // navegador
   function alistarWidget(widget, feed, tok) {
     sinParametros(widget);
@@ -6870,7 +6899,7 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
   // informa la densidad de los lienzos, y después vuelve a la de siempre
   function capturaCliente(widget, tok, contenedor) {
     const foto = () => widget.takeClientScreenshot({ backgroundColor: tok('bg'),
-      borderColor: tok('line'), font: "'IBM Plex Sans', system-ui, sans-serif", fontSize: 12,
+      borderColor: tok('line'), font: "'Archivo', system-ui, sans-serif", fontSize: 12,
       legendMode: 'horizontal', hideResolution: true });
     let ventana = null, densidad = 1;
     try {
@@ -6919,14 +6948,14 @@ __CSS_BASE__
   header { display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 14px;
     padding:14px clamp(16px,3vw,32px); border-bottom:1px solid var(--line);
     min-height:51px; }
-  .wordmark { font:700 20px/1.1 var(--display); letter-spacing:.06em;
+  .wordmark { font:800 20px/1.1 var(--display); letter-spacing:.06em;
     color:var(--tinta); text-decoration:none; display:inline-flex;
     align-items:baseline; height:22px; overflow:hidden; }
 __CSS_MARCA__
   .tagline { font:400 12px/14.3px var(--sans); color:var(--tinta2); }
   main { max-width:1280px; margin:0 auto;
     padding:clamp(20px,3vw,32px) clamp(16px,3vw,32px) clamp(28px,4vw,44px); }
-  .miga { font:500 10px var(--mono); letter-spacing:.16em;
+  .miga { font:600 10px var(--sans); letter-spacing:.04em;
     color:var(--tinta2); text-transform:uppercase; }
   h1 { font:600 clamp(24px,4vw,34px)/1.15 var(--sans);
     letter-spacing:-.005em; margin-top:6px; text-wrap:balance; }
@@ -6947,7 +6976,7 @@ __CSS_MARCA__
   body[data-motor="lightweight"] .lw-barra { display:flex; }
   body[data-motor="lightweight"] .marco { margin-top:10px; }
   .vtoggle { display:flex; border:1px solid var(--line); background:var(--bg); }
-  .vbtn { font:600 11px var(--mono); letter-spacing:.1em; padding:8px 14px;
+  .vbtn { font:600 11px var(--sans); letter-spacing:.04em; padding:8px 14px;
     border:none; cursor:pointer; background:transparent; color:var(--tinta2);
     min-height:34px; }
   .vbtn + .vbtn { border-left:1px solid var(--line); }
@@ -7105,7 +7134,7 @@ __PIE__
         });
         const sNom = chart.addLineSeries({ color: tok('tinta2'), lineWidth: 1,
           priceLineVisible: false, lastValueVisible: false, visible: false });
-        // la línea de los índices oficiales, en brasa
+        // la línea de los índices oficiales, en --serie
         const sReal = chart.addLineSeries({ color: tok('serie'), lineWidth: 2,
           priceLineVisible: false });
         const sVelas = chart.addCandlestickSeries({ upColor: tok('verde'),
@@ -7147,8 +7176,8 @@ __PIE__
 
 
 # variables de color de la interfaz de la librería (toolbars, menús y
-# diálogos) para el tema oscuro, con los tokens del sitio
-TV_COLORES = """.theme-dark:root {{
+# diálogos) para el tema claro, con los tokens del sitio
+TV_COLORES = """.theme-light:root {{
   --tv-color-platform-background: {bg};
   --tv-color-pane-background: {bg};
   --tv-color-toolbar-button-background-hover: {hover};
@@ -7221,7 +7250,7 @@ def tokens_css() -> dict:
 
 def tv_css() -> str:
     """carestia-tv.css: el tema del sitio dentro del iframe de Advanced Charts
-    (custom_css_url). Plex Sans con la misma llamada a Google Fonts del sitio
+    (custom_css_url). Archivo con la misma llamada a Google Fonts del sitio
     (el iframe es otro documento: no hereda las fuentes de la página) y los
     colores de la interfaz de la librería con los tokens."""
     t = tokens_css()
@@ -7230,7 +7259,7 @@ def tv_css() -> str:
     return (f'/* Tema de Carestía para Advanced Charts: tokens de build_site.py */\n'
             f'@import url("{fuentes}");\n'
             f'{colores}'
-            # menús y diálogos en Plex Sans (el lienzo la toma de
+            # menús y diálogos en Archivo (el lienzo la toma de
             # custom_font_family)
             f'html, body {{ font-family: {t_sans()}; }}\n')
 
@@ -7310,7 +7339,7 @@ __CSS_BASE__
   header { display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 14px;
     padding:14px clamp(16px,3vw,32px); border-bottom:1px solid var(--line);
     min-height:51px; }
-  .wordmark { font:700 20px/1.1 var(--display); letter-spacing:.06em;
+  .wordmark { font:800 20px/1.1 var(--display); letter-spacing:.06em;
     color:var(--tinta); text-decoration:none; display:inline-flex;
     align-items:baseline; height:22px; overflow:hidden; }
 __CSS_MARCA__
@@ -7318,14 +7347,14 @@ __CSS_MARCA__
   /* el texto usa el mismo ancho y el mismo margen izquierdo que el pie (y
      que la marca): sin columna angosta centrada */
   main { padding:clamp(20px,4vw,36px) clamp(16px,3vw,32px) clamp(28px,4vw,44px); }
-  .miga { font:500 10px var(--mono); letter-spacing:.16em;
+  .miga { font:600 10px var(--sans); letter-spacing:.04em;
     color:var(--tinta2); text-transform:uppercase; }
   h1 { font:600 clamp(26px,5vw,40px)/1.15 var(--sans);
     letter-spacing:-.005em; margin-top:6px; text-wrap:balance; }
 
   /* ---- textos: metodología, institucionales y legales ---- */
   .doc > h1:first-child { margin-top:0; }
-  .doc h2 { font:600 11px var(--mono); letter-spacing:.16em;
+  .doc h2 { font:600 11px var(--sans); letter-spacing:.04em;
     color:var(--tinta2); text-transform:uppercase; margin-top:40px; }
   .doc h3 { font:600 16px var(--sans); color:var(--tinta); }
   .doc h3 span { font-weight:400; color:var(--tinta2); }
@@ -7372,7 +7401,7 @@ __CSS_MARCA__
   .grupos a span { color:var(--tinta2); }
   .grupos a:hover, .grupos a:focus-visible { border-color:var(--tinta); background:var(--hover); }
   .pgrupo { margin-top:36px; scroll-margin-top:12px; }
-  .pgrupo h2 { font:600 11px var(--mono); letter-spacing:.16em;
+  .pgrupo h2 { font:600 11px var(--sans); letter-spacing:.04em;
     color:var(--tinta2); text-transform:uppercase; }
   .pgrupo h2 span { letter-spacing:.04em; }
   .plista { list-style:none; margin-top:10px; display:grid;
@@ -7393,8 +7422,8 @@ __CSS_MARCA__
   .ind-cifra { display:flex; flex-wrap:wrap; align-items:baseline; gap:8px 16px;
     margin-top:18px; }
   .ind-precio { font:700 clamp(40px,7vw,64px)/1 var(--display); letter-spacing:-.01em; }
-  .ind-pill { align-self:center; font:500 12px var(--mono); letter-spacing:.08em;
-    padding:4px 11px; border-radius:999px; color:var(--bg); }
+  .ind-pill { align-self:center; font:600 12px var(--sans); letter-spacing:.04em;
+    padding:4px 11px; border-radius:2px; }
   .ind-links { display:flex; flex-wrap:wrap; gap:12px; margin-top:22px; }
   .ind-links a { display:inline-flex; align-items:center; min-height:40px; padding:0 16px;
     font:600 13px var(--sans); color:var(--tinta); text-decoration:none;
@@ -7581,6 +7610,14 @@ TOP_SEMANA = 5
 SEMAFORO = {"BARATO": "var(--verde)", "NORMAL": "var(--ambar)", "CARO": "var(--rojo)"}
 
 
+def clase_veredicto(veredicto: str) -> str:
+    """La clase de la etiqueta del veredicto (ver .ver-rojo en CSS_SITIO):
+    el color sale de los tokens según el nombre del veredicto, no del campo
+    'color' de indices.json (ese campo sale de indices.py con la paleta
+    anterior y el sitio no lo usa)."""
+    return "ver-" + COLOR_VEREDICTO.get(veredicto, "ambar")
+
+
 def cambio(x, sep: str = " ") -> str:
     """Variación con su flecha al lado (▲ sube, ▼ baja, = si redondea a 0,0)
     y el número en color (numero_variacion). Sin dato, el marcador "·"."""
@@ -7668,7 +7705,6 @@ def html_tarjetas(indices: dict) -> str:
         else:
             nota = ""
         corto = html.escape(d["nombre"].replace("Índice ", "").upper())
-        color = SEMAFORO.get(d["veredicto"], html.escape(d["color"]))
         pct = d["percentil"]
         t = d.get("temporada")
         marca, zonas = (t["percentil"], "zonas") if t else (pct, "zonas historia")
@@ -7688,7 +7724,7 @@ def html_tarjetas(indices: dict) -> str:
         out.append(
             f'        <a class="icard" href="/graficos.html#{code}">\n'
             f'          <div class="ic-top"><span class="ic-ey"><span class="ic-ind">ÍNDICE </span>{corto}</span>'
-            f'<span class="ic-pill" style="background:{color}">{html.escape(d["veredicto"])}</span></div>\n'
+            f'<span class="ic-pill {clase_veredicto(d["veredicto"])}">{html.escape(d["veredicto"])}</span></div>\n'
             f'          <div class="ic-mid"><span class="ic-sub">{html.escape(d["subtitulo"])}</span>'
             f'<span class="ic-precio">{fmt_clp(d["costo_real"])}</span></div>\n'
             f'          <div class="ic-niv"><p class="ic-fr">{html.escape(r["frase"])}</p>'
@@ -8064,7 +8100,7 @@ def generar_paginas_indices() -> list:
             f'    <p class="intro">{html.escape(d["subtitulo"])}, en la Región '
             f'Metropolitana. Semana del <span class="nw">{fecha}</span>.</p>\n'
             f'    <div class="ind-cifra"><span class="ind-precio">{fmt_clp(d["costo_real"])}</span>'
-            f'<span class="ind-pill" style="background:{SEMAFORO.get(d["veredicto"], "var(--ambar)")}">'
+            f'<span class="ind-pill {clase_veredicto(d["veredicto"])}">'
             f'{html.escape(d["veredicto"])}</span></div>\n'
             f'    <p class="intro">{html.escape(frase_indice(d))} Está en el percentil '
             f'{d["percentil"]} de su historia, {vs_txt} su promedio histórico.</p>\n'
@@ -8273,7 +8309,7 @@ def generar_compras(fichas: dict, catalogo: dict, canastas: list = ()) -> None:
 # Una canasta armada como en Arma tu canasta de /graficos.html, con su página
 # en HTML estático: un correo, los buscadores y los asistentes que no corren
 # JS ven su costo y las cifras de su franja, y la página tiene su link y su
-# tarjeta. No es un índice de Carestía: su línea va en hueso, el color de las
+# tarjeta. No es un índice de Carestía: su línea va en --canasta, el color de las
 # canastas de usuario. Las claves son las de indices.json (las de los links
 # de canasta) y cada cantidad va en la unidad del producto. 'compras' es la
 # frase de /compras.html antes del link a la página (sin ella, no va ahí)
@@ -8492,7 +8528,7 @@ def oracion(s: str) -> str:
 def tarjeta_canasta(c: dict, r: dict, lineas: dict, ruta: str) -> str:
     """og/canastas/{slug}.png, como la de un producto: el título, el costo,
     la frase de temporada (sin ella, la del percentil) y el gráfico de la
-    serie, con la línea en hueso. Devuelve las etiquetas og."""
+    serie, con la línea en --canasta. Devuelve las etiquetas og."""
     fin = datetime.date.fromisoformat(r["serie"][-1][0])
     datos = {
         "antetitulo": "Canasta de ejemplo en Santiago",
@@ -8994,6 +9030,7 @@ with open("graficos.html", "w", encoding="utf-8") as fh:
                           .replace("__CSS_CABECERA__", CSS_CABECERA)
                           .replace("__CSS_SITIO__", CSS_SITIO)
                           .replace("__GRUPOS__", json.dumps(GRUPO_TXT, ensure_ascii=False))
+                          .replace("__TONO_VEREDICTO__", _json(COLOR_VEREDICTO))
                           .replace("__NAV__", nav_sitio("indices"))
                           .replace("__PIE__", pie_sitio())
                           # de qué semana son los precios y la próxima actualización

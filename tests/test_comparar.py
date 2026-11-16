@@ -311,7 +311,7 @@ def test_escala_frase_y_linea_igual_que_la_inflacion(sitio):
 def test_captura_con_las_lineas_la_leyenda_y_la_frase(sitio):
     js = _ficha(sitio, "palta")
     cap = js[js.index("async function capturar()"):js.index("$('shot').onclick")]
-    assert "o.lineas = [{ texto: NOMBRE, color: tok('tinta'), punteada: false }]" in cap
+    assert "o.lineas = [{ texto: NOMBRE, color: tok('serie'), punteada: false }]" in cap
     assert "o.frase = (ultimaFrase || []).filter(x => !x.muestra);" in cap
     # la nota de las que no tienen precio reciente, en su propia línea y en gris
     assert ("if (ultimaNota) o.frase = o.frase.concat(o.frase.length ? [{ salto: true }] : [],\n"
@@ -503,22 +503,27 @@ def _contraste(a, b):
     return (y + 0.05) / (x + 0.05)
 
 
-def test_tercer_color_distinto_del_hueso_y_de_los_otros():
-    """--cmp3 (mostaza): lejos del hueso de la ficha y de los otros tres con
-    visión normal y con protanopía y deuteranopía simuladas (18 o más; con
-    tritanopía, 8 o más), legible sobre el fondo y el panel, y fuera de los
-    azules, verdes, naranjos y rojos (tono OKLCH de los amarillos)."""
+def test_cuatro_tonos_distintos_de_la_serie_y_entre_si():
+    """--cmp1 a --cmp4 (magenta, morado, mostaza y café) sobre blanco: entre
+    sí a 20 o más con visión normal y con protanopía y deuteranopía simuladas
+    (con tritanopía, a 8 o más), a 28 o más de la línea de la ficha
+    (--serie) con las cuatro, 3:1 o más sobre el fondo, y fuera de los
+    azules, verdes y rojos (tono OKLCH de 304 a 8 y de 56 a 100)."""
     base = _constantes()["CSS_BASE"]
     t = dict(re.findall(r"--([a-z0-9]+):(#[0-9a-f]{6})", base))
-    cmp3 = t["cmp3"]
-    assert cmp3 == "#9d8519"
-    for otro in ["tinta", "cmp1", "cmp2", "cmp4"]:
-        for vision in ["normal", "protan", "deutan"]:
-            assert _distancia(cmp3, t[otro], vision) >= (28 if otro == "tinta" else 18), (otro, vision)
-        assert _distancia(cmp3, t[otro], "tritan") >= 8, otro
-    assert _contraste(cmp3, t["bg"]) >= 4.5 and _contraste(cmp3, t["panel"]) >= 4.5
-    _L, a, b = _oklab(_lineal(cmp3))
-    assert 85 <= math.degrees(math.atan2(b, a)) % 360 <= 100
+    tonos = [t[f"cmp{i}"] for i in range(1, 5)]
+    assert tonos == ["#e05ddf", "#8101a4", "#b4902e", "#6d5732"]
+    for i, a in enumerate(tonos):
+        for b in tonos[i + 1:]:
+            for vision in ["normal", "protan", "deutan"]:
+                assert _distancia(a, b, vision) >= 20, (a, b, vision)
+            assert _distancia(a, b, "tritan") >= 8, (a, b)
+        for vision in ["normal", "protan", "deutan", "tritan"]:
+            assert _distancia(a, t["serie"], vision) >= 28, (a, vision)
+        assert _contraste(a, t["bg"]) >= 3, a
+        _L, x, y = _oklab(_lineal(a))
+        tono = math.degrees(math.atan2(y, x)) % 360
+        assert tono >= 304 or tono <= 8 or 56 <= tono <= 100, (a, tono)
 
 
 # ---------- en Node ----------

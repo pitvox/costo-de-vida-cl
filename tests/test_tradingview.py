@@ -644,12 +644,12 @@ def test_ficha_con_advanced_charts_despues_del_primer_pantallazo(sitio):
     assert re.search(r"const MIN = \[[0-9null, ]+\];", js) and re.search(r"const MAX = \[[0-9null, ]+\];", js)
     assert ('<p class="ref-velas" id="ref-velas" hidden>Velas semanales. La mecha va del precio más bajo '
             'al más alto que ODEPA encontró entre los locales encuestados.</p>') in h
-    # respaldo: Lightweight como siempre, en hueso y con fechas es-CL
+    # respaldo: Lightweight como siempre, en --serie y con fechas es-CL
     assert "}).then(w => {\n      widget = w;\n      el.dataset.motor = 'advanced';" in js
     assert "    }, () => { selector.limitar(unidadesHay()); lightweight(); });" in js
     # la referencia de las velas se muestra mientras estén a la vista
     assert "c.onChartTypeChanged().subscribe(null, ver);" in js
-    assert "chart.addLineSeries({ color: tok('tinta'), lineWidth: 2, priceLineVisible: false })" in js
+    assert "chart.addLineSeries({ color: tok('serie'), lineWidth: 2, priceLineVisible: false })" in js
     assert "localization: { locale: 'es-CL', priceFormatter: fmt, percentageFormatter: fmtPct }," in js
 
 
@@ -730,25 +730,27 @@ def test_textos_del_dueno(sitio):
 def test_tema_del_iframe_con_los_tokens(sitio):
     css = _leer(sitio, "carestia-tv.css")
     assert css.startswith("/* Tema de Carestía para Advanced Charts")
-    assert ('@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600'
-            '&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@700'
+    assert ('@import url("https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800'
             '&display=swap");') in css
-    for var, valor in [("platform-background", "#0f0f0e"), ("pane-background", "#0f0f0e"),
-                       ("popup-background", "#171716"), ("toolbar-divider-background", "#2b2a27"),
-                       ("popup-element-text", "#e4dacc"), ("toolbar-button-text", "#a39e95")]:
+    # el tema claro de la librería (theme: 'light'), con los tokens
+    assert ".theme-light:root {" in css and ".theme-dark" not in css
+    for var, valor in [("platform-background", "#ffffff"), ("pane-background", "#ffffff"),
+                       ("popup-background", "#f5f5f5"), ("toolbar-divider-background", "#d9d9d9"),
+                       ("popup-element-text", "#111111"), ("toolbar-button-text", "#4d4d4d")]:
         assert f"--tv-color-{var}: {valor};" in css, var
+    assert 'html, body { font-family: "Archivo","Archivo Fallback",system-ui,sans-serif; }' in css
 
 
 def test_pagina_de_prueba_lee_los_colores_de_los_tokens(sitio):
     h = _leer(sitio, "prueba-graficos.html")
     assert h.count(":root {") == 1
-    # la brasa y el semáforo, solo en sus tokens (el hueso, en --tinta y en
-    # --canasta, que por ahora valen lo mismo)
-    for color in ["#e8743b", "#5bbf7a", "#e0552f"]:
+    # el semáforo y el gris de las canastas, solo en sus tokens (la tinta,
+    # en --tinta y en --serie, que valen lo mismo)
+    for color in ["#1a7f47", "#c8321c", "#767676"]:
         assert h.count(color) == 1, color
-    assert h.count("#e4dacc") == 2
+    assert h.count("#111111") == 2
     js = _leer(sitio, "carestia-tv.js")
-    for color in ["#e8743b", "#5bbf7a", "#e0552f", "#e4dacc", "#0f0f0e"]:
+    for color in ["#1a7f47", "#c8321c", "#767676", "#111111", "#ffffff"]:
         assert color not in js, color
 
 

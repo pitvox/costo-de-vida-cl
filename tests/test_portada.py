@@ -119,7 +119,7 @@ def test_tarjetas_de_indices_llevan_a_su_grafico(sitio):
     assert [href for href, _ in tarjetas] == [f"/graficos.html#{c}" for c in BASKETS]
     asado = tarjetas[0][1]
     assert "ÍNDICE </span>ASADO" in asado
-    assert 'style="background:var(--rojo)">CARO<' in asado
+    assert '<span class="ic-pill ver-rojo">CARO<' in asado
     # 60 semanas: sin temporada (menos de 5 años del mes), las zonas, la
     # marca y la frase son las de toda la historia
     assert ">percentil 88 en su historia<" in asado and 'style="left:88%"' in asado
@@ -130,7 +130,7 @@ def test_tarjetas_de_indices_llevan_a_su_grafico(sitio):
     assert "+14% sobre su promedio" in asado
     assert "+0% sobre su promedio" in tarjetas[1][1]
     assert "-5% bajo su promedio" in tarjetas[2][1]
-    assert 'style="background:var(--verde)">BARATO<' in tarjetas[2][1]
+    assert '<span class="ic-pill ver-verde">BARATO<' in tarjetas[2][1]
     # cambio semanal: la flecha al lado y el número en rojo (subió)
     assert '<i class="f">▲</i> <span class="v-sube">0,1%</span> esta semana' in asado
 
@@ -151,11 +151,11 @@ def _valores(h, lid):
 def test_variaciones_en_color_con_criterio_de_consumidor(sitio):
     """El número de cada variación va en rojo si el precio subió y en verde
     si bajó (sin cambio, en el color del texto); la flecha va al lado, en
-    gris, y el resto del texto en hueso."""
+    gris, y el resto del texto en tinta."""
     h = _leer(sitio, "index.html")
     # los tokens: rojo y verde del sitio, con su propio nombre
     assert "--sube:var(--rojo); --baja:var(--verde);" in h
-    assert "--verde:#5bbf7a;" in h and "--rojo:#e0552f;" in h
+    assert "--verde:#1a7f47;" in h and "--rojo:#c8321c;" in h
     assert ".f { font-style:normal; color:var(--tinta3); }" in h
     assert ".v-sube { color:var(--sube); }" in h and ".v-baja { color:var(--baja); }" in h
     # Esta semana: los que subieron en rojo, los que bajaron en verde
@@ -180,7 +180,7 @@ def test_variaciones_en_color_con_criterio_de_consumidor(sitio):
     assert ('<div class="ic-m"><span class="nw"><i class="f">▲</i> <span class="v-sube">0,1%</span> '
             'esta semana</span>, <span class="nw"><i class="f">▲</i> <span class="v-sube">0,4%</span> '
             '4 semanas</span>, percentil 88 en su historia</div>') in h
-    # el resto del texto en hueso
+    # el resto del texto en tinta
     assert ".titem .td { font:500 12px var(--sans); color:var(--tinta); }" in h
     assert "font:400 12px/1.5 var(--sans); color:var(--tinta);\n    border-top:1px solid var(--line); padding-top:12px; }" in h
     assert ".ic-m { display:block; font:400 11px/1.4 var(--sans); color:var(--tinta); }" in h
@@ -212,7 +212,8 @@ def test_semaforo_solo_en_los_indices(sitio):
     h = _leer(sitio, "index.html")
     # los productos van primero: Esta semana y la tabla, antes de los índices
     productos = h[h.index('id="h-semana"'):h.index('aria-labelledby="h-indices"')]
-    for token in ["--verde", "--ambar", "--rojo", "#5bbf7a", "#e0a83c", "#e0552f"]:
+    for token in ["--verde", "--ambar", "--rojo", "ver-rojo", "ver-ambar", "ver-verde",
+                  "#1a7f47", "#f0b429", "#c8321c"]:
         assert token not in productos, token
 
 
