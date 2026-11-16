@@ -311,12 +311,12 @@ def test_escala_frase_y_linea_igual_que_la_inflacion(sitio):
 def test_captura_con_las_lineas_la_leyenda_y_la_frase(sitio):
     js = _ficha(sitio, "palta")
     cap = js[js.index("async function capturar()"):js.index("$('shot').onclick")]
-    assert "o.lineas = [{ texto: NOMBRE, color: tok('bone'), punteada: false }]" in cap
+    assert "o.lineas = [{ texto: NOMBRE, color: tok('tinta'), punteada: false }]" in cap
     assert "o.frase = (ultimaFrase || []).filter(x => !x.muestra);" in cap
     # la nota de las que no tienen precio reciente, en su propia línea y en gris
     assert ("if (ultimaNota) o.frase = o.frase.concat(o.frase.length ? [{ salto: true }] : [],\n"
             "        [{ texto: ultimaNota, clase: 'nota' }]);") in cap
-    assert "const COLOR_CIFRA = { 'v-sube': tok('sube'), 'v-baja': tok('baja'), nota: tok('ash') };" in js
+    assert "const COLOR_CIFRA = { 'v-sube': tok('sube'), 'v-baja': tok('baja'), nota: tok('tinta2') };" in js
     assert "o.precio = ONOTE[u];" in cap
     assert "await componerCaptura(o);" in cap
     # Advanced Charts: la captura del cliente, con el tramo de la pantalla
@@ -512,9 +512,9 @@ def test_tercer_color_distinto_del_hueso_y_de_los_otros():
     t = dict(re.findall(r"--([a-z0-9]+):(#[0-9a-f]{6})", base))
     cmp3 = t["cmp3"]
     assert cmp3 == "#9d8519"
-    for otro in ["bone", "cmp1", "cmp2", "cmp4"]:
+    for otro in ["tinta", "cmp1", "cmp2", "cmp4"]:
         for vision in ["normal", "protan", "deutan"]:
-            assert _distancia(cmp3, t[otro], vision) >= (28 if otro == "bone" else 18), (otro, vision)
+            assert _distancia(cmp3, t[otro], vision) >= (28 if otro == "tinta" else 18), (otro, vision)
         assert _distancia(cmp3, t[otro], "tritan") >= 8, otro
     assert _contraste(cmp3, t["bg"]) >= 4.5 and _contraste(cmp3, t["panel"]) >= 4.5
     _L, a, b = _oklab(_lineal(cmp3))

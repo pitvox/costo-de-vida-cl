@@ -397,9 +397,9 @@ def test_bajo_la_frase_citable(sitio):
     # con el aspecto de la frase citable, cuyas reglas no cambian, y la
     # línea de la semana igual de cerca
     h = _leer(sitio, "productos/marraqueta.html")
-    for regla in [".citable { font:400 13px/1.6 var(--sans); color:var(--ash); margin-top:14px;\n"
+    for regla in [".citable { font:400 13px/1.6 var(--sans); color:var(--tinta2); margin-top:14px;\n"
                   "    text-wrap:pretty; }\n  .citable + .fecha { margin-top:4px; }",
-                  ".diez { font:400 13px/1.6 var(--sans); color:var(--ash); margin-top:4px;\n"
+                  ".diez { font:400 13px/1.6 var(--sans); color:var(--tinta2); margin-top:4px;\n"
                   "    text-wrap:pretty; }\n  .diez + .fecha { margin-top:4px; }"]:
         assert regla in h, regla
 

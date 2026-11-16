@@ -156,7 +156,7 @@ def test_variaciones_en_color_con_criterio_de_consumidor(sitio):
     # los tokens: rojo y verde del sitio, con su propio nombre
     assert "--sube:var(--rojo); --baja:var(--verde);" in h
     assert "--verde:#5bbf7a;" in h and "--rojo:#e0552f;" in h
-    assert ".f { font-style:normal; color:var(--dim); }" in h
+    assert ".f { font-style:normal; color:var(--tinta3); }" in h
     assert ".v-sube { color:var(--sube); }" in h and ".v-baja { color:var(--baja); }" in h
     # Esta semana: los que subieron en rojo, los que bajaron en verde
     sube, baja = _valores(h, "sem-sub"), _valores(h, "sem-baj")
@@ -181,9 +181,9 @@ def test_variaciones_en_color_con_criterio_de_consumidor(sitio):
             'esta semana</span>, <span class="nw"><i class="f">▲</i> <span class="v-sube">0,4%</span> '
             '4 semanas</span>, percentil 88 en su historia</div>') in h
     # el resto del texto en hueso
-    assert ".titem .td { font:500 12px var(--sans); color:var(--bone); }" in h
-    assert "font:400 12px/1.5 var(--sans); color:var(--bone);\n    border-top:1px solid var(--line); padding-top:12px; }" in h
-    assert ".ic-m { display:block; font:400 11px/1.4 var(--sans); color:var(--bone); }" in h
+    assert ".titem .td { font:500 12px var(--sans); color:var(--tinta); }" in h
+    assert "font:400 12px/1.5 var(--sans); color:var(--tinta);\n    border-top:1px solid var(--line); padding-top:12px; }" in h
+    assert ".ic-m { display:block; font:400 11px/1.4 var(--sans); color:var(--tinta); }" in h
 
 
 def test_variacion_de_la_ficha_y_de_graficos_en_color(sitio):
@@ -195,7 +195,7 @@ def test_variacion_de_la_ficha_y_de_graficos_en_color(sitio):
         # al lado, el cambio de 4 semanas en el mismo formato
         assert (f'<div class="odelta"><i class="f">{flecha}</i><span class="{clase}">{cuatro}</span> '
                 f'<small>4 semanas</small></div>') in h, slug
-        assert ".odelta { font:600 15px var(--sans); color:var(--bone); }" in h
+        assert ".odelta { font:600 15px var(--sans); color:var(--tinta); }" in h
     quieto = _leer(sitio, "productos/quieto.html")
     assert '<div class="odelta"><i class="f">▲</i>0,0% <small>sem.</small></div>' in quieto
     assert '<div class="odelta"><i class="f">▲</i>0,0% <small>4 semanas</small></div>' in quieto

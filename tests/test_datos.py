@@ -266,8 +266,8 @@ def test_tokens_en_un_solo_lugar_y_brasa_solo_en_su_token(sitio):
         h = p.read_text(encoding="utf-8")
         assert h.count(":root {") == 1, p
         for token in ["--bg:#0f0f0e", "--panel:#171716", "--line:#2b2a27",
-                      "--bone:#e4dacc", "--ash:#a39e95", "--dim:#86817a",
-                      "--ember:#e8743b", "--verde:#5bbf7a", "--ambar:#e0a83c",
+                      "--tinta:#e4dacc", "--tinta2:#a39e95", "--tinta3:#86817a",
+                      "--serie:#e8743b", "--verde:#5bbf7a", "--ambar:#e0a83c",
                       "--rojo:#e0552f"]:
             assert token in h, (p, token)
         # la brasa se escribe una sola vez (su token); el resto la usa por var()

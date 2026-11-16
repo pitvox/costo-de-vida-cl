@@ -649,7 +649,7 @@ def test_ficha_con_advanced_charts_despues_del_primer_pantallazo(sitio):
     assert "    }, () => { selector.limitar(unidadesHay()); lightweight(); });" in js
     # la referencia de las velas se muestra mientras estén a la vista
     assert "c.onChartTypeChanged().subscribe(null, ver);" in js
-    assert "chart.addLineSeries({ color: tok('bone'), lineWidth: 2, priceLineVisible: false })" in js
+    assert "chart.addLineSeries({ color: tok('tinta'), lineWidth: 2, priceLineVisible: false })" in js
     assert "localization: { locale: 'es-CL', priceFormatter: fmt, percentageFormatter: fmtPct }," in js
 
 
@@ -742,9 +742,11 @@ def test_tema_del_iframe_con_los_tokens(sitio):
 def test_pagina_de_prueba_lee_los_colores_de_los_tokens(sitio):
     h = _leer(sitio, "prueba-graficos.html")
     assert h.count(":root {") == 1
-    # la brasa y el semáforo, solo en sus tokens
-    for color in ["#e8743b", "#5bbf7a", "#e0552f", "#e4dacc"]:
+    # la brasa y el semáforo, solo en sus tokens (el hueso, en --tinta y en
+    # --canasta, que por ahora valen lo mismo)
+    for color in ["#e8743b", "#5bbf7a", "#e0552f"]:
         assert h.count(color) == 1, color
+    assert h.count("#e4dacc") == 2
     js = _leer(sitio, "carestia-tv.js")
     for color in ["#e8743b", "#5bbf7a", "#e0552f", "#e4dacc", "#0f0f0e"]:
         assert color not in js, color

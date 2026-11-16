@@ -119,11 +119,11 @@ __CSS_CABECERA__
   .tab { flex:none; font:600 13px var(--sans); letter-spacing:.01em;
     padding:8px 16px; min-height:34px; cursor:pointer; white-space:nowrap;
     background:var(--panel); border:1px solid var(--line); border-radius:999px;
-    color:var(--bone);
+    color:var(--tinta);
     transition:background-color .15s ease, border-color .15s ease, color .15s ease; }
   .tab:not(.active):hover, .tab:not(.active):focus-visible {
-    background:var(--hover); border-color:var(--bone); }
-  .tab.active { background:var(--bone); border-color:var(--bone); color:var(--bg); }
+    background:var(--hover); border-color:var(--tinta); }
+  .tab.active { background:var(--tinta); border-color:var(--tinta); color:var(--bg); }
   /* punto de 6px: marca las tabs de herramienta (Comparar productos /
      Arma tu canasta); toma el color del texto de la pill */
   .tab .tdot { display:inline-block; width:6px; height:6px; border-radius:50%;
@@ -225,8 +225,8 @@ __CSS_CABECERA__
   .overlay { position:absolute; left:clamp(12px,2.5vw,32px); top:clamp(12px,2.5vw,26px);
     pointer-events:none; z-index:5; max-width:88%; }
   .overlay .oname { font:500 clamp(10px,1.4vw,12px) var(--mono);
-    letter-spacing:.16em; color:var(--ash); text-transform:uppercase; }
-  .overlay .oname span { color:var(--dim); text-transform:none; }
+    letter-spacing:.16em; color:var(--tinta2); text-transform:uppercase; }
+  .overlay .oname span { color:var(--tinta3); text-transform:none; }
   /* el nombre del índice es una etiqueta corta: mono y en mayúsculas, como
      en el ticker; el subtítulo y el rango de años van en texto normal */
   .overlay .oname #oname { text-transform:uppercase; }
@@ -236,26 +236,26 @@ __CSS_CABECERA__
   .orow { display:flex; align-items:baseline; gap:clamp(8px,1.5vw,16px);
     margin-top:4px; flex-wrap:wrap; }
   .oprice { font:700 clamp(34px,6vw,68px)/1 var(--display);
-    letter-spacing:-.01em; color:var(--bone); }
+    letter-spacing:-.01em; color:var(--tinta); }
   /* la variación semanal: el número en color (ver .v-sube y .v-baja) y el
      resto en hueso */
-  .odelta { font:600 clamp(13px,1.6vw,18px) var(--sans); color:var(--bone); }
-  .odelta small { font:400 12px var(--sans); color:var(--bone); }
+  .odelta { font:600 clamp(13px,1.6vw,18px) var(--sans); color:var(--tinta); }
+  .odelta small { font:400 12px var(--sans); color:var(--tinta); }
   .overd { display:flex; align-items:center; gap:12px; margin-top:12px; flex-wrap:wrap; }
   .badge { font:600 clamp(11px,1.4vw,13px) var(--mono); letter-spacing:.14em;
     padding:5px 12px; background:var(--verdict); color:var(--bg);
     animation:car-pulse 2.4s ease-in-out infinite; }
   /* la frase del veredicto por temporada junto a la píldora y, debajo, el
      percentil de toda la historia como dato secundario */
-  .opct { font:400 clamp(12px,1.4vw,14px)/1.45 var(--sans); color:var(--bone);
+  .opct { font:400 clamp(12px,1.4vw,14px)/1.45 var(--sans); color:var(--tinta);
     text-wrap:pretty; }
-  .ovs { font:400 clamp(11px,1.3vw,13px)/1.45 var(--sans); color:var(--ash);
+  .ovs { font:400 clamp(11px,1.3vw,13px)/1.45 var(--sans); color:var(--tinta2);
     margin-top:8px; text-wrap:pretty; }
   /* la nota de la regla de las dos semanas, bajo el percentil */
   .ovs.onota { margin-top:2px; }
   .onota:empty { display:none; }
   body.tv-ind .overlay.m-ind .onota { flex-basis:100%; }
-  .onote { display:inline-block; font:500 12px var(--sans); color:var(--ash);
+  .onote { display:inline-block; font:500 12px var(--sans); color:var(--tinta2);
     border:1px solid var(--line); padding:4px 10px; background:var(--panel);
     margin-top:8px; }
   /* ---- barra de controles: fuera del lienzo, sobre el gráfico ---- */
@@ -280,7 +280,7 @@ __CSS_CABECERA__
      línea de la unidad elegida, que reemplaza a la leyenda de las series */
   .unidad { flex:none; }
   .vtoggle .ubtn { font:500 13px var(--sans); letter-spacing:0; }
-  .usel { display:none; font:500 13px var(--sans); color:var(--bone);
+  .usel { display:none; font:500 13px var(--sans); color:var(--tinta);
     background:var(--bg); border:1px solid var(--line); border-radius:0;
     min-height:34px; padding:0 6px; color-scheme:dark; cursor:pointer; }
   .unidad.compacta .ubtns { display:none; }
@@ -289,15 +289,15 @@ __CSS_CABECERA__
   .midiendo .cbar-right { justify-content:flex-start; }
   .urow { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between;
     gap:4px 24px; padding:0 clamp(16px,3vw,32px) 9px; border-bottom:1px solid var(--line); }
-  .utxt { flex:1 1 320px; font:400 11px/1.5 var(--sans); color:var(--ash); text-wrap:pretty; }
+  .utxt { flex:1 1 320px; font:400 11px/1.5 var(--sans); color:var(--tinta2); text-wrap:pretty; }
   /* la leyenda de la línea del índice: las dos unidades, la elegida a la
      vista y la otra atenuada; en escritorio junto a la línea de la
      unidad, en el celular en la franja bajo el lienzo */
-  .legend { display:none; gap:14px; font:400 11px/1.5 var(--sans); color:var(--ash);
+  .legend { display:none; gap:14px; font:400 11px/1.5 var(--sans); color:var(--tinta2);
     white-space:nowrap; }
   @media (min-width:900px) { .legend { display:flex; } }
   .legend .sw, .mstrip .sw { display:inline-block; width:16px; height:0; margin-right:6px;
-    vertical-align:middle; border-top:2px solid var(--ember); }
+    vertical-align:middle; border-top:2px solid var(--serie); }
   /* con la unidad a la vista, su línea va pegada a la barra */
   body:not([data-modo="canasta"]) .cbar { border-bottom:none; padding-bottom:6px; }
   .vtoggle { display:flex; border:1px solid var(--line); background:var(--bg); }
@@ -305,10 +305,10 @@ __CSS_CABECERA__
      de texto normal (captura PNG) van en la tipografía de la
      interfaz */
   .vbtn { font:600 11px var(--mono); letter-spacing:.1em; padding:8px 14px;
-    border:none; cursor:pointer; background:transparent; color:var(--ash); min-height:34px;
+    border:none; cursor:pointer; background:transparent; color:var(--tinta2); min-height:34px;
     white-space:nowrap; }
   .vbtn + .vbtn { border-left:1px solid var(--line); }
-  .vbtn.active { background:var(--bone); color:var(--bg); }
+  .vbtn.active { background:var(--tinta); color:var(--bg); }
   .nomtoggle { border:1px solid var(--line); background:var(--bg);
     font:500 13px var(--sans); letter-spacing:0; }
   /* celular: la unidad (en el desplegable si los botones no caben),
@@ -327,9 +327,9 @@ __CSS_CABECERA__
      bajo 760px se omiten para no alargar la fila de controles en móvil, y la
      pista de zoom espera a 960px para que en tablets la fila siga siendo una */
   .ref { display:none; max-width:300px; text-wrap:balance;
-    font:400 11px/1.5 var(--sans); color:var(--dim); }
+    font:400 11px/1.5 var(--sans); color:var(--tinta3); }
   .zoomhint { display:none; max-width:280px; text-wrap:balance;
-    font:400 11px/1.5 var(--sans); color:var(--ash); }
+    font:400 11px/1.5 var(--sans); color:var(--tinta2); }
   @media (min-width:760px) { .ref { display:block; } }
   @media (min-width:960px) { .zoomhint { display:block; } }
   /* ---- franja móvil bajo el lienzo: leyenda compacta + pista táctil ---- */
@@ -344,16 +344,16 @@ __CSS_CABECERA__
     .mstrip { display:flex; flex-wrap:wrap; align-content:flex-start;
       align-items:center; gap:4px 14px; min-height:66px;
       padding:7px clamp(16px,3vw,32px);
-      font:400 11px/16px var(--sans); color:var(--ash); }
+      font:400 11px/16px var(--sans); color:var(--tinta2); }
     .mstrip .mleg { white-space:nowrap; }
-    .mstrip .mhint { flex-basis:100%; color:var(--dim); text-wrap:balance; }
+    .mstrip .mhint { flex-basis:100%; color:var(--tinta3); text-wrap:balance; }
   }
   .tooltip { position:absolute; display:none; z-index:7; pointer-events:none;
     background:var(--panel); border:1px solid var(--line); padding:8px 12px; white-space:nowrap; }
-  .tooltip .tt-d { font:500 11px var(--sans); color:var(--ash); }
-  .tooltip .tt-r { font:600 15px var(--sans); color:var(--bone); margin-top:2px; }
-  .tooltip .tt-r small { font:400 11px var(--sans); color:var(--ash); }
-  .tooltip .tt-n { font:400 12px var(--sans); color:var(--ash); }
+  .tooltip .tt-d { font:500 11px var(--sans); color:var(--tinta2); }
+  .tooltip .tt-r { font:600 15px var(--sans); color:var(--tinta); margin-top:2px; }
+  .tooltip .tt-r small { font:400 11px var(--sans); color:var(--tinta2); }
+  .tooltip .tt-n { font:400 12px var(--sans); color:var(--tinta2); }
 
   /* ---- franja de contexto ---- */
   /* min-height en las cajas que puebla JS (barras, chips, selector): la
@@ -364,31 +364,31 @@ __CSS_CABECERA__
   .ctx-box { padding:clamp(16px,3vw,24px) clamp(16px,3vw,32px); min-height:190px; }
   @media (min-width:900px) { .ctx-box + .ctx-box { border-left:1px solid var(--line); } }
   @media (max-width:899px) { .ctx-box + .ctx-box { border-top:1px solid var(--line); } }
-  .ctx-h { font:600 11px var(--mono); letter-spacing:.16em; color:var(--ash); }
-  .ctx-h span { font:400 12px var(--sans); color:var(--dim); letter-spacing:0; }
+  .ctx-h { font:600 11px var(--mono); letter-spacing:.16em; color:var(--tinta2); }
+  .ctx-h span { font:400 12px var(--sans); color:var(--tinta3); letter-spacing:0; }
   .bars { display:flex; align-items:flex-end; gap:6px; height:76px; margin-top:16px; }
   .bars .mcol { flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; }
-  .bars .bar { width:100%; min-height:3px; background:var(--ash); }
-  .bars .ml { font:400 10px var(--sans); color:var(--dim); }
-  .frase { font:400 14px/1.55 var(--sans); color:var(--bone); margin-top:16px;
+  .bars .bar { width:100%; min-height:3px; background:var(--tinta2); }
+  .bars .ml { font:400 10px var(--sans); color:var(--tinta3); }
+  .frase { font:400 14px/1.55 var(--sans); color:var(--tinta); margin-top:16px;
     text-wrap:pretty; }
-  .frase b { font-weight:600; color:var(--bone); }
+  .frase b { font-weight:600; color:var(--tinta); }
   .comp { display:flex; flex-wrap:wrap; gap:10px; margin-top:16px; }
   .comp .chip { display:flex; align-items:baseline; gap:10px; border:1px solid var(--line);
     padding:9px 14px; background:var(--panel); font:400 13px var(--sans);
-    color:var(--bone); }
+    color:var(--tinta); }
   .comp .chip b { font-weight:600; }
   /* la semana de los 4 índices en HTML estático (html_semana_indices): sin
      JS también se leen sus cifras */
   .ctx-semana { border-top:1px solid var(--line);
     padding:clamp(16px,3vw,24px) clamp(16px,3vw,32px); }
-  .sem-intro { font:400 13px/1.55 var(--sans); color:var(--ash); margin-top:12px;
+  .sem-intro { font:400 13px/1.55 var(--sans); color:var(--tinta2); margin-top:12px;
     text-wrap:pretty; }
-  .sem-ind { font:400 14px/1.55 var(--sans); color:var(--bone); margin-top:8px;
+  .sem-ind { font:400 14px/1.55 var(--sans); color:var(--tinta); margin-top:8px;
     text-wrap:pretty; }
-  .sem-ind a { color:var(--bone); font-weight:600; text-underline-offset:3px;
-    text-decoration-color:var(--dim); }
-  .sem-ind a:hover, .sem-ind a:focus-visible { text-decoration-color:var(--bone); }
+  .sem-ind a { color:var(--tinta); font-weight:600; text-underline-offset:3px;
+    text-decoration-color:var(--tinta3); }
+  .sem-ind a:hover, .sem-ind a:focus-visible { text-decoration-color:var(--tinta); }
 
   /* ---- franja de contexto: productos y canasta ---- */
   .ctx-solo { border-top:1px solid var(--line); min-height:190px;
@@ -397,57 +397,57 @@ __CSS_CABECERA__
 __CSS_COMPARAR__
   .pgroup { border-top:1px solid var(--line); }
   .pg-head { display:flex; align-items:center; gap:8px; width:100%; text-align:left;
-    font:600 11px var(--mono); letter-spacing:.14em; color:var(--ash);
+    font:600 11px var(--mono); letter-spacing:.14em; color:var(--tinta2);
     text-transform:uppercase; background:none; border:none; padding:11px 2px;
     min-height:38px; cursor:pointer; }
-  .pg-head:hover { color:var(--bone); }
-  .pg-n { color:var(--dim); letter-spacing:.04em; }
-  .pg-chev { color:var(--dim); transition:transform .15s ease; }
+  .pg-head:hover { color:var(--tinta); }
+  .pg-n { color:var(--tinta3); letter-spacing:.04em; }
+  .pg-chev { color:var(--tinta3); transition:transform .15s ease; }
   .pgroup.abierto .pg-chev { transform:rotate(90deg); }
   .pg-body { padding:2px 0 14px; }
   /* colapso con más especificidad que el display:flex de .pchips (el cuerpo
      lleva ambas clases); buscando: los grupos con resultados se abren solos
      y al borrar la búsqueda vuelve el colapso que dejó el usuario */
   .pgroup:not(.abierto):not(.buscando) .pg-body { display:none; }
-  .can-reg { font:400 12px/1.6 var(--sans); color:var(--ash); margin-top:10px; }
+  .can-reg { font:400 12px/1.6 var(--sans); color:var(--tinta2); margin-top:10px; }
   /* acción principal de la vista: pill como los tabs, en hueso para que
      se lea como botón protagonista */
   .ccopy { font:600 13px var(--sans); padding:8px 16px;
-    min-height:34px; cursor:pointer; background:transparent; border:1px solid var(--bone);
-    border-radius:999px; color:var(--bone); white-space:nowrap; }
+    min-height:34px; cursor:pointer; background:transparent; border:1px solid var(--tinta);
+    border-radius:999px; color:var(--tinta); white-space:nowrap; }
   .ccopy:hover { background:var(--hover); }
-  .ccopy.copiado { background:var(--bone); border-color:var(--bone); color:var(--bg); }
+  .ccopy.copiado { background:var(--tinta); border-color:var(--tinta); color:var(--bg); }
   .can-acciones { display:flex; gap:8px; flex-wrap:wrap; margin-top:16px; }
   .citems { display:flex; flex-wrap:wrap; gap:10px; margin-top:16px; }
   .citem { display:flex; flex-direction:column; gap:6px; border:1px solid var(--line);
     background:var(--panel); padding:10px 14px; max-width:100%; }
   .ci-top { display:flex; align-items:center; justify-content:space-between;
     gap:8px 14px; flex-wrap:wrap; }
-  .ci-label { font:500 14px var(--sans); color:var(--bone); }
+  .ci-label { font:500 14px var(--sans); color:var(--tinta); }
   .ci-step { display:flex; align-items:stretch; border:1px solid var(--line); background:var(--bg); }
   .ci-btn { font:600 16px var(--sans); width:38px; min-height:34px; cursor:pointer;
-    background:transparent; border:none; color:var(--bone); }
+    background:transparent; border:none; color:var(--tinta); }
   .ci-btn:hover { background:var(--hover); }
   .ci-q { font:500 13px var(--sans);
-    color:var(--bone); min-width:66px; display:flex; align-items:center;
+    color:var(--tinta); min-width:66px; display:flex; align-items:center;
     justify-content:center; padding:0 6px; border-left:1px solid var(--line);
     border-right:1px solid var(--line); }
-  .ci-eq { font:400 12px var(--sans); color:var(--ash); }
-  .cstats { font:400 13px/1.5 var(--sans); color:var(--ash); margin-top:8px;
+  .ci-eq { font:400 12px var(--sans); color:var(--tinta2); }
+  .cstats { font:400 13px/1.5 var(--sans); color:var(--tinta2); margin-top:8px;
     text-wrap:pretty; }
   .ctemporada { margin-top:2px; }
-  .caviso { font:400 12px/1.5 var(--sans); color:var(--ash); margin-top:4px; }
+  .caviso { font:400 12px/1.5 var(--sans); color:var(--tinta2); margin-top:4px; }
 
   /* ---- footer: el pie común del sitio (CSS_SITIO, más abajo) ---- */
 
   .nochart { display:flex; align-items:center; justify-content:center; height:100%;
-    color:var(--ash); font-size:13px; padding:20px; text-align:center; }
+    color:var(--tinta2); font-size:13px; padding:20px; text-align:center; }
   /* estado de carga del lienzo: centrado, sin tapar el overlay; el botón
      de reintentar aparece solo si el pedido falló */
   .carga { position:absolute; inset:0; z-index:6; display:flex;
     flex-direction:column; align-items:center; justify-content:center; gap:10px;
     padding:20px; text-align:center; pointer-events:none;
-    font:400 12px/1.5 var(--sans); color:var(--ash); }
+    font:400 12px/1.5 var(--sans); color:var(--tinta2); }
   .carga[hidden] { display:none; }
   /* mientras se prepara la captura PNG, un velo tapa el gráfico */
   .carga.velo { background:var(--bg); pointer-events:auto; }
@@ -476,9 +476,9 @@ __CSS_PANTALLA__
   }
   .pc-lienzo { display:none; position:absolute; top:8px; right:8px; z-index:7;
     width:36px; height:36px; padding:0; align-items:center;
-    justify-content:center; cursor:pointer; color:var(--bone);
+    justify-content:center; cursor:pointer; color:var(--tinta);
     background:var(--panel); border:1px solid var(--line); border-radius:999px; }
-  .pc-lienzo:hover, .pc-lienzo:focus-visible { border-color:var(--bone); }
+  .pc-lienzo:hover, .pc-lienzo:focus-visible { border-color:var(--tinta); }
   @media (max-width:759px) {
     .cbar .pc-abrir { display:none; }
     .pc-lienzo { display:flex; }
@@ -724,7 +724,7 @@ __JS_PANTALLA__
   const VARS = getComputedStyle(document.documentElement);
   const tok = n => VARS.getPropertyValue('--' + n).trim();
   const COL = {};
-  ['bg', 'bone', 'ash', 'dim', 'line', 'grid', 'ember', 'cruz', 'verde', 'rojo', 'sans']
+  ['bg', 'tinta', 'tinta2', 'tinta3', 'line', 'grid', 'serie', 'canasta', 'cruz', 'verde', 'rojo', 'sans']
     .forEach(n => { COL[n] = tok(n); });
   // opciones comunes de los tres lienzos: la rueda acerca y mueve el
   // gráfico, como en Advanced Charts; el deslizamiento vertical en táctil
@@ -733,7 +733,7 @@ __JS_PANTALLA__
     extra = extra || {};
     return Object.assign({
       autoSize: true,
-      layout: { background: { type: 'solid', color: 'transparent' }, textColor: COL.ash,
+      layout: { background: { type: 'solid', color: 'transparent' }, textColor: COL.tinta2,
         fontFamily: COL.sans },
       grid: { vertLines: { color: COL.grid }, horzLines: { color: COL.grid } },
       rightPriceScale: { borderColor: COL.line },
@@ -1006,7 +1006,7 @@ __JS_PANTALLA__
     chart = LightweightCharts.createChart(el, opcionesChart({ localization: {
       priceFormatter: fmt } }));
     // la línea de los índices oficiales: el único lugar de la brasa en los gráficos
-    sLinea = chart.addLineSeries({ color: COL.ember, lineWidth: 2, priceLineVisible: false });
+    sLinea = chart.addLineSeries({ color: COL.serie, lineWidth: 2, priceLineVisible: false });
     // C2: convención estándar de trading, verde sube y rojo baja
     sCandle = chart.addCandlestickSeries({
       upColor: COL.verde, downColor: COL.rojo, borderVisible: false,
@@ -1137,11 +1137,11 @@ __JS_PANTALLA__
       const col = document.createElement('div'); col.className = 'mcol';
       const bar = document.createElement('div'); bar.className = 'bar';
       bar.style.height = (6 + Math.abs(dev) / maxDev * 50) + 'px';
-      bar.style.background = dev >= 0 ? COL.bone : COL.dim;
+      bar.style.background = dev >= 0 ? COL.tinta : COL.tinta3;
       bar.title = MESES[m] + ': ' + (dev >= 0 ? '+' : '') + Math.round(dev * 100) + '%';
       const lab = document.createElement('div'); lab.className = 'ml';
       lab.textContent = MESES[m];
-      if (m === e.mes_caro || m === e.mes_barato) lab.style.color = COL.bone;
+      if (m === e.mes_caro || m === e.mes_barato) lab.style.color = COL.tinta;
       col.appendChild(bar); col.appendChild(lab); cont.appendChild(col);
     }
   }
@@ -1514,7 +1514,7 @@ __JS_PANTALLA__
     cchart = LightweightCharts.createChart(el,
       opcionesChart({ localization: { priceFormatter: fmt } }));
     // el label de precio del eje toma el color de la serie: acompaña
-    cserie = cchart.addLineSeries({ color: COL.bone, lineWidth: 2, priceLineVisible: false });
+    cserie = cchart.addLineSeries({ color: COL.canasta, lineWidth: 2, priceLineVisible: false });
   }
 
   function renderCItems() {
@@ -1658,8 +1658,8 @@ __JS_PANTALLA__
         const on = canasta.has(k);
         b.classList.toggle('active', on);
         // la canasta de usuario va en hueso, como su línea
-        dot.style.background = on ? 'var(--bone)' : 'var(--dim)';
-        b.style.borderColor = on ? 'var(--bone)' : 'var(--line)';
+        dot.style.background = on ? 'var(--canasta)' : 'var(--tinta3)';
+        b.style.borderColor = on ? 'var(--canasta)' : 'var(--line)';
         b.style.opacity = (!on && canasta.size >= CMAX) ? '.4' : '';
       };
       cpaints.push(paint);
@@ -1888,13 +1888,13 @@ __CSS_CABECERA__
   .sec-head { display:flex; align-items:flex-end; justify-content:space-between;
     flex-wrap:wrap; gap:12px 24px; }
   .sec-tit { display:flex; flex-direction:column; gap:6px; }
-  .sec-tit p { font:400 14px/1.5 var(--sans); color:var(--ash); max-width:72ch;
+  .sec-tit p { font:400 14px/1.5 var(--sans); color:var(--tinta2); max-width:72ch;
     text-wrap:pretty; }
-  .sec-link { font:400 14px var(--sans); color:var(--ash);
-    text-decoration:underline; text-decoration-color:var(--dim);
+  .sec-link { font:400 14px var(--sans); color:var(--tinta2);
+    text-decoration:underline; text-decoration-color:var(--tinta3);
     text-underline-offset:3px; }
-  .sec-link:hover, .sec-link:focus-visible { color:var(--bone);
-    text-decoration-color:var(--bone); }
+  .sec-link:hover, .sec-link:focus-visible { color:var(--tinta);
+    text-decoration-color:var(--tinta); }
   /* la cinta queda quieta para quien pidió menos movimiento, como en
      /graficos.html */
   @media (prefers-reduced-motion: reduce) {
@@ -1905,16 +1905,16 @@ __CSS_CABECERA__
   .icards { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; }
   .icard { display:flex; flex-direction:column; gap:14px; padding:20px;
     background:var(--panel); border:1px solid var(--line); border-radius:14px;
-    color:var(--bone); text-decoration:none;
+    color:var(--tinta); text-decoration:none;
     transition:border-color .15s ease, background-color .15s ease; }
-  .icard:hover, .icard:focus-visible { border-color:var(--bone); background:var(--hover); }
+  .icard:hover, .icard:focus-visible { border-color:var(--tinta); background:var(--hover); }
   .ic-top { display:flex; flex-wrap:wrap; justify-content:space-between;
     align-items:center; gap:6px 8px; }
-  .ic-ey { font:500 11px var(--mono); letter-spacing:.14em; color:var(--ash); }
+  .ic-ey { font:500 11px var(--mono); letter-spacing:.14em; color:var(--tinta2); }
   .ic-pill { font:500 11px var(--mono); letter-spacing:.08em; padding:3px 9px;
     border-radius:999px; color:var(--bg); }
   .ic-mid { display:flex; flex-direction:column; gap:4px; }
-  .ic-sub { font:400 13px var(--sans); color:var(--ash); }
+  .ic-sub { font:400 13px var(--sans); color:var(--tinta2); }
   /* el precio de esta semana, sin etiqueta: en su semana, ajustado y de la
      época son el mismo */
   .ic-precio { font:700 38px/1.05 var(--display); letter-spacing:-.02em; }
@@ -1922,7 +1922,7 @@ __CSS_CABECERA__
      las barras de las 4 tarjetas quedan a la misma altura */
   .ic-niv { flex:1 1 auto; display:flex; flex-direction:column; gap:9px; }
   /* la frase del veredicto: el mismo mes de los últimos 10 años */
-  .ic-fr { flex:1 1 auto; font:400 13px/1.45 var(--sans); color:var(--bone);
+  .ic-fr { flex:1 1 auto; font:400 13px/1.45 var(--sans); color:var(--tinta);
     text-wrap:pretty; }
   /* las tres zonas del veredicto (más caro que en 3 o menos de cada 10 años,
      entre medio y en 7 o más) y la marca en la cuenta de esta semana. Los
@@ -1941,9 +1941,9 @@ __CSS_CABECERA__
   .zonas.historia .z { flex-grow:33; }
   .zonas.historia .z3 { flex-grow:34; }
   .zonas .marca { position:absolute; top:-4px; width:3px; height:16px;
-    margin-left:-1px; background:var(--bone); border-radius:2px; }
+    margin-left:-1px; background:var(--tinta); border-radius:2px; }
   .ic-pie { display:flex; flex-direction:column; gap:4px 8px;
-    font:400 12px/1.5 var(--sans); color:var(--bone);
+    font:400 12px/1.5 var(--sans); color:var(--tinta);
     border-top:1px solid var(--line); padding-top:12px; }
   /* las 4 tarjetas miden lo mismo y el pie va igual en todas, sin depender
      del largo de cada cifra: en columna y, si la tarjeta tiene espacio para
@@ -1955,7 +1955,7 @@ __CSS_CABECERA__
   .ic-m { display:none; }
   /* la nota de la regla de las dos semanas, como texto secundario; en las
      tarjetas sin nota, el mismo alto vacío */
-  .ic-nota { font:400 12px/1.45 var(--sans); color:var(--ash); text-wrap:pretty; }
+  .ic-nota { font:400 12px/1.45 var(--sans); color:var(--tinta2); text-wrap:pretty; }
   .ic-nota.sin::after { content:attr(data-alto); visibility:hidden; }
 
   /* ---- Esta semana ---- */
@@ -1965,35 +1965,35 @@ __CSS_CABECERA__
     border-radius:14px; overflow:hidden; }
   .sem-h { display:flex; flex-direction:column; gap:3px; padding:16px 18px 12px; }
   .sem-h h3 { font:600 15px var(--sans); }
-  .sem-h span { font:400 12px var(--sans); color:var(--dim); }
+  .sem-h span { font:400 12px var(--sans); color:var(--tinta3); }
   .sem-l ul { list-style:none; }
   .sem-l a { display:flex; justify-content:space-between; align-items:center;
     gap:12px; min-height:44px; padding:8px 18px; border-top:1px solid var(--hover);
-    color:var(--bone); text-decoration:none; }
+    color:var(--tinta); text-decoration:none; }
   .sem-l a:hover, .sem-l a:focus-visible { background:var(--hover); }
   .sem-l .vacio { padding:12px 18px; border-top:1px solid var(--hover);
-    font:400 13px var(--sans); color:var(--ash); }
+    font:400 13px var(--sans); color:var(--tinta2); }
   .sn { display:flex; flex-wrap:wrap; align-items:baseline; gap:0 8px; min-width:0; }
   .sn b { font:500 14px var(--sans); }
-  .sn small { font:400 12px var(--sans); color:var(--dim); }
+  .sn small { font:400 12px var(--sans); color:var(--tinta3); }
   .sv { display:flex; align-items:baseline; gap:6px; font:400 14px var(--sans);
     white-space:nowrap; }
   .sv .f { font-size:11px; }
 
   /* ---- Productos ---- */
   .orden { display:flex; align-items:center; gap:10px; font:400 13px var(--sans);
-    color:var(--ash); }
+    color:var(--tinta2); }
   .orden select { height:36px; padding:0 10px; background:var(--panel);
-    color:var(--bone); border:1px solid var(--line); border-radius:9px;
+    color:var(--tinta); border:1px solid var(--line); border-radius:9px;
     font:400 13px var(--sans); }
   .chips { display:flex; flex-wrap:wrap; gap:8px; }
   .chips button { min-height:36px; padding:0 14px; border-radius:999px;
     cursor:pointer; font:500 13px var(--sans); background:transparent;
-    color:var(--ash); border:1px solid var(--line); }
-  .chips button:hover, .chips button:focus-visible { color:var(--bone);
-    border-color:var(--bone); }
-  .chips button[aria-pressed="true"] { background:var(--bone); color:var(--bg);
-    border-color:var(--bone); }
+    color:var(--tinta2); border:1px solid var(--line); }
+  .chips button:hover, .chips button:focus-visible { color:var(--tinta);
+    border-color:var(--tinta); }
+  .chips button[aria-pressed="true"] { background:var(--tinta); color:var(--bg);
+    border-color:var(--tinta); }
   /* sin JS no hay orden ni filtro: las filas igual quedan en el HTML */
   html:not(.js) .orden, html:not(.js) .chips { display:none; }
   .tabla { background:var(--panel); border:1px solid var(--line);
@@ -2004,45 +2004,45 @@ __CSS_CABECERA__
   .thead { border-bottom:1px solid var(--line); }
   .thead > * { display:flex; justify-content:flex-end; align-items:center; gap:4px;
     min-height:40px; padding:0; background:none; border:0; text-align:right;
-    font:500 12px var(--sans); color:var(--dim); }
+    font:500 12px var(--sans); color:var(--tinta3); }
   .thead > :first-child { justify-content:flex-start; text-align:left; }
   .thead button { cursor:pointer; }
   /* las cabeceras de cifras no se parten, ni con la flecha del orden */
   .thead button:not([data-k="c"]) { white-space:nowrap; }
   .thead button:hover, .thead button:focus-visible,
-  .thead button[aria-pressed="true"] { color:var(--bone); }
+  .thead button[aria-pressed="true"] { color:var(--tinta); }
   .fila { min-height:60px; padding-top:8px; padding-bottom:8px;
-    border-bottom:1px solid var(--hover); color:var(--bone); text-decoration:none; }
+    border-bottom:1px solid var(--hover); color:var(--tinta); text-decoration:none; }
   .fila:last-child { border-bottom:0; }
   .fila[hidden] { display:none; }
   .fila:hover, .fila:focus-visible { background:var(--hover); }
   /* la flecha de la fila: abre la ficha */
   .fila::after { content:""; justify-self:end; width:7px; height:7px;
-    margin-right:5px; border-top:2px solid var(--dim); border-right:2px solid var(--dim);
+    margin-right:5px; border-top:2px solid var(--tinta3); border-right:2px solid var(--tinta3);
     transform:rotate(45deg); }
   .c-n { display:flex; flex-direction:column; gap:2px; min-width:0; }
   .nm { font:500 15px/1.3 var(--sans); }
-  .mt { font:400 12px/1.4 var(--sans); color:var(--dim); }
+  .mt { font:400 12px/1.4 var(--sans); color:var(--tinta3); }
   .mp { display:none; }
   .c-p { text-align:right; font:500 15px var(--sans); }
-  .c-p small { display:block; font:400 11px var(--sans); color:var(--dim); }
+  .c-p small { display:block; font:400 11px var(--sans); color:var(--tinta3); }
   .c-v { text-align:right; font:400 14px var(--sans); white-space:nowrap; }
   .c-v .f { font-size:10px; }
   /* percentil en su historia: barra neutra, sin semáforo */
   .c-c { display:flex; align-items:center; justify-content:flex-end; gap:10px; }
   .bar { position:relative; flex:none; width:96px; height:4px;
     background:var(--line); border-radius:2px; }
-  .bar span { position:absolute; left:0; top:0; bottom:0; background:var(--ash);
+  .bar span { position:absolute; left:0; top:0; bottom:0; background:var(--tinta2);
     border-radius:2px; }
   .cn { width:28px; text-align:right; font:400 13px var(--sans); }
   .sp { justify-self:end; width:112px; height:28px; overflow:visible; }
-  .sp path { fill:none; stroke:var(--bone); stroke-width:1.5; stroke-linejoin:round;
+  .sp path { fill:none; stroke:var(--tinta); stroke-width:1.5; stroke-linejoin:round;
     stroke-linecap:round; vector-effect:non-scaling-stroke; }
   .ver-todos { align-self:center; display:flex; align-items:center;
     justify-content:center; min-height:44px; padding:0 20px;
     border:1px solid var(--line); border-radius:10px;
-    font:500 14px var(--sans); color:var(--bone); text-decoration:none; }
-  .ver-todos:hover, .ver-todos:focus-visible { border-color:var(--bone);
+    font:500 14px var(--sans); color:var(--tinta); text-decoration:none; }
+  .ver-todos:hover, .ver-todos:focus-visible { border-color:var(--tinta);
     background:var(--hover); }
 
   /* ---- escritorio angosto: 2 índices por fila, la tabla sin "3 meses" ---- */
@@ -2072,8 +2072,8 @@ __CSS_CABECERA__
       border-bottom:1px solid var(--hover); }
     .sem-tabs button { flex:1 1 0; min-width:0; min-height:40px; border:0;
       border-radius:8px; cursor:pointer; font:500 14px var(--sans);
-      background:transparent; color:var(--ash); }
-    .sem-tabs button[aria-pressed="true"] { background:var(--line); color:var(--bone); }
+      background:transparent; color:var(--tinta2); }
+    .sem-tabs button[aria-pressed="true"] { background:var(--line); color:var(--tinta); }
     .js .sem-l:not(.on) { display:none; }
     .js .sem-l + .sem-l { border-top:0; }
     .js .sem-h { position:absolute; width:1px; height:1px; padding:0;
@@ -2106,10 +2106,10 @@ __CSS_CABECERA__
     /* en el celular no hay cabecera: el cambio de 4 semanas lleva su
        etiqueta (aquí y no en cada fila, por el peso de la página); sin dato
        no va */
-    .c-m::after { content:" 4 semanas"; font:400 11px var(--sans); color:var(--bone); }
+    .c-m::after { content:" 4 semanas"; font:400 11px var(--sans); color:var(--tinta); }
     .fila:not([data-m]) .c-m { display:none; }
     /* y la semanal, la suya, para no confundirlas */
-    .c-w::after { content:" sem."; font:400 11px var(--sans); color:var(--bone); }
+    .c-w::after { content:" sem."; font:400 11px var(--sans); color:var(--tinta); }
     .fila:not([data-w]) .c-w::after { content:none; }
     .c-t, .c-y, .c-c, .mg { display:none; }
     .mp { display:inline; }
@@ -2131,7 +2131,7 @@ __CSS_CABECERA__
     .ic-precio { font-size:24px; line-height:1.1; }
     .zonas { height:6px; }
     .zonas .marca { top:-3px; height:12px; }
-    .ic-m { display:block; font:400 11px/1.4 var(--sans); color:var(--bone); }
+    .ic-m { display:block; font:400 11px/1.4 var(--sans); color:var(--tinta); }
     .ic-nota { font-size:11px; line-height:1.4; }
   }
 __CSS_SITIO__
@@ -2398,7 +2398,7 @@ MASCARA_LINEA = ("url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/
 CSS_MARCA = r"""  /* la Í de la marca: el texto del nodo sigue siendo la Í única (innerText
      y copy-paste leen CARESTÍA). El clip-path del span interior recorta la
      tilde del glifo y el ::after del envoltorio dibuja la línea: el color es
-     el token --ember y la forma va como máscara. Envoltorio y span son
+     el token --serie y la forma va como máscara. Envoltorio y span son
      inline-block con line-height normal y un margen negativo que los deja
      dentro de la línea: el wordmark no cambia de alto ni se mueve (CLS).
      Inline-block y no inline: en un span inline, Chrome no mueve el recorte
@@ -2413,7 +2413,7 @@ CSS_MARCA = r"""  /* la Í de la marca: el texto del nodo sigue siendo la Í ún
     margin:-.25em 0; }
   .wordmark .i > span { display:inline-block; clip-path:inset(.265em 0 0 0); }
   .wordmark .i::after { content:""; position:absolute; left:0; top:.12em;
-    width:.243em; height:.153em; pointer-events:none; background:var(--ember);
+    width:.243em; height:.153em; pointer-events:none; background:var(--serie);
     --linea:__MASCARA__;
     -webkit-mask:var(--linea) 0 0/100% 100% no-repeat;
     mask:var(--linea) 0 0/100% 100% no-repeat;
@@ -2446,11 +2446,14 @@ CSS_BASE = r"""
     /* base neutra. Sobre --bg, hueso 13,9:1, secundario 7,2:1 y
        terciario 5,0:1 (AA); sobre --panel, 13,0, 6,7 y 4,6 */
     --bg:#0f0f0e; --panel:#171716; --line:#2b2a27;
-    --bone:#e4dacc; --ash:#a39e95; --dim:#86817a;
+    --tinta:#e4dacc; --tinta2:#a39e95; --tinta3:#86817a;
     /* derivados de la base: hover de los controles y grilla de gráficos */
     --hover:#201f1d; --grid:#1c1c1a;
     /* brasa: solo la í del wordmark y la línea de los índices oficiales */
-    --ember:#e8743b;
+    --serie:#e8743b;
+    /* canastas de usuario: la línea de Arma tu canasta y de las canastas
+       de ejemplo */
+    --canasta:#e4dacc;
     /* semáforo: solo el veredicto y las velas de los 4 índices */
     --verde:#5bbf7a; --ambar:#e0a83c; --rojo:#e0552f; --verdict:var(--rojo);
     /* variaciones de precio, con criterio de consumidor: el número va en
@@ -2471,7 +2474,7 @@ CSS_BASE = r"""
     --display:"Space Grotesk","Space Grotesk Fallback",sans-serif;
   }
   * { box-sizing:border-box; margin:0; padding:0; }
-  body { background:var(--bg); color:var(--bone); font-family:var(--sans);
+  body { background:var(--bg); color:var(--tinta); font-family:var(--sans);
     font-variant-numeric:tabular-nums; min-height:100vh; }
   button, input { font-family:inherit; }
 """
@@ -2484,7 +2487,7 @@ CSS_CABECERA = r"""  /* ---- ticker ---- */
     background:var(--bg); border-bottom:1px solid var(--line); min-height:44px; }
   .ticker .tag { display:none; align-items:center; padding:0 18px;
     border-right:1px solid var(--line); font:600 10px var(--mono);
-    letter-spacing:.18em; color:var(--ash); white-space:nowrap; }
+    letter-spacing:.18em; color:var(--tinta2); white-space:nowrap; }
   .ticker-scroll { flex:1; overflow-x:auto; overflow-y:hidden;
     scrollbar-width:none; -webkit-overflow-scrolling:touch; }
   .ticker-scroll::-webkit-scrollbar { display:none; }
@@ -2505,12 +2508,12 @@ CSS_CABECERA = r"""  /* ---- ticker ---- */
     white-space:nowrap; border-right:1px solid var(--grid); background:none; border-top:0;
     border-bottom:0; border-left:0; min-height:44px; }
   .titem:hover { background:var(--hover); }
-  .titem .tn { font:600 11px var(--mono); letter-spacing:.1em; color:var(--bone); }
-  .titem .tp { font:500 13px var(--sans); color:var(--bone); }
+  .titem .tn { font:600 11px var(--mono); letter-spacing:.1em; color:var(--tinta); }
+  .titem .tp { font:500 13px var(--sans); color:var(--tinta); }
   /* la variación semanal y la de 4 semanas: el número en color (ver
      .v-sube y .v-baja) y su etiqueta en hueso */
-  .titem .td { font:500 12px var(--sans); color:var(--bone); }
-  .titem .tv, .titem .tv small { font:400 11px var(--sans); color:var(--bone); }
+  .titem .td { font:500 12px var(--sans); color:var(--tinta); }
+  .titem .tv, .titem .tv small { font:400 11px var(--sans); color:var(--tinta); }
   @media (min-width:760px) {
     .ticker .tag { display:flex; }
     .ticker-scroll { overflow-x:hidden; }
@@ -2529,15 +2532,15 @@ CSS_CABECERA = r"""  /* ---- ticker ---- */
   /* line-height y alto explícitos: el alto del wordmark depende solo del
      font-size, no de la métrica de la fuente que esté cargada (CLS) */
   .wordmark { font:700 clamp(20px,4vw,26px)/1.15 var(--display);
-    letter-spacing:.06em; color:var(--bone); display:flex; align-items:baseline;
+    letter-spacing:.06em; color:var(--tinta); display:flex; align-items:baseline;
     height:1.15em; }
 __CSS_MARCA__
   /* line-height fijo en el texto del encabezado: su alto no cambia con la
      tipografía y el encuadre del lienzo (calc más abajo) sigue exacto */
-  .tagline { font:400 13px/15.6px var(--sans); color:var(--ash); }
-  .semana { font:500 12px/14.3px var(--sans); color:var(--ash); }
-  .semana span { color:var(--dim); }
-  .semana .sin-nuevos { color:var(--bone); }
+  .tagline { font:400 13px/15.6px var(--sans); color:var(--tinta2); }
+  .semana { font:500 12px/14.3px var(--sans); color:var(--tinta2); }
+  .semana span { color:var(--tinta3); }
+  .semana .sin-nuevos { color:var(--tinta); }
   a.wordmark, a.titem { text-decoration:none; }
 """.replace("__CSS_MARCA__", CSS_MARCA)
 
@@ -2548,11 +2551,11 @@ CSS_SITIO = r"""
   .snav-links { display:flex; flex-wrap:wrap; gap:0 22px; }
   .snav-links a, .snav-panel a { font:500 11px var(--mono);
     letter-spacing:.08em; text-transform:uppercase; text-decoration:none; }
-  .snav-links a { display:inline-block; padding:6px 0 5px; color:var(--ash);
+  .snav-links a { display:inline-block; padding:6px 0 5px; color:var(--tinta2);
     border-bottom:1px solid transparent; }
-  .snav-links a:hover, .snav-links a:focus-visible { color:var(--bone);
-    border-bottom-color:var(--dim); }
-  .snav-links a[aria-current] { color:var(--bone); border-bottom-color:var(--bone); }
+  .snav-links a:hover, .snav-links a:focus-visible { color:var(--tinta);
+    border-bottom-color:var(--tinta3); }
+  .snav-links a[aria-current] { color:var(--tinta); border-bottom-color:var(--tinta); }
   /* móvil: el <summary> mide 34px de alto (área táctil de las pills) pero
      el margen negativo deja su caja en 22px, el alto de la fila del
      wordmark: el encabezado no crece */
@@ -2561,20 +2564,20 @@ CSS_SITIO = r"""
     min-height:34px; margin:-6px 0; padding:0 14px; cursor:pointer;
     list-style:none; -webkit-user-select:none; user-select:none;
     font:600 11px var(--mono); letter-spacing:.1em;
-    text-transform:uppercase; color:var(--bone); background:var(--panel);
+    text-transform:uppercase; color:var(--tinta); background:var(--panel);
     border:1px solid var(--line); border-radius:999px; }
   .snav-menu > summary::-webkit-details-marker { display:none; }
-  .snav-menu > summary::after { content:"▾"; content:"▾" / ""; color:var(--ash); }
-  .snav-menu[open] > summary { border-color:var(--bone); }
+  .snav-menu > summary::after { content:"▾"; content:"▾" / ""; color:var(--tinta2); }
+  .snav-menu[open] > summary { border-color:var(--tinta); }
   .snav-panel { position:absolute; right:0; top:calc(100% + 12px); z-index:60;
     min-width:230px; max-width:calc(100vw - 32px); padding:4px 0;
     background:var(--panel); border:1px solid var(--line);
     box-shadow:0 14px 34px rgba(0,0,0,.55); }
   .snav-panel li + li { border-top:1px solid var(--line); }
   .snav-panel a { display:flex; align-items:center; min-height:44px;
-    padding:0 18px; font-size:12px; color:var(--bone); }
+    padding:0 18px; font-size:12px; color:var(--tinta); }
   .snav-panel a:hover, .snav-panel a:focus-visible { background:var(--hover); }
-  .snav-panel a[aria-current] { box-shadow:inset 3px 0 0 var(--bone); }
+  .snav-panel a[aria-current] { box-shadow:inset 3px 0 0 var(--tinta); }
   @media (max-width:640px) {
     header { display:grid; grid-template-columns:minmax(0,1fr) auto;
       align-items:center; column-gap:12px; row-gap:6px; }
@@ -2593,15 +2596,15 @@ CSS_SITIO = r"""
   .sitefoot { border-top:1px solid var(--line); background:var(--bg);
     padding:18px clamp(16px,3vw,32px) 24px; display:flex;
     flex-direction:column; gap:8px; }
-  .sitefoot p { font:400 12px/1.6 var(--sans); color:var(--ash);
+  .sitefoot p { font:400 12px/1.6 var(--sans); color:var(--tinta2);
     text-wrap:pretty; }
-  .sitefoot a { color:var(--bone); text-decoration:underline;
-    text-decoration-color:var(--dim); text-underline-offset:3px; }
-  .sitefoot a:hover, .sitefoot a:focus-visible { text-decoration-color:var(--bone); }
+  .sitefoot a { color:var(--tinta); text-decoration:underline;
+    text-decoration-color:var(--tinta3); text-underline-offset:3px; }
+  .sitefoot a:hover, .sitefoot a:focus-visible { text-decoration-color:var(--tinta); }
   .pie-links { display:flex; flex-wrap:wrap; gap:0 20px; list-style:none; }
   .pie-links a { display:inline-block; padding:6px 0;
     font:500 13px var(--sans); }
-  .pie-links a[aria-current] { text-decoration-color:var(--bone); }
+  .pie-links a[aria-current] { text-decoration-color:var(--tinta); }
   /* RUT y fechas (78.521.796-9, 22-07-2026) no se cortan en el guion */
   .nw { white-space:nowrap; }
 
@@ -2609,7 +2612,7 @@ CSS_SITIO = r"""
   /* el número va en color con criterio de consumidor: rojo si el precio
      subió, verde si bajó y el color del texto si no cambió. La flecha va al
      lado, en gris, y el resto del texto en hueso */
-  .f { font-style:normal; color:var(--dim); }
+  .f { font-style:normal; color:var(--tinta3); }
   .v-sube { color:var(--sube); }
   .v-baja { color:var(--baja); }
 """
@@ -2663,12 +2666,12 @@ BUSCA_CSS = r"""  /* encabezado: en pantallas anchas, un campo al final de la fi
   .sbusca[hidden] { display:none; }
   .sb-abrir { display:flex; align-items:center; justify-content:center;
     width:34px; height:34px; margin:-6px 0; padding:0; cursor:pointer;
-    color:var(--bone); background:var(--panel); border:1px solid var(--line);
+    color:var(--tinta); background:var(--panel); border:1px solid var(--line);
     border-radius:999px; }
   .sb-abrir svg { width:15px; height:15px; fill:none; stroke:currentColor;
     stroke-width:2; stroke-linecap:round; }
   .sb-abrir:hover, .sb-abrir:focus-visible,
-  .sbusca.abierta .sb-abrir { border-color:var(--bone); }
+  .sbusca.abierta .sb-abrir { border-color:var(--tinta); }
   .sb-caja { display:none; position:absolute; right:0; top:calc(100% + 12px);
     z-index:60; width:min(360px, calc(100vw - 32px)); padding:10px;
     background:var(--panel); border:1px solid var(--line);
@@ -2676,22 +2679,22 @@ BUSCA_CSS = r"""  /* encabezado: en pantallas anchas, un campo al final de la fi
   .sbusca.abierta .sb-caja { display:block; }
   /* 16px: con menos, Safari del iPhone acerca la página al enfocar el campo */
   .sb-q { display:block; width:100%; height:44px; padding:0 12px;
-    font:400 16px var(--sans); color:var(--bone); background:var(--bg);
+    font:400 16px var(--sans); color:var(--tinta); background:var(--bg);
     border:1px solid var(--line); border-radius:0; outline:none;
     -webkit-appearance:none; appearance:none; }
-  .sb-q::placeholder { color:var(--dim); }
-  .sb-q:focus { border-color:var(--bone); }
+  .sb-q::placeholder { color:var(--tinta3); }
+  .sb-q:focus { border-color:var(--tinta); }
   .sb-res { list-style:none; margin-top:8px; max-height:min(60vh, 420px);
     overflow-y:auto; overscroll-behavior:contain; }
   .sb-res[hidden] { display:none; }
   .sb-res li + li { border-top:1px solid var(--line); }
   .sb-res a { display:flex; align-items:center; justify-content:space-between;
-    gap:12px; min-height:44px; padding:6px 10px; color:var(--bone);
+    gap:12px; min-height:44px; padding:6px 10px; color:var(--tinta);
     text-decoration:none; font:500 14px var(--sans); }
   .sb-res a:hover, .sb-res a:focus-visible, .sb-res a.activo { background:var(--hover); }
-  .sb-res small { font:400 12px var(--sans); color:var(--dim); margin-left:6px; }
+  .sb-res small { font:400 12px var(--sans); color:var(--tinta3); margin-left:6px; }
   .sb-res .sb-p { flex:none; font:500 14px var(--sans); }
-  .sb-res .sb-vacio { padding:12px 10px; font:400 13px var(--sans); color:var(--ash); }
+  .sb-res .sb-vacio { padding:12px 10px; font:400 13px var(--sans); color:var(--tinta2); }
   @media (max-width:640px) {
     .sitenav { gap:8px; }
     .sbusca { position:static; order:0; }
@@ -2719,15 +2722,15 @@ BUSCA_CSS = r"""  /* encabezado: en pantallas anchas, un campo al final de la fi
   /* portada y /productos/: el campo sobre la tabla o la lista, en el alto
      que la página le reserva (#pbh) */
   .pbusca { display:block; width:100%; max-width:420px; height:44px;
-    padding:0 14px; font:400 16px var(--sans); color:var(--bone);
+    padding:0 14px; font:400 16px var(--sans); color:var(--tinta);
     background:var(--panel); border:1px solid var(--line); border-radius:9px;
     outline:none; -webkit-appearance:none; appearance:none; }
-  .pbusca::placeholder { color:var(--dim); }
-  .pbusca:focus { border-color:var(--bone); }
-  .pvacio { padding:18px 16px; font:400 14px/1.5 var(--sans); color:var(--ash); }
+  .pbusca::placeholder { color:var(--tinta3); }
+  .pbusca:focus { border-color:var(--tinta); }
+  .pvacio { padding:18px 16px; font:400 14px/1.5 var(--sans); color:var(--tinta2); }
   .pvacio[hidden], .nb { display:none !important; }
-  .pvacio a { color:var(--bone); text-decoration:underline;
-    text-decoration-color:var(--dim); text-underline-offset:3px; }
+  .pvacio a { color:var(--tinta); text-decoration:underline;
+    text-decoration-color:var(--tinta3); text-underline-offset:3px; }
   main.catalogo .pbusca { border-radius:0; }
   main.catalogo .pvacio { padding:28px 0 0; }
   @media (max-width:760px) {
@@ -3027,10 +3030,10 @@ __CSS_BASE__
     padding:14px clamp(16px,3vw,32px); border-bottom:1px solid var(--line);
     min-height:51px; }
   .wordmark { font:700 20px/1.1 var(--display); letter-spacing:.06em;
-    color:var(--bone); text-decoration:none; display:inline-flex;
+    color:var(--tinta); text-decoration:none; display:inline-flex;
     align-items:baseline; height:22px; overflow:hidden; }
 __CSS_MARCA__
-  .tagline { font:400 12px/14.3px var(--sans); color:var(--ash); }
+  .tagline { font:400 12px/14.3px var(--sans); color:var(--tinta2); }
   /* el gráfico usa el ancho de la página, como en /graficos.html, y el texto
      se alinea con él (y con la marca y el pie) a la izquierda, en un ancho
      de lectura */
@@ -3038,23 +3041,23 @@ __CSS_MARCA__
     padding:clamp(20px,4vw,36px) clamp(16px,3vw,32px) clamp(28px,4vw,44px); }
   main > * { max-width:916px; }
   .miga { font:500 10px var(--mono); letter-spacing:.16em;
-    color:var(--ash); text-transform:uppercase; }
+    color:var(--tinta2); text-transform:uppercase; }
   h1 { font:600 clamp(26px,5vw,40px)/1.15 var(--sans);
     letter-spacing:-.005em; margin-top:6px; }
   .orow { display:flex; align-items:baseline; gap:clamp(10px,2vw,18px);
     flex-wrap:wrap; margin-top:14px; min-height:52px; }
   .oprice { font:700 clamp(38px,7vw,64px)/1 var(--display);
-    letter-spacing:-.01em; color:var(--bone); }
-  .ouni { font:400 13px var(--sans); color:var(--ash); }
+    letter-spacing:-.01em; color:var(--tinta); }
+  .ouni { font:400 13px var(--sans); color:var(--tinta2); }
   /* la variación semanal: el número en color (ver .v-sube y .v-baja) y el
      resto en hueso */
-  .odelta { font:600 15px var(--sans); color:var(--bone); }
-  .odelta small { font:400 12px var(--sans); color:var(--bone); }
+  .odelta { font:600 15px var(--sans); color:var(--tinta); }
+  .odelta small { font:400 12px var(--sans); color:var(--tinta); }
   /* la frase del veredicto por temporada y, debajo, el percentil de toda la
      historia como dato secundario */
-  .pct { font:400 15px/1.6 var(--sans); color:var(--bone);
+  .pct { font:400 15px/1.6 var(--sans); color:var(--tinta);
     margin-top:12px; text-wrap:pretty; }
-  .pct2 { font:400 13px/1.6 var(--sans); color:var(--ash); margin-top:4px;
+  .pct2 { font:400 13px/1.6 var(--sans); color:var(--tinta2); margin-top:4px;
     text-wrap:pretty; }
   /* la unidad del gráfico: ajustado por inflación o precio de la época, en
      dos botones o, si no caben, en un desplegable (JS_UNIDAD). Su línea va
@@ -3066,11 +3069,11 @@ __CSS_MARCA__
   .fctrl .pc-abrir { margin-left:auto; }
   .vtoggle { display:inline-flex; border:1px solid var(--line); background:var(--bg); }
   .vbtn { font:500 13px var(--sans); padding:8px 14px; border:none; cursor:pointer;
-    background:transparent; color:var(--ash); min-height:34px; white-space:nowrap; }
+    background:transparent; color:var(--tinta2); min-height:34px; white-space:nowrap; }
   .vbtn + .vbtn { border-left:1px solid var(--line); }
-  .vbtn.active { background:var(--bone); color:var(--bg); }
+  .vbtn.active { background:var(--tinta); color:var(--bg); }
   .nomtoggle { border:1px solid var(--line); background:var(--bg); }
-  .usel { display:none; font:500 13px var(--sans); color:var(--bone);
+  .usel { display:none; font:500 13px var(--sans); color:var(--tinta);
     background:var(--bg); border:1px solid var(--line); border-radius:0;
     min-height:34px; padding:0 6px; color-scheme:dark; cursor:pointer; }
   .unidad.compacta .ubtns { display:none; }
@@ -3098,7 +3101,7 @@ __CSS_MARCA__
   /* mientras se prepara la captura PNG, un velo tapa el gráfico */
   .velo { position:absolute; inset:0; z-index:6; display:flex; align-items:center;
     justify-content:center; padding:20px; background:var(--bg);
-    font:400 12px/1.5 var(--sans); color:var(--ash); }
+    font:400 12px/1.5 var(--sans); color:var(--tinta2); }
   .velo[hidden] { display:none; }
   /* el texto del producto (frente a su historia, el resumen y hace diez
      años) va al final de la ficha, después de "Comparar con" y de los otros
@@ -3110,20 +3113,20 @@ __CSS_MARCA__
      Prensa */
   .notas { margin-top:30px; padding-top:4px; border-top:1px solid var(--line); }
   .notas .pct2 { margin-top:14px; }
-  .fecha { font:500 12px/1.6 var(--sans); color:var(--ash); margin-top:14px; text-wrap:pretty; }
-  .fecha .sin-nuevos { color:var(--bone); }
+  .fecha { font:500 12px/1.6 var(--sans); color:var(--tinta2); margin-top:14px; text-wrap:pretty; }
+  .fecha .sin-nuevos { color:var(--tinta); }
   /* para citar: la frase con el precio de esta semana, antes de la línea de
      la semana (con la del precio de hace diez años en medio, si va), y la
      línea de cita (CSS_CITA), después */
-  .citable { font:400 13px/1.6 var(--sans); color:var(--ash); margin-top:14px;
+  .citable { font:400 13px/1.6 var(--sans); color:var(--tinta2); margin-top:14px;
     text-wrap:pretty; }
   .citable + .fecha { margin-top:4px; }
   /* bajo la frase citable, con su mismo aspecto, el precio de hace diez años
      (si la serie lo tiene); la línea de la semana queda igual de cerca */
-  .diez { font:400 13px/1.6 var(--sans); color:var(--ash); margin-top:4px;
+  .diez { font:400 13px/1.6 var(--sans); color:var(--tinta2); margin-top:4px;
     text-wrap:pretty; }
   .diez + .fecha { margin-top:4px; }
-  .ref-velas { font:400 12px/1.5 var(--sans); color:var(--dim); margin-top:10px; }
+  .ref-velas { font:400 12px/1.5 var(--sans); color:var(--tinta3); margin-top:10px; }
   /* Comparar con: el componente de Comparar de /graficos.html (CSS_COMPARAR)
      con las sugerencias del build, el buscador y, con algo elegido, la
      línea de la escala y la frase */
@@ -3132,42 +3135,42 @@ __CSS_COMPARAR__
   .comparar .pchips { margin-top:12px; }
   .comparar #cmp-res:empty { display:none; }
   .comparar .psearch { max-width:420px; margin:12px 0 0; display:block; }
-  .cmp-vacio { font:400 13px var(--sans); color:var(--ash); }
-  .cmp-nota { font:400 12px/1.5 var(--sans); color:var(--ash); margin-top:10px; }
-  .cmp-escala { font:400 12px/1.5 var(--sans); color:var(--ash); margin-top:16px;
+  .cmp-vacio { font:400 13px var(--sans); color:var(--tinta2); }
+  .cmp-nota { font:400 12px/1.5 var(--sans); color:var(--tinta2); margin-top:10px; }
+  .cmp-escala { font:400 12px/1.5 var(--sans); color:var(--tinta2); margin-top:16px;
     text-wrap:pretty; }
-  .cmp-frase { font:400 15px/1.6 var(--sans); color:var(--bone); margin-top:6px;
+  .cmp-frase { font:400 15px/1.6 var(--sans); color:var(--tinta); margin-top:6px;
     text-wrap:pretty; }
   /* el color de cada línea antes de su nombre: el punto de los botones */
   .cmp-frase .dot { display:inline-block; width:8px; height:8px; border-radius:50%;
-    margin:0 6px 0 2px; vertical-align:middle; background:var(--bone); }
+    margin:0 6px 0 2px; vertical-align:middle; background:var(--tinta); }
   .cmp-frase .serie { white-space:nowrap; }
   /* las series sin precio reciente, aparte de la frase */
-  .cmp-sin { font:400 13px/1.6 var(--sans); color:var(--ash); margin-top:4px;
+  .cmp-sin { font:400 13px/1.6 var(--sans); color:var(--tinta2); margin-top:4px;
     text-wrap:pretty; }
   .cmp-nota[hidden], .cmp-escala[hidden], .cmp-frase[hidden], .cmp-sin[hidden] { display:none; }
   /* otros productos del grupo: interlinking sobrio al pie, misma paleta
      del sitio (panel/línea/hueso, hover con borde hueso como .links) */
   .otros { margin-top:26px; }
   .otros-h { font:600 11px var(--mono); letter-spacing:.16em;
-    color:var(--ash); text-transform:uppercase; }
+    color:var(--tinta2); text-transform:uppercase; }
   .otros-links { display:flex; flex-wrap:wrap; gap:10px; margin-top:12px; }
   .otros-links a { font:500 13px var(--sans); padding:9px 14px;
     min-height:34px; display:inline-flex; align-items:center;
-    text-decoration:none; border:1px solid var(--line); color:var(--bone);
+    text-decoration:none; border:1px solid var(--line); color:var(--tinta);
     background:var(--panel); }
-  .otros-links a:hover { border-color:var(--bone); background:var(--hover); }
+  .otros-links a:hover { border-color:var(--tinta); background:var(--hover); }
   .links { display:flex; gap:12px; flex-wrap:wrap; margin-top:24px; }
   .links a { font:600 13px var(--sans);
     padding:9px 16px; min-height:34px; display:inline-flex; align-items:center;
-    text-decoration:none; border:1px solid var(--line); color:var(--bone);
+    text-decoration:none; border:1px solid var(--line); color:var(--tinta);
     background:var(--panel); border-radius:999px; }
-  .links a:hover { border-color:var(--bone); background:var(--hover); }
+  .links a:hover { border-color:var(--tinta); background:var(--hover); }
   .nochart { display:flex; align-items:center; justify-content:center;
-    height:100%; color:var(--ash); font-size:13px; padding:20px; text-align:center; }
+    height:100%; color:var(--tinta2); font-size:13px; padding:20px; text-align:center; }
   /* el gráfico llega después del primer pantallazo: mientras, un aviso tenue
      en el alto ya reservado */
-  #grafico .cargando { color:var(--dim); }
+  #grafico .cargando { color:var(--tinta3); }
 __CSS_PANTALLA__
 __CSS_SITIO__
 </style>
@@ -3631,7 +3634,7 @@ __JS_PANTALLA__
       setTimeout(programarFrase, 2000);
     } else if (t) reintentos = 0;
     const escala = $('cmp-escala'), frase = $('cmp-frase'), nota = $('cmp-sin');
-    const series = [{ nombre: NOMBRE, color: tok('bone') }].concat(ks.map(k =>
+    const series = [{ nombre: NOMBRE, color: tok('tinta') }].concat(ks.map(k =>
       ({ nombre: nombres.get(k) || k, color: cmp.estilo(k).color })));
     escala.hidden = !e;
     if (e) escala.innerHTML = conFechas(esc(textoEscala(e, series.map(s => s.nombre))));
@@ -3677,8 +3680,8 @@ __JS_PANTALLA__
     if (una) { try { una.x.setPoints([punto]); return; } catch (e) {} }
     await Promise.resolve(c.createShape(punto, { shape: 'horizontal_line', lock: true,
       disableSelection: true, disableSave: true, disableUndo: true, showInObjectsTree: false,
-      text: IGUAL, overrides: { linecolor: tok('dim'), linestyle: 2, linewidth: 1,
-        showLabel: true, textcolor: tok('ash'), fontsize: 12, horzLabelsAlign: 'center',
+      text: IGUAL, overrides: { linecolor: tok('tinta3'), linestyle: 2, linewidth: 1,
+        showLabel: true, textcolor: tok('tinta2'), fontsize: 12, horzLabelsAlign: 'center',
         vertLabelsAlign: 'bottom' } })).catch(() => null);
   }
 
@@ -3697,7 +3700,7 @@ __JS_PANTALLA__
       });
       const chart = LightweightCharts.createChart(el, {
         autoSize: true,
-        layout: { background: { type: 'solid', color: 'transparent' }, textColor: tok('ash'),
+        layout: { background: { type: 'solid', color: 'transparent' }, textColor: tok('tinta2'),
           fontFamily: tok('sans') },
         grid: { vertLines: { color: tok('grid') }, horzLines: { color: tok('grid') } },
         rightPriceScale: { borderColor: tok('line') },
@@ -3716,7 +3719,7 @@ __JS_PANTALLA__
       });
       // un producto no es un índice oficial: su línea va en hueso (la brasa
       // queda para los índices)
-      const linea = chart.addLineSeries({ color: tok('bone'), lineWidth: 2, priceLineVisible: false });
+      const linea = chart.addLineSeries({ color: tok('tinta'), lineWidth: 2, priceLineVisible: false });
       linea.setData(serie);
       chart.timeScale().fitContent();
       lwChart = chart;
@@ -3758,7 +3761,7 @@ __JS_PANTALLA__
       LightweightCharts.PriceScaleMode.Normal });
     if (hay && u === 'real') {
       if (!lwRef) {
-        lwRef = lwChart.addLineSeries({ color: tok('dim'), lineWidth: 1,
+        lwRef = lwChart.addLineSeries({ color: tok('tinta3'), lineWidth: 1,
           lineStyle: LightweightCharts.LineStyle.Dashed, title: IGUAL, priceLineVisible: false,
           crosshairMarkerVisible: false });
       }
@@ -3794,7 +3797,7 @@ __JS_PANTALLA__
       o.titulo = NOMBRE.toUpperCase();
       o.precio = ONOTE[u];
       o.chico = true;
-      o.lineas = [{ texto: NOMBRE, color: tok('bone'), punteada: false }].concat(ks.map(k =>
+      o.lineas = [{ texto: NOMBRE, color: tok('tinta'), punteada: false }].concat(ks.map(k =>
         Object.assign({ texto: nombres.get(k) || k }, cmp.estilo(k))));
       // la frase y, en otra línea, la nota de las que no tienen precio reciente
       o.frase = (ultimaFrase || []).filter(x => !x.muestra);
@@ -4468,7 +4471,7 @@ def linea_cita(semana: datetime.date) -> str:
 
 # la línea de cita de las fichas y de las páginas de índice: texto chico,
 # ceniza, como .fecha
-CSS_CITA = """  .cita { font:400 12px/1.6 var(--sans); color:var(--ash); margin-top:4px; text-wrap:pretty; }"""
+CSS_CITA = """  .cita { font:400 12px/1.6 var(--sans); color:var(--tinta2); margin-top:4px; text-wrap:pretty; }"""
 
 
 # ---------------- Datos a demanda (datos/) ----------------
@@ -4855,17 +4858,17 @@ JS_UNIDAD = r"""  /* ---------- selector de unidad ---------- */
 # (la elección con los colores por orden de selección, los botones y el
 # dibujo en escala porcentual en los dos motores) viven solo aquí y van en
 # las dos páginas, como el selector de unidad.
-CSS_COMPARAR = r"""  .psearch { width:100%; font:400 14px var(--sans); color:var(--bone);
+CSS_COMPARAR = r"""  .psearch { width:100%; font:400 14px var(--sans); color:var(--tinta);
     background:var(--panel); border:1px solid var(--line); padding:10px 14px;
     margin-bottom:10px; border-radius:0; outline:none; -webkit-appearance:none; }
-  .psearch::placeholder { color:var(--dim); }
-  .psearch:focus { border-color:var(--dim); }
+  .psearch::placeholder { color:var(--tinta3); }
+  .psearch:focus { border-color:var(--tinta3); }
   .pchips { display:flex; flex-wrap:wrap; gap:8px; }
   .pchip { display:flex; align-items:center; gap:8px; font:500 13px var(--sans);
     padding:7px 12px; min-height:34px; cursor:pointer; background:transparent;
-    border:1px solid var(--line); color:var(--ash); }
-  .pchip .dot { width:8px; height:8px; border-radius:50%; background:var(--dim); flex:none; }
-  .pchip.active { background:var(--panel); color:var(--bone); }"""
+    border:1px solid var(--line); color:var(--tinta2); }
+  .pchip .dot { width:8px; height:8px; border-radius:50%; background:var(--tinta3); flex:none; }
+  .pchip.active { background:var(--panel); color:var(--tinta); }"""
 
 JS_COMPARAR = r"""  /* ---------- Comparar: el componente común ---------- */
   // Comparar productos de /graficos.html y la franja "Comparar con" de las
@@ -4910,7 +4913,7 @@ JS_COMPARAR = r"""  /* ---------- Comparar: el componente común ---------- */
       const dot = b.querySelector('.dot');
       b.classList.toggle('active', on);
       b.setAttribute('aria-pressed', on ? 'true' : 'false');
-      dot.style.background = !on ? 'var(--dim)' : e.punteada ? 'transparent' : e.color;
+      dot.style.background = !on ? 'var(--tinta3)' : e.punteada ? 'transparent' : e.color;
       dot.style.boxShadow = on && e.punteada ? 'inset 0 0 0 2px ' + e.color : '';
       b.style.borderColor = on ? e.color : 'var(--line)';
       b.style.borderStyle = on && e.punteada ? 'dashed' : '';
@@ -5270,11 +5273,11 @@ CSS_PANTALLA = r"""  /* ---- pantalla completa ---- */
     padding:0 clamp(8px,2vw,16px) 0 clamp(14px,3vw,24px);
     border-bottom:1px solid var(--line); background:var(--bg); }
   .pc-tit { min-width:0; overflow:hidden; text-overflow:ellipsis;
-    white-space:nowrap; font:600 14px var(--sans); color:var(--bone); }
+    white-space:nowrap; font:600 14px var(--sans); color:var(--tinta); }
   .pc-cerrar { flex:none; min-height:36px; padding:0 16px; cursor:pointer;
-    font:500 13px var(--sans); color:var(--bone); background:var(--panel);
+    font:500 13px var(--sans); color:var(--tinta); background:var(--panel);
     border:1px solid var(--line); border-radius:999px; }
-  .pc-cerrar:hover, .pc-cerrar:focus-visible { border-color:var(--bone); }"""
+  .pc-cerrar:hover, .pc-cerrar:focus-visible { border-color:var(--tinta); }"""
 JS_PANTALLA = r"""  /* ---------- pantalla completa ---------- */
   // Se cierra con su botón, con Escape o con "atrás": al abrir se agrega un
   // paso al historial, para que "atrás" cierre el gráfico y no salga de la
@@ -5345,9 +5348,9 @@ JS_CAPTURA = r"""  /* ---------- captura PNG: la composición común ---------- 
     const seg = ['carest', 'í', 'a.cl'];
     const w = seg.map(s => ctx.measureText(s).width);
     let x = xDer - (w[0] + w[1] + w[2]);
-    ctx.globalAlpha = 0.4; ctx.fillStyle = tok('bone');  ctx.fillText(seg[0], x, yBase);
-    ctx.globalAlpha = 1;   ctx.fillStyle = tok('ember'); ctx.fillText(seg[1], x + w[0], yBase);
-    ctx.globalAlpha = 0.4; ctx.fillStyle = tok('bone');  ctx.fillText(seg[2], x + w[0] + w[1], yBase);
+    ctx.globalAlpha = 0.4; ctx.fillStyle = tok('tinta');  ctx.fillText(seg[0], x, yBase);
+    ctx.globalAlpha = 1;   ctx.fillStyle = tok('serie'); ctx.fillText(seg[1], x + w[0], yBase);
+    ctx.globalAlpha = 0.4; ctx.fillStyle = tok('tinta');  ctx.fillText(seg[2], x + w[0] + w[1], yBase);
     ctx.globalAlpha = 1;
   }
 
@@ -5476,7 +5479,7 @@ JS_CAPTURA = r"""  /* ---------- captura PNG: la composición común ---------- 
     // la frase en las líneas que quepan: palabra por palabra, cada trozo
     // con su color (las cifras en rojo si subieron y en verde si bajaron; una
     // nota, en gris). { salto: true } pasa a la línea siguiente
-    const COLOR_CIFRA = { 'v-sube': tok('sube'), 'v-baja': tok('baja'), nota: tok('ash') };
+    const COLOR_CIFRA = { 'v-sube': tok('sube'), 'v-baja': tok('baja'), nota: tok('tinta2') };
     const espacio = mctx.measureText(' ').width;
     if (o.frase && o.frase.length) {
       const palabras = [];
@@ -5488,7 +5491,7 @@ JS_CAPTURA = r"""  /* ---------- captura PNG: la composición común ---------- 
           if (!p) return;
           if (!actual) { actual = { trozos: [], ancho: 0 }; palabras.push(actual); }
           const a = mctx.measureText(p).width;
-          actual.trozos.push({ texto: p, color: COLOR_CIFRA[t.clase] || tok('bone'), ancho: a });
+          actual.trozos.push({ texto: p, color: COLOR_CIFRA[t.clase] || tok('tinta'), ancho: a });
           actual.ancho += a;
         });
       });
@@ -5524,13 +5527,13 @@ JS_CAPTURA = r"""  /* ---------- captura PNG: la composición común ---------- 
     ctx.fillStyle = tok('bg');
     ctx.fillRect(0, 0, W, H);
     ctx.textBaseline = 'top';
-    ctx.fillStyle = tok('ash');
+    ctx.fillStyle = tok('tinta2');
     ctx.font = '500 ' + Math.round(W * 0.014) + 'px "IBM Plex Mono", monospace';
     ctx.fillText(o.titulo, pad, Math.round(W * 0.028));
-    ctx.fillStyle = tok('bone');
+    ctx.fillStyle = tok('tinta');
     ctx.font = precioFont;
     ctx.fillText(o.precio, pad, Math.round(W * 0.05));
-    ctx.fillStyle = tok('ash');
+    ctx.fillStyle = tok('tinta2');
     ctx.font = '400 ' + compSize + 'px "IBM Plex Sans", sans-serif';
     const yLinea = i => Math.round(W * 0.098) + i * compAlto;
     compLineas.forEach((l, i) => ctx.fillText(l, pad, yLinea(i)));
@@ -5560,7 +5563,7 @@ JS_CAPTURA = r"""  /* ---------- captura PNG: la composición común ---------- 
         p.trozos.forEach(t => { ctx.fillStyle = t.color; ctx.fillText(t.texto, x, y); x += t.ancho; });
       });
     });
-    ctx.fillStyle = tok('ash');
+    ctx.fillStyle = tok('tinta2');
     ctx.font = '400 ' + Math.round(W * 0.012) + 'px "IBM Plex Sans", sans-serif';
     ctx.fillText('semana del ' + o.fecha, pad, Math.round(W * 0.098) + compH);
     // el gráfico entero en su recuadro, centrado si la proporción no quedó exacta
@@ -6601,14 +6604,14 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
       'paneProperties.background': tok('bg'),
       'paneProperties.vertGridProperties.color': tok('grid'),
       'paneProperties.horzGridProperties.color': tok('grid'),
-      'paneProperties.crossHairProperties.color': tok('dim'),
+      'paneProperties.crossHairProperties.color': tok('tinta3'),
       'paneProperties.separatorColor': tok('line'),
-      'scalesProperties.textColor': tok('ash'),
+      'scalesProperties.textColor': tok('tinta2'),
       'scalesProperties.lineColor': tok('line'),
       'mainSeriesProperties.style': 2,
       // v32 dibuja la línea con degradé si no se pide un color sólido
       'mainSeriesProperties.lineStyle.colorType': 'solid',
-      'mainSeriesProperties.lineStyle.color': tok('ember'),
+      'mainSeriesProperties.lineStyle.color': tok('serie'),
       'mainSeriesProperties.lineStyle.linewidth': 2,
     });
     ['candleStyle', 'hollowCandleStyle', 'haStyle'].forEach(e => {
@@ -6623,8 +6626,8 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
     o['mainSeriesProperties.barStyle.downColor'] = rojo;
     return o;
   }
-  const colorLinea = (tok, indice) => {
-    const c = tok(indice ? 'ember' : 'bone');
+  const colorLinea = (tok, clase) => {
+    const c = tok(clase === 'indice' ? 'serie' : clase === 'canasta' ? 'canasta' : 'tinta');
     return { 'mainSeriesProperties.lineStyle.colorType': 'solid', 'mainSeriesProperties.lineStyle.color': c };
   };
 
@@ -6669,7 +6672,7 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
       autosize: true,
       custom_css_url: o.css,
       custom_font_family: "'IBM Plex Sans', system-ui, sans-serif",
-      loading_screen: { backgroundColor: o.tok('bg'), foregroundColor: o.tok('ember') },
+      loading_screen: { backgroundColor: o.tok('bg'), foregroundColor: o.tok('serie') },
       toolbar_bg: o.tok('panel'),
       overrides: ov,
       custom_formatters: formateadores(),
@@ -6729,7 +6732,7 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
     // el que elija la persona
     const estilo = () => feed.simbolo(chart.symbol()).then(s => {
       if (!s) return;
-      widget.applyOverrides(colorLinea(tok, s.clase === 'indice'));
+      widget.applyOverrides(colorLinea(tok, s.clase));
     });
     estilo();
     chart.onSymbolChanged().subscribe(null, estilo);
@@ -6917,17 +6920,17 @@ __CSS_BASE__
     padding:14px clamp(16px,3vw,32px); border-bottom:1px solid var(--line);
     min-height:51px; }
   .wordmark { font:700 20px/1.1 var(--display); letter-spacing:.06em;
-    color:var(--bone); text-decoration:none; display:inline-flex;
+    color:var(--tinta); text-decoration:none; display:inline-flex;
     align-items:baseline; height:22px; overflow:hidden; }
 __CSS_MARCA__
-  .tagline { font:400 12px/14.3px var(--sans); color:var(--ash); }
+  .tagline { font:400 12px/14.3px var(--sans); color:var(--tinta2); }
   main { max-width:1280px; margin:0 auto;
     padding:clamp(20px,3vw,32px) clamp(16px,3vw,32px) clamp(28px,4vw,44px); }
   .miga { font:500 10px var(--mono); letter-spacing:.16em;
-    color:var(--ash); text-transform:uppercase; }
+    color:var(--tinta2); text-transform:uppercase; }
   h1 { font:600 clamp(24px,4vw,34px)/1.15 var(--sans);
     letter-spacing:-.005em; margin-top:6px; text-wrap:balance; }
-  .intro { font:400 14px/1.6 var(--sans); color:var(--bone); margin-top:10px;
+  .intro { font:400 14px/1.6 var(--sans); color:var(--tinta); margin-top:10px;
     max-width:76ch; text-wrap:pretty; }
   /* el lienzo: alto reservado antes de que monte cualquiera de los dos
      motores (CLS); en svh, estable frente a la barra del navegador móvil.
@@ -6945,23 +6948,23 @@ __CSS_MARCA__
   body[data-motor="lightweight"] .marco { margin-top:10px; }
   .vtoggle { display:flex; border:1px solid var(--line); background:var(--bg); }
   .vbtn { font:600 11px var(--mono); letter-spacing:.1em; padding:8px 14px;
-    border:none; cursor:pointer; background:transparent; color:var(--ash);
+    border:none; cursor:pointer; background:transparent; color:var(--tinta2);
     min-height:34px; }
   .vbtn + .vbtn { border-left:1px solid var(--line); }
-  .vbtn.active { background:var(--bone); color:var(--bg); }
+  .vbtn.active { background:var(--tinta); color:var(--bg); }
   .nomtoggle { border:1px solid var(--line); background:var(--bg);
     font:500 13px var(--sans); letter-spacing:0; }
-  .lw-ref { font:400 11px/1.5 var(--sans); color:var(--dim); max-width:46ch; }
+  .lw-ref { font:400 11px/1.5 var(--sans); color:var(--tinta3); max-width:46ch; }
   .carga { position:absolute; inset:0; display:flex; align-items:center;
     justify-content:center; padding:20px; text-align:center;
-    font:400 12px/1.5 var(--sans); color:var(--ash); pointer-events:none; }
+    font:400 12px/1.5 var(--sans); color:var(--tinta2); pointer-events:none; }
   .carga[hidden] { display:none; }
   .nochart { display:flex; align-items:center; justify-content:center;
-    height:100%; color:var(--ash); font-size:13px; padding:20px; text-align:center; }
-  .motor { font:400 12px/1.6 var(--sans); color:var(--ash); margin-top:12px;
+    height:100%; color:var(--tinta2); font-size:13px; padding:20px; text-align:center; }
+  .motor { font:400 12px/1.6 var(--sans); color:var(--tinta2); margin-top:12px;
     text-wrap:pretty; }
   /* pista de gestos: solo en pantallas táctiles angostas */
-  .gestos { display:none; font:400 12px/1.6 var(--sans); color:var(--dim);
+  .gestos { display:none; font:400 12px/1.6 var(--sans); color:var(--tinta3);
     margin-top:4px; }
   @media (max-width:759px) { .gestos { display:block; } }
 __CSS_SITIO__
@@ -7085,7 +7088,7 @@ __PIE__
         const fmt = v => '$' + TV.miles(v);
         const chart = LightweightCharts.createChart(lw, {
           autoSize: true,
-          layout: { background: { type: 'solid', color: 'transparent' }, textColor: tok('ash'),
+          layout: { background: { type: 'solid', color: 'transparent' }, textColor: tok('tinta2'),
             fontFamily: tok('sans') },
           grid: { vertLines: { color: tok('grid') }, horzLines: { color: tok('grid') } },
           rightPriceScale: { borderColor: tok('line') },
@@ -7100,10 +7103,10 @@ __PIE__
             horzLine: { color: tok('cruz'), labelBackgroundColor: tok('line') } },
           localization: { locale: 'es-CL', priceFormatter: fmt },
         });
-        const sNom = chart.addLineSeries({ color: tok('ash'), lineWidth: 1,
+        const sNom = chart.addLineSeries({ color: tok('tinta2'), lineWidth: 1,
           priceLineVisible: false, lastValueVisible: false, visible: false });
         // la línea de los índices oficiales, en brasa
-        const sReal = chart.addLineSeries({ color: tok('ember'), lineWidth: 2,
+        const sReal = chart.addLineSeries({ color: tok('serie'), lineWidth: 2,
           priceLineVisible: false });
         const sVelas = chart.addCandlestickSeries({ upColor: tok('verde'),
           downColor: tok('rojo'), borderVisible: false, wickUpColor: tok('verde'),
@@ -7152,27 +7155,27 @@ TV_COLORES = """.theme-dark:root {{
   --tv-color-toolbar-button-background-expanded: {hover};
   --tv-color-toolbar-button-background-active: {hover};
   --tv-color-toolbar-button-background-active-hover: {hover};
-  --tv-color-toolbar-button-text: {ash};
-  --tv-color-toolbar-button-text-hover: {bone};
-  --tv-color-toolbar-button-text-active: {bone};
-  --tv-color-toolbar-button-text-active-hover: {bone};
-  --tv-color-item-active-text: {bone};
+  --tv-color-toolbar-button-text: {tinta2};
+  --tv-color-toolbar-button-text-hover: {tinta};
+  --tv-color-toolbar-button-text-active: {tinta};
+  --tv-color-toolbar-button-text-active-hover: {tinta};
+  --tv-color-item-active-text: {tinta};
   --tv-color-toolbar-toggle-button-background-active: {line};
   --tv-color-toolbar-toggle-button-background-active-hover: {line};
   --tv-color-toolbar-divider-background: {line};
-  --tv-color-toolbar-save-layout-loader: {dim};
+  --tv-color-toolbar-save-layout-loader: {tinta3};
   --tv-color-popup-background: {panel};
-  --tv-color-popup-element-text: {bone};
-  --tv-color-popup-element-text-hover: {bone};
+  --tv-color-popup-element-text: {tinta};
+  --tv-color-popup-element-text-hover: {tinta};
   --tv-color-popup-element-background-hover: {hover};
   --tv-color-popup-element-divider-background: {line};
-  --tv-color-popup-element-secondary-text: {ash};
-  --tv-color-popup-element-hint-text: {dim};
-  --tv-color-popup-element-text-active: {bone};
+  --tv-color-popup-element-secondary-text: {tinta2};
+  --tv-color-popup-element-hint-text: {tinta3};
+  --tv-color-popup-element-text-active: {tinta};
   --tv-color-popup-element-background-active: {line};
-  --tv-color-popup-element-toolbox-text: {ash};
-  --tv-color-popup-element-toolbox-text-hover: {bone};
-  --tv-color-popup-element-toolbox-text-active-hover: {bone};
+  --tv-color-popup-element-toolbox-text: {tinta2};
+  --tv-color-popup-element-toolbox-text-hover: {tinta};
+  --tv-color-popup-element-toolbox-text-active-hover: {tinta};
   --tv-color-popup-element-toolbox-background-hover: {hover};
   --tv-color-popup-element-toolbox-background-active-hover: {hover};
 }}
@@ -7308,50 +7311,50 @@ __CSS_BASE__
     padding:14px clamp(16px,3vw,32px); border-bottom:1px solid var(--line);
     min-height:51px; }
   .wordmark { font:700 20px/1.1 var(--display); letter-spacing:.06em;
-    color:var(--bone); text-decoration:none; display:inline-flex;
+    color:var(--tinta); text-decoration:none; display:inline-flex;
     align-items:baseline; height:22px; overflow:hidden; }
 __CSS_MARCA__
-  .tagline { font:400 12px/14.3px var(--sans); color:var(--ash); }
+  .tagline { font:400 12px/14.3px var(--sans); color:var(--tinta2); }
   /* el texto usa el mismo ancho y el mismo margen izquierdo que el pie (y
      que la marca): sin columna angosta centrada */
   main { padding:clamp(20px,4vw,36px) clamp(16px,3vw,32px) clamp(28px,4vw,44px); }
   .miga { font:500 10px var(--mono); letter-spacing:.16em;
-    color:var(--ash); text-transform:uppercase; }
+    color:var(--tinta2); text-transform:uppercase; }
   h1 { font:600 clamp(26px,5vw,40px)/1.15 var(--sans);
     letter-spacing:-.005em; margin-top:6px; text-wrap:balance; }
 
   /* ---- textos: metodología, institucionales y legales ---- */
   .doc > h1:first-child { margin-top:0; }
   .doc h2 { font:600 11px var(--mono); letter-spacing:.16em;
-    color:var(--ash); text-transform:uppercase; margin-top:40px; }
-  .doc h3 { font:600 16px var(--sans); color:var(--bone); }
-  .doc h3 span { font-weight:400; color:var(--ash); }
+    color:var(--tinta2); text-transform:uppercase; margin-top:40px; }
+  .doc h3 { font:600 16px var(--sans); color:var(--tinta); }
+  .doc h3 span { font-weight:400; color:var(--tinta2); }
   .doc p, .doc li { font:400 15px/1.7 var(--sans);
-    color:var(--bone); text-wrap:pretty; }
+    color:var(--tinta); text-wrap:pretty; }
   .doc p { margin-top:14px; }
   .doc ul { margin-top:12px; padding-left:18px; }
   .doc li + li { margin-top:8px; }
-  .doc li::marker { color:var(--ash); }
+  .doc li::marker { color:var(--tinta2); }
   .doc strong { font-weight:600; }
   .doc code { font:inherit; font-size:.95em; background:var(--panel);
     border:1px solid var(--line); padding:0 5px;
     -webkit-box-decoration-break:clone; box-decoration-break:clone; }
-  .doc a { color:var(--bone); text-decoration:underline;
-    text-decoration-color:var(--dim); text-underline-offset:3px; }
-  .doc a:hover, .doc a:focus-visible { text-decoration-color:var(--bone); }
-  .doc .meta { font-size:13px; color:var(--ash); }
+  .doc a { color:var(--tinta); text-decoration:underline;
+    text-decoration-color:var(--tinta3); text-underline-offset:3px; }
+  .doc a:hover, .doc a:focus-visible { text-decoration-color:var(--tinta); }
+  .doc .meta { font-size:13px; color:var(--tinta2); }
   /* novedades: el título de cada nota como titular, no como etiqueta, y su
      fecha justo debajo */
-  .novedades h2 { font:600 20px/1.3 var(--sans); letter-spacing:0; color:var(--bone);
+  .novedades h2 { font:600 20px/1.3 var(--sans); letter-spacing:0; color:var(--tinta);
     text-transform:none; text-wrap:balance; }
   .novedades h2 + .meta { margin-top:6px; }
   .doc .sub { padding-left:3ch; }   /* sub-cláusulas: 4.1., 4.2., ... */
-  .doc .pendiente { border:1px dashed var(--dim); padding:12px 16px;
-    color:var(--ash); }
+  .doc .pendiente { border:1px dashed var(--tinta3); padding:12px 16px;
+    color:var(--tinta2); }
   /* las canastas: cantidades leídas de BASKETS (indices.py) */
   .canastas { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
     gap:26px 32px; margin-top:18px; }
-  .canastas .csub { font:400 13px/1.5 var(--sans); color:var(--ash);
+  .canastas .csub { font:400 13px/1.5 var(--sans); color:var(--tinta2);
     margin-top:4px; }
   .canastas ul { list-style:none; margin-top:10px; padding-left:0; }
   .canastas li { font:400 14px/1.5 var(--sans); padding:7px 0;
@@ -7359,32 +7362,32 @@ __CSS_MARCA__
   .canastas li + li { margin-top:0; }
 
   /* ---- /productos/: listado estático de fichas ---- */
-  .intro { font:400 15px/1.7 var(--sans); color:var(--bone);
+  .intro { font:400 15px/1.7 var(--sans); color:var(--tinta);
     margin-top:14px; text-wrap:pretty; }
   .grupos { display:flex; flex-wrap:wrap; gap:8px; margin-top:20px; list-style:none; }
   .grupos a { display:inline-flex; align-items:center; gap:8px; min-height:34px;
     padding:7px 12px; font:500 13px var(--sans);
-    text-decoration:none; color:var(--bone); background:var(--panel);
+    text-decoration:none; color:var(--tinta); background:var(--panel);
     border:1px solid var(--line); }
-  .grupos a span { color:var(--ash); }
-  .grupos a:hover, .grupos a:focus-visible { border-color:var(--bone); background:var(--hover); }
+  .grupos a span { color:var(--tinta2); }
+  .grupos a:hover, .grupos a:focus-visible { border-color:var(--tinta); background:var(--hover); }
   .pgrupo { margin-top:36px; scroll-margin-top:12px; }
   .pgrupo h2 { font:600 11px var(--mono); letter-spacing:.16em;
-    color:var(--ash); text-transform:uppercase; }
+    color:var(--tinta2); text-transform:uppercase; }
   .pgrupo h2 span { letter-spacing:.04em; }
   .plista { list-style:none; margin-top:10px; display:grid;
     grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); column-gap:32px; }
   .plista a { display:flex; align-items:baseline; justify-content:space-between;
     gap:14px; min-height:44px; padding:11px 0; text-decoration:none;
-    color:var(--bone); border-bottom:1px solid var(--line); }
+    color:var(--tinta); border-bottom:1px solid var(--line); }
   .plista a:hover .pn, .plista a:focus-visible .pn { text-decoration:underline;
-    text-decoration-color:var(--bone); text-underline-offset:3px; }
+    text-decoration-color:var(--tinta); text-underline-offset:3px; }
   .pn { font:500 14px/1.4 var(--sans); }
-  .pf { display:block; font:400 12px var(--sans); color:var(--ash);
+  .pf { display:block; font:400 12px var(--sans); color:var(--tinta2);
     margin-top:2px; }
   .pp { font:600 14px var(--sans);
     white-space:nowrap; text-align:right; }
-  .pp small { font:400 12px var(--sans); color:var(--ash); }
+  .pp small { font:400 12px var(--sans); color:var(--tinta2); }
 
   /* ---- /indices/{codigo}.html: un índice para compartir ---- */
   .ind-cifra { display:flex; flex-wrap:wrap; align-items:baseline; gap:8px 16px;
@@ -7394,17 +7397,17 @@ __CSS_MARCA__
     padding:4px 11px; border-radius:999px; color:var(--bg); }
   .ind-links { display:flex; flex-wrap:wrap; gap:12px; margin-top:22px; }
   .ind-links a { display:inline-flex; align-items:center; min-height:40px; padding:0 16px;
-    font:600 13px var(--sans); color:var(--bone); text-decoration:none;
+    font:600 13px var(--sans); color:var(--tinta); text-decoration:none;
     background:var(--panel); border:1px solid var(--line); border-radius:999px; }
-  .ind-links a:hover, .ind-links a:focus-visible { border-color:var(--bone);
+  .ind-links a:hover, .ind-links a:focus-visible { border-color:var(--tinta);
     background:var(--hover); }
-  .indice .intro a { color:var(--bone); text-underline-offset:3px;
-    text-decoration-color:var(--dim); }
+  .indice .intro a { color:var(--tinta); text-underline-offset:3px;
+    text-decoration-color:var(--tinta3); }
   .comp { list-style:none; margin-top:10px; max-width:560px; }
   .comp li { display:flex; justify-content:space-between; align-items:baseline; gap:14px;
     min-height:44px; padding:11px 0; border-bottom:1px solid var(--line);
     font:500 14px/1.4 var(--sans); }
-  .comp small { font:400 12px var(--sans); color:var(--ash); margin-left:6px; }
+  .comp small { font:400 12px var(--sans); color:var(--tinta2); margin-left:6px; }
   .comp b { font-weight:600; white-space:nowrap; }
   .tarjeta { display:block; width:100%; max-width:600px; height:auto; margin-top:32px;
     border:1px solid var(--line); }
@@ -8142,25 +8145,25 @@ COMPRAS = [
 # 4 semanas con su etiqueta y la frase. Sin scroll horizontal
 CSS_COMPRAS = r"""
   /* ---- /compras.html: los insumos de una minuta ---- */
-  .compras .meta .sin-nuevos { color:var(--bone); }
+  .compras .meta .sin-nuevos { color:var(--tinta); }
   .insumos { width:100%; max-width:1100px; margin-top:6px; border-collapse:collapse; }
   .insumos th, .insumos td { padding:11px 12px; text-align:left; vertical-align:baseline; }
   .insumos th:first-child { padding-left:0; }
   .insumos thead th:last-child, .insumos td:last-child { padding-left:24px; padding-right:0; }
-  .insumos thead th { padding-top:14px; font:500 12px var(--sans); color:var(--dim);
+  .insumos thead th { padding-top:14px; font:500 12px var(--sans); color:var(--tinta3);
     white-space:nowrap; border-bottom:1px solid var(--line); }
   .insumos .ins-p, .insumos .ins-4 { text-align:right; white-space:nowrap; }
   /* cada bloque abre con su subtítulo */
-  .insumos .ins-g th { padding-top:26px; font:600 16px var(--sans); color:var(--bone); }
+  .insumos .ins-g th { padding-top:26px; font:600 16px var(--sans); color:var(--tinta); }
   .insumos tr:not(.ins-g) { border-bottom:1px solid var(--line); }
   .ins-n { width:28%; font:500 15px/1.4 var(--sans); }
   .ins-p { font:500 15px var(--sans); }
-  .ins-p small { font:400 12px var(--sans); color:var(--ash); }
+  .ins-p small { font:400 12px var(--sans); color:var(--tinta2); }
   .ins-p .ins-sem { display:block; margin-top:2px; }
   .ins-4 { font:400 14px var(--sans); }
   .ins-4 .f { font-size:10px; }
-  .ins-f { font:400 14px/1.5 var(--sans); color:var(--bone); text-wrap:pretty; }
-  .doc .ins-nota { margin-top:12px; font-size:12px; color:var(--ash); }
+  .ins-f { font:400 14px/1.5 var(--sans); color:var(--tinta); text-wrap:pretty; }
+  .doc .ins-nota { margin-top:12px; font-size:12px; color:var(--tinta2); }
   @media (max-width:760px) {
     .insumos, .insumos tbody, .insumos tr, .insumos th, .insumos td { display:block; }
     .insumos thead { display:none; }
@@ -8172,7 +8175,7 @@ CSS_COMPRAS = r"""
     .insumos .ins-p, .insumos .ins-4 { text-align:left; }
     /* sin cabecera, el cambio de 4 semanas lleva su etiqueta; sin dato no va */
     .ins-4:not(:empty)::after { content:" 4 semanas"; font:400 12px var(--sans);
-      color:var(--bone); }
+      color:var(--tinta); }
   }
 """
 
@@ -8295,28 +8298,28 @@ CANASTA_LINEA = ("Canasta de ejemplo con precios de Santiago, ajustados por infl
 # precio y el aporte, con su etiqueta. Sin scroll horizontal
 CSS_CANASTA = r"""
   /* ---- /canastas/{slug}.html: una canasta de ejemplo ---- */
-  .can-sem { font:400 13px var(--sans); color:var(--ash); }
+  .can-sem { font:400 13px var(--sans); color:var(--tinta2); }
   /* las líneas de la franja de Arma tu canasta, como en /graficos.html */
-  .cstats { font:400 13px/1.5 var(--sans); color:var(--ash); margin-top:8px;
+  .cstats { font:400 13px/1.5 var(--sans); color:var(--tinta2); margin-top:8px;
     text-wrap:pretty; }
   .ctemporada { margin-top:2px; }
-  .caviso { font:400 12px/1.5 var(--sans); color:var(--ash); margin-top:4px; }
+  .caviso { font:400 12px/1.5 var(--sans); color:var(--tinta2); margin-top:4px; }
   .can-tabla { width:100%; max-width:760px; margin-top:6px; border-collapse:collapse; }
   .can-tabla th, .can-tabla td { padding:11px 12px; text-align:left; vertical-align:baseline; }
   .can-tabla th:first-child { padding-left:0; }
   .can-tabla td:last-child { padding-right:0; }
-  .can-tabla thead th { font:500 12px var(--sans); color:var(--dim); white-space:nowrap;
+  .can-tabla thead th { font:500 12px var(--sans); color:var(--tinta3); white-space:nowrap;
     border-bottom:1px solid var(--line); }
   .can-tabla tbody tr { border-bottom:1px solid var(--line); }
   .can-tabla tbody th { font:500 15px/1.4 var(--sans); }
-  .can-tabla a { color:var(--bone); text-decoration:underline;
-    text-decoration-color:var(--dim); text-underline-offset:3px; }
-  .can-tabla a:hover, .can-tabla a:focus-visible { text-decoration-color:var(--bone); }
+  .can-tabla a { color:var(--tinta); text-decoration:underline;
+    text-decoration-color:var(--tinta3); text-underline-offset:3px; }
+  .can-tabla a:hover, .can-tabla a:focus-visible { text-decoration-color:var(--tinta); }
   .can-tabla .can-n { text-align:right; white-space:nowrap; }
   .can-q, .can-p { font:400 14px var(--sans); }
-  .can-p small { font:400 12px var(--sans); color:var(--ash); }
+  .can-p small { font:400 12px var(--sans); color:var(--tinta2); }
   .can-a { font:600 14px var(--sans); }
-  .can-nota { font:400 12px/1.6 var(--sans); color:var(--ash); margin-top:12px;
+  .can-nota { font:400 12px/1.6 var(--sans); color:var(--tinta2); margin-top:12px;
     text-wrap:pretty; }
   @media (max-width:760px) {
     .can-tabla, .can-tabla tbody, .can-tabla tr, .can-tabla th, .can-tabla td { display:block; }
@@ -8328,7 +8331,7 @@ CSS_CANASTA = r"""
     .can-tabla .can-n { text-align:left; }
     .can-tabla .can-a { text-align:right; }
     /* sin cabecera, el aporte lleva su etiqueta */
-    .can-a::before { content:"aporta "; font:400 12px var(--sans); color:var(--ash); }
+    .can-a::before { content:"aporta "; font:400 12px var(--sans); color:var(--tinta2); }
   }
 """
 
@@ -8504,7 +8507,7 @@ def tarjeta_canasta(c: dict, r: dict, lineas: dict, ruta: str) -> str:
         "serie": serie_tarjeta([datetime.date.fromisoformat(t) for t, _v in r["serie"]],
                                [v for _t, v in r["serie"]]),
         "leyenda": TARJETA_LEYENDA,
-        "linea": "bone",
+        "linea": "canasta",
     }
     dibujar(tarjetas.ficha, ruta, datos)
     alt = (f"{c['titulo']}: {datos['precio']}, {datos['fecha'][0].lower()}{datos['fecha'][1:]}. "

@@ -141,7 +141,7 @@ class Lienzo:
         return f, ls[:max_lineas]
 
     # ---- piezas comunes ----
-    def linea(self, x: float, y: float, escala: float, color: str = "ember"):
+    def linea(self, x: float, y: float, escala: float, color: str = "serie"):
         """La línea de la marca con la esquina de arriba a la izquierda de su
         caja en (x, y) y 'escala' píxeles por unidad. Se dibuja a 8x en una
         capa del tamaño de la línea y se reduce: bordes suaves."""
@@ -164,7 +164,7 @@ class Lienzo:
         f = fuente("display", tam)
         esp = tam * 0.06
         for c in "CARESTIA":
-            self.d.text((x, y), c, font=f, fill=self.tok["bone"], anchor="ls")
+            self.d.text((x, y), c, font=f, fill=self.tok["tinta"], anchor="ls")
             if c == "I":
                 # tope de la caja de la I con line-height 1: el medio de la
                 # fuente (ascendente más descendente) queda al medio de la caja
@@ -177,13 +177,13 @@ class Lienzo:
             x += self.d.textlength(c, font=f) + esp
 
     def fecha(self, texto: str, y: int = 92):
-        self.texto((ANCHO - MARGEN, y), texto.upper(), fuente("mono", 20), "ash",
+        self.texto((ANCHO - MARGEN, y), texto.upper(), fuente("mono", 20), "tinta2",
                    espacio=2.4, ancla="rs")
 
     def pie(self, fuente_txt: str, sitio: str):
         self.d.line([(MARGEN, 548), (ANCHO - MARGEN, 548)], fill=self.tok["line"], width=2)
-        self.texto((MARGEN, 590), fuente_txt, fuente("sans", 22), "ash")
-        self.texto((ANCHO - MARGEN, 590), sitio, fuente("display", 26), "bone", ancla="rs")
+        self.texto((MARGEN, 590), fuente_txt, fuente("sans", 22), "tinta2")
+        self.texto((ANCHO - MARGEN, 590), sitio, fuente("display", 26), "tinta", ancla="rs")
 
     def pildora(self, x: float, y_base: float, texto: str, color: str, tam: int = 22) -> float:
         """Píldora del veredicto (solo índices), con la línea base de su texto
@@ -214,7 +214,7 @@ class Lienzo:
         self.img.paste(Image.new("RGB", capa.size, self.tok[color]), (izq, arr), capa)
 
     def grafico(self, puntos: list, leyenda: str = "", caja: tuple = GRAFICO,
-                color: str = "ember"):
+                color: str = "serie"):
         """El gráfico de la tarjeta, en 'caja': la serie de 'puntos' (pares
         [fecha ISO, valor], en orden) en el token 'color' (brasa, como en el
         sitio; hueso en las canastas de ejemplo), con un área suave debajo;
@@ -245,16 +245,16 @@ class Lienzo:
             tramos[-1].append(px(f, v))
             previa = f
         if leyenda:
-            self.texto((x0, 178), leyenda.upper(), fuente("mono", 18), "ash", espacio=2.2)
+            self.texto((x0, 178), leyenda.upper(), fuente("mono", 18), "tinta2", espacio=2.2)
         # el eje, una marca por cada 1 de enero y los años de los extremos
         self.d.line([(x0, y1), (x1, y1)], fill=self.tok["line"], width=2)
         for anio in range(fechas[0].year + 1, fechas[-1].year + 1):
             xm = round(px(datetime.date(anio, 1, 1), bajo)[0])
             self.d.line([(xm, y1), (xm, y1 + 8)], fill=self.tok["line"], width=2)
         f_anio = fuente("mono", 20)
-        self.texto((x0, y1 + 36), str(fechas[0].year), f_anio, "ash")
+        self.texto((x0, y1 + 36), str(fechas[0].year), f_anio, "tinta2")
         if fechas[-1].year != fechas[0].year:
-            self.texto((x1, y1 + 36), str(fechas[-1].year), f_anio, "ash", ancla="rs")
+            self.texto((x1, y1 + 36), str(fechas[-1].year), f_anio, "tinta2", ancla="rs")
         # el área y la línea, en capas a GRAF_SUPER x con un margen para los
         # bordes redondeados del trazo, reducidas y pegadas en su color
         m, s = 16, GRAF_SUPER
@@ -278,7 +278,7 @@ class Lienzo:
         xp = x0
         while xp < x1:
             self.d.line([(xp, round(yu)), (min(xp + 10, x1), round(yu))],
-                        fill=self.tok["dim"], width=2)
+                        fill=self.tok["tinta3"], width=2)
             xp += 18
         self.img.paste(tinta, (x0 - m, y0 - m), linea)
         # el punto de esta semana, con un anillo del fondo que lo separa
@@ -294,7 +294,7 @@ class Lienzo:
 def ficha(ruta: str, tok: dict, *, antetitulo: str, nombre: str, precio: str,
           unidad: str, frase: str, fecha: str, fuente_txt: str, sitio: str,
           veredicto: str = None, color_veredicto: str = None, nota: str = None,
-          serie: list = None, leyenda: str = "", linea: str = "ember") -> None:
+          serie: list = None, leyenda: str = "", linea: str = "serie") -> None:
     """La tarjeta de un producto, de un índice o de una canasta de ejemplo:
     antetítulo, nombre, precio con su unidad (y, en los índices, la píldora
     del veredicto), la frase, la 'nota' (índices: la regla de las dos
@@ -344,7 +344,7 @@ def _columna(c: Lienzo, t: dict, k: float, dibujar: bool = False) -> float:
         if c.ancho(ante, f_ant, tam * 0.14) <= COLUMNA:
             break
     if dibujar:
-        c.texto((x, y), ante, f_ant, "ash", espacio=tam * 0.14)
+        c.texto((x, y), ante, f_ant, "tinta2", espacio=tam * 0.14)
     escala = lambda tams: tuple(round(s * k) for s in tams)  # noqa: E731
     f_nom, l_nom = c.ajustar(t["nombre"], "sans-semi", escala((56, 50, 44)), COLUMNA, 1)
     if len(c.lineas(t["nombre"], f_nom, COLUMNA)) > 1:
@@ -353,16 +353,16 @@ def _columna(c: Lienzo, t: dict, k: float, dibujar: bool = False) -> float:
     for linea in l_nom:
         y += int(f_nom.size * 1.12)
         if dibujar:
-            c.texto((x, y), linea, f_nom, "bone")
+            c.texto((x, y), linea, f_nom, "tinta")
     f_pre = fuente("display", round((104 if len(l_nom) == 1 else 88) * k))
     y += int(f_pre.size * 1.08)
     if dibujar:
-        c.texto((x, y), t["precio"], f_pre, "bone")
+        c.texto((x, y), t["precio"], f_pre, "tinta")
     f_uni = fuente("sans", 28)
     piezas = []   # (ancho, separación antes, cómo dibujarla en (x, línea base))
     if t["unidad"]:
         piezas.append((c.ancho(t["unidad"], f_uni), 22,
-                       lambda xp, yp: c.texto((xp, yp), t["unidad"], f_uni, "ash")))
+                       lambda xp, yp: c.texto((xp, yp), t["unidad"], f_uni, "tinta2")))
     if t["veredicto"]:
         piezas.append((c.ancho_pildora(t["veredicto"]), 24,
                        lambda xp, yp: c.pildora(xp, yp - 4, t["veredicto"], t["color_veredicto"])))
@@ -381,14 +381,14 @@ def _columna(c: Lienzo, t: dict, k: float, dibujar: bool = False) -> float:
     for linea in l_fra:
         y += int(f_fra.size * 1.3)
         if dibujar:
-            c.texto((x, y), linea, f_fra, "bone")
+            c.texto((x, y), linea, f_fra, "tinta")
     if t["nota"]:
         f_not, l_not = c.ajustar(t["nota"], "sans", escala((22, 20)), COLUMNA, 2)
         y += 6
         for linea in l_not:
             y += int(f_not.size * 1.4)
             if dibujar:
-                c.texto((x, y), linea, f_not, "ash")
+                c.texto((x, y), linea, f_not, "tinta2")
     return y
 
 
@@ -401,20 +401,20 @@ def _ancho_completo(c: Lienzo, t: dict) -> None:
     frase, veredicto, color_veredicto, nota = (t["frase"], t["veredicto"],
                                                t["color_veredicto"], t["nota"])
     ancho = ANCHO - 2 * MARGEN
-    c.texto((MARGEN, 178), antetitulo.upper(), fuente("mono", 20), "ash", espacio=2.8)
+    c.texto((MARGEN, 178), antetitulo.upper(), fuente("mono", 20), "tinta2", espacio=2.8)
     f_nom, l_nom = c.ajustar(nombre, "sans-semi", (64, 56, 48), ancho, 2)
     dos = len(l_nom) > 1
     y = 178 + 18
     for linea in l_nom:
         y += int(f_nom.size * 1.12)
-        c.texto((MARGEN, y), linea, f_nom, "bone")
+        c.texto((MARGEN, y), linea, f_nom, "tinta")
     tam_precio = 84 if dos else 112
     f_pre = fuente("display", tam_precio)
     y += int(tam_precio * 1.08)
-    c.texto((MARGEN, y), precio, f_pre, "bone")
+    c.texto((MARGEN, y), precio, f_pre, "tinta")
     x = MARGEN + c.ancho(precio, f_pre) + 22
     f_uni = fuente("sans", 28)
-    c.texto((x, y), unidad, f_uni, "ash")
+    c.texto((x, y), unidad, f_uni, "tinta2")
     if veredicto:
         x += c.ancho(unidad, f_uni) + 24
         c.pildora(x, y - 4, veredicto, color_veredicto)
@@ -428,11 +428,11 @@ def _ancho_completo(c: Lienzo, t: dict) -> None:
     y += 30
     for linea in l_fra:
         y += int(f_fra.size * 1.3)
-        c.texto((MARGEN, y), linea, f_fra, "bone")
+        c.texto((MARGEN, y), linea, f_fra, "tinta")
     if nota:
         f_not, l_not = c.ajustar(nota, "sans", (24, 22, 20), ancho, 1)
         y += int(f_not.size * 1.5)
-        c.texto((MARGEN, y), l_not[0], f_not, "ash")
+        c.texto((MARGEN, y), l_not[0], f_not, "tinta2")
 
 
 def portada(ruta: str, tok: dict, *, indices: list, fecha: str,
@@ -452,14 +452,14 @@ def portada(ruta: str, tok: dict, *, indices: list, fecha: str,
                               fill=c.tok["panel"], outline=c.tok["line"], width=2)
         xi = x + 26
         f_n = fuente("mono", 20)
-        c.texto((xi, y0 + 44), d["nombre"].upper(), f_n, "ash", espacio=2.4)
+        c.texto((xi, y0 + 44), d["nombre"].upper(), f_n, "tinta2", espacio=2.4)
         c.pildora(xi + c.ancho(d["nombre"].upper(), f_n, 2.4) + 16, y0 + 44,
                   d["veredicto"], d["color"], tam=17)
         f_p = fuente("display", 54)
-        c.texto((xi, y0 + 108), d["precio"], f_p, "bone")
+        c.texto((xi, y0 + 108), d["precio"], f_p, "tinta")
         f_f, l_f = c.ajustar(d["frase"], "sans", (20, 19, 18), col - 52, 2)
         for k, linea in enumerate(l_f):
-            c.texto((xi, y0 + 142 + k * int(f_f.size * 1.3)), linea, f_f, "bone")
+            c.texto((xi, y0 + 142 + k * int(f_f.size * 1.3)), linea, f_f, "tinta")
     c.pie(pie_txt, sitio)
     c.guardar(ruta)
 
@@ -469,8 +469,8 @@ def generica(ruta: str, tok: dict, *, tagline: str, sitio: str) -> None:
     grande, la línea del sitio y, abajo a la derecha, el sitio."""
     c = Lienzo(tok)
     c.marca(tam=160, y=337, x=MARGEN + 32)
-    c.texto((MARGEN + 32, 407), tagline, fuente("mono", 28), "ash")
-    c.texto((ANCHO - MARGEN, 590), sitio, fuente("display", 30), "dim", ancla="rs")
+    c.texto((MARGEN + 32, 407), tagline, fuente("mono", 28), "tinta2")
+    c.texto((ANCHO - MARGEN, 590), sitio, fuente("display", 30), "tinta3", ancla="rs")
     c.guardar(ruta)
 
 
@@ -488,7 +488,7 @@ def icono(ruta: str, tok: dict, lado: int = 180) -> None:
     img = Image.new("RGB", (lado * SUPER, lado * SUPER), _rgb(tok["bg"]))
     d = ImageDraw.Draw(img)
     (x0, y0), (x1, y1) = a(27, 30), a(37, 54)
-    d.rounded_rectangle([x0, y0, x1 - 1, y1 - 1], radius=2 * k, fill=_rgb(tok["bone"]))
-    trazo(d, [a(17, 25), a(25, 17), a(31, 21), a(46, 8)], 6 * k, _rgb(tok["ember"]))
+    d.rounded_rectangle([x0, y0, x1 - 1, y1 - 1], radius=2 * k, fill=_rgb(tok["tinta"]))
+    trazo(d, [a(17, 25), a(25, 17), a(31, 21), a(46, 8)], 6 * k, _rgb(tok["serie"]))
     _carpeta(ruta)
     img.reduce(SUPER).save(ruta, "PNG", optimize=True)

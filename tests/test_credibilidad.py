@@ -314,13 +314,13 @@ def test_portada_avisa_si_odepa_no_publico(tmp_path):
              "</span> Próxima actualización: viernes 9 de octubre en la tarde.")
     h = _leer(d, "index.html")
     assert f'<div class="semana">{linea}</div>' in h
-    assert ".semana .sin-nuevos { color:var(--bone); }" in h
+    assert ".semana .sin-nuevos { color:var(--tinta); }" in h
     assert f'<div class="semana">{linea}</div>' in _leer(d, "graficos.html")
     # en las fichas la línea de la semana va solo para dar este aviso
     f = _leer(d, "productos/tomate.html")
     assert f'<div class="fecha">{linea} Serie desde ' in f
     assert f.index('<div class="notas">') < f.index('<div class="fecha">') < f.index('<nav class="links">')
-    assert ".fecha .sin-nuevos { color:var(--bone); }" in f
+    assert ".fecha .sin-nuevos { color:var(--tinta); }" in f
 
 
 # ---------- 5. tarjetas para WhatsApp ----------
@@ -388,8 +388,8 @@ def test_un_grafico_que_falla_no_frena_la_tarjeta(tmp_path, capsys):
     # sin gráfico, como antes, y queda el aviso; el build sigue
     serie = [[f"2026-01-{d:02d}", 1000] for d in range(1, 27)] + [["no-es-fecha", 1000]]
     ruta = str(tmp_path / "rota.png")
-    tok = {"bg": "#0f0f0e", "bone": "#e4dacc", "ash": "#a39e95", "dim": "#86817a",
-           "line": "#2b2a27", "ember": "#e8743b", "rojo": "#e0552f"}
+    tok = {"bg": "#0f0f0e", "tinta": "#e4dacc", "tinta2": "#a39e95", "tinta3": "#86817a",
+           "line": "#2b2a27", "serie": "#e8743b", "rojo": "#e0552f"}
     tarjetas.ficha(ruta, tok, antetitulo="Precio en Santiago", nombre="Prueba", precio="$1.000",
                    unidad="por kilo", frase="Frase.", fecha="Semana del 19-10-2026",
                    fuente_txt="Fuente", sitio="carestia.cl", serie=serie, leyenda="Ajustado por inflación")

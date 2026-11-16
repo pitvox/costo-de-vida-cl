@@ -338,7 +338,7 @@ def test_linea_de_cita_en_las_paginas_de_indice(sitio, datos):
         assert h.index("Fuente: precios al consumidor de ODEPA") < h.index('<p class="cita">')
         assert 'class="citable"' not in h
         # ceniza y chica, sin colores nuevos ni semáforo
-        assert ".cita { font:400 12px/1.6 var(--sans); color:var(--ash);" in h
+        assert ".cita { font:400 12px/1.6 var(--sans); color:var(--tinta2);" in h
         assert infracciones(h) == []
 
 
