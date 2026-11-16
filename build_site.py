@@ -109,23 +109,23 @@ __CSS_CABECERA__
   /* ---- tabs de índice ---- */
   /* min-height = pill (34px) + padding: las tabs las construye JS y sin
      reserva la fila nacía vacía y empujaba todo al poblarse (CLS) */
-  .tabs { display:flex; gap:8px; padding:12px clamp(16px,3vw,32px);
+  .tabs { display:flex; gap:22px; padding:12px clamp(16px,3vw,32px);
     min-height:59px; border-bottom:1px solid var(--line);
     overflow-x:auto; overflow-y:hidden;
     scrollbar-width:none; -webkit-overflow-scrolling:touch; }
   .tabs::-webkit-scrollbar { display:none; }
-  /* afordancia: las pills inactivas se leen como botón (fondo panel, borde
-     de línea, texto en tinta) y el hover/focus responde con borde en tinta */
+  /* tabs como las de un boletín: texto sin caja y, en la activa, un
+     subrayado de 3px en tinta; el hover/focus marca el subrayado en gris */
   .tab { flex:none; font:600 13px var(--sans); letter-spacing:.01em;
-    padding:8px 16px; min-height:34px; cursor:pointer; white-space:nowrap;
-    background:var(--panel); border:1px solid var(--line); border-radius:999px;
-    color:var(--tinta);
-    transition:background-color .15s ease, border-color .15s ease, color .15s ease; }
+    padding:8px 2px 5px; min-height:34px; cursor:pointer; white-space:nowrap;
+    background:none; border:0; border-bottom:3px solid transparent; border-radius:0;
+    color:var(--tinta2);
+    transition:border-color .15s ease, color .15s ease; }
   .tab:not(.active):hover, .tab:not(.active):focus-visible {
-    background:var(--hover); border-color:var(--tinta); }
-  .tab.active { background:var(--tinta); border-color:var(--tinta); color:var(--bg); }
+    color:var(--tinta); border-bottom-color:var(--line); }
+  .tab.active { color:var(--tinta); border-bottom-color:var(--tinta); }
   /* punto de 6px: marca las tabs de herramienta (Comparar productos /
-     Arma tu canasta); toma el color del texto de la pill */
+     Arma tu canasta); toma el color del texto de la tab */
   .tab .tdot { display:inline-block; width:6px; height:6px; border-radius:50%;
     background:currentColor; margin-right:8px; vertical-align:middle; }
   /* separador fino entre los índices y las pills de herramientas */
@@ -135,14 +135,15 @@ __CSS_CABECERA__
      (índices arriba, herramientas abajo) y el separador se vuelve un filete
      horizontal que fuerza el salto de fila. flex-basis 0 en las pills: cada
      fila se reparte el ancho y NUNCA nace una tercera fila; en pantallas muy
-     angostas el texto elipsa en vez de reflowar. min-height =
-     12+34+8+1+8+34+12 más el borde inferior: la reserva exacta de las dos
-     filas antes de que JS las pueble (CLS). El punto de las
-     herramientas queda intacto */
+     angostas el texto elipsa en vez de reflowar. Cada tab mide 44px (el
+     blanco de toque del celular): min-height = 12+44+8+1+8+44+12 más el
+     borde inferior, la reserva exacta de las dos filas antes de que JS las
+     pueble (CLS). El punto de las herramientas queda intacto */
   @media (max-width:640px) {
-    .tabs { flex-wrap:wrap; overflow-x:visible; min-height:110px; }
+    .tabs { flex-wrap:wrap; overflow-x:visible; min-height:130px; gap:8px; }
     .tab { flex:1 1 0; min-width:0; overflow:hidden; text-overflow:ellipsis;
-      text-align:center; padding:8px 6px; font-size:12px; letter-spacing:0; }
+      text-align:center; padding:8px 6px 5px; min-height:44px; font-size:12px;
+      letter-spacing:0; }
     .tab .tdot { margin-right:6px; }
     .tab-sep { flex-basis:100%; width:auto; height:1px; align-self:auto;
       margin:0; }
@@ -415,7 +416,7 @@ __CSS_COMPARAR__
      se lea como botón protagonista */
   .ccopy { font:600 13px var(--sans); padding:8px 16px;
     min-height:34px; cursor:pointer; background:transparent; border:1px solid var(--tinta);
-    border-radius:999px; color:var(--tinta); white-space:nowrap; }
+    border-radius:2px; color:var(--tinta); white-space:nowrap; }
   .ccopy:hover { background:var(--hover); }
   .ccopy.copiado { background:var(--tinta); border-color:var(--tinta); color:var(--bg); }
   .can-acciones { display:flex; gap:8px; flex-wrap:wrap; margin-top:16px; }
@@ -478,14 +479,14 @@ __CSS_PANTALLA__
   .pc-lienzo { display:none; position:absolute; top:8px; right:8px; z-index:7;
     width:36px; height:36px; padding:0; align-items:center;
     justify-content:center; cursor:pointer; color:var(--tinta);
-    background:var(--panel); border:1px solid var(--line); border-radius:999px; }
+    background:var(--panel); border:1px solid var(--line); border-radius:2px; }
   .pc-lienzo:hover, .pc-lienzo:focus-visible { border-color:var(--tinta); }
   @media (max-width:759px) {
     .cbar .pc-abrir { display:none; }
     .pc-lienzo { display:flex; }
     .hero-wrap.pc .pc-lienzo { display:none; }
     body.tv-ind .overlay.m-ind, body.tv-prod .overlay.m-prod,
-    body.tv-can .overlay.m-can { padding-right:52px; }
+    body.tv-can .overlay.m-can { padding-right:60px; }
   }
 __CSS_SITIO__
 </style>
@@ -1906,12 +1907,13 @@ __CSS_CABECERA__
   }
 
   /* ---- Índices Carestía: el semáforo vive solo aquí ---- */
-  .icards { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; }
-  .icard { display:flex; flex-direction:column; gap:14px; padding:20px;
-    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+  /* cada índice, sin caja: una regla de 2px en tinta arriba */
+  .icards { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px 24px; }
+  .icard { display:flex; flex-direction:column; gap:14px; padding:14px 0 4px;
+    border-top:2px solid var(--tinta); border-radius:0;
     color:var(--tinta); text-decoration:none;
-    transition:border-color .15s ease, background-color .15s ease; }
-  .icard:hover, .icard:focus-visible { border-color:var(--tinta); background:var(--hover); }
+    transition:background-color .15s ease; }
+  .icard:hover, .icard:focus-visible { background:var(--panel); }
   .ic-top { display:flex; flex-wrap:wrap; justify-content:space-between;
     align-items:center; gap:6px 8px; }
   .ic-ey { font:600 11px var(--sans); letter-spacing:.04em; color:var(--tinta2); }
@@ -1937,10 +1939,10 @@ __CSS_CABECERA__
   .zonas { position:relative; height:8px; display:flex; gap:2px; }
   .zonas .z { flex:32 1 0; }
   .zonas .z1 { background:color-mix(in srgb, var(--verde) 28%, transparent);
-    border-radius:4px 0 0 4px; }
+    border-radius:2px 0 0 2px; }
   .zonas .z2 { flex-grow:36;
     background:color-mix(in srgb, var(--ambar) 28%, transparent); }
-  .zonas .z3 { border-radius:0 4px 4px 0;
+  .zonas .z3 { border-radius:0 2px 2px 0;
     background:color-mix(in srgb, var(--rojo) 28%, transparent); }
   .zonas.historia .z { flex-grow:33; }
   .zonas.historia .z3 { flex-grow:34; }
@@ -1964,18 +1966,19 @@ __CSS_CABECERA__
 
   /* ---- Esta semana ---- */
   .sem-tabs { display:none; }
-  .sem-listas { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
-  .sem-l { background:var(--panel); border:1px solid var(--line);
-    border-radius:14px; overflow:hidden; }
-  .sem-h { display:flex; flex-direction:column; gap:3px; padding:16px 18px 12px; }
+  .sem-listas { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px 24px; }
+  /* cada lista, sin caja: una regla de 2px en tinta arriba y reglas de 1px
+     entre filas */
+  .sem-l { border-top:2px solid var(--tinta); }
+  .sem-h { display:flex; flex-direction:column; gap:3px; padding:12px 0 10px; }
   .sem-h h3 { font:600 15px var(--sans); }
   .sem-h span { font:400 12px var(--sans); color:var(--tinta3); }
   .sem-l ul { list-style:none; }
   .sem-l a { display:flex; justify-content:space-between; align-items:center;
-    gap:12px; min-height:44px; padding:8px 18px; border-top:1px solid var(--hover);
+    gap:12px; min-height:44px; padding:8px 0; border-top:1px solid var(--line);
     color:var(--tinta); text-decoration:none; }
   .sem-l a:hover, .sem-l a:focus-visible { background:var(--hover); }
-  .sem-l .vacio { padding:12px 18px; border-top:1px solid var(--hover);
+  .sem-l .vacio { padding:12px 0; border-top:1px solid var(--line);
     font:400 13px var(--sans); color:var(--tinta2); }
   .sn { display:flex; flex-wrap:wrap; align-items:baseline; gap:0 8px; min-width:0; }
   .sn b { font:500 14px var(--sans); }
@@ -1988,10 +1991,10 @@ __CSS_CABECERA__
   .orden { display:flex; align-items:center; gap:10px; font:400 13px var(--sans);
     color:var(--tinta2); }
   .orden select { height:36px; padding:0 10px; background:var(--panel);
-    color:var(--tinta); border:1px solid var(--line); border-radius:9px;
+    color:var(--tinta); border:1px solid var(--line); border-radius:2px;
     font:400 13px var(--sans); }
   .chips { display:flex; flex-wrap:wrap; gap:8px; }
-  .chips button { min-height:36px; padding:0 14px; border-radius:999px;
+  .chips button { min-height:36px; padding:0 14px; border-radius:2px;
     cursor:pointer; font:500 13px var(--sans); background:transparent;
     color:var(--tinta2); border:1px solid var(--line); }
   .chips button:hover, .chips button:focus-visible { color:var(--tinta);
@@ -2000,9 +2003,9 @@ __CSS_CABECERA__
     border-color:var(--tinta); }
   /* sin JS no hay orden ni filtro: las filas igual quedan en el HTML */
   html:not(.js) .orden, html:not(.js) .chips { display:none; }
-  .tabla { background:var(--panel); border:1px solid var(--line);
-    border-radius:14px; overflow:hidden; }
-  .thead, .fila { display:grid; align-items:center; gap:12px; padding:0 16px;
+  /* la tabla, sin caja: regla de 2px en tinta arriba y de 1px entre filas */
+  .tabla { border-top:2px solid var(--tinta); }
+  .thead, .fila { display:grid; align-items:center; gap:12px; padding:0;
     grid-template-columns:minmax(0,2.4fr) minmax(0,1.1fr) minmax(0,.9fr)
       minmax(0,.9fr) minmax(0,.9fr) minmax(0,.9fr) minmax(0,1.7fr) 124px 24px; }
   .thead { border-bottom:1px solid var(--line); }
@@ -2016,8 +2019,7 @@ __CSS_CABECERA__
   .thead button:hover, .thead button:focus-visible,
   .thead button[aria-pressed="true"] { color:var(--tinta); }
   .fila { min-height:60px; padding-top:8px; padding-bottom:8px;
-    border-bottom:1px solid var(--hover); color:var(--tinta); text-decoration:none; }
-  .fila:last-child { border-bottom:0; }
+    border-bottom:1px solid var(--line); color:var(--tinta); text-decoration:none; }
   .fila[hidden] { display:none; }
   .fila:hover, .fila:focus-visible { background:var(--hover); }
   /* la flecha de la fila: abre la ficha */
@@ -2044,7 +2046,7 @@ __CSS_CABECERA__
     stroke-linecap:round; vector-effect:non-scaling-stroke; }
   .ver-todos { align-self:center; display:flex; align-items:center;
     justify-content:center; min-height:44px; padding:0 20px;
-    border:1px solid var(--line); border-radius:10px;
+    border:1px solid var(--line); border-radius:2px;
     font:500 14px var(--sans); color:var(--tinta); text-decoration:none; }
   .ver-todos:hover, .ver-todos:focus-visible { border-color:var(--tinta);
     background:var(--hover); }
@@ -2067,23 +2069,23 @@ __CSS_CABECERA__
   @media (max-width:760px) {
     /* Esta semana: una tarjeta con tres pestañas (sin JS, las tres listas
        una bajo otra) */
-    .sem { background:var(--panel); border:1px solid var(--line);
-      border-radius:12px; overflow:hidden; }
+    .sem { border-top:2px solid var(--tinta); }
     .sem-listas { display:block; }
-    .sem-l { background:none; border:0; border-radius:0; }
-    .sem-l + .sem-l { border-top:1px solid var(--line); }
-    .js .sem-tabs { display:flex; gap:4px; padding:6px;
-      border-bottom:1px solid var(--hover); }
-    .sem-tabs button { flex:1 1 0; min-width:0; min-height:40px; border:0;
-      border-radius:8px; cursor:pointer; font:500 14px var(--sans);
-      background:transparent; color:var(--tinta2); }
-    .sem-tabs button[aria-pressed="true"] { background:var(--line); color:var(--tinta); }
+    .sem-l { border-top:0; }
+    .sem-l + .sem-l { border-top:2px solid var(--tinta); }
+    .js .sem-tabs { display:flex; gap:4px; padding:0;
+      border-bottom:1px solid var(--line); }
+    .sem-tabs button { flex:1 1 0; min-width:0; min-height:44px; border:0;
+      border-bottom:3px solid transparent; border-radius:0; cursor:pointer;
+      font:500 14px var(--sans); background:transparent; color:var(--tinta2); }
+    .sem-tabs button[aria-pressed="true"] { border-bottom-color:var(--tinta);
+      color:var(--tinta); font-weight:600; }
     .js .sem-l:not(.on) { display:none; }
     .js .sem-l + .sem-l { border-top:0; }
     .js .sem-h { position:absolute; width:1px; height:1px; padding:0;
       overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
-    .sem-l a { min-height:48px; padding:8px 14px; border-top:0;
-      border-bottom:1px solid var(--hover); }
+    .sem-l a { min-height:48px; padding:8px 0; border-top:0;
+      border-bottom:1px solid var(--line); }
     .sem-l a .sn b, .sem-l a .sv { font-size:15px; }
 
     /* Productos: lista con nombre, unidad y percentil, sparkline, precio y
@@ -2127,7 +2129,7 @@ __CSS_CABECERA__
     .ind-head .sec-tit p, .ind-head .sec-link { display:none; }
     /* Índices: 2 por fila, tarjeta compacta */
     .icards { gap:10px; }
-    .icard { gap:8px; padding:14px; border-radius:12px; }
+    .icard { gap:8px; padding:12px 0 4px; }
     .ic-ind, .ic-sub, .ic-pie { display:none; }
     .ic-fr { font-size:12px; }
     .ic-ey { font-size:10px; letter-spacing:.04em; }
@@ -2582,16 +2584,16 @@ CSS_SITIO = r"""
   .snav-links a:hover, .snav-links a:focus-visible { color:var(--tinta);
     border-bottom-color:var(--tinta3); }
   .snav-links a[aria-current] { color:var(--tinta); border-bottom-color:var(--tinta); }
-  /* móvil: el <summary> mide 34px de alto (área táctil de las pills) pero
-     el margen negativo deja su caja en 22px, el alto de la fila del
+  /* móvil: el <summary> mide 44px de alto (el blanco de toque del celular)
+     pero el margen negativo deja su caja en 22px, el alto de la fila del
      wordmark: el encabezado no crece */
   .snav-menu { display:none; position:relative; }
   .snav-menu > summary { display:flex; align-items:center; gap:8px;
-    min-height:34px; margin:-6px 0; padding:0 14px; cursor:pointer;
+    min-height:44px; margin:-11px 0; padding:0 14px; cursor:pointer;
     list-style:none; -webkit-user-select:none; user-select:none;
     font:600 11px var(--sans); letter-spacing:.04em;
     text-transform:uppercase; color:var(--tinta); background:var(--panel);
-    border:1px solid var(--line); border-radius:999px; }
+    border:1px solid var(--line); border-radius:2px; }
   .snav-menu > summary::-webkit-details-marker { display:none; }
   .snav-menu > summary::after { content:"▾"; content:"▾" / ""; color:var(--tinta2); }
   .snav-menu[open] > summary { border-color:var(--tinta); }
@@ -2642,6 +2644,15 @@ CSS_SITIO = r"""
   .v-sube { color:var(--sube); }
   .v-baja { color:var(--baja); }
 
+  /* ---- blancos de toque: 44px o más en el celular ---- */
+  @media (max-width:759px) {
+    .chips button, .orden select, .pchip, .links a, .grupos a, .ccopy,
+    .ind-links a, .pc-cerrar, .ver-todos, .vbtn, .usel, .vtoggle .ubtn,
+    .otros-links a, .pg-head, .ci-btn { min-height:44px; }
+    .orden select { height:44px; }
+    .pc-lienzo { width:44px; height:44px; }
+  }
+
   /* ---- veredicto de los 4 índices: etiqueta rellena ---- */
   /* blanco sobre rojo (5,4:1) y sobre verde (5,0:1), tinta sobre ámbar
      (10,1:1) */
@@ -2691,16 +2702,16 @@ LUPA = ('<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.
         '<path d="M10.5 10.5 14 14"/></svg>')
 BUSCA_CSS = r"""  /* encabezado: en pantallas anchas, un campo al final de la fila del menú;
      bajo 900px, una lupa (al lado de "Menú" en el celular) que abre el campo
-     en un panel. El campo mide 30px con margen negativo y la lupa 34px, como
-     el botón del menú: el encabezado no crece */
+     en un panel. El campo mide 30px con margen negativo y la lupa 44px (el
+     blanco de toque), como el botón del menú: el encabezado no crece */
   .sitenav { display:flex; align-items:center; gap:0 22px; }
   .snav-links { flex:1 1 auto; }
   .sbusca { position:relative; order:3; flex:none; }
   .sbusca[hidden] { display:none; }
   .sb-abrir { display:flex; align-items:center; justify-content:center;
-    width:34px; height:34px; margin:-6px 0; padding:0; cursor:pointer;
+    width:44px; height:44px; margin:-11px 0; padding:0; cursor:pointer;
     color:var(--tinta); background:var(--panel); border:1px solid var(--line);
-    border-radius:999px; }
+    border-radius:2px; }
   .sb-abrir svg { width:15px; height:15px; fill:none; stroke:currentColor;
     stroke-width:2; stroke-linecap:round; }
   .sb-abrir:hover, .sb-abrir:focus-visible,
@@ -2756,7 +2767,7 @@ BUSCA_CSS = r"""  /* encabezado: en pantallas anchas, un campo al final de la fi
      que la página le reserva (#pbh) */
   .pbusca { display:block; width:100%; max-width:420px; height:44px;
     padding:0 14px; font:400 16px var(--sans); color:var(--tinta);
-    background:var(--panel); border:1px solid var(--line); border-radius:9px;
+    background:var(--panel); border:1px solid var(--line); border-radius:2px;
     outline:none; -webkit-appearance:none; appearance:none; }
   .pbusca::placeholder { color:var(--tinta3); }
   .pbusca:focus { border-color:var(--tinta); }
@@ -3197,7 +3208,7 @@ __CSS_COMPARAR__
   .links a { font:600 13px var(--sans);
     padding:9px 16px; min-height:34px; display:inline-flex; align-items:center;
     text-decoration:none; border:1px solid var(--line); color:var(--tinta);
-    background:var(--panel); border-radius:999px; }
+    background:var(--panel); border-radius:2px; }
   .links a:hover { border-color:var(--tinta); background:var(--hover); }
   .nochart { display:flex; align-items:center; justify-content:center;
     height:100%; color:var(--tinta2); font-size:13px; padding:20px; text-align:center; }
@@ -5308,7 +5319,7 @@ CSS_PANTALLA = r"""  /* ---- pantalla completa ---- */
     white-space:nowrap; font:600 14px var(--sans); color:var(--tinta); }
   .pc-cerrar { flex:none; min-height:36px; padding:0 16px; cursor:pointer;
     font:500 13px var(--sans); color:var(--tinta); background:var(--panel);
-    border:1px solid var(--line); border-radius:999px; }
+    border:1px solid var(--line); border-radius:2px; }
   .pc-cerrar:hover, .pc-cerrar:focus-visible { border-color:var(--tinta); }"""
 JS_PANTALLA = r"""  /* ---------- pantalla completa ---------- */
   // Se cierra con su botón, con Escape o con "atrás": al abrir se agrega un
@@ -7427,7 +7438,7 @@ __CSS_MARCA__
   .ind-links { display:flex; flex-wrap:wrap; gap:12px; margin-top:22px; }
   .ind-links a { display:inline-flex; align-items:center; min-height:40px; padding:0 16px;
     font:600 13px var(--sans); color:var(--tinta); text-decoration:none;
-    background:var(--panel); border:1px solid var(--line); border-radius:999px; }
+    background:var(--panel); border:1px solid var(--line); border-radius:2px; }
   .ind-links a:hover, .ind-links a:focus-visible { border-color:var(--tinta);
     background:var(--hover); }
   .indice .intro a { color:var(--tinta); text-underline-offset:3px;
