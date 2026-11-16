@@ -312,7 +312,8 @@ def test_graficos_es_la_app(sitio):
     assert '<link rel="canonical" href="https://carestia.cl/graficos.html">' in h
     assert "lightweight-charts" in h and "const DATA = " in h
     # #asado, #ensalada, #fruta y #desayuno abren ese índice
-    assert "render(indiceDelHash() || CODES[0], true);" in h
+    # sin índice en el hash, el de antes de la recarga del cambio de tema o el primero
+    assert "render(indiceDelHash() || (previo && INDICES[previo.cur] ? previo.cur : CODES[0]), true);" in h
     assert "const code = indiceDelHash();" in h
     # el wordmark vuelve a la portada
     assert '<a class="wordmark" href="https://carestia.cl/">' in h

@@ -499,7 +499,7 @@ async function temporalidades(info, semanales, t, completo) {
   // ---- opciones del widget ----
   const TOK = { bg: '#000001', panel: '#000002', line: '#000003', grid: '#000004', tinta: '#000005',
     tinta2: '#000006', tinta3: '#000007', serie: '#000008', verde: '#000009', rojo: '#00000a',
-    cruz: '#00000b' };
+    cruz: '#00000b', 'cruz-tv': '#00000c' };
   const o = TV.opcionesWidget({ contenedor: 'tv', libreria: '/charting_library/', simbolo: 'asado',
     datafeed: feed, tok: n => TOK[n], css: 'https://carestia.cl/carestia-tv.css' });
   ok(o.locale === 'es' && o.interval === '1W' && o.timezone === 'America/Santiago' &&
@@ -523,7 +523,7 @@ async function temporalidades(info, semanales, t, completo) {
   ok(ov['paneProperties.background'] === TOK.bg && ov['paneProperties.backgroundType'] === 'solid' &&
      ov['paneProperties.vertGridProperties.color'] === TOK.grid &&
      ov['scalesProperties.textColor'] === TOK.tinta2 && ov['scalesProperties.lineColor'] === TOK.line &&
-     ov['paneProperties.crossHairProperties.color'] === TOK.cruz,
+     ov['paneProperties.crossHairProperties.color'] === TOK['cruz-tv'],
      'widget: fondo, grilla, escalas y crosshair con los tokens');
   ok(ov['mainSeriesProperties.style'] === 2 && ov['mainSeriesProperties.lineStyle.color'] === TOK.serie,
      'widget: línea por defecto, en --serie');

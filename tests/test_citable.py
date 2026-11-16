@@ -353,7 +353,7 @@ def test_bloque_esta_semana_en_graficos(sitio, datos):
     b = _bloque(h)
     # bajo la franja de contexto del modo índices, que es con el que carga
     assert h.index('<section class="contexto m-ind">') < h.index(b)
-    assert '<body data-modo="indices">' in h
+    assert '<body data-modo="indices" data-graficos>' in h
     assert '<h2 class="ctx-h" id="h-semana-ind">ESTA SEMANA</h2>' in b
     assert _parrafo(b, "sem-intro") == [
         f"Costo de cada canasta en la Región Metropolitana, semana del {_fecha_larga(FIN)}."]

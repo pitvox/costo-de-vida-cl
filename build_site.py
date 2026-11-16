@@ -287,7 +287,7 @@ __CSS_CABECERA__
   .vtoggle .ubtn { font:500 13px var(--sans); letter-spacing:0; }
   .usel { display:none; font:500 13px var(--sans); color:var(--tinta);
     background:var(--bg); border:1px solid var(--line); border-radius:0;
-    min-height:34px; padding:0 6px; color-scheme:light; cursor:pointer; }
+    min-height:34px; padding:0 6px; cursor:pointer; }
   .unidad.compacta .ubtns { display:none; }
   .unidad.compacta .usel { display:block; }
   .midiendo { flex-wrap:nowrap !important; }
@@ -494,7 +494,7 @@ __CSS_PANTALLA__
 __CSS_SITIO__
 </style>
 </head>
-<body data-modo="indices">
+<body data-modo="indices" data-graficos>
 
   <div class="ticker">
     <div class="tag">ÍNDICES</div>
@@ -1825,7 +1825,24 @@ __JS_PANTALLA__
     setModo(m);
   });
 
+  // lo que la persona estaba mirando, para la recarga del cambio de tema
+  // (JS_MENU): el índice, el modo, línea o velas, la unidad y lo comparado
+  window.CarestiaEstado = () => ({ cur, modo, vista, unidad, prods: cmp.claves() });
+  function estadoPrevio() {
+    try {
+      const x = JSON.parse(sessionStorage.getItem('carestia-estado') || 'null');
+      sessionStorage.removeItem('carestia-estado');
+      return x && x.ruta === location.pathname ? x.estado : null;
+    } catch (e) { return null; }
+  }
+
   window.addEventListener('load', () => {
+    const previo = estadoPrevio();
+    if (previo && Array.isArray(previo.prods)) {
+      cmp.claves().forEach(k => cmp.soltar(k));
+      previo.prods.filter(k => PRODS[k]).forEach(k => cmp.elegir(k));
+    }
+    if (previo && (previo.vista === 'linea' || previo.vista === 'velas')) vista = previo.vista;
     prepararTV();
     selector.limitar(unidadesHay());
     pintarLeyenda();
@@ -1833,13 +1850,15 @@ __JS_PANTALLA__
     buildTabs();
     // sin carestia-tv.js, Lightweight desde el principio, como antes
     if (usaLW('indices')) initChart();
-    render(indiceDelHash() || CODES[0], true);
+    render(indiceDelHash() || (previo && INDICES[previo.cur] ? previo.cur : CODES[0]), true);
     aplicarVista();   // botones y referencia de velas antes de que llegue el gráfico
     if (usaLW('productos')) initPChart();
     buildProductos();
     syncProductos();
     buildCanasta();
     activarDeepLink();
+    if (previo && !modoDelHash() && tv[previo.modo]) setModo(previo.modo);
+    if (previo && previo.unidad && previo.unidad !== unidad) ponerUnidad(previo.unidad);
   });
 </script>
 </body>
@@ -2390,7 +2409,7 @@ FUENTES = """<link rel="preconnect" href="https://fonts.googleapis.com">
 # (apple-touch-icon.png, 180 x 180, a sangre: iOS redondea las esquinas) lo
 # dibuja tarjetas.icono en cada build. Va con el color de la barra del
 # navegador (theme-color), el fondo blanco de las páginas.
-ICONO = ("<meta name=\"theme-color\" content=\"#ffffff\">\n"
+ICONO = ("<meta name=\"theme-color\" content=\"#ffffff\" data-oscuro=\"#0f0f0e\">\n"
          "<link rel=\"icon\" href=\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' "
          "viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23111111'/%3E"
          "%3Crect x='26' y='30' width='12' height='25' rx='2' fill='%23ffffff'/%3E"
@@ -2398,8 +2417,10 @@ ICONO = ("<meta name=\"theme-color\" content=\"#ffffff\">\n"
          "stroke-width='8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\">\n"
          "<link rel=\"apple-touch-icon\" href=\"/apple-touch-icon.png\">\n"
          # el modo oscuro elegido, antes de pintar: sin destello del claro
-         "<script>try{if(localStorage.getItem('carestia-tema')==='oscuro')"
-         "document.documentElement.dataset.tema='oscuro'}catch(e){}</script>")
+         "<script>try{if(localStorage.getItem('carestia-tema')==='oscuro'){"
+         "document.documentElement.dataset.tema='oscuro';"
+         "var m=document.querySelector('meta[name=theme-color]');"
+         "if(m)m.content=m.dataset.oscuro}}catch(e){}</script>")
 
 # Wordmark: la Í de CARESTÍA lleva, en vez de la tilde, la línea de precio
 # que sube (en tinta, como las letras). Es la misma en todas las páginas;
@@ -2512,6 +2533,8 @@ CSS_BASE = r"""
     --cruz:rgba(17,17,17,.35);
     /* sombra de los menús y del buscador */
     --sombra:rgba(17,17,17,.12);
+    /* el crosshair de Advanced Charts: en el claro, el mismo de Lightweight */
+    --cruz-tv:rgba(17,17,17,.35);
     /* una sola familia: Archivo. Las cifras van con tabular-nums */
     --sans:"Archivo","Archivo Fallback",system-ui,sans-serif;
     --display:"Archivo","Archivo Fallback",system-ui,sans-serif;
@@ -2534,7 +2557,7 @@ CSS_BASE = r"""
     --verde:#5bbf7a; --ambar:#e0a83c; --rojo:#e0552f;
     --ambar-texto:#e0a83c; --sobre-ambar:#0f0f0e;
     --cmp1:#f28cc0; --cmp2:#b04fb5; --cmp3:#9d8519; --cmp4:#f2d74e;
-    --cruz:rgba(228,218,204,.35); --sombra:rgba(0,0,0,.55);
+    --cruz:rgba(228,218,204,.35); --cruz-tv:#86817a; --sombra:rgba(0,0,0,.55);
   }
   * { box-sizing:border-box; margin:0; padding:0; }
   body { background:var(--bg); color:var(--tinta); font-family:var(--sans);
@@ -2622,21 +2645,27 @@ CSS_SITIO = r"""
   /* móvil: el <summary> mide 44px de alto (el blanco de toque del celular)
      pero el margen negativo deja su caja en 22px, el alto de la fila del
      wordmark: el encabezado no crece */
-  /* el botón del tema: 44px de alto con margen negativo, como el del menú y
-     la lupa (el encabezado no crece); en pantallas anchas, después del
-     buscador */
-  .tema { display:flex; align-items:center; justify-content:center; order:4;
-    flex:none; width:44px; height:44px; margin:-11px 0; padding:0; cursor:pointer;
+  /* el botón del tema, en pantallas anchas: arriba a la derecha del
+     encabezado, a la altura del wordmark y fuera del flujo (no ocupa lugar
+     en la fila de los links ni hace crecer el encabezado) */
+  header { position:relative; }
+  .tema { display:flex; align-items:center; justify-content:center;
+    position:absolute; top:12px; right:clamp(16px,3vw,32px);
+    width:26px; height:26px; padding:0; cursor:pointer;
     color:var(--tinta); background:var(--panel); border:1px solid var(--line);
     border-radius:2px; }
+  /* centrado en el wordmark: el de 22px de las fichas y las páginas (arriba)
+     o el grande de la portada y /graficos.html (con .brand) */
+  header:has(.brand) .tema { top:18px; }
+  /* bajo 900px la lupa va al final de la fila de los links, debajo: el botón
+     se corre a su izquierda para no tocarla */
+  @media (max-width:899px) { .tema { right:calc(clamp(16px,3vw,32px) + 52px); } }
   .tema[hidden] { display:none; }
-  .tema svg { width:16px; height:16px; fill:none; stroke:currentColor;
+  .tema svg { width:14px; height:14px; fill:none; stroke:currentColor;
     stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
   .tema .sol, :root[data-tema="oscuro"] .tema .luna { display:none; }
   :root[data-tema="oscuro"] .tema .sol { display:block; }
   .tema:hover, .tema:focus-visible { border-color:var(--tinta); }
-  /* en pantallas anchas, del alto del campo del buscador */
-  @media (min-width:900px) { .tema { width:30px; height:30px; margin:-3px 0; } }
   /* la opción del menú del celular, como los links del panel */
   .tema-menu { display:flex; align-items:center; gap:10px; width:100%;
     min-height:44px; padding:0 18px; cursor:pointer; background:none; border:0;
@@ -2724,26 +2753,30 @@ CSS_SITIO = r"""
 """
 
 # El botón del modo oscuro (la luna; en el oscuro, el sol). Va dos veces:
-# como ícono en la fila de la navegación (pantallas anchas) y como última
-# opción del menú del celular, donde la fila del wordmark no tiene lugar
-# para un tercer botón. Sin JS no hace nada: van ocultos y JS_MENU los
-# muestra.
+# como ícono arriba a la derecha del encabezado (pantallas anchas, fuera de
+# la fila de los links: no le quita lugar) y como última opción del menú del
+# celular, donde la fila del wordmark no tiene lugar para un tercer botón.
+# Su nombre dice lo que hace ("Cambiar a modo claro" en el oscuro). Sin JS
+# no hace nada: van ocultos y JS_MENU los muestra.
 ICONOS_TEMA = ('<svg class="luna" viewBox="0 0 16 16" aria-hidden="true">'
                '<path d="M13.5 9.6A5.6 5.6 0 0 1 6.4 2.5a5.6 5.6 0 1 0 7.1 7.1z"/></svg>'
                '<svg class="sol" viewBox="0 0 16 16" aria-hidden="true">'
                '<circle cx="8" cy="8" r="3"/><path d="M8 1v1.6M8 13.4V15M1 8h1.6M13.4 8H15'
                'M3 3l1.1 1.1M11.9 11.9 13 13M3 13l1.1-1.1M11.9 4.1 13 3"/></svg>')
-BOTON_TEMA = ('<button class="tema" type="button" hidden aria-pressed="false" '
-              f'aria-label="Modo oscuro" title="Modo oscuro">{ICONOS_TEMA}</button>')
-BOTON_TEMA_MENU = ('<button class="tema-menu" type="button" hidden aria-pressed="false">'
+BOTON_TEMA = ('<button class="tema" type="button" hidden '
+              f'aria-label="Cambiar a modo oscuro" title="Cambiar a modo oscuro">{ICONOS_TEMA}</button>')
+BOTON_TEMA_MENU = ('<button class="tema-menu" type="button" hidden>'
                    f'{ICONOS_TEMA}<span>Modo oscuro</span></button>')
 
 
 # menú móvil: se cierra al tocar fuera o con Escape (sin JS abre y cierra
 # igual con su propio botón). El botón del tema: guarda la elección en el
-# navegador y la aplica; en una página con gráficos (Advanced Charts o
-# Lightweight) la recarga, para que los gráficos se monten con la paleta
-# nueva (leen los colores al montarse).
+# navegador y la aplica; en una página con gráficos (<body data-graficos>:
+# /graficos.html, las fichas y la de prueba) la recarga, para que los
+# gráficos se monten con la paleta nueva (leen los colores al montarse).
+# Antes guarda en sessionStorage lo que la página da en CarestiaEstado (el
+# índice, el modo, lo comparado, la unidad), que la página repone al volver
+# (estadoPrevio).
 JS_MENU = """<script>
   (function () {
     var bs = [].slice.call(document.querySelectorAll('.tema, .tema-menu'));
@@ -2753,10 +2786,9 @@ JS_MENU = """<script>
       var oscuro = raiz.dataset.tema === 'oscuro';
       var txt = oscuro ? 'Modo claro' : 'Modo oscuro';
       bs.forEach(function (b) {
-        b.setAttribute('aria-pressed', oscuro ? 'true' : 'false');
         var t = b.querySelector('span');
         if (t) t.textContent = txt;
-        else { b.setAttribute('aria-label', txt); b.title = txt; }
+        else { b.setAttribute('aria-label', 'Cambiar a ' + txt.toLowerCase()); b.title = b.getAttribute('aria-label'); }
       });
       if (meta) meta.content = getComputedStyle(raiz).getPropertyValue('--bg').trim() || '#ffffff';
     }
@@ -2767,7 +2799,14 @@ JS_MENU = """<script>
       if (oscuro) raiz.dataset.tema = 'oscuro'; else delete raiz.dataset.tema;
       try { localStorage.setItem('carestia-tema', oscuro ? 'oscuro' : 'claro'); } catch (e) {}
       pintar();
-      if (window.CarestiaTV || window.LightweightCharts) location.reload();
+      // una página con gráficos (data-graficos) se recarga, con lo que la
+      // persona estaba mirando guardado para la vuelta (CarestiaEstado)
+      if (!document.body.hasAttribute('data-graficos')) return;
+      try {
+        if (window.CarestiaEstado) sessionStorage.setItem('carestia-estado',
+          JSON.stringify({ ruta: location.pathname, estado: window.CarestiaEstado() }));
+      } catch (e) {}
+      location.reload();
     }
   })();
   (function () {
@@ -3227,7 +3266,7 @@ __CSS_MARCA__
   .nomtoggle { border:1px solid var(--line); background:var(--bg); }
   .usel { display:none; font:500 13px var(--sans); color:var(--tinta);
     background:var(--bg); border:1px solid var(--line); border-radius:0;
-    min-height:34px; padding:0 6px; color-scheme:light; cursor:pointer; }
+    min-height:34px; padding:0 6px; cursor:pointer; }
   .unidad.compacta .ubtns { display:none; }
   .unidad.compacta .usel { display:block; }
   /* alto reservado por CSS antes de que monte cualquiera de los dos
@@ -3328,7 +3367,7 @@ __CSS_SITIO__
 </style>
 __JSONLD__
 </head>
-<body>
+<body data-graficos>
 
   <header>
     <!-- span único: un solo flex item para que innerText no parta el texto -->
@@ -3967,6 +4006,16 @@ __JS_PANTALLA__
   window.addEventListener('hashchange', leerHash);
   leerHash();
 
+  // lo que la persona estaba mirando, para la recarga del cambio de tema
+  // (JS_MENU): la unidad (lo comparado ya va en #comparar=)
+  window.CarestiaEstado = () => ({ unidad });
+  let previo = null;
+  try {
+    previo = JSON.parse(sessionStorage.getItem('carestia-estado') || 'null');
+    sessionStorage.removeItem('carestia-estado');
+    previo = previo && previo.ruta === location.pathname ? previo.estado : null;
+  } catch (e) { previo = null; }
+
   window.addEventListener('load', () => {
     cargarScript('/__TV_JS__?v=__VER_TV__').then(() => {
       TV = window.CarestiaTV;
@@ -4010,9 +4059,9 @@ __JS_PANTALLA__
       c.onVisibleRangeChanged().subscribe(null, programarFrase);
       c.onDataLoaded().subscribe(null, programarFrase);
       c.onSymbolChanged().subscribe(null, programarFrase);
-      // la unidad elegida mientras el gráfico cargaba, con lo que se haya
-      // elegido para comparar
-      ponerUnidad(unidad);
+      // la unidad elegida mientras el gráfico cargaba (o la de antes de la
+      // recarga del cambio de tema), con lo que se haya elegido para comparar
+      ponerUnidad(previo && previo.unidad && unidad === 'real' ? previo.unidad : unidad);
     }, () => { selector.limitar(unidadesHay()); lightweight(); });
   });
 """
@@ -5493,13 +5542,22 @@ JS_CAPTURA = r"""  /* ---------- captura PNG: la composición común ---------- 
   // el título dice la unidad de la serie, en las dos: la imagen circula sola
   // y sin eso un gráfico ajustado por inflación se lee como precios de cada año
   const TITULO_UNIDAD = { real: ', PRECIO AJUSTADO POR INFLACIÓN', epoca: ', PRECIO DE LA ÉPOCA' };
-  // la marca, en la tipografía del wordmark y en tinta: sin color de marca
+  // la marca, en la tipografía del wordmark: en el claro, toda en tinta; en
+  // el modo oscuro, como antes, en hueso tenue con la í en brasa (--marca)
   function marcaDeAgua(ctx, xDer, yBase, size) {
     ctx.font = '800 ' + size + 'px "Archivo", sans-serif';
     ctx.textBaseline = 'alphabetic';
-    const texto = 'carestía.cl';
-    ctx.fillStyle = tok('tinta');
-    ctx.fillText(texto, xDer - ctx.measureText(texto).width, yBase);
+    const oscuro = document.documentElement.dataset.tema === 'oscuro';
+    const seg = ['carest', 'í', 'a.cl'];
+    const w = seg.map(s => ctx.measureText(s).width);
+    let x = xDer - (w[0] + w[1] + w[2]);
+    seg.forEach((s, i) => {
+      ctx.globalAlpha = oscuro && i !== 1 ? 0.4 : 1;
+      ctx.fillStyle = tok(i === 1 ? 'marca' : 'tinta');
+      ctx.fillText(s, x, yBase);
+      x += w[i];
+    });
+    ctx.globalAlpha = 1;
   }
 
   // el gráfico fotografiado con la proporción de su recuadro en la captura
@@ -6755,7 +6813,7 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
       'paneProperties.background': tok('bg'),
       'paneProperties.vertGridProperties.color': tok('grid'),
       'paneProperties.horzGridProperties.color': tok('grid'),
-      'paneProperties.crossHairProperties.color': tok('cruz'),
+      'paneProperties.crossHairProperties.color': tok('cruz-tv'),
       'paneProperties.separatorColor': tok('line'),
       'scalesProperties.textColor': tok('tinta2'),
       'scalesProperties.lineColor': tok('line'),
@@ -7126,7 +7184,7 @@ __CSS_MARCA__
 __CSS_SITIO__
 </style>
 </head>
-<body data-motor="cargando">
+<body data-motor="cargando" data-graficos>
 
   <header>
     <!-- span único: un solo flex item para que innerText no parta el texto -->

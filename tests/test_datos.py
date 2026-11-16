@@ -26,14 +26,15 @@ FIN = datetime.date(2026, 9, 21)   # lunes
 LIMITE_PORTADA = 200_000           # bytes, sin comprimir
 # el bloque del modo oscuro (a pedido, con el botón de la luna) en el CSS de
 # las páginas, y su par en el tema del iframe de Advanced Charts
-OSCURO = re.compile(r':root\[data-tema="oscuro"\] \{[^}]*\}|\.theme-dark:root \{[^}]*\}')
+OSCURO = re.compile(r':root\[data-tema="oscuro"\] \{[^}]*\}|\.theme-dark:root \{[^}]*\}'
+                    r'| data-oscuro="#0f0f0e"')
 TOKENS_OSCURO = ["color-scheme:dark;", "--bg:#0f0f0e;", "--panel:#171716;", "--line:#2b2a27;",
                  "--tinta:#e4dacc;", "--tinta2:#a39e95;", "--tinta3:#86817a;", "--hover:#201f1d;",
                  "--grid:#1c1c1a;", "--serie:#e8743b;", "--producto:#e4dacc;", "--marca:#e8743b;",
                  "--canasta:#e4dacc;",
                  "--verde:#5bbf7a;", "--ambar:#e0a83c;", "--rojo:#e0552f;",
                  "--cmp1:#f28cc0; --cmp2:#b04fb5; --cmp3:#9d8519; --cmp4:#f2d74e;",
-                 "--cruz:rgba(228,218,204,.35);"]
+                 "--cruz:rgba(228,218,204,.35);", "--cruz-tv:#86817a;"]
 
 
 def _semanas(ini: datetime.date) -> list:
@@ -281,14 +282,14 @@ def test_tokens_en_un_solo_lugar_y_sin_color_de_marca(sitio):
                       "--verde:#1a7f47", "--ambar:#f0b429", "--rojo:#c8321c",
                       "--ambar-texto:#8a6100", "--cruz:rgba(17,17,17,.35)", "color-scheme:light;"]:
             assert token in h, (p, token)
-        assert '<meta name="theme-color" content="#ffffff">' in h, p
+        assert '<meta name="theme-color" content="#ffffff" data-oscuro="#0f0f0e">' in h, p
         # el semáforo se escribe una sola vez (su token); el resto lo usa por var()
         for color in ["#1a7f47", "#f0b429", "#c8321c"]:
             assert h.count(color) == 1, (p, color)
         assert "--mono" not in h, p
         # el modo oscuro: un solo bloque, con la paleta anterior, y nada de
         # ella fuera de él
-        oscuros = OSCURO.findall(h)
+        oscuros = [x for x in OSCURO.findall(h) if x.startswith(":root")]
         assert len(oscuros) == 1, p
         for token in TOKENS_OSCURO:
             assert token in oscuros[0], (p, token)
@@ -327,12 +328,22 @@ def test_boton_del_modo_oscuro_en_todas_las_paginas(sitio):
         h = p.read_text(encoding="utf-8")
         assert '<html lang="es">' in h and "data-tema" not in h.split("<head>")[0], p
         cabeza = h[h.index("<head>"):h.index("<style>")]
-        assert ("<script>try{if(localStorage.getItem('carestia-tema')==='oscuro')"
-                "document.documentElement.dataset.tema='oscuro'}catch(e){}</script>") in cabeza, p
-        assert h.count('<button class="tema" type="button" hidden') == 1, p
-        assert h.count('<button class="tema-menu" type="button" hidden') == 1, p
+        assert ("<script>try{if(localStorage.getItem('carestia-tema')==='oscuro'){"
+                "document.documentElement.dataset.tema='oscuro';"
+                "var m=document.querySelector('meta[name=theme-color]');"
+                "if(m)m.content=m.dataset.oscuro}}catch(e){}</script>") in cabeza, p
+        # el nombre dice lo que hace (sin aria-pressed, que lo contradiría)
+        assert h.count('<button class="tema" type="button" hidden '
+                       'aria-label="Cambiar a modo oscuro"') == 1, p
+        assert h.count('<button class="tema-menu" type="button" hidden>') == 1, p
+        assert "aria-pressed" not in h.split('class="tema')[1][:120], p
         assert "localStorage.setItem('carestia-tema', oscuro ? 'oscuro' : 'claro')" in h, p
-        assert "if (window.CarestiaTV || window.LightweightCharts) location.reload();" in h, p
+        # solo las páginas con gráficos se recargan, con lo que la persona
+        # estaba mirando guardado para la vuelta
+        assert "if (!document.body.hasAttribute('data-graficos')) return;" in h, p
+        con_graficos = p.name == "graficos.html" or p.name == "prueba-graficos.html" or (
+            p.parent.name == "productos" and p.name != "index.html")
+        assert ("<body data-" in h and " data-graficos>" in h.split("<body")[1][:60]) == con_graficos, p
 
 
 def test_sin_restos_del_look_oscuro(sitio):
