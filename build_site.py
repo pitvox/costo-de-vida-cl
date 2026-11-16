@@ -7626,8 +7626,8 @@ SEMAFORO = {"BARATO": "var(--verde)", "NORMAL": "var(--ambar)", "CARO": "var(--r
 def clase_veredicto(veredicto: str) -> str:
     """La clase de la etiqueta del veredicto (ver .ver-rojo en CSS_SITIO):
     el color sale de los tokens según el nombre del veredicto, no del campo
-    'color' de indices.json (ese campo sale de indices.py con la paleta
-    anterior y el sitio no lo usa)."""
+    'color' de indices.json (ese campo sale de COLORES en indices.py, con los
+    mismos valores que los tokens, y el sitio no lo usa)."""
     return "ver-" + COLOR_VEREDICTO.get(veredicto, "ambar")
 
 
