@@ -54,7 +54,7 @@ def indices_realista() -> dict:
             "nombre": meta["nombre"], "subtitulo": meta["subtitulo"],
             "fecha": "21-09-2026", "costo_nominal": nominal[-1]["value"],
             "costo_real": real[-1]["value"], "percentil": 71, "zscore": 0.4,
-            "vs_promedio": 12, "veredicto": "CARO", "color": "#e0552f",
+            "vs_promedio": 12, "veredicto": "CARO", "color": "#c8321c",
             "n": len(real),
             "componentes": [{"label": lab, "qty": qty, "unidad": uni,
                              "odepa_unit": "$/kg", "factor": 1.0, "mismatch": False,
@@ -279,6 +279,21 @@ def test_tokens_en_un_solo_lugar_y_sin_color_de_marca(sitio):
         for viejo in ["#17120e", "#8b8276", "#5a5348", "#1f1913", "#6ea8dc",
                       "#58c5c0", "#9a8ec4", "#8f9bb3", '"IBM Plex Mono",monospace']:
             assert viejo not in h, (p, viejo)
+
+
+def test_colores_de_indices_json_con_los_tokens_del_semaforo(sitio):
+    """El campo color de indices.json (indices.COLORES) vale lo mismo que los
+    tokens del semáforo de CSS_BASE. /graficos.html no lo lleva en su resumen
+    inline (el color sale del nombre del veredicto); datos/indices/ copia
+    indices.json tal cual, con el mismo valor."""
+    d, _data = sitio
+    h = (d / "graficos.html").read_text(encoding="utf-8")
+    tok = dict(re.findall(r"--([a-z]+):(#[0-9a-f]{6})", h))
+    assert COLORES == {"BARATO": tok["verde"], "NORMAL": tok["ambar"], "CARO": tok["rojo"]}
+    assert '"color":' not in h
+    for p in (d / "datos" / "indices").glob("*.json"):
+        j = json.loads(p.read_text(encoding="utf-8"))
+        assert j["color"] == COLORES[j["veredicto"]], p
 
 
 def test_sin_restos_del_look_oscuro(sitio):

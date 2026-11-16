@@ -43,7 +43,7 @@ def _producto(label, grupo, v, unidad="kg", propio=None, fin=FIN):
 def sintetico() -> dict:
     out = {"generado": "2026-09-26", "ipc_mes": "2026-08", "indices": {}, "productos": {},
            "descartes": []}
-    colores = {"BARATO": "#5bbf7a", "NORMAL": "#e0a83c", "CARO": "#e0552f"}
+    colores = {"BARATO": "#1a7f47", "NORMAL": "#f0b429", "CARO": "#c8321c"}
     for k, (code, meta) in enumerate(BASKETS.items()):
         fechas = [(FIN - datetime.timedelta(weeks=99 - i)).isoformat() for i in range(100)]
         # el último valor es mayor que 81 de las 100 semanas: 8 de cada 10
@@ -389,7 +389,7 @@ def test_un_grafico_que_falla_no_frena_la_tarjeta(tmp_path, capsys):
     serie = [[f"2026-01-{d:02d}", 1000] for d in range(1, 27)] + [["no-es-fecha", 1000]]
     ruta = str(tmp_path / "rota.png")
     tok = {"bg": "#0f0f0e", "tinta": "#e4dacc", "tinta2": "#a39e95", "tinta3": "#86817a",
-           "line": "#2b2a27", "serie": "#e8743b", "rojo": "#e0552f"}
+           "line": "#2b2a27", "serie": "#e8743b", "rojo": "#c8321c"}
     tarjetas.ficha(ruta, tok, antetitulo="Precio en Santiago", nombre="Prueba", precio="$1.000",
                    unidad="por kilo", frase="Frase.", fecha="Semana del 19-10-2026",
                    fuente_txt="Fuente", sitio="carestia.cl", serie=serie, leyenda="Ajustado por inflación")

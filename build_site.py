@@ -4531,8 +4531,10 @@ CSS_CITA = """  .cita { font:400 12px/1.6 var(--sans); color:var(--tinta2); marg
 # [open, high, low, close]. El build verifica que se expanden sin pérdida.
 DATOS = "datos"
 SERIES_INDICE = ("real", "nominal", "velas")
+# sin el campo color de indices.json: el sitio toma el color del nombre del
+# veredicto (TONO_VEREDICTO en /graficos.html)
 RESUMEN_INDICE = ("nombre", "subtitulo", "fecha", "costo_real", "veredicto",
-                  "color", "percentil", "n", "vs_promedio")
+                  "percentil", "n", "vs_promedio")
 
 
 def _json(obj) -> str:

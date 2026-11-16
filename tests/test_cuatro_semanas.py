@@ -43,7 +43,7 @@ def _indice(code: str, valores: list, saltos: dict = None) -> dict:
         "nombre": meta["nombre"], "subtitulo": meta["subtitulo"],
         "fecha": FIN.strftime("%d-%m-%Y"), "costo_nominal": valores[-1],
         "costo_real": valores[-1], "percentil": 50, "zscore": 0.0, "vs_promedio": 0,
-        "veredicto": "NORMAL", "color": "#e0a83c",
+        "veredicto": "NORMAL", "color": "#f0b429",
         "base_veredicto": "toda la historia", "percentil_temporada": None,
         "anios_temporada": None, "temporada": None, "n": len(real),
         "componentes": [{"label": lab, "qty": qty, "unidad": uni, "odepa_unit": "$/kg",

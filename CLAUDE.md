@@ -47,7 +47,7 @@ Un boletín estadístico: tinta sobre blanco y sin color de marca (decisión del
 | `--ambar-texto` | `#8a6100` | ámbar cuando es texto o trazo fino sobre blanco |
 | `--cruz` | `rgba(17,17,17,.35)` | crosshair |
 
-Todo texto cumple AA sobre `--bg` y `--panel`. El veredicto va como etiqueta rellena (`.ver-rojo`, `.ver-verde`, `.ver-ambar`), con el color sacado del nombre del veredicto, no del campo `color` de `indices.json`. Comparar usa `--cmp1` a `--cmp4` (ver el comentario de `CSS_BASE`). Azul y celeste siguen vetados. El ícono es la única pieza en negativo.
+Todo texto cumple AA sobre `--bg` y `--panel`. El veredicto va como etiqueta rellena (`.ver-rojo`, `.ver-verde`, `.ver-ambar`), con el color sacado del nombre del veredicto, no del campo `color` de `indices.json` (ese campo sale de `COLORES` en `indices.py`, que vale lo mismo que `--verde`, `--ambar` y `--rojo`; un test los mantiene alineados). Comparar usa `--cmp1` a `--cmp4` (ver el comentario de `CSS_BASE`). Azul y celeste siguen vetados. El ícono es la única pieza en negativo.
 
 ## Alcance
 

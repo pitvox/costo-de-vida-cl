@@ -37,7 +37,7 @@ def _serie(ultima: float, penultima: float, base: float = 1000) -> list:
 def sintetico() -> dict:
     out = {"generado": "2026-09-26", "ipc_mes": "2026-08", "indices": {}, "productos": {},
            "descartes": []}
-    colores = {"BARATO": "#5bbf7a", "NORMAL": "#e0a83c", "CARO": "#e0552f"}
+    colores = {"BARATO": "#1a7f47", "NORMAL": "#f0b429", "CARO": "#c8321c"}
     for k, (code, meta) in enumerate(BASKETS.items()):
         fechas = [(FIN - datetime.timedelta(weeks=59 - i)).isoformat() for i in range(60)]
         real = [{"time": t, "value": 10000 + 10 * i} for i, t in enumerate(fechas)]

@@ -289,7 +289,7 @@ def sintetico() -> dict:
         out["indices"][code] = {
             "nombre": meta["nombre"], "subtitulo": meta["subtitulo"], "fecha": "28-09-2026",
             "costo_nominal": v[-1], "costo_real": v[-1], "percentil": 90, "zscore": 1.0,
-            "vs_promedio": 12, "veredicto": "CARO", "color": "#e0552f", "n": len(real),
+            "vs_promedio": 12, "veredicto": "CARO", "color": "#c8321c", "n": len(real),
             "componentes": [{"label": lab, "qty": qty, "unidad": uni, "odepa_unit": "$/kg",
                              "factor": 1.0, "mismatch": False, "precio_ult": 1000, "aporte": 1000}
                             for (lab, _m, qty, uni) in meta["items"]],

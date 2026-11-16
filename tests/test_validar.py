@@ -41,7 +41,7 @@ def indices_nuevo(n_extra=1, productos=120):
             "nombre": f"Índice {code.title()}", "subtitulo": "x",
             "fecha": "21-09-2026", "costo_nominal": costo, "costo_real": costo,
             "percentil": 50, "zscore": 0.1, "vs_promedio": 2, "veredicto": "NORMAL",
-            "color": "#e0a83c",
+            "color": "#f0b429",
             # el veredicto por temporada, como lo escribe indices.py
             "base_veredicto": "mismo mes, ultimos 10 anios",
             "percentil_temporada": 60, "anios_temporada": 10,
