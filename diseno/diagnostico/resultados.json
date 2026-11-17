@@ -13,7 +13,9 @@
    "#111111 (tinta del claro)": 23061,
    "#e4dacc (hueso)": 0,
    "#e8743b (brasa)": 0,
-   "#767676 (canasta del claro)": 249
+   "#767676 (canasta del claro)": 249,
+   "#ffffff (fondo del claro)": 609130,
+   "#0f0f0e (fondo del oscuro)": 110
   },
   "guardado": {
    "tradingview.sessions": {
@@ -72,7 +74,9 @@
    "#111111 (tinta del claro)": 11008,
    "#e4dacc (hueso)": 0,
    "#e8743b (brasa)": 0,
-   "#767676 (canasta del claro)": 151
+   "#767676 (canasta del claro)": 151,
+   "#ffffff (fondo del claro)": 707741,
+   "#0f0f0e (fondo del oscuro)": 110
   },
   "guardado": {
    "tradingview.sessions": {
@@ -131,7 +135,9 @@
    "#111111 (tinta del claro)": 11008,
    "#e4dacc (hueso)": 0,
    "#e8743b (brasa)": 0,
-   "#767676 (canasta del claro)": 151
+   "#767676 (canasta del claro)": 151,
+   "#ffffff (fondo del claro)": 707741,
+   "#0f0f0e (fondo del oscuro)": 110
   },
   "guardado": {
    "tradingview.chart.lastUsedStyle": {
@@ -197,10 +203,12 @@
   },
   "lienzos": 2,
   "conteo": {
-   "#111111 (tinta del claro)": 0,
+   "#111111 (tinta del claro)": 14,
    "#e4dacc (hueso)": 0,
-   "#e8743b (brasa)": 11010,
-   "#767676 (canasta del claro)": 1
+   "#e8743b (brasa)": 11000,
+   "#767676 (canasta del claro)": 1,
+   "#ffffff (fondo del claro)": 110,
+   "#0f0f0e (fondo del oscuro)": 707756
   },
   "guardado": {
    "tradingview.chart.lastUsedStyle": {
@@ -226,12 +234,12 @@
     "trozos": []
    },
    "tradingview.chartproperties": {
-    "largo": 2208,
+    "largo": 2197,
     "inicio": "{\"timezone\":\"America/Santiago\",\"priceScaleSelectionStrategyName\":\"auto\",\"inactivityGaps\":false,\"paneProperties\":{\"backgr",
     "trozos": [
      "\"lineLength\":5,\"lineWidth\":1,\"lineStyle\":0},\"volumePaneSize\":\"large\"}",
-     "auto\",\"inactivityGaps\":false,\"paneProperties\":{\"backgroundType\":\"solid\",\"gridLinesMode\":\"both\",\"vertGridProperties\":{\"style\":0,\"color\":\"#ececec\"},\"horzGridProperties\":{\"style\":0,\"color\":\"#ececec\"},\"crossHairProperties\":{\"style\":2,\"transparency\":0,\"width\":1,\"color\":\"rgba(17,17,17,.35)\"},\"to",
-     ":\"both\",\"vertGridProperties\":{\"style\":0,\"color\":\"#ececec\"},\"horzGridProperties\":{\"style\":0,\"color\":\"#ececec\"},\"crossHairProperties\":{\"style\":2,\"transparency\":0,\"width\":1,\"color\":\"rgba(17,17,17,.35)\"},\"topMargin\":10,\"bottomMargin\":8,\"axisProperties\":{\"autoScale\":true,\"autoScaleDisabled\":fal"
+     "auto\",\"inactivityGaps\":false,\"paneProperties\":{\"backgroundType\":\"solid\",\"gridLinesMode\":\"both\",\"vertGridProperties\":{\"style\":0,\"color\":\"#1c1c1a\"},\"horzGridProperties\":{\"style\":0,\"color\":\"#1c1c1a\"},\"crossHairProperties\":{\"style\":2,\"transparency\":0,\"width\":1,\"color\":\"#86817a\"},\"topMargin\":10",
+     ":\"both\",\"vertGridProperties\":{\"style\":0,\"color\":\"#1c1c1a\"},\"horzGridProperties\":{\"style\":0,\"color\":\"#1c1c1a\"},\"crossHairProperties\":{\"style\":2,\"transparency\":0,\"width\":1,\"color\":\"#86817a\"},\"topMargin\":10,\"bottomMargin\":8,\"axisProperties\":{\"autoScale\":true,\"autoScaleDisabled\":false,\"lockSca"
     ]
    },
    "tradingview.current_theme.name": {
@@ -266,10 +274,12 @@
   },
   "lienzos": 2,
   "conteo": {
-   "#111111 (tinta del claro)": 0,
-   "#e4dacc (hueso)": 23290,
+   "#111111 (tinta del claro)": 45,
+   "#e4dacc (hueso)": 23059,
    "#e8743b (brasa)": 0,
-   "#767676 (canasta del claro)": 1
+   "#767676 (canasta del claro)": 1,
+   "#ffffff (fondo del claro)": 110,
+   "#0f0f0e (fondo del oscuro)": 609123
   },
   "guardado": {
    "tradingview.chart.lastUsedStyle": {
@@ -295,12 +305,12 @@
     "trozos": []
    },
    "tradingview.chartproperties": {
-    "largo": 2208,
+    "largo": 2197,
     "inicio": "{\"timezone\":\"America/Santiago\",\"priceScaleSelectionStrategyName\":\"auto\",\"inactivityGaps\":false,\"paneProperties\":{\"backgr",
     "trozos": [
      "\"lineLength\":5,\"lineWidth\":1,\"lineStyle\":0},\"volumePaneSize\":\"large\"}",
-     "auto\",\"inactivityGaps\":false,\"paneProperties\":{\"backgroundType\":\"solid\",\"gridLinesMode\":\"both\",\"vertGridProperties\":{\"style\":0,\"color\":\"#ececec\"},\"horzGridProperties\":{\"style\":0,\"color\":\"#ececec\"},\"crossHairProperties\":{\"style\":2,\"transparency\":0,\"width\":1,\"color\":\"rgba(17,17,17,.35)\"},\"to",
-     ":\"both\",\"vertGridProperties\":{\"style\":0,\"color\":\"#ececec\"},\"horzGridProperties\":{\"style\":0,\"color\":\"#ececec\"},\"crossHairProperties\":{\"style\":2,\"transparency\":0,\"width\":1,\"color\":\"rgba(17,17,17,.35)\"},\"topMargin\":10,\"bottomMargin\":8,\"axisProperties\":{\"autoScale\":true,\"autoScaleDisabled\":fal"
+     "auto\",\"inactivityGaps\":false,\"paneProperties\":{\"backgroundType\":\"solid\",\"gridLinesMode\":\"both\",\"vertGridProperties\":{\"style\":0,\"color\":\"#1c1c1a\"},\"horzGridProperties\":{\"style\":0,\"color\":\"#1c1c1a\"},\"crossHairProperties\":{\"style\":2,\"transparency\":0,\"width\":1,\"color\":\"#86817a\"},\"topMargin\":10",
+     ":\"both\",\"vertGridProperties\":{\"style\":0,\"color\":\"#1c1c1a\"},\"horzGridProperties\":{\"style\":0,\"color\":\"#1c1c1a\"},\"crossHairProperties\":{\"style\":2,\"transparency\":0,\"width\":1,\"color\":\"#86817a\"},\"topMargin\":10,\"bottomMargin\":8,\"axisProperties\":{\"autoScale\":true,\"autoScaleDisabled\":false,\"lockSca"
     ]
    },
    "tradingview.current_theme.name": {
@@ -338,7 +348,9 @@
    "#111111 (tinta del claro)": 23061,
    "#e4dacc (hueso)": 0,
    "#e8743b (brasa)": 0,
-   "#767676 (canasta del claro)": 249
+   "#767676 (canasta del claro)": 249,
+   "#ffffff (fondo del claro)": 609130,
+   "#0f0f0e (fondo del oscuro)": 110
   },
   "guardado": {
    "tradingview.chart.lastUsedStyle": {
@@ -407,7 +419,9 @@
    "#111111 (tinta del claro)": 45,
    "#e4dacc (hueso)": 23059,
    "#e8743b (brasa)": 0,
-   "#767676 (canasta del claro)": 1
+   "#767676 (canasta del claro)": 1,
+   "#ffffff (fondo del claro)": 110,
+   "#0f0f0e (fondo del oscuro)": 609123
   },
   "guardado": {
    "tradingview.sessions": {
@@ -466,7 +480,9 @@
    "#111111 (tinta del claro)": 14,
    "#e4dacc (hueso)": 0,
    "#e8743b (brasa)": 11000,
-   "#767676 (canasta del claro)": 1
+   "#767676 (canasta del claro)": 1,
+   "#ffffff (fondo del claro)": 110,
+   "#0f0f0e (fondo del oscuro)": 707756
   },
   "guardado": {
    "tradingview.sessions": {
