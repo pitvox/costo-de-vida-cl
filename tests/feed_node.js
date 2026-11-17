@@ -536,6 +536,30 @@ async function temporalidades(info, semanales, t, completo) {
   ok(o.loading_screen.backgroundColor === TOK.bg && o.loading_screen.foregroundColor === TOK.serie,
      'widget: pantalla de carga con el fondo y la serie');
 
+  // ---- el tema de la página manda sobre lo que la librería guardó en el navegador ----
+  const ct = TV.coloresTema(n => TOK[n]);
+  ok(!('mainSeriesProperties.style' in ct) && !('mainSeriesProperties.lineStyle.color' in ct) &&
+     ct['paneProperties.background'] === TOK.bg && ct['paneProperties.vertGridProperties.color'] === TOK.grid &&
+     ct['scalesProperties.textColor'] === TOK.tinta2 && ct['mainSeriesProperties.candleStyle.upColor'] === TOK.verde,
+     'tema: los colores sin el tipo de gráfico ni el color de la línea');
+  {
+    const aplicados = [], alLlegarDatos = [];
+    const chart = { symbol: () => 'asado', onSymbolChanged: () => ({ subscribe: () => {} }),
+      onDataLoaded: () => ({ subscribe: (_, f) => alLlegarDatos.push(f) }) };
+    const w = { activeChart: () => chart, applyOverrides: x => aplicados.push(x), subscribe: () => {} };
+    const tiene = (k, v) => aplicados.some(x => x[k] === v);
+    const pausa = () => new Promise(r => setTimeout(r, 50));
+    TV.alistarWidget(w, feed, n => TOK[n]);
+    await pausa();
+    ok(tiene('paneProperties.background', TOK.bg) && tiene('mainSeriesProperties.lineStyle.color', TOK.serie) &&
+       alLlegarDatos.length === 2, 'tema: al quedar listo, los colores del tema y la línea del índice');
+    aplicados.length = 0;
+    alLlegarDatos.forEach(f => f());
+    await pausa();
+    ok(tiene('paneProperties.background', TOK.bg) && tiene('mainSeriesProperties.lineStyle.color', TOK.serie),
+       'tema: cada vez que llegan datos, otra vez los colores y la línea');
+  }
+
   // ---- configuración común: celular y páginas del sitio ----
   const base = { contenedor: 'tv', libreria: '/charting_library/', simbolo: 'asado', datafeed: feed,
     tok: n => TOK[n], css: 'x' };

@@ -32,7 +32,8 @@ async function medir(page, nombre) {
     const tok = n => getComputedStyle(document.documentElement).getPropertyValue('--' + n).trim();
     const hex = h => { h = h.replace('#', ''); return [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16)); };
     const objetivos = { '#111111 (tinta del claro)': '#111111', '#e4dacc (hueso)': '#e4dacc',
-      '#e8743b (brasa)': '#e8743b', '#767676 (canasta del claro)': '#767676' };
+      '#e8743b (brasa)': '#e8743b', '#767676 (canasta del claro)': '#767676',
+      '#ffffff (fondo del claro)': '#ffffff', '#0f0f0e (fondo del oscuro)': '#0f0f0e' };
     const conteo = {};
     let lienzos = 0;
     for (const f of document.querySelectorAll('iframe')) {
