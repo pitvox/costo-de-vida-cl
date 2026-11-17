@@ -2660,6 +2660,17 @@ CSS_SITIO = r"""
   /* bajo 900px la lupa va al final de la fila de los links, debajo: el botón
      se corre a su izquierda para no tocarla */
   @media (max-width:899px) { .tema { right:calc(clamp(16px,3vw,32px) + 52px); } }
+  /* desde 1000px la fila de los links tiene lugar: el botón va ahí, al final,
+     después del buscador y en el flujo. Arriba a la derecha taparía la línea
+     de la semana de la portada y de /graficos.html, que en pantallas anchas
+     sube a la primera fila y se va a la derecha. La fila es flex desde aquí
+     (y no solo desde BUSCA_CSS): el botón no salta mientras llega el
+     buscador */
+  @media (min-width:1000px) {
+    .sitenav { display:flex; align-items:center; gap:0 22px; }
+    .snav-links { flex:1 1 auto; }
+    .tema { position:static; order:4; flex:none; width:30px; height:30px; margin:-3px 0; }
+  }
   .tema[hidden] { display:none; }
   .tema svg { width:14px; height:14px; fill:none; stroke:currentColor;
     stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
