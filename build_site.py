@@ -2660,6 +2660,17 @@ CSS_SITIO = r"""
   /* bajo 900px la lupa va al final de la fila de los links, debajo: el botón
      se corre a su izquierda para no tocarla */
   @media (max-width:899px) { .tema { right:calc(clamp(16px,3vw,32px) + 52px); } }
+  /* desde 1000px la fila de los links tiene lugar: el botón va ahí, al final,
+     después del buscador y en el flujo. Arriba a la derecha taparía la línea
+     de la semana de la portada y de /graficos.html, que en pantallas anchas
+     sube a la primera fila y se va a la derecha. La fila es flex desde aquí
+     (y no solo desde BUSCA_CSS): el botón no salta mientras llega el
+     buscador */
+  @media (min-width:1000px) {
+    .sitenav { display:flex; align-items:center; gap:0 22px; }
+    .snav-links { flex:1 1 auto; }
+    .tema { position:static; order:4; flex:none; width:30px; height:30px; margin:-3px 0; }
+  }
   .tema[hidden] { display:none; }
   .tema svg { width:14px; height:14px; fill:none; stroke:currentColor;
     stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
@@ -6835,6 +6846,27 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
     o['mainSeriesProperties.barStyle.downColor'] = rojo;
     return o;
   }
+  // los colores del tema de la página: los de 'overrides' sin el tipo de
+  // gráfico (queda el que elija la persona) ni el color de la línea (va por
+  // símbolo, o lo pone Comparar). La librería guarda en el navegador las
+  // propiedades del gráfico (tradingview.chartproperties) y lo guardado manda
+  // sobre 'overrides': quien pasaba del claro al oscuro con la luna (o al
+  // revés) quedaba con el fondo, la grilla o la línea del otro tema (un
+  // fondo blanco en la página oscura, una línea en tinta sobre carbón). Se
+  // aplican al quedar listo el widget y cada vez que llegan datos (aplicarTema)
+  function coloresTema(tok) {
+    const o = overrides(tok);
+    delete o['mainSeriesProperties.style'];
+    delete o['mainSeriesProperties.lineStyle.color'];
+    return o;
+  }
+  function aplicarTema(widget, tok) {
+    try { widget.applyOverrides(coloresTema(tok)); } catch (e) {}
+  }
+  function temaSiempre(widget, tok) {
+    aplicarTema(widget, tok);
+    try { widget.activeChart().onDataLoaded().subscribe(null, () => aplicarTema(widget, tok)); } catch (e) {}
+  }
   const colorLinea = (tok, clase) => {
     const c = tok(clase === 'canasta' ? 'canasta' : clase === 'indice' ? 'serie' : 'producto');
     return { 'mainSeriesProperties.lineStyle.colorType': 'solid', 'mainSeriesProperties.lineStyle.color': c };
@@ -6933,6 +6965,7 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
   // canasta) y guardado automático en el navegador
   function alistarWidget(widget, feed, tok) {
     sinParametros(widget);
+    temaSiempre(widget, tok);
     estiloPorSimbolo(widget, feed, tok);
     widget.subscribe('onAutoSaveNeeded', () => {
       Promise.resolve(widget.saveChartToServer({ defaultChartName: 'Mi gráfico' }))
@@ -6943,13 +6976,15 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
     const chart = widget.activeChart();
     // el color de la línea por clase; el tipo de gráfico no se toca: índices
     // y productos parten en la línea de 'overrides' (o lo guardado) y queda
-    // el que elija la persona
+    // el que elija la persona. También cada vez que llegan datos: el color
+    // guardado en el navegador puede volver a aplicarse después de listo
     const estilo = () => feed.simbolo(chart.symbol()).then(s => {
       if (!s) return;
       widget.applyOverrides(colorLinea(tok, s.clase));
     });
     estilo();
     chart.onSymbolChanged().subscribe(null, estilo);
+    try { chart.onDataLoaded().subscribe(null, estilo); } catch (e) {}
   }
   // la librería quedó lista (chartReady desde v32; onChartReady antes)
   const listoWidget = w => w.chartReady ? w.chartReady() : new Promise(r => w.onChartReady(r));
@@ -7050,6 +7085,7 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
         listoWidget(widget).then(() => {
           if (hecho) return;
           sinParametros(widget);
+          temaSiempre(widget, o.tok);
           if (o.estilo !== false) estiloPorSimbolo(widget, o.datafeed, o.tok);
           const caja = typeof o.contenedor === 'string' ? document.getElementById(o.contenedor) : o.contenedor;
           const c = widget.activeChart();
@@ -7107,7 +7143,7 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
 
   const api = { crearDatafeed, serieCanasta, miles, numUF, numUFEje, textoUF, fecha, almacenLocal,
     formateadores, overrides, opcionesWidget, alistarWidget, listoWidget, montar, verTodo,
-    rangoListo, cargarLibreria, capturaCliente, colorLinea, temporalidad, MOVIL, RESOLUCION, RESOLUCIONES,
+    rangoListo, cargarLibreria, capturaCliente, colorLinea, coloresTema, temporalidad, MOVIL, RESOLUCION, RESOLUCIONES,
     SUFIJO, ZONA, NOMBRE_CANASTA, PESOS };
   raiz.CarestiaTV = api;
   if (typeof module === 'object' && module.exports) module.exports = api;
