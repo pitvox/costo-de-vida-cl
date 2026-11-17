@@ -1,0 +1,514 @@
+[
+ {
+  "url": "/productos/abastero.html",
+  "tema": "claro",
+  "motor": "advanced",
+  "tokens": {
+   "producto": "#111111",
+   "serie": "#111111",
+   "bg": "#ffffff"
+  },
+  "lienzos": 2,
+  "conteo": {
+   "#111111 (tinta del claro)": 23061,
+   "#e4dacc (hueso)": 0,
+   "#e8743b (brasa)": 0,
+   "#767676 (canasta del claro)": 249
+  },
+  "guardado": {
+   "tradingview.sessions": {
+    "largo": 459,
+    "inicio": "{\"sessionHighlight\":{\"backgrounds\":{\"preMarket\":{\"color\":\"#FF9800\",\"transparency\":92},\"postMarket\":{\"color\":\"#2962FF\",\"t",
+    "trozos": [
+     "essBreaks\":{\"color\":\"#4985e7\",\"style\":2,\"visible\":false,\"width\":1,\"available\":true}}}}"
+    ]
+   },
+   "tradingview.BarsMarksContainer.visibile": {
+    "largo": 4,
+    "inicio": "true",
+    "trozos": []
+   },
+   "tradingview.toggle_delete_locked_linetools": {
+    "largo": 5,
+    "inicio": "false",
+    "trozos": []
+   },
+   "tradingview.current_theme.name": {
+    "largo": 5,
+    "inicio": "light",
+    "trozos": []
+   },
+   "tradingview.chartproperties.mainSeriesProperties": {
+    "largo": 6906,
+    "inicio": "{\"style\":2,\"esdShowDividends\":true,\"esdShowSplits\":true,\"esdShowEarnings\":true,\"esdShowBreaks\":false,\"showContinuousCont",
+    "trozos": [
+     "r\",\"bidAsk\":{\"visible\":false,\"lineStyle\":1,\"lineWidth\":1,\"bidLineColor\":\"#2962FF\",\"askLineColor\":\"#F7525F\"},\"prePostMarket\":{\"visible\":true,\"lineStyle\":1,\"lineWidth\":1,\"preMarketColor\":\"#FB8C00\",\"postMarketColor\":\"#2962FF\",\"overnightMarketColor\":\"#8e24aa\"},\"highLowAvgPrice\":{\"highLowPriceL",
+     "{\"style\":2,\"esdShowDividends\":true,\"esdShowSplits\":true,\"esdShowEarnings\":true,\"esdShowBreaks\":false,\"showContinuousContractSwitches\":true,\"showContinuousContractSwitchesBreaks\":false,\"showFuturesContractExpiration\":true,\"showLastNews\":true,\"showCountdown\":fals"
+    ]
+   },
+   "tradingview.chartproperties": {
+    "largo": 2208,
+    "inicio": "{\"timezone\":\"America/Santiago\",\"priceScaleSelectionStrategyName\":\"auto\",\"inactivityGaps\":false,\"paneProperties\":{\"backgr",
+    "trozos": [
+     "\"lineLength\":5,\"lineWidth\":1,\"lineStyle\":0},\"volumePaneSize\":\"large\"}",
+     "auto\",\"inactivityGaps\":false,\"paneProperties\":{\"backgroundType\":\"solid\",\"gridLinesMode\":\"both\",\"vertGridProperties\":{\"style\":0,\"color\":\"#ececec\"},\"horzGridProperties\":{\"style\":0,\"color\":\"#ececec\"},\"crossHairProperties\":{\"style\":2,\"transparency\":0,\"width\":1,\"color\":\"rgba(17,17,17,.35)\"},\"to",
+     ":\"both\",\"vertGridProperties\":{\"style\":0,\"color\":\"#ececec\"},\"horzGridProperties\":{\"style\":0,\"color\":\"#ececec\"},\"crossHairProperties\":{\"style\":2,\"transparency\":0,\"width\":1,\"color\":\"rgba(17,17,17,.35)\"},\"topMargin\":10,\"bottomMargin\":8,\"axisProperties\":{\"autoScale\":true,\"autoScaleDisabled\":fal"
+    ]
+   }
+  },
+  "nombre": "1-ficha-claro"
+ },
+ {
+  "url": "/graficos.html#asado",
+  "tema": "claro",
+  "motor": "advanced",
+  "tokens": {
+   "producto": "#111111",
+   "serie": "#111111",
+   "bg": "#ffffff"
+  },
+  "lienzos": 2,
+  "conteo": {
+   "#111111 (tinta del claro)": 11008,
+   "#e4dacc (hueso)": 0,
+   "#e8743b (brasa)": 0,
+   "#767676 (canasta del claro)": 151
+  },
+  "guardado": {
+   "tradingview.sessions": {
+    "largo": 459,
+    "inicio": "{\"sessionHighlight\":{\"backgrounds\":{\"preMarket\":{\"color\":\"#FF9800\",\"transparency\":92},\"postMarket\":{\"color\":\"#2962FF\",\"t",
+    "trozos": [
+     "essBreaks\":{\"color\":\"#4985e7\",\"style\":2,\"visible\":false,\"width\":1,\"available\":true}}}}"
+    ]
+   },
+   "tradingview.BarsMarksContainer.visibile": {
+    "largo": 4,
+    "inicio": "true",
+    "trozos": []
+   },
+   "tradingview.toggle_delete_locked_linetools": {
+    "largo": 5,
+    "inicio": "false",
+    "trozos": []
+   },
+   "tradingview.current_theme.name": {
+    "largo": 5,
+    "inicio": "light",
+    "trozos": []
+   },
+   "tradingview.chartproperties.mainSeriesProperties": {
+    "largo": 6900,
+    "inicio": "{\"style\":2,\"esdShowDividends\":true,\"esdShowSplits\":true,\"esdShowEarnings\":true,\"esdShowBreaks\":false,\"showContinuousCont",
+    "trozos": [
+     "r\",\"bidAsk\":{\"visible\":false,\"lineStyle\":1,\"lineWidth\":1,\"bidLineColor\":\"#2962FF\",\"askLineColor\":\"#F7525F\"},\"prePostMarket\":{\"visible\":true,\"lineStyle\":1,\"lineWidth\":1,\"preMarketColor\":\"#FB8C00\",\"postMarketColor\":\"#2962FF\",\"overnightMarketColor\":\"#8e24aa\"},\"highLowAvgPrice\":{\"highLowPriceL",
+     "{\"style\":2,\"esdShowDividends\":true,\"esdShowSplits\":true,\"esdShowEarnings\":true,\"esdShowBreaks\":false,\"showContinuousContractSwitches\":true,\"showContinuousContractSwitchesBreaks\":false,\"showFuturesContractExpiration\":true,\"showLastNews\":true,\"showCountdown\":fals"
+    ]
+   },
+   "tradingview.chartproperties": {
+    "largo": 2208,
+    "inicio": "{\"timezone\":\"America/Santiago\",\"priceScaleSelectionStrategyName\":\"auto\",\"inactivityGaps\":false,\"paneProperties\":{\"backgr",
+    "trozos": [
+     "\"lineLength\":5,\"lineWidth\":1,\"lineStyle\":0},\"volumePaneSize\":\"large\"}",
+     "auto\",\"inactivityGaps\":false,\"paneProperties\":{\"backgroundType\":\"solid\",\"gridLinesMode\":\"both\",\"vertGridProperties\":{\"style\":0,\"color\":\"#ececec\"},\"horzGridProperties\":{\"style\":0,\"color\":\"#ececec\"},\"crossHairProperties\":{\"style\":2,\"transparency\":0,\"width\":1,\"color\":\"rgba(17,17,17,.35)\"},\"to",
+     ":\"both\",\"vertGridProperties\":{\"style\":0,\"color\":\"#ececec\"},\"horzGridProperties\":{\"style\":0,\"color\":\"#ececec\"},\"crossHairProperties\":{\"style\":2,\"transparency\":0,\"width\":1,\"color\":\"rgba(17,17,17,.35)\"},\"topMargin\":10,\"bottomMargin\":8,\"axisProperties\":{\"autoScale\":true,\"autoScaleDisabled\":fal"
+    ]
+   }
+  },
+  "nombre": "2-graficos-claro"
+ },
+ {
+  "url": "/graficos.html#asado",
+  "tema": "claro",
+  "motor": "advanced",
+  "tokens": {
+   "producto": "#111111",
+   "serie": "#111111",
+   "bg": "#ffffff"
+  },
+  "lienzos": 2,
+  "conteo": {
+   "#111111 (tinta del claro)": 11008,
+   "#e4dacc (hueso)": 0,
+   "#e8743b (brasa)": 0,
+   "#767676 (canasta del claro)": 151
+  },
+  "guardado": {
+   "tradingview.chart.lastUsedStyle": {
+    "largo": 1,
+    "inicio": "2",
+    "trozos": []
+   },
+   "tradingview.sessions": {
+    "largo": 459,
+    "inicio": "{\"sessionHighlight\":{\"backgrounds\":{\"preMarket\":{\"color\":\"#FF9800\",\"transparency\":92},\"postMarket\":{\"color\":\"#2962FF\",\"t",
+    "trozos": [
+     "essBreaks\":{\"color\":\"#4985e7\",\"style\":2,\"visible\":false,\"width\":1,\"available\":true}}}}"
+    ]
+   },
+   "tradingview.BarsMarksContainer.visibile": {
+    "largo": 4,
+    "inicio": "true",
+    "trozos": []
+   },
+   "tradingview.toggle_delete_locked_linetools": {
+    "largo": 5,
+    "inicio": "false",
+    "trozos": []
+   },
+   "tradingview.chartproperties": {
+    "largo": 2208,
+    "inicio": "{\"timezone\":\"America/Santiago\",\"priceScaleSelectionStrategyName\":\"auto\",\"inactivityGaps\":false,\"paneProperties\":{\"backgr",
+    "trozos": [
+     "\"lineLength\":5,\"lineWidth\":1,\"lineStyle\":0},\"volumePaneSize\":\"large\"}",
+     "auto\",\"inactivityGaps\":false,\"paneProperties\":{\"backgroundType\":\"solid\",\"gridLinesMode\":\"both\",\"vertGridProperties\":{\"style\":0,\"color\":\"#ececec\"},\"horzGridProperties\":{\"style\":0,\"color\":\"#ececec\"},\"crossHairProperties\":{\"style\":2,\"transparency\":0,\"width\":1,\"color\":\"rgba(17,17,17,.35)\"},\"to",
+     ":\"both\",\"vertGridProperties\":{\"style\":0,\"color\":\"#ececec\"},\"horzGridProperties\":{\"style\":0,\"color\":\"#ececec\"},\"crossHairProperties\":{\"style\":2,\"transparency\":0,\"width\":1,\"color\":\"rgba(17,17,17,.35)\"},\"topMargin\":10,\"bottomMargin\":8,\"axisProperties\":{\"autoScale\":true,\"autoScaleDisabled\":fal"
+    ]
+   },
+   "tradingview.current_theme.name": {
+    "largo": 5,
+    "inicio": "light",
+    "trozos": []
+   },
+   "tradingview.chartproperties.mainSeriesProperties": {
+    "largo": 6900,
+    "inicio": "{\"style\":2,\"esdShowDividends\":true,\"esdShowSplits\":true,\"esdShowEarnings\":true,\"esdShowBreaks\":false,\"showContinuousCont",
+    "trozos": [
+     "r\",\"bidAsk\":{\"visible\":false,\"lineStyle\":1,\"lineWidth\":1,\"bidLineColor\":\"#2962FF\",\"askLineColor\":\"#F7525F\"},\"prePostMarket\":{\"visible\":true,\"lineStyle\":1,\"lineWidth\":1,\"preMarketColor\":\"#FB8C00\",\"postMarketColor\":\"#2962FF\",\"overnightMarketColor\":\"#8e24aa\"},\"highLowAvgPrice\":{\"highLowPriceL",
+     "{\"style\":2,\"esdShowDividends\":true,\"esdShowSplits\":true,\"esdShowEarnings\":true,\"esdShowBreaks\":false,\"showContinuousContractSwitches\":true,\"showContinuousContractSwitchesBreaks\":false,\"showFuturesContractExpiration\":true,\"showLastNews\":true,\"showCountdown\":fals"
+    ]
+   },
+   "tradingview.chart.rawDataStyle": {
+    "largo": 1,
+    "inicio": "2",
+    "trozos": []
+   }
+  },
+  "nombre": "3-graficos-claro-velas-y-linea"
+ },
+ {
+  "url": "/graficos.html#asado",
+  "tema": "oscuro",
+  "motor": "advanced",
+  "tokens": {
+   "producto": "#e4dacc",
+   "serie": "#e8743b",
+   "bg": "#0f0f0e"
+  },
+  "lienzos": 2,
+  "conteo": {
+   "#111111 (tinta del claro)": 0,
+   "#e4dacc (hueso)": 0,
+   "#e8743b (brasa)": 11010,
+   "#767676 (canasta del claro)": 1
+  },
+  "guardado": {
+   "tradingview.chart.lastUsedStyle": {
+    "largo": 1,
+    "inicio": "2",
+    "trozos": []
+   },
+   "tradingview.sessions": {
+    "largo": 459,
+    "inicio": "{\"sessionHighlight\":{\"backgrounds\":{\"preMarket\":{\"color\":\"#FF9800\",\"transparency\":92},\"postMarket\":{\"color\":\"#2962FF\",\"t",
+    "trozos": [
+     "essBreaks\":{\"color\":\"#4985e7\",\"style\":2,\"visible\":false,\"width\":1,\"available\":true}}}}"
+    ]
+   },
+   "tradingview.BarsMarksContainer.visibile": {
+    "largo": 4,
+    "inicio": "true",
+    "trozos": []
+   },
+   "tradingview.toggle_delete_locked_linetools": {
+    "largo": 5,
+    "inicio": "false",
+    "trozos": []
+   },
+   "tradingview.chartproperties": {
+    "largo": 2208,
+    "inicio": "{\"timezone\":\"America/Santiago\",\"priceScaleSelectionStrategyName\":\"auto\",\"inactivityGaps\":false,\"paneProperties\":{\"backgr",
+    "trozos": [
+     "\"lineLength\":5,\"lineWidth\":1,\"lineStyle\":0},\"volumePaneSize\":\"large\"}",
+     "auto\",\"inactivityGaps\":false,\"paneProperties\":{\"backgroundType\":\"solid\",\"gridLinesMode\":\"both\",\"vertGridProperties\":{\"style\":0,\"color\":\"#ececec\"},\"horzGridProperties\":{\"style\":0,\"color\":\"#ececec\"},\"crossHairProperties\":{\"style\":2,\"transparency\":0,\"width\":1,\"color\":\"rgba(17,17,17,.35)\"},\"to",
+     ":\"both\",\"vertGridProperties\":{\"style\":0,\"color\":\"#ececec\"},\"horzGridProperties\":{\"style\":0,\"color\":\"#ececec\"},\"crossHairProperties\":{\"style\":2,\"transparency\":0,\"width\":1,\"color\":\"rgba(17,17,17,.35)\"},\"topMargin\":10,\"bottomMargin\":8,\"axisProperties\":{\"autoScale\":true,\"autoScaleDisabled\":fal"
+    ]
+   },
+   "tradingview.current_theme.name": {
+    "largo": 5,
+    "inicio": "light",
+    "trozos": []
+   },
+   "tradingview.chartproperties.mainSeriesProperties": {
+    "largo": 6900,
+    "inicio": "{\"style\":2,\"esdShowDividends\":true,\"esdShowSplits\":true,\"esdShowEarnings\":true,\"esdShowBreaks\":false,\"showContinuousCont",
+    "trozos": [
+     "r\",\"bidAsk\":{\"visible\":false,\"lineStyle\":1,\"lineWidth\":1,\"bidLineColor\":\"#2962FF\",\"askLineColor\":\"#F7525F\"},\"prePostMarket\":{\"visible\":true,\"lineStyle\":1,\"lineWidth\":1,\"preMarketColor\":\"#FB8C00\",\"postMarketColor\":\"#2962FF\",\"overnightMarketColor\":\"#8e24aa\"},\"highLowAvgPrice\":{\"highLowPriceL",
+     "{\"style\":2,\"esdShowDividends\":true,\"esdShowSplits\":true,\"esdShowEarnings\":true,\"esdShowBreaks\":false,\"showContinuousContractSwitches\":true,\"showContinuousContractSwitchesBreaks\":false,\"showFuturesContractExpiration\":true,\"showLastNews\":true,\"showCountdown\":fals"
+    ]
+   },
+   "tradingview.chart.rawDataStyle": {
+    "largo": 1,
+    "inicio": "2",
+    "trozos": []
+   }
+  },
+  "nombre": "4-graficos-oscuro-tras-la-luna"
+ },
+ {
+  "url": "/productos/abastero.html",
+  "tema": "oscuro",
+  "motor": "advanced",
+  "tokens": {
+   "producto": "#e4dacc",
+   "serie": "#e8743b",
+   "bg": "#0f0f0e"
+  },
+  "lienzos": 2,
+  "conteo": {
+   "#111111 (tinta del claro)": 0,
+   "#e4dacc (hueso)": 23290,
+   "#e8743b (brasa)": 0,
+   "#767676 (canasta del claro)": 1
+  },
+  "guardado": {
+   "tradingview.chart.lastUsedStyle": {
+    "largo": 1,
+    "inicio": "2",
+    "trozos": []
+   },
+   "tradingview.sessions": {
+    "largo": 459,
+    "inicio": "{\"sessionHighlight\":{\"backgrounds\":{\"preMarket\":{\"color\":\"#FF9800\",\"transparency\":92},\"postMarket\":{\"color\":\"#2962FF\",\"t",
+    "trozos": [
+     "essBreaks\":{\"color\":\"#4985e7\",\"style\":2,\"visible\":false,\"width\":1,\"available\":true}}}}"
+    ]
+   },
+   "tradingview.BarsMarksContainer.visibile": {
+    "largo": 4,
+    "inicio": "true",
+    "trozos": []
+   },
+   "tradingview.toggle_delete_locked_linetools": {
+    "largo": 5,
+    "inicio": "false",
+    "trozos": []
+   },
+   "tradingview.chartproperties": {
+    "largo": 2208,
+    "inicio": "{\"timezone\":\"America/Santiago\",\"priceScaleSelectionStrategyName\":\"auto\",\"inactivityGaps\":false,\"paneProperties\":{\"backgr",
+    "trozos": [
+     "\"lineLength\":5,\"lineWidth\":1,\"lineStyle\":0},\"volumePaneSize\":\"large\"}",
+     "auto\",\"inactivityGaps\":false,\"paneProperties\":{\"backgroundType\":\"solid\",\"gridLinesMode\":\"both\",\"vertGridProperties\":{\"style\":0,\"color\":\"#ececec\"},\"horzGridProperties\":{\"style\":0,\"color\":\"#ececec\"},\"crossHairProperties\":{\"style\":2,\"transparency\":0,\"width\":1,\"color\":\"rgba(17,17,17,.35)\"},\"to",
+     ":\"both\",\"vertGridProperties\":{\"style\":0,\"color\":\"#ececec\"},\"horzGridProperties\":{\"style\":0,\"color\":\"#ececec\"},\"crossHairProperties\":{\"style\":2,\"transparency\":0,\"width\":1,\"color\":\"rgba(17,17,17,.35)\"},\"topMargin\":10,\"bottomMargin\":8,\"axisProperties\":{\"autoScale\":true,\"autoScaleDisabled\":fal"
+    ]
+   },
+   "tradingview.current_theme.name": {
+    "largo": 5,
+    "inicio": "light",
+    "trozos": []
+   },
+   "tradingview.chartproperties.mainSeriesProperties": {
+    "largo": 6906,
+    "inicio": "{\"style\":2,\"esdShowDividends\":true,\"esdShowSplits\":true,\"esdShowEarnings\":true,\"esdShowBreaks\":false,\"showContinuousCont",
+    "trozos": [
+     "r\",\"bidAsk\":{\"visible\":false,\"lineStyle\":1,\"lineWidth\":1,\"bidLineColor\":\"#2962FF\",\"askLineColor\":\"#F7525F\"},\"prePostMarket\":{\"visible\":true,\"lineStyle\":1,\"lineWidth\":1,\"preMarketColor\":\"#FB8C00\",\"postMarketColor\":\"#2962FF\",\"overnightMarketColor\":\"#8e24aa\"},\"highLowAvgPrice\":{\"highLowPriceL",
+     "{\"style\":2,\"esdShowDividends\":true,\"esdShowSplits\":true,\"esdShowEarnings\":true,\"esdShowBreaks\":false,\"showContinuousContractSwitches\":true,\"showContinuousContractSwitchesBreaks\":false,\"showFuturesContractExpiration\":true,\"showLastNews\":true,\"showCountdown\":fals"
+    ]
+   },
+   "tradingview.chart.rawDataStyle": {
+    "largo": 1,
+    "inicio": "2",
+    "trozos": []
+   }
+  },
+  "nombre": "5-ficha-oscuro"
+ },
+ {
+  "url": "/productos/abastero.html",
+  "tema": "claro",
+  "motor": "advanced",
+  "tokens": {
+   "producto": "#111111",
+   "serie": "#111111",
+   "bg": "#ffffff"
+  },
+  "lienzos": 2,
+  "conteo": {
+   "#111111 (tinta del claro)": 23061,
+   "#e4dacc (hueso)": 0,
+   "#e8743b (brasa)": 0,
+   "#767676 (canasta del claro)": 249
+  },
+  "guardado": {
+   "tradingview.chart.lastUsedStyle": {
+    "largo": 1,
+    "inicio": "2",
+    "trozos": []
+   },
+   "tradingview.sessions": {
+    "largo": 459,
+    "inicio": "{\"sessionHighlight\":{\"backgrounds\":{\"preMarket\":{\"color\":\"#FF9800\",\"transparency\":92},\"postMarket\":{\"color\":\"#2962FF\",\"t",
+    "trozos": [
+     "essBreaks\":{\"color\":\"#4985e7\",\"style\":2,\"visible\":false,\"width\":1,\"available\":true}}}}"
+    ]
+   },
+   "tradingview.BarsMarksContainer.visibile": {
+    "largo": 4,
+    "inicio": "true",
+    "trozos": []
+   },
+   "tradingview.toggle_delete_locked_linetools": {
+    "largo": 5,
+    "inicio": "false",
+    "trozos": []
+   },
+   "tradingview.chartproperties": {
+    "largo": 2208,
+    "inicio": "{\"timezone\":\"America/Santiago\",\"priceScaleSelectionStrategyName\":\"auto\",\"inactivityGaps\":false,\"paneProperties\":{\"backgr",
+    "trozos": [
+     "\"lineLength\":5,\"lineWidth\":1,\"lineStyle\":0},\"volumePaneSize\":\"large\"}",
+     "auto\",\"inactivityGaps\":false,\"paneProperties\":{\"backgroundType\":\"solid\",\"gridLinesMode\":\"both\",\"vertGridProperties\":{\"style\":0,\"color\":\"#ececec\"},\"horzGridProperties\":{\"style\":0,\"color\":\"#ececec\"},\"crossHairProperties\":{\"style\":2,\"transparency\":0,\"width\":1,\"color\":\"rgba(17,17,17,.35)\"},\"to",
+     ":\"both\",\"vertGridProperties\":{\"style\":0,\"color\":\"#ececec\"},\"horzGridProperties\":{\"style\":0,\"color\":\"#ececec\"},\"crossHairProperties\":{\"style\":2,\"transparency\":0,\"width\":1,\"color\":\"rgba(17,17,17,.35)\"},\"topMargin\":10,\"bottomMargin\":8,\"axisProperties\":{\"autoScale\":true,\"autoScaleDisabled\":fal"
+    ]
+   },
+   "tradingview.current_theme.name": {
+    "largo": 5,
+    "inicio": "light",
+    "trozos": []
+   },
+   "tradingview.chartproperties.mainSeriesProperties": {
+    "largo": 6906,
+    "inicio": "{\"style\":2,\"esdShowDividends\":true,\"esdShowSplits\":true,\"esdShowEarnings\":true,\"esdShowBreaks\":false,\"showContinuousCont",
+    "trozos": [
+     "r\",\"bidAsk\":{\"visible\":false,\"lineStyle\":1,\"lineWidth\":1,\"bidLineColor\":\"#2962FF\",\"askLineColor\":\"#F7525F\"},\"prePostMarket\":{\"visible\":true,\"lineStyle\":1,\"lineWidth\":1,\"preMarketColor\":\"#FB8C00\",\"postMarketColor\":\"#2962FF\",\"overnightMarketColor\":\"#8e24aa\"},\"highLowAvgPrice\":{\"highLowPriceL",
+     "{\"style\":2,\"esdShowDividends\":true,\"esdShowSplits\":true,\"esdShowEarnings\":true,\"esdShowBreaks\":false,\"showContinuousContractSwitches\":true,\"showContinuousContractSwitchesBreaks\":false,\"showFuturesContractExpiration\":true,\"showLastNews\":true,\"showCountdown\":fals"
+    ]
+   },
+   "tradingview.chart.rawDataStyle": {
+    "largo": 1,
+    "inicio": "2",
+    "trozos": []
+   }
+  },
+  "nombre": "6-ficha-claro-de-vuelta"
+ },
+ {
+  "url": "/productos/abastero.html",
+  "tema": "oscuro",
+  "motor": "advanced",
+  "tokens": {
+   "producto": "#e4dacc",
+   "serie": "#e8743b",
+   "bg": "#0f0f0e"
+  },
+  "lienzos": 2,
+  "conteo": {
+   "#111111 (tinta del claro)": 45,
+   "#e4dacc (hueso)": 23059,
+   "#e8743b (brasa)": 0,
+   "#767676 (canasta del claro)": 1
+  },
+  "guardado": {
+   "tradingview.sessions": {
+    "largo": 459,
+    "inicio": "{\"sessionHighlight\":{\"backgrounds\":{\"preMarket\":{\"color\":\"#FF9800\",\"transparency\":92},\"postMarket\":{\"color\":\"#2962FF\",\"t",
+    "trozos": [
+     "essBreaks\":{\"color\":\"#4985e7\",\"style\":2,\"visible\":false,\"width\":1,\"available\":true}}}}"
+    ]
+   },
+   "tradingview.BarsMarksContainer.visibile": {
+    "largo": 4,
+    "inicio": "true",
+    "trozos": []
+   },
+   "tradingview.toggle_delete_locked_linetools": {
+    "largo": 5,
+    "inicio": "false",
+    "trozos": []
+   },
+   "tradingview.chartproperties": {
+    "largo": 2197,
+    "inicio": "{\"timezone\":\"America/Santiago\",\"priceScaleSelectionStrategyName\":\"auto\",\"inactivityGaps\":false,\"paneProperties\":{\"backgr",
+    "trozos": [
+     "\"lineLength\":5,\"lineWidth\":1,\"lineStyle\":0},\"volumePaneSize\":\"large\"}",
+     "auto\",\"inactivityGaps\":false,\"paneProperties\":{\"backgroundType\":\"solid\",\"gridLinesMode\":\"both\",\"vertGridProperties\":{\"style\":0,\"color\":\"#1c1c1a\"},\"horzGridProperties\":{\"style\":0,\"color\":\"#1c1c1a\"},\"crossHairProperties\":{\"style\":2,\"transparency\":0,\"width\":1,\"color\":\"#86817a\"},\"topMargin\":10",
+     ":\"both\",\"vertGridProperties\":{\"style\":0,\"color\":\"#1c1c1a\"},\"horzGridProperties\":{\"style\":0,\"color\":\"#1c1c1a\"},\"crossHairProperties\":{\"style\":2,\"transparency\":0,\"width\":1,\"color\":\"#86817a\"},\"topMargin\":10,\"bottomMargin\":8,\"axisProperties\":{\"autoScale\":true,\"autoScaleDisabled\":false,\"lockSca"
+    ]
+   },
+   "tradingview.current_theme.name": {
+    "largo": 4,
+    "inicio": "dark",
+    "trozos": []
+   },
+   "tradingview.chartproperties.mainSeriesProperties": {
+    "largo": 6906,
+    "inicio": "{\"style\":2,\"esdShowDividends\":true,\"esdShowSplits\":true,\"esdShowEarnings\":true,\"esdShowBreaks\":false,\"showContinuousCont",
+    "trozos": [
+     "r\",\"bidAsk\":{\"visible\":false,\"lineStyle\":1,\"lineWidth\":1,\"bidLineColor\":\"#2962FF\",\"askLineColor\":\"#F7525F\"},\"prePostMarket\":{\"visible\":true,\"lineStyle\":1,\"lineWidth\":1,\"preMarketColor\":\"#FB8C00\",\"postMarketColor\":\"#2962FF\",\"overnightMarketColor\":\"#8e24aa\"},\"highLowAvgPrice\":{\"highLowPriceL",
+     "{\"style\":2,\"esdShowDividends\":true,\"esdShowSplits\":true,\"esdShowEarnings\":true,\"esdShowBreaks\":false,\"showContinuousContractSwitches\":true,\"showContinuousContractSwitchesBreaks\":false,\"showFuturesContractExpiration\":true,\"showLastNews\":true,\"showCountdown\":fals"
+    ]
+   }
+  },
+  "nombre": "7-ficha-oscuro-persona-nueva"
+ },
+ {
+  "url": "/graficos.html#asado",
+  "tema": "oscuro",
+  "motor": "advanced",
+  "tokens": {
+   "producto": "#e4dacc",
+   "serie": "#e8743b",
+   "bg": "#0f0f0e"
+  },
+  "lienzos": 2,
+  "conteo": {
+   "#111111 (tinta del claro)": 14,
+   "#e4dacc (hueso)": 0,
+   "#e8743b (brasa)": 11000,
+   "#767676 (canasta del claro)": 1
+  },
+  "guardado": {
+   "tradingview.sessions": {
+    "largo": 459,
+    "inicio": "{\"sessionHighlight\":{\"backgrounds\":{\"preMarket\":{\"color\":\"#FF9800\",\"transparency\":92},\"postMarket\":{\"color\":\"#2962FF\",\"t",
+    "trozos": [
+     "essBreaks\":{\"color\":\"#4985e7\",\"style\":2,\"visible\":false,\"width\":1,\"available\":true}}}}"
+    ]
+   },
+   "tradingview.BarsMarksContainer.visibile": {
+    "largo": 4,
+    "inicio": "true",
+    "trozos": []
+   },
+   "tradingview.toggle_delete_locked_linetools": {
+    "largo": 5,
+    "inicio": "false",
+    "trozos": []
+   },
+   "tradingview.chartproperties": {
+    "largo": 2197,
+    "inicio": "{\"timezone\":\"America/Santiago\",\"priceScaleSelectionStrategyName\":\"auto\",\"inactivityGaps\":false,\"paneProperties\":{\"backgr",
+    "trozos": [
+     "\"lineLength\":5,\"lineWidth\":1,\"lineStyle\":0},\"volumePaneSize\":\"large\"}",
+     "auto\",\"inactivityGaps\":false,\"paneProperties\":{\"backgroundType\":\"solid\",\"gridLinesMode\":\"both\",\"vertGridProperties\":{\"style\":0,\"color\":\"#1c1c1a\"},\"horzGridProperties\":{\"style\":0,\"color\":\"#1c1c1a\"},\"crossHairProperties\":{\"style\":2,\"transparency\":0,\"width\":1,\"color\":\"#86817a\"},\"topMargin\":10",
+     ":\"both\",\"vertGridProperties\":{\"style\":0,\"color\":\"#1c1c1a\"},\"horzGridProperties\":{\"style\":0,\"color\":\"#1c1c1a\"},\"crossHairProperties\":{\"style\":2,\"transparency\":0,\"width\":1,\"color\":\"#86817a\"},\"topMargin\":10,\"bottomMargin\":8,\"axisProperties\":{\"autoScale\":true,\"autoScaleDisabled\":false,\"lockSca"
+    ]
+   },
+   "tradingview.current_theme.name": {
+    "largo": 4,
+    "inicio": "dark",
+    "trozos": []
+   },
+   "tradingview.chartproperties.mainSeriesProperties": {
+    "largo": 6900,
+    "inicio": "{\"style\":2,\"esdShowDividends\":true,\"esdShowSplits\":true,\"esdShowEarnings\":true,\"esdShowBreaks\":false,\"showContinuousCont",
+    "trozos": [
+     "r\",\"bidAsk\":{\"visible\":false,\"lineStyle\":1,\"lineWidth\":1,\"bidLineColor\":\"#2962FF\",\"askLineColor\":\"#F7525F\"},\"prePostMarket\":{\"visible\":true,\"lineStyle\":1,\"lineWidth\":1,\"preMarketColor\":\"#FB8C00\",\"postMarketColor\":\"#2962FF\",\"overnightMarketColor\":\"#8e24aa\"},\"highLowAvgPrice\":{\"highLowPriceL",
+     "{\"style\":2,\"esdShowDividends\":true,\"esdShowSplits\":true,\"esdShowEarnings\":true,\"esdShowBreaks\":false,\"showContinuousContractSwitches\":true,\"showContinuousContractSwitchesBreaks\":false,\"showFuturesContractExpiration\":true,\"showLastNews\":true,\"showCountdown\":fals"
+    ]
+   }
+  },
+  "nombre": "8-graficos-oscuro-persona-nueva"
+ }
+]
