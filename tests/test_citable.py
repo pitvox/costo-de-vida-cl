@@ -338,7 +338,7 @@ def test_linea_de_cita_en_las_paginas_de_indice(sitio, datos):
         assert h.index("Fuente: precios al consumidor de ODEPA") < h.index('<p class="cita">')
         assert 'class="citable"' not in h
         # ceniza y chica, sin colores nuevos ni semáforo
-        assert ".cita { font:400 12px/1.6 var(--sans); color:var(--ash);" in h
+        assert ".cita { font:400 12px/1.6 var(--sans); color:var(--tinta2);" in h
         assert infracciones(h) == []
 
 
@@ -353,7 +353,7 @@ def test_bloque_esta_semana_en_graficos(sitio, datos):
     b = _bloque(h)
     # bajo la franja de contexto del modo índices, que es con el que carga
     assert h.index('<section class="contexto m-ind">') < h.index(b)
-    assert '<body data-modo="indices">' in h
+    assert '<body data-modo="indices" data-graficos>' in h
     assert '<h2 class="ctx-h" id="h-semana-ind">ESTA SEMANA</h2>' in b
     assert _parrafo(b, "sem-intro") == [
         f"Costo de cada canasta en la Región Metropolitana, semana del {_fecha_larga(FIN)}."]

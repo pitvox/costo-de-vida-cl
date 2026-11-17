@@ -497,12 +497,13 @@ async function temporalidades(info, semanales, t, completo) {
   ok(metodos.every(m => typeof a[m] === 'function'), 'IExternalSaveLoadAdapter completo');
 
   // ---- opciones del widget ----
-  const TOK = { bg: '#000001', panel: '#000002', line: '#000003', grid: '#000004', bone: '#000005',
-    ash: '#000006', dim: '#000007', ember: '#000008', verde: '#000009', rojo: '#00000a' };
+  const TOK = { bg: '#000001', panel: '#000002', line: '#000003', grid: '#000004', tinta: '#000005',
+    tinta2: '#000006', tinta3: '#000007', serie: '#000008', verde: '#000009', rojo: '#00000a',
+    cruz: '#00000b', 'cruz-tv': '#00000c' };
   const o = TV.opcionesWidget({ contenedor: 'tv', libreria: '/charting_library/', simbolo: 'asado',
     datafeed: feed, tok: n => TOK[n], css: 'https://carestia.cl/carestia-tv.css' });
   ok(o.locale === 'es' && o.interval === '1W' && o.timezone === 'America/Santiago' &&
-     o.theme === 'dark' && o.symbol === 'asado' && o.datafeed === feed, 'widget: es, 1W, Santiago, oscuro');
+     o.theme === 'light' && o.symbol === 'asado' && o.datafeed === feed, 'widget: es, 1W, Santiago, claro');
   ok(o.library_path === '/charting_library/' && o.autosize === true, 'widget: ruta de la librería');
   // nada que guarde fuera del navegador
   ok(!['charts_storage_url', 'charts_storage_api_version', 'client_id', 'user_id', 'snapshot_url',
@@ -516,22 +517,24 @@ async function temporalidades(info, semanales, t, completo) {
   ok(o.numeric_formatting.decimal_sign === ',' && o.numeric_formatting.grouping_separator === '.',
      'widget: coma decimal y punto de miles');
   ok(o.custom_formatters.priceFormatterFactory(null, '1').format(26467) === '26.467', 'widget: formato de precio');
-  ok(/IBM Plex Sans/.test(o.custom_font_family) && o.custom_css_url === 'https://carestia.cl/carestia-tv.css',
-     'widget: Plex Sans y el tema del sitio');
+  ok(/Archivo/.test(o.custom_font_family) && o.custom_css_url === 'https://carestia.cl/carestia-tv.css',
+     'widget: Archivo y el tema del sitio');
   const ov = o.overrides;
   ok(ov['paneProperties.background'] === TOK.bg && ov['paneProperties.backgroundType'] === 'solid' &&
      ov['paneProperties.vertGridProperties.color'] === TOK.grid &&
-     ov['scalesProperties.textColor'] === TOK.ash && ov['scalesProperties.lineColor'] === TOK.line,
-     'widget: fondo, grilla y escalas con los tokens');
-  ok(ov['mainSeriesProperties.style'] === 2 && ov['mainSeriesProperties.lineStyle.color'] === TOK.ember,
-     'widget: línea por defecto, en brasa para los índices');
+     ov['scalesProperties.textColor'] === TOK.tinta2 && ov['scalesProperties.lineColor'] === TOK.line &&
+     ov['paneProperties.crossHairProperties.color'] === TOK['cruz-tv'],
+     'widget: fondo, grilla, escalas y crosshair con los tokens');
+  ok(ov['mainSeriesProperties.style'] === 2 && ov['mainSeriesProperties.lineStyle.color'] === TOK.serie,
+     'widget: línea por defecto, en --serie');
   ok(o.interval === '1W' && JSON.stringify(o.favorites.intervals) === JSON.stringify(RES) &&
      JSON.stringify(o.favorites.chartTypes) === '["Line","Candles"]',
      'widget: 1S por defecto; las temporalidades, la línea y las velas a un clic');
   ok(['upColor', 'borderUpColor', 'wickUpColor'].every(k => ov['mainSeriesProperties.candleStyle.' + k] === TOK.verde) &&
      ['downColor', 'borderDownColor', 'wickDownColor'].every(k => ov['mainSeriesProperties.candleStyle.' + k] === TOK.rojo),
      'widget: velas verde sube, rojo baja');
-  ok(o.loading_screen.backgroundColor === TOK.bg, 'widget: pantalla de carga con el fondo');
+  ok(o.loading_screen.backgroundColor === TOK.bg && o.loading_screen.foregroundColor === TOK.serie,
+     'widget: pantalla de carga con el fondo y la serie');
 
   // ---- configuración común: celular y páginas del sitio ----
   const base = { contenedor: 'tv', libreria: '/charting_library/', simbolo: 'asado', datafeed: feed,

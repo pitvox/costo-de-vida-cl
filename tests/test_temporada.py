@@ -289,7 +289,7 @@ def sintetico() -> dict:
         out["indices"][code] = {
             "nombre": meta["nombre"], "subtitulo": meta["subtitulo"], "fecha": "28-09-2026",
             "costo_nominal": v[-1], "costo_real": v[-1], "percentil": 90, "zscore": 1.0,
-            "vs_promedio": 12, "veredicto": "CARO", "color": "#e0552f", "n": len(real),
+            "vs_promedio": 12, "veredicto": "CARO", "color": "#c8321c", "n": len(real),
             "componentes": [{"label": lab, "qty": qty, "unidad": uni, "odepa_unit": "$/kg",
                              "factor": 1.0, "mismatch": False, "precio_ult": 1000, "aporte": 1000}
                             for (lab, _m, qty, uni) in meta["items"]],
@@ -423,8 +423,8 @@ def test_tarjetas_de_la_portada(sitio):
     assert 'style="left:100%"' in tarjetas["asado"] and 'style="left:0%"' in tarjetas["fruta"]
     assert 'style="left:80%"' in tarjetas["ensalada"]
     # el color, con la regla de las dos semanas
-    assert 'style="background:var(--ambar)">NORMAL<' in tarjetas["ensalada"]
-    assert 'style="background:var(--verde)">BARATO<' in tarjetas["fruta"]
+    assert '<span class="ic-pill ver-ambar">NORMAL<' in tarjetas["ensalada"]
+    assert '<span class="ic-pill ver-verde">BARATO<' in tarjetas["fruta"]
     # sin temporada: la frase y las zonas de toda la historia
     assert '<div class="zonas historia" aria-hidden="true">' in tarjetas["desayuno"]
     assert "de cada 10 semanas desde 2023, descontada la inflación.</p>" in tarjetas["desayuno"]
@@ -642,7 +642,7 @@ def test_graficos_y_paginas_de_los_indices(sitio):
     assert "document.getElementById('opct').textContent = d.frase;" in _leer(d, "graficos.html")
     # el número grande sin etiqueta de ajuste
     asado = _leer(d, "indices/asado.html")
-    assert '<span class="ind-precio">$2.000</span><span class="ind-pill"' in asado
+    assert '<span class="ind-precio">$2.000</span><span class="ind-pill ver-' in asado
     assert "pesos de hoy" not in asado
 
 

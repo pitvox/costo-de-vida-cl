@@ -94,7 +94,7 @@ def indices_sintetico() -> dict:
     out = {"generado": "2026-09-26", "ipc_mes": "2026-08", "indices": {}, "productos": {},
            "descartes": []}
     costos = {"asado": 52000, "ensalada": 8000, "fruta": 12000, "desayuno": 15000}
-    colores = {"BARATO": "#5bbf7a", "NORMAL": "#e0a83c", "CARO": "#e0552f"}
+    colores = {"BARATO": "#1a7f47", "NORMAL": "#f0b429", "CARO": "#c8321c"}
     for k, (code, meta) in enumerate(BASKETS.items()):
         n = 300
         fechas = _semanas(fin, n)

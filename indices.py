@@ -125,7 +125,10 @@ RESOURCES = {
     2008: "0c3bb1cb-d52e-4c22-8c8a-e8451123afcd",
 }
 URL = "https://datos.odepa.gob.cl/dataset/{ds}/resource/{rid}/download/precio_consumidor_{y}.csv"
-COLORES = {"BARATO": "#5bbf7a", "NORMAL": "#e0a83c", "CARO": "#e0552f"}
+# el color de cada veredicto en indices.json: los tokens del semáforo de
+# CSS_BASE en build_site.py (--verde, --ambar y --rojo). El sitio no lee este
+# campo: toma el color del nombre del veredicto
+COLORES = {"BARATO": "#1a7f47", "NORMAL": "#f0b429", "CARO": "#c8321c"}
 
 
 # ---------------- ODEPA ----------------

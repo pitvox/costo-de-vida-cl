@@ -19,11 +19,42 @@ La guardia está en `tests/test_texto.py` (pytest, sin red). Falla si aparece "�
 
 Por decisión del dueño, esta regla reemplaza la de "flechas neutras". El número de cada variación de precio (la cinta de índices, las tarjetas de "Índices Carestía", "Esta semana", la tabla de la portada, la ficha de cada producto y la cifra del índice en /graficos.html) va en color con criterio de consumidor:
 
-- Si el precio subió, rojo #e0552f (token `--sube`, clase `.v-sube`).
-- Si bajó, verde #5bbf7a (token `--baja`, clase `.v-baja`).
+- Si el precio subió, rojo #c8321c (token `--sube`, que apunta a `--rojo`; clase `.v-sube`).
+- Si bajó, verde #1a7f47 (token `--baja`, que apunta a `--verde`; clase `.v-baja`).
 - Si no cambió (redondea a 0,0), en el color del texto, sin clase.
 
-La flecha sigue al lado del número, en gris (`.f`), y el resto del texto va en hueso. Las clases las ponen `cambio()` y `fmt_delta()` en `build_site.py`, `fmtDelta()` en el JS de /graficos.html y `cifraTramo()` en la frase de "Comparar con" de las fichas (ahí la cifra va con su signo, "+38%", sin flecha). Las velas no cambian: siguen la convención de los gráficos (verde sube, rojo baja). El semáforo CARO/NORMAL/BARATO sigue reservado a los 4 índices.
+La flecha sigue al lado del número, en gris (`.f`, `--tinta3`), y el resto del texto va en tinta. Las clases las ponen `cambio()` y `fmt_delta()` en `build_site.py`, `fmtDelta()` en el JS de /graficos.html y `cifraTramo()` en la frase de "Comparar con" de las fichas (ahí la cifra va con su signo, "+38%", sin flecha). Las velas no cambian: siguen la convención de los gráficos (verde sube, rojo baja). El semáforo CARO/NORMAL/BARATO sigue reservado a los 4 índices.
+
+## Identidad
+
+Un boletín estadístico: tinta sobre blanco y sin color de marca (decisión del dueño, 16-11-2026). El único color del sitio es el dato: el semáforo de los 4 índices y el rojo o verde de las variaciones. Una sola familia, Archivo (400 y 500 texto, 600 etiquetas, 700 cifras, 800 wordmark), con `tabular-nums`. Los tokens viven solo en `CSS_BASE` de `build_site.py`:
+
+| Token | Valor | Uso |
+|---|---|---|
+| `--bg` | `#ffffff` | fondo |
+| `--panel` | `#f5f5f5` | superficies secundarias |
+| `--line` | `#d9d9d9` | reglas y bordes |
+| `--hover` | `#ebebeb` | hover de controles |
+| `--grid` | `#ececec` | grilla de los gráficos |
+| `--tinta` | `#111111` | texto |
+| `--tinta2` | `#4d4d4d` | texto secundario |
+| `--tinta3` | `#6b6b6b` | texto terciario, flechas |
+| `--serie` | `#111111` | línea de índices oficiales |
+| `--producto` | `#111111` | línea de productos |
+| `--marca` | `#111111` | línea de la Í del wordmark |
+| `--canasta` | `#767676` | línea de canastas de usuario |
+| `--verde` | `#1a7f47` | semáforo, baja, vela que sube |
+| `--rojo` | `#c8321c` | semáforo, sube, vela que baja |
+| `--ambar` | `#f0b429` | semáforo como relleno |
+| `--ambar-texto` | `#8a6100` | ámbar cuando es texto o trazo fino sobre blanco |
+| `--sobre-ambar` | `#111111` | texto de la etiqueta NORMAL |
+| `--cruz` | `rgba(17,17,17,.35)` | crosshair |
+| `--cruz-tv` | `rgba(17,17,17,.35)` | crosshair de Advanced Charts |
+| `--sombra` | `rgba(17,17,17,.12)` | sombra de menús y buscador |
+
+Todo texto cumple AA sobre `--bg` y `--panel`. El veredicto va como etiqueta rellena (`.ver-rojo`, `.ver-verde`, `.ver-ambar`), con el color sacado del nombre del veredicto, no del campo `color` de `indices.json` (ese campo sale de `COLORES` en `indices.py`, que vale lo mismo que `--verde`, `--ambar` y `--rojo`; un test los mantiene alineados). Comparar usa `--cmp1` a `--cmp4` (ver el comentario de `CSS_BASE`). Azul y celeste siguen vetados. El ícono es la única pieza en negativo.
+
+**Modo oscuro (a pedido).** El claro es el predeterminado. El botón de la luna (arriba a la derecha del encabezado, fuera de la fila de los links; en el celular, la última opción del menú) cambia solo la paleta a la anterior: carbón, hueso (también en la línea de los productos y de las canastas) y la brasa en la línea de los índices y en la Í del wordmark. Tipografía y forma no cambian. Los valores van en el bloque `:root[data-tema="oscuro"]` de `CSS_BASE` (y en `.theme-dark:root` del tema de Advanced Charts); fuera de ese bloque no puede aparecer la paleta anterior (lo revisa un test). La elección se guarda en el navegador (`carestia-tema`) y un script en el `<head>` la aplica antes de pintar. En las páginas con gráficos (`<body data-graficos>`), cambiar de modo recarga la página, porque los gráficos leen los colores al montarse; antes guarda lo que la persona estaba mirando (`CarestiaEstado`: índice, modo, lo comparado, línea o velas, unidad) y la página lo repone al volver. Las tarjetas OG y el ícono quedan siempre en el claro.
 
 ## Alcance
 

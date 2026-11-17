@@ -16,7 +16,7 @@ de 30 semanas comparables y con casos borde (29 y 30 comparables, mediana de
 un número par, empates, dos productos que parten juntos, el redondeo del %),
 y que leerHash lea el link del botón con las mismas claves y cantidades. Sin
 Node, esas comparaciones se saltan y quedan las cuentas hechas a mano.
-Verifica también la página (orden, cifras, tabla, botón, cita y Dataset), su tarjeta en hueso, el párrafo de
+Verifica también la página (orden, cifras, tabla, botón, cita y Dataset), su tarjeta en el gris de las canastas, el párrafo de
 /compras.html, el sitemap y el workflow, cuándo no se escribe (un insumo sin
 precio en las últimas 4 semanas, sin ficha o sin semanas en común en ese
 plazo) y cuándo sí (un insumo de hace 3 semanas: la canasta va con esa
@@ -189,7 +189,7 @@ def datos():
 
 @pytest.fixture(scope="module")
 def sitio(tmp_path_factory, datos):
-    # con las tarjetas dibujadas: la de la canasta va en hueso
+    # con las tarjetas dibujadas: la de la canasta va en --canasta
     d = tmp_path_factory.mktemp("build_canastas")
     _construir(d, datos, tarjetas=True)
     return d
@@ -619,9 +619,10 @@ def test_la_cita_y_el_dataset(sitio, datos, f):
     assert "La serie se publica como precio de la época y ajustada por inflación" in ficha["description"]
 
 
-def test_la_tarjeta_va_en_hueso(sitio):
-    """og/canastas/{slug}.png, como la de un producto, con la línea en hueso;
-    la de un producto sigue en brasa."""
+def test_la_tarjeta_va_en_el_gris_de_las_canastas(sitio):
+    """og/canastas/{slug}.png, como la de un producto, con la línea en
+    --canasta; la de un producto sigue en --serie, el color de la serie
+    oficial."""
     from PIL import Image
     h = _leer(sitio, f"canastas/{SLUG}.html")
     og = re.search(r'<meta property="og:image" content="([^"]+)">', h).group(1)
@@ -632,19 +633,21 @@ def test_la_tarjeta_va_en_hueso(sitio):
     assert alt.endswith(".") and "tu canasta" not in alt
 
     def tonos(ruta):
-        """Los píxeles del gráfico (la caja GRAFICO de tarjetas.py) cerca del
-        hueso y cerca de la brasa."""
+        """Los píxeles del gráfico (la caja GRAFICO de tarjetas.py) cerca de
+        --canasta y cerca de --serie."""
         img = Image.open(sitio / ruta).convert("RGB")
         assert img.size == (1200, 630)
         b = img.crop((624, 206, 1137, 487)).tobytes()
         caja = [b[i:i + 3] for i in range(0, len(b), 3)]
-        cerca = lambda c, t: sum(abs(x - y) for x, y in zip(c, t)) <= 30  # noqa: E731
-        return (sum(1 for c in caja if cerca(c, (0xe4, 0xda, 0xcc))),
-                sum(1 for c in caja if cerca(c, (0xe8, 0x74, 0x3b))))
-    hueso, brasa = tonos(f"og/canastas/{SLUG}.png")
-    assert hueso > 1000 and brasa == 0
-    hueso, brasa = tonos("og/productos/tomate.png")
-    assert brasa > 1000 and hueso == 0
+        cerca = lambda c, t: sum(abs(x - y) for x, y in zip(c, t)) <= 6  # noqa: E731
+        return (sum(1 for c in caja if cerca(c, (0x76, 0x76, 0x76))),
+                sum(1 for c in caja if cerca(c, (0x11, 0x11, 0x11))))
+    canasta, serie = tonos(f"og/canastas/{SLUG}.png")
+    assert canasta > 1000 and serie == 0
+    # en la del producto, el gris de las canastas solo aparece en el borde
+    # suavizado de la línea en tinta
+    canasta, serie = tonos("og/productos/tomate.png")
+    assert serie > 1000 and canasta < serie / 50
 
 
 def test_el_parrafo_de_compras(sitio):

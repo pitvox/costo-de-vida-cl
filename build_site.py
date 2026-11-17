@@ -15,16 +15,19 @@ Lee 'indices.json' (lo produce indices.py) y escribe dos páginas principales:
   spaghetti, Arma tu canasta), con una franja de contexto que acompaña a
   cada modo. #asado, #ensalada, #fruta y #desayuno abren ese índice.
 
-Identidad (tokens en CSS_BASE, iguales en todas las páginas): base neutra
-con texto hueso; la brasa #e8743b solo vive en la í del wordmark y en la
-línea de los índices oficiales; hueso es el color de las canastas de
-usuario. El verde/ámbar/rojo del semáforo queda reservado a los 4 índices
-(veredicto, zonas del percentil de sus tarjetas y velas); los productos van
-sin semáforo. El número de cada variación de precio va en color con criterio
-de consumidor (rojo si subió, verde si bajó), con la flecha al lado en gris.
-IBM Plex Sans para la interfaz y el texto, IBM Plex Mono para etiquetas
-cortas en mayúsculas y Space Grotesk para el wordmark, los títulos de
-sección de la portada y las cifras grandes.
+Identidad (tokens en CSS_BASE, iguales en todas las páginas): un boletín
+estadístico, tinta sobre blanco y sin color de marca. El único color del
+sitio es el dato. El verde/ámbar/rojo del semáforo queda reservado a los 4
+índices (el veredicto, una etiqueta rellena; las zonas del percentil de sus
+tarjetas y las velas); los productos van sin semáforo. El número de cada
+variación de precio va en color con criterio de consumidor (rojo si subió,
+verde si bajó), con la flecha al lado en gris. Las líneas de los índices y
+de los productos van en --serie (tinta) y las de las canastas de usuario,
+en --canasta (gris). Una sola familia, Archivo: el texto en 400 y 500, las
+etiquetas cortas en 600, las cifras grandes en 700 y el wordmark en 800.
+El modo oscuro va a pedido (el botón de la luna, JS_MENU): solo cambia la
+paleta, a la anterior (carbón, hueso y brasa), en el bloque
+:root[data-tema="oscuro"] de CSS_BASE.
 
 /graficos.html trae inline solo el primer pantallazo; las series completas
 van a datos/ y se piden a demanda (ver generar_datos). La portada no lleva
@@ -109,23 +112,23 @@ __CSS_CABECERA__
   /* ---- tabs de índice ---- */
   /* min-height = pill (34px) + padding: las tabs las construye JS y sin
      reserva la fila nacía vacía y empujaba todo al poblarse (CLS) */
-  .tabs { display:flex; gap:8px; padding:12px clamp(16px,3vw,32px);
+  .tabs { display:flex; gap:22px; padding:12px clamp(16px,3vw,32px);
     min-height:59px; border-bottom:1px solid var(--line);
     overflow-x:auto; overflow-y:hidden;
     scrollbar-width:none; -webkit-overflow-scrolling:touch; }
   .tabs::-webkit-scrollbar { display:none; }
-  /* afordancia: las pills inactivas se leen como botón (fondo panel, borde
-     de línea, texto hueso) y el hover/focus responde con borde hueso */
+  /* tabs como las de un boletín: texto sin caja y, en la activa, un
+     subrayado de 3px en tinta; el hover/focus marca el subrayado en gris */
   .tab { flex:none; font:600 13px var(--sans); letter-spacing:.01em;
-    padding:8px 16px; min-height:34px; cursor:pointer; white-space:nowrap;
-    background:var(--panel); border:1px solid var(--line); border-radius:999px;
-    color:var(--bone);
-    transition:background-color .15s ease, border-color .15s ease, color .15s ease; }
+    padding:8px 2px 5px; min-height:34px; cursor:pointer; white-space:nowrap;
+    background:none; border:0; border-bottom:3px solid transparent; border-radius:0;
+    color:var(--tinta2);
+    transition:border-color .15s ease, color .15s ease; }
   .tab:not(.active):hover, .tab:not(.active):focus-visible {
-    background:var(--hover); border-color:var(--bone); }
-  .tab.active { background:var(--bone); border-color:var(--bone); color:var(--bg); }
+    color:var(--tinta); border-bottom-color:var(--line); }
+  .tab.active { color:var(--tinta); border-bottom-color:var(--tinta); }
   /* punto de 6px: marca las tabs de herramienta (Comparar productos /
-     Arma tu canasta); toma el color del texto de la pill */
+     Arma tu canasta); toma el color del texto de la tab */
   .tab .tdot { display:inline-block; width:6px; height:6px; border-radius:50%;
     background:currentColor; margin-right:8px; vertical-align:middle; }
   /* separador fino entre los índices y las pills de herramientas */
@@ -135,14 +138,15 @@ __CSS_CABECERA__
      (índices arriba, herramientas abajo) y el separador se vuelve un filete
      horizontal que fuerza el salto de fila. flex-basis 0 en las pills: cada
      fila se reparte el ancho y NUNCA nace una tercera fila; en pantallas muy
-     angostas el texto elipsa en vez de reflowar. min-height =
-     12+34+8+1+8+34+12 más el borde inferior: la reserva exacta de las dos
-     filas antes de que JS las pueble (CLS). El punto brasa de las
-     herramientas queda intacto */
+     angostas el texto elipsa en vez de reflowar. Cada tab mide 44px (el
+     blanco de toque del celular): min-height = 12+44+8+1+8+44+12 más el
+     borde inferior, la reserva exacta de las dos filas antes de que JS las
+     pueble (CLS). El punto de las herramientas queda intacto */
   @media (max-width:640px) {
-    .tabs { flex-wrap:wrap; overflow-x:visible; min-height:110px; }
+    .tabs { flex-wrap:wrap; overflow-x:visible; min-height:130px; gap:8px; }
     .tab { flex:1 1 0; min-width:0; overflow:hidden; text-overflow:ellipsis;
-      text-align:center; padding:8px 6px; font-size:12px; letter-spacing:0; }
+      text-align:center; padding:8px 6px 5px; min-height:44px; font-size:12px;
+      letter-spacing:0; }
     .tab .tdot { margin-right:6px; }
     .tab-sep { flex-basis:100%; width:auto; height:1px; align-self:auto;
       margin:0; }
@@ -224,9 +228,9 @@ __CSS_CABECERA__
   body.tv-can .overlay.m-can > :empty { display:none; }
   .overlay { position:absolute; left:clamp(12px,2.5vw,32px); top:clamp(12px,2.5vw,26px);
     pointer-events:none; z-index:5; max-width:88%; }
-  .overlay .oname { font:500 clamp(10px,1.4vw,12px) var(--mono);
-    letter-spacing:.16em; color:var(--ash); text-transform:uppercase; }
-  .overlay .oname span { color:var(--dim); text-transform:none; }
+  .overlay .oname { font:600 clamp(10px,1.4vw,12px) var(--sans);
+    letter-spacing:.04em; color:var(--tinta2); text-transform:uppercase; }
+  .overlay .oname span { color:var(--tinta3); text-transform:none; }
   /* el nombre del índice es una etiqueta corta: mono y en mayúsculas, como
      en el ticker; el subtítulo y el rango de años van en texto normal */
   .overlay .oname #oname { text-transform:uppercase; }
@@ -236,26 +240,27 @@ __CSS_CABECERA__
   .orow { display:flex; align-items:baseline; gap:clamp(8px,1.5vw,16px);
     margin-top:4px; flex-wrap:wrap; }
   .oprice { font:700 clamp(34px,6vw,68px)/1 var(--display);
-    letter-spacing:-.01em; color:var(--bone); }
+    letter-spacing:-.01em; color:var(--tinta); }
   /* la variación semanal: el número en color (ver .v-sube y .v-baja) y el
-     resto en hueso */
-  .odelta { font:600 clamp(13px,1.6vw,18px) var(--sans); color:var(--bone); }
-  .odelta small { font:400 12px var(--sans); color:var(--bone); }
+     resto en tinta */
+  .odelta { font:600 clamp(13px,1.6vw,18px) var(--sans); color:var(--tinta); }
+  .odelta small { font:400 12px var(--sans); color:var(--tinta); }
   .overd { display:flex; align-items:center; gap:12px; margin-top:12px; flex-wrap:wrap; }
-  .badge { font:600 clamp(11px,1.4vw,13px) var(--mono); letter-spacing:.14em;
+  .badge { font:600 clamp(11px,1.4vw,13px) var(--sans); letter-spacing:.04em;
     padding:5px 12px; background:var(--verdict); color:var(--bg);
+    border-radius:2px;
     animation:car-pulse 2.4s ease-in-out infinite; }
   /* la frase del veredicto por temporada junto a la píldora y, debajo, el
      percentil de toda la historia como dato secundario */
-  .opct { font:400 clamp(12px,1.4vw,14px)/1.45 var(--sans); color:var(--bone);
+  .opct { font:400 clamp(12px,1.4vw,14px)/1.45 var(--sans); color:var(--tinta);
     text-wrap:pretty; }
-  .ovs { font:400 clamp(11px,1.3vw,13px)/1.45 var(--sans); color:var(--ash);
+  .ovs { font:400 clamp(11px,1.3vw,13px)/1.45 var(--sans); color:var(--tinta2);
     margin-top:8px; text-wrap:pretty; }
   /* la nota de la regla de las dos semanas, bajo el percentil */
   .ovs.onota { margin-top:2px; }
   .onota:empty { display:none; }
   body.tv-ind .overlay.m-ind .onota { flex-basis:100%; }
-  .onote { display:inline-block; font:500 12px var(--sans); color:var(--ash);
+  .onote { display:inline-block; font:500 12px var(--sans); color:var(--tinta2);
     border:1px solid var(--line); padding:4px 10px; background:var(--panel);
     margin-top:8px; }
   /* ---- barra de controles: fuera del lienzo, sobre el gráfico ---- */
@@ -280,42 +285,42 @@ __CSS_CABECERA__
      línea de la unidad elegida, que reemplaza a la leyenda de las series */
   .unidad { flex:none; }
   .vtoggle .ubtn { font:500 13px var(--sans); letter-spacing:0; }
-  .usel { display:none; font:500 13px var(--sans); color:var(--bone);
+  .usel { display:none; font:500 13px var(--sans); color:var(--tinta);
     background:var(--bg); border:1px solid var(--line); border-radius:0;
-    min-height:34px; padding:0 6px; color-scheme:dark; cursor:pointer; }
+    min-height:34px; padding:0 6px; cursor:pointer; }
   .unidad.compacta .ubtns { display:none; }
   .unidad.compacta .usel { display:block; }
   .midiendo { flex-wrap:nowrap !important; }
   .midiendo .cbar-right { justify-content:flex-start; }
   .urow { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between;
     gap:4px 24px; padding:0 clamp(16px,3vw,32px) 9px; border-bottom:1px solid var(--line); }
-  .utxt { flex:1 1 320px; font:400 11px/1.5 var(--sans); color:var(--ash); text-wrap:pretty; }
+  .utxt { flex:1 1 320px; font:400 11px/1.5 var(--sans); color:var(--tinta2); text-wrap:pretty; }
   /* la leyenda de la línea del índice: las dos unidades, la elegida a la
      vista y la otra atenuada; en escritorio junto a la línea de la
      unidad, en el celular en la franja bajo el lienzo */
-  .legend { display:none; gap:14px; font:400 11px/1.5 var(--sans); color:var(--ash);
+  .legend { display:none; gap:14px; font:400 11px/1.5 var(--sans); color:var(--tinta2);
     white-space:nowrap; }
   @media (min-width:900px) { .legend { display:flex; } }
   .legend .sw, .mstrip .sw { display:inline-block; width:16px; height:0; margin-right:6px;
-    vertical-align:middle; border-top:2px solid var(--ember); }
+    vertical-align:middle; border-top:2px solid var(--serie); }
   /* con la unidad a la vista, su línea va pegada a la barra */
   body:not([data-modo="canasta"]) .cbar { border-bottom:none; padding-bottom:6px; }
   .vtoggle { display:flex; border:1px solid var(--line); background:var(--bg); }
   /* LÍNEA / VELAS son etiquetas cortas en mayúsculas (mono); los botones
      de texto normal (captura PNG) van en la tipografía de la
      interfaz */
-  .vbtn { font:600 11px var(--mono); letter-spacing:.1em; padding:8px 14px;
-    border:none; cursor:pointer; background:transparent; color:var(--ash); min-height:34px;
+  .vbtn { font:600 11px var(--sans); letter-spacing:.04em; padding:8px 14px;
+    border:none; cursor:pointer; background:transparent; color:var(--tinta2); min-height:34px;
     white-space:nowrap; }
   .vbtn + .vbtn { border-left:1px solid var(--line); }
-  .vbtn.active { background:var(--bone); color:var(--bg); }
+  .vbtn.active { background:var(--tinta); color:var(--bg); }
   .nomtoggle { border:1px solid var(--line); background:var(--bg);
     font:500 13px var(--sans); letter-spacing:0; }
   /* celular: la unidad (en el desplegable si los botones no caben),
      LÍNEA / VELAS y la captura van en la fila con botones más justos */
   @media (max-width:640px) {
     .cbar, .cbar-right, .cbar-ctrl { gap:8px 6px; }
-    .cbar .vbtn { padding:8px 7px; letter-spacing:.06em; }
+    .cbar .vbtn { padding:8px 7px; letter-spacing:.04em; }
     .cbar .nomtoggle { font-size:12px; }
     .cbar .vtoggle .ubtn { letter-spacing:0; padding:8px 10px; }
     .usel { font-size:11px; padding:0 2px; }
@@ -327,9 +332,9 @@ __CSS_CABECERA__
      bajo 760px se omiten para no alargar la fila de controles en móvil, y la
      pista de zoom espera a 960px para que en tablets la fila siga siendo una */
   .ref { display:none; max-width:300px; text-wrap:balance;
-    font:400 11px/1.5 var(--sans); color:var(--dim); }
+    font:400 11px/1.5 var(--sans); color:var(--tinta3); }
   .zoomhint { display:none; max-width:280px; text-wrap:balance;
-    font:400 11px/1.5 var(--sans); color:var(--ash); }
+    font:400 11px/1.5 var(--sans); color:var(--tinta2); }
   @media (min-width:760px) { .ref { display:block; } }
   @media (min-width:960px) { .zoomhint { display:block; } }
   /* ---- franja móvil bajo el lienzo: leyenda compacta + pista táctil ---- */
@@ -344,16 +349,16 @@ __CSS_CABECERA__
     .mstrip { display:flex; flex-wrap:wrap; align-content:flex-start;
       align-items:center; gap:4px 14px; min-height:66px;
       padding:7px clamp(16px,3vw,32px);
-      font:400 11px/16px var(--sans); color:var(--ash); }
+      font:400 11px/16px var(--sans); color:var(--tinta2); }
     .mstrip .mleg { white-space:nowrap; }
-    .mstrip .mhint { flex-basis:100%; color:var(--dim); text-wrap:balance; }
+    .mstrip .mhint { flex-basis:100%; color:var(--tinta3); text-wrap:balance; }
   }
   .tooltip { position:absolute; display:none; z-index:7; pointer-events:none;
     background:var(--panel); border:1px solid var(--line); padding:8px 12px; white-space:nowrap; }
-  .tooltip .tt-d { font:500 11px var(--sans); color:var(--ash); }
-  .tooltip .tt-r { font:600 15px var(--sans); color:var(--bone); margin-top:2px; }
-  .tooltip .tt-r small { font:400 11px var(--sans); color:var(--ash); }
-  .tooltip .tt-n { font:400 12px var(--sans); color:var(--ash); }
+  .tooltip .tt-d { font:500 11px var(--sans); color:var(--tinta2); }
+  .tooltip .tt-r { font:600 15px var(--sans); color:var(--tinta); margin-top:2px; }
+  .tooltip .tt-r small { font:400 11px var(--sans); color:var(--tinta2); }
+  .tooltip .tt-n { font:400 12px var(--sans); color:var(--tinta2); }
 
   /* ---- franja de contexto ---- */
   /* min-height en las cajas que puebla JS (barras, chips, selector): la
@@ -364,31 +369,31 @@ __CSS_CABECERA__
   .ctx-box { padding:clamp(16px,3vw,24px) clamp(16px,3vw,32px); min-height:190px; }
   @media (min-width:900px) { .ctx-box + .ctx-box { border-left:1px solid var(--line); } }
   @media (max-width:899px) { .ctx-box + .ctx-box { border-top:1px solid var(--line); } }
-  .ctx-h { font:600 11px var(--mono); letter-spacing:.16em; color:var(--ash); }
-  .ctx-h span { font:400 12px var(--sans); color:var(--dim); letter-spacing:0; }
+  .ctx-h { font:600 11px var(--sans); letter-spacing:.04em; color:var(--tinta2); }
+  .ctx-h span { font:400 12px var(--sans); color:var(--tinta3); letter-spacing:0; }
   .bars { display:flex; align-items:flex-end; gap:6px; height:76px; margin-top:16px; }
   .bars .mcol { flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; }
-  .bars .bar { width:100%; min-height:3px; background:var(--ash); }
-  .bars .ml { font:400 10px var(--sans); color:var(--dim); }
-  .frase { font:400 14px/1.55 var(--sans); color:var(--bone); margin-top:16px;
+  .bars .bar { width:100%; min-height:3px; background:var(--tinta2); }
+  .bars .ml { font:400 10px var(--sans); color:var(--tinta3); }
+  .frase { font:400 14px/1.55 var(--sans); color:var(--tinta); margin-top:16px;
     text-wrap:pretty; }
-  .frase b { font-weight:600; color:var(--bone); }
+  .frase b { font-weight:600; color:var(--tinta); }
   .comp { display:flex; flex-wrap:wrap; gap:10px; margin-top:16px; }
   .comp .chip { display:flex; align-items:baseline; gap:10px; border:1px solid var(--line);
     padding:9px 14px; background:var(--panel); font:400 13px var(--sans);
-    color:var(--bone); }
+    color:var(--tinta); }
   .comp .chip b { font-weight:600; }
   /* la semana de los 4 índices en HTML estático (html_semana_indices): sin
      JS también se leen sus cifras */
   .ctx-semana { border-top:1px solid var(--line);
     padding:clamp(16px,3vw,24px) clamp(16px,3vw,32px); }
-  .sem-intro { font:400 13px/1.55 var(--sans); color:var(--ash); margin-top:12px;
+  .sem-intro { font:400 13px/1.55 var(--sans); color:var(--tinta2); margin-top:12px;
     text-wrap:pretty; }
-  .sem-ind { font:400 14px/1.55 var(--sans); color:var(--bone); margin-top:8px;
+  .sem-ind { font:400 14px/1.55 var(--sans); color:var(--tinta); margin-top:8px;
     text-wrap:pretty; }
-  .sem-ind a { color:var(--bone); font-weight:600; text-underline-offset:3px;
-    text-decoration-color:var(--dim); }
-  .sem-ind a:hover, .sem-ind a:focus-visible { text-decoration-color:var(--bone); }
+  .sem-ind a { color:var(--tinta); font-weight:600; text-underline-offset:3px;
+    text-decoration-color:var(--tinta3); }
+  .sem-ind a:hover, .sem-ind a:focus-visible { text-decoration-color:var(--tinta); }
 
   /* ---- franja de contexto: productos y canasta ---- */
   .ctx-solo { border-top:1px solid var(--line); min-height:190px;
@@ -397,57 +402,57 @@ __CSS_CABECERA__
 __CSS_COMPARAR__
   .pgroup { border-top:1px solid var(--line); }
   .pg-head { display:flex; align-items:center; gap:8px; width:100%; text-align:left;
-    font:600 11px var(--mono); letter-spacing:.14em; color:var(--ash);
+    font:600 11px var(--sans); letter-spacing:.04em; color:var(--tinta2);
     text-transform:uppercase; background:none; border:none; padding:11px 2px;
     min-height:38px; cursor:pointer; }
-  .pg-head:hover { color:var(--bone); }
-  .pg-n { color:var(--dim); letter-spacing:.04em; }
-  .pg-chev { color:var(--dim); transition:transform .15s ease; }
+  .pg-head:hover { color:var(--tinta); }
+  .pg-n { color:var(--tinta3); letter-spacing:.04em; }
+  .pg-chev { color:var(--tinta3); transition:transform .15s ease; }
   .pgroup.abierto .pg-chev { transform:rotate(90deg); }
   .pg-body { padding:2px 0 14px; }
   /* colapso con más especificidad que el display:flex de .pchips (el cuerpo
      lleva ambas clases); buscando: los grupos con resultados se abren solos
      y al borrar la búsqueda vuelve el colapso que dejó el usuario */
   .pgroup:not(.abierto):not(.buscando) .pg-body { display:none; }
-  .can-reg { font:400 12px/1.6 var(--sans); color:var(--ash); margin-top:10px; }
-  /* acción principal de la vista: pill como los tabs, en hueso para que
+  .can-reg { font:400 12px/1.6 var(--sans); color:var(--tinta2); margin-top:10px; }
+  /* acción principal de la vista: pill como los tabs, en tinta para que
      se lea como botón protagonista */
   .ccopy { font:600 13px var(--sans); padding:8px 16px;
-    min-height:34px; cursor:pointer; background:transparent; border:1px solid var(--bone);
-    border-radius:999px; color:var(--bone); white-space:nowrap; }
+    min-height:34px; cursor:pointer; background:transparent; border:1px solid var(--tinta);
+    border-radius:2px; color:var(--tinta); white-space:nowrap; }
   .ccopy:hover { background:var(--hover); }
-  .ccopy.copiado { background:var(--bone); border-color:var(--bone); color:var(--bg); }
+  .ccopy.copiado { background:var(--tinta); border-color:var(--tinta); color:var(--bg); }
   .can-acciones { display:flex; gap:8px; flex-wrap:wrap; margin-top:16px; }
   .citems { display:flex; flex-wrap:wrap; gap:10px; margin-top:16px; }
   .citem { display:flex; flex-direction:column; gap:6px; border:1px solid var(--line);
     background:var(--panel); padding:10px 14px; max-width:100%; }
   .ci-top { display:flex; align-items:center; justify-content:space-between;
     gap:8px 14px; flex-wrap:wrap; }
-  .ci-label { font:500 14px var(--sans); color:var(--bone); }
+  .ci-label { font:500 14px var(--sans); color:var(--tinta); }
   .ci-step { display:flex; align-items:stretch; border:1px solid var(--line); background:var(--bg); }
   .ci-btn { font:600 16px var(--sans); width:38px; min-height:34px; cursor:pointer;
-    background:transparent; border:none; color:var(--bone); }
+    background:transparent; border:none; color:var(--tinta); }
   .ci-btn:hover { background:var(--hover); }
   .ci-q { font:500 13px var(--sans);
-    color:var(--bone); min-width:66px; display:flex; align-items:center;
+    color:var(--tinta); min-width:66px; display:flex; align-items:center;
     justify-content:center; padding:0 6px; border-left:1px solid var(--line);
     border-right:1px solid var(--line); }
-  .ci-eq { font:400 12px var(--sans); color:var(--ash); }
-  .cstats { font:400 13px/1.5 var(--sans); color:var(--ash); margin-top:8px;
+  .ci-eq { font:400 12px var(--sans); color:var(--tinta2); }
+  .cstats { font:400 13px/1.5 var(--sans); color:var(--tinta2); margin-top:8px;
     text-wrap:pretty; }
   .ctemporada { margin-top:2px; }
-  .caviso { font:400 12px/1.5 var(--sans); color:var(--ash); margin-top:4px; }
+  .caviso { font:400 12px/1.5 var(--sans); color:var(--tinta2); margin-top:4px; }
 
   /* ---- footer: el pie común del sitio (CSS_SITIO, más abajo) ---- */
 
   .nochart { display:flex; align-items:center; justify-content:center; height:100%;
-    color:var(--ash); font-size:13px; padding:20px; text-align:center; }
+    color:var(--tinta2); font-size:13px; padding:20px; text-align:center; }
   /* estado de carga del lienzo: centrado, sin tapar el overlay; el botón
      de reintentar aparece solo si el pedido falló */
   .carga { position:absolute; inset:0; z-index:6; display:flex;
     flex-direction:column; align-items:center; justify-content:center; gap:10px;
     padding:20px; text-align:center; pointer-events:none;
-    font:400 12px/1.5 var(--sans); color:var(--ash); }
+    font:400 12px/1.5 var(--sans); color:var(--tinta2); }
   .carga[hidden] { display:none; }
   /* mientras se prepara la captura PNG, un velo tapa el gráfico */
   .carga.velo { background:var(--bg); pointer-events:auto; }
@@ -476,20 +481,20 @@ __CSS_PANTALLA__
   }
   .pc-lienzo { display:none; position:absolute; top:8px; right:8px; z-index:7;
     width:36px; height:36px; padding:0; align-items:center;
-    justify-content:center; cursor:pointer; color:var(--bone);
-    background:var(--panel); border:1px solid var(--line); border-radius:999px; }
-  .pc-lienzo:hover, .pc-lienzo:focus-visible { border-color:var(--bone); }
+    justify-content:center; cursor:pointer; color:var(--tinta);
+    background:var(--panel); border:1px solid var(--line); border-radius:2px; }
+  .pc-lienzo:hover, .pc-lienzo:focus-visible { border-color:var(--tinta); }
   @media (max-width:759px) {
     .cbar .pc-abrir { display:none; }
     .pc-lienzo { display:flex; }
     .hero-wrap.pc .pc-lienzo { display:none; }
     body.tv-ind .overlay.m-ind, body.tv-prod .overlay.m-prod,
-    body.tv-can .overlay.m-can { padding-right:52px; }
+    body.tv-can .overlay.m-can { padding-right:60px; }
   }
 __CSS_SITIO__
 </style>
 </head>
-<body data-modo="indices">
+<body data-modo="indices" data-graficos>
 
   <div class="ticker">
     <div class="tag">ÍNDICES</div>
@@ -719,21 +724,23 @@ __JS_PANTALLA__
   const GRUPO_TXT = __GRUPOS__;
   const grupoTxt = g => GRUPO_TXT[g] || g;
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // el tono del semáforo de cada veredicto (tokens --verde, --ambar y --rojo)
+  const TONO_VEREDICTO = __TONO_VEREDICTO__;
 
   // los colores de los gráficos y de la captura salen de los tokens de :root
   const VARS = getComputedStyle(document.documentElement);
   const tok = n => VARS.getPropertyValue('--' + n).trim();
   const COL = {};
-  ['bg', 'bone', 'ash', 'dim', 'line', 'grid', 'ember', 'cruz', 'verde', 'rojo', 'sans']
+  ['bg', 'tinta', 'tinta2', 'tinta3', 'line', 'grid', 'serie', 'canasta', 'cruz', 'verde', 'rojo', 'sans']
     .forEach(n => { COL[n] = tok(n); });
   // opciones comunes de los tres lienzos: la rueda acerca y mueve el
   // gráfico, como en Advanced Charts; el deslizamiento vertical en táctil
-  // queda para la página y dos dedos acercan. El crosshair va en hueso tenue
+  // queda para la página y dos dedos acercan. El crosshair va en tinta tenue
   function opcionesChart(extra) {
     extra = extra || {};
     return Object.assign({
       autoSize: true,
-      layout: { background: { type: 'solid', color: 'transparent' }, textColor: COL.ash,
+      layout: { background: { type: 'solid', color: 'transparent' }, textColor: COL.tinta2,
         fontFamily: COL.sans },
       grid: { vertLines: { color: COL.grid }, horzLines: { color: COL.grid } },
       rightPriceScale: { borderColor: COL.line },
@@ -801,7 +808,7 @@ __JS_PANTALLA__
       css: location.origin + TV_CSS,
       simbolo: m === 'indices' ? simboloIndice(cur) : m === 'canasta' ? tickerCanasta() :
         PRODS[primero].slug + SUF[unidad],
-      // Comparar pone sus propios colores; Tu canasta, una línea en hueso
+      // Comparar pone sus propios colores; Tu canasta, una línea en --canasta
       estilo: m !== 'productos' })
       .then(w => {
         e.w = w;
@@ -1005,8 +1012,8 @@ __JS_PANTALLA__
     }
     chart = LightweightCharts.createChart(el, opcionesChart({ localization: {
       priceFormatter: fmt } }));
-    // la línea de los índices oficiales: el único lugar de la brasa en los gráficos
-    sLinea = chart.addLineSeries({ color: COL.ember, lineWidth: 2, priceLineVisible: false });
+    // la línea de los índices oficiales, en --serie
+    sLinea = chart.addLineSeries({ color: COL.serie, lineWidth: 2, priceLineVisible: false });
     // C2: convención estándar de trading, verde sube y rojo baja
     sCandle = chart.addCandlestickSeries({
       upColor: COL.verde, downColor: COL.rojo, borderVisible: false,
@@ -1137,11 +1144,11 @@ __JS_PANTALLA__
       const col = document.createElement('div'); col.className = 'mcol';
       const bar = document.createElement('div'); bar.className = 'bar';
       bar.style.height = (6 + Math.abs(dev) / maxDev * 50) + 'px';
-      bar.style.background = dev >= 0 ? COL.bone : COL.dim;
+      bar.style.background = dev >= 0 ? COL.tinta : COL.tinta3;
       bar.title = MESES[m] + ': ' + (dev >= 0 ? '+' : '') + Math.round(dev * 100) + '%';
       const lab = document.createElement('div'); lab.className = 'ml';
       lab.textContent = MESES[m];
-      if (m === e.mes_caro || m === e.mes_barato) lab.style.color = COL.bone;
+      if (m === e.mes_caro || m === e.mes_barato) lab.style.color = COL.tinta;
       col.appendChild(bar); col.appendChild(lab); cont.appendChild(col);
     }
   }
@@ -1157,7 +1164,8 @@ __JS_PANTALLA__
   let fechaSemana = '';
   function aplicar(code) {
     const d = INDICES[code];
-    document.documentElement.style.setProperty('--verdict', d.color);
+    // el color sale del nombre del veredicto (tokens), no del campo color
+    document.documentElement.style.setProperty('--verdict', 'var(--' + (TONO_VEREDICTO[d.veredicto] || 'ambar') + ')');
     fechaSemana = d.fecha;
     document.getElementById('oname').textContent = d.nombre.replace(/^Índice /i, '');
     document.getElementById('osub').textContent = d.subtitulo;
@@ -1170,7 +1178,7 @@ __JS_PANTALLA__
     document.getElementById('odelta4').innerHTML = fmtDelta(d4);
     document.getElementById('odelta4-caja').hidden = d4 == null;
     document.getElementById('obadge').textContent = d.veredicto;
-    document.getElementById('obadge').style.background = d.color;
+    document.getElementById('obadge').className = 'badge ver-' + (TONO_VEREDICTO[d.veredicto] || 'ambar');
     // la frase del veredicto por temporada y el percentil de toda la
     // historia como dato secundario: los arma el build
     document.getElementById('opct').textContent = d.frase;
@@ -1509,12 +1517,12 @@ __JS_PANTALLA__
       return;
     }
     // mismos gestos del hero (rueda y swipe vertical scrollean la página,
-    // zoom en ejes y pinch) pero la línea va en HUESO: la brasa queda para
-    // los índices oficiales; las canastas de usuario se dibujan en hueso
+    // zoom en ejes y pinch) pero la línea va en --canasta: --serie queda
+    // para los índices oficiales y los productos
     cchart = LightweightCharts.createChart(el,
       opcionesChart({ localization: { priceFormatter: fmt } }));
     // el label de precio del eje toma el color de la serie: acompaña
-    cserie = cchart.addLineSeries({ color: COL.bone, lineWidth: 2, priceLineVisible: false });
+    cserie = cchart.addLineSeries({ color: COL.canasta, lineWidth: 2, priceLineVisible: false });
   }
 
   function renderCItems() {
@@ -1657,9 +1665,9 @@ __JS_PANTALLA__
       const paint = () => {
         const on = canasta.has(k);
         b.classList.toggle('active', on);
-        // la canasta de usuario va en hueso, como su línea
-        dot.style.background = on ? 'var(--bone)' : 'var(--dim)';
-        b.style.borderColor = on ? 'var(--bone)' : 'var(--line)';
+        // la canasta de usuario va en --canasta, como su línea
+        dot.style.background = on ? 'var(--canasta)' : 'var(--tinta3)';
+        b.style.borderColor = on ? 'var(--canasta)' : 'var(--line)';
         b.style.opacity = (!on && canasta.size >= CMAX) ? '.4' : '';
       };
       cpaints.push(paint);
@@ -1817,7 +1825,24 @@ __JS_PANTALLA__
     setModo(m);
   });
 
+  // lo que la persona estaba mirando, para la recarga del cambio de tema
+  // (JS_MENU): el índice, el modo, línea o velas, la unidad y lo comparado
+  window.CarestiaEstado = () => ({ cur, modo, vista, unidad, prods: cmp.claves() });
+  function estadoPrevio() {
+    try {
+      const x = JSON.parse(sessionStorage.getItem('carestia-estado') || 'null');
+      sessionStorage.removeItem('carestia-estado');
+      return x && x.ruta === location.pathname ? x.estado : null;
+    } catch (e) { return null; }
+  }
+
   window.addEventListener('load', () => {
+    const previo = estadoPrevio();
+    if (previo && Array.isArray(previo.prods)) {
+      cmp.claves().forEach(k => cmp.soltar(k));
+      previo.prods.filter(k => PRODS[k]).forEach(k => cmp.elegir(k));
+    }
+    if (previo && (previo.vista === 'linea' || previo.vista === 'velas')) vista = previo.vista;
     prepararTV();
     selector.limitar(unidadesHay());
     pintarLeyenda();
@@ -1825,13 +1850,15 @@ __JS_PANTALLA__
     buildTabs();
     // sin carestia-tv.js, Lightweight desde el principio, como antes
     if (usaLW('indices')) initChart();
-    render(indiceDelHash() || CODES[0], true);
+    render(indiceDelHash() || (previo && INDICES[previo.cur] ? previo.cur : CODES[0]), true);
     aplicarVista();   // botones y referencia de velas antes de que llegue el gráfico
     if (usaLW('productos')) initPChart();
     buildProductos();
     syncProductos();
     buildCanasta();
     activarDeepLink();
+    if (previo && !modoDelHash() && tv[previo.modo]) setModo(previo.modo);
+    if (previo && previo.unidad && previo.unidad !== unidad) ponerUnidad(previo.unidad);
   });
 </script>
 </body>
@@ -1888,13 +1915,13 @@ __CSS_CABECERA__
   .sec-head { display:flex; align-items:flex-end; justify-content:space-between;
     flex-wrap:wrap; gap:12px 24px; }
   .sec-tit { display:flex; flex-direction:column; gap:6px; }
-  .sec-tit p { font:400 14px/1.5 var(--sans); color:var(--ash); max-width:72ch;
+  .sec-tit p { font:400 14px/1.5 var(--sans); color:var(--tinta2); max-width:72ch;
     text-wrap:pretty; }
-  .sec-link { font:400 14px var(--sans); color:var(--ash);
-    text-decoration:underline; text-decoration-color:var(--dim);
+  .sec-link { font:400 14px var(--sans); color:var(--tinta2);
+    text-decoration:underline; text-decoration-color:var(--tinta3);
     text-underline-offset:3px; }
-  .sec-link:hover, .sec-link:focus-visible { color:var(--bone);
-    text-decoration-color:var(--bone); }
+  .sec-link:hover, .sec-link:focus-visible { color:var(--tinta);
+    text-decoration-color:var(--tinta); }
   /* la cinta queda quieta para quien pidió menos movimiento, como en
      /graficos.html */
   @media (prefers-reduced-motion: reduce) {
@@ -1902,19 +1929,20 @@ __CSS_CABECERA__
   }
 
   /* ---- Índices Carestía: el semáforo vive solo aquí ---- */
-  .icards { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; }
-  .icard { display:flex; flex-direction:column; gap:14px; padding:20px;
-    background:var(--panel); border:1px solid var(--line); border-radius:14px;
-    color:var(--bone); text-decoration:none;
-    transition:border-color .15s ease, background-color .15s ease; }
-  .icard:hover, .icard:focus-visible { border-color:var(--bone); background:var(--hover); }
+  /* cada índice, sin caja: una regla de 2px en tinta arriba */
+  .icards { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px 24px; }
+  .icard { display:flex; flex-direction:column; gap:14px; padding:14px 0 4px;
+    border-top:2px solid var(--tinta); border-radius:0;
+    color:var(--tinta); text-decoration:none;
+    transition:background-color .15s ease; }
+  .icard:hover, .icard:focus-visible { background:var(--panel); }
   .ic-top { display:flex; flex-wrap:wrap; justify-content:space-between;
     align-items:center; gap:6px 8px; }
-  .ic-ey { font:500 11px var(--mono); letter-spacing:.14em; color:var(--ash); }
-  .ic-pill { font:500 11px var(--mono); letter-spacing:.08em; padding:3px 9px;
-    border-radius:999px; color:var(--bg); }
+  .ic-ey { font:600 11px var(--sans); letter-spacing:.04em; color:var(--tinta2); }
+  .ic-pill { font:600 11px var(--sans); letter-spacing:.04em; padding:3px 9px;
+    border-radius:2px; }
   .ic-mid { display:flex; flex-direction:column; gap:4px; }
-  .ic-sub { font:400 13px var(--sans); color:var(--ash); }
+  .ic-sub { font:400 13px var(--sans); color:var(--tinta2); }
   /* el precio de esta semana, sin etiqueta: en su semana, ajustado y de la
      época son el mismo */
   .ic-precio { font:700 38px/1.05 var(--display); letter-spacing:-.02em; }
@@ -1922,7 +1950,7 @@ __CSS_CABECERA__
      las barras de las 4 tarjetas quedan a la misma altura */
   .ic-niv { flex:1 1 auto; display:flex; flex-direction:column; gap:9px; }
   /* la frase del veredicto: el mismo mes de los últimos 10 años */
-  .ic-fr { flex:1 1 auto; font:400 13px/1.45 var(--sans); color:var(--bone);
+  .ic-fr { flex:1 1 auto; font:400 13px/1.45 var(--sans); color:var(--tinta);
     text-wrap:pretty; }
   /* las tres zonas del veredicto (más caro que en 3 o menos de cada 10 años,
      entre medio y en 7 o más) y la marca en la cuenta de esta semana. Los
@@ -1933,17 +1961,17 @@ __CSS_CABECERA__
   .zonas { position:relative; height:8px; display:flex; gap:2px; }
   .zonas .z { flex:32 1 0; }
   .zonas .z1 { background:color-mix(in srgb, var(--verde) 28%, transparent);
-    border-radius:4px 0 0 4px; }
+    border-radius:2px 0 0 2px; }
   .zonas .z2 { flex-grow:36;
     background:color-mix(in srgb, var(--ambar) 28%, transparent); }
-  .zonas .z3 { border-radius:0 4px 4px 0;
+  .zonas .z3 { border-radius:0 2px 2px 0;
     background:color-mix(in srgb, var(--rojo) 28%, transparent); }
   .zonas.historia .z { flex-grow:33; }
   .zonas.historia .z3 { flex-grow:34; }
   .zonas .marca { position:absolute; top:-4px; width:3px; height:16px;
-    margin-left:-1px; background:var(--bone); border-radius:2px; }
+    margin-left:-1px; background:var(--tinta); border-radius:2px; }
   .ic-pie { display:flex; flex-direction:column; gap:4px 8px;
-    font:400 12px/1.5 var(--sans); color:var(--bone);
+    font:400 12px/1.5 var(--sans); color:var(--tinta);
     border-top:1px solid var(--line); padding-top:12px; }
   /* las 4 tarjetas miden lo mismo y el pie va igual en todas, sin depender
      del largo de cada cifra: en columna y, si la tarjeta tiene espacio para
@@ -1955,94 +1983,94 @@ __CSS_CABECERA__
   .ic-m { display:none; }
   /* la nota de la regla de las dos semanas, como texto secundario; en las
      tarjetas sin nota, el mismo alto vacío */
-  .ic-nota { font:400 12px/1.45 var(--sans); color:var(--ash); text-wrap:pretty; }
+  .ic-nota { font:400 12px/1.45 var(--sans); color:var(--tinta2); text-wrap:pretty; }
   .ic-nota.sin::after { content:attr(data-alto); visibility:hidden; }
 
   /* ---- Esta semana ---- */
   .sem-tabs { display:none; }
-  .sem-listas { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
-  .sem-l { background:var(--panel); border:1px solid var(--line);
-    border-radius:14px; overflow:hidden; }
-  .sem-h { display:flex; flex-direction:column; gap:3px; padding:16px 18px 12px; }
+  .sem-listas { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px 24px; }
+  /* cada lista, sin caja: una regla de 2px en tinta arriba y reglas de 1px
+     entre filas */
+  .sem-l { border-top:2px solid var(--tinta); }
+  .sem-h { display:flex; flex-direction:column; gap:3px; padding:12px 0 10px; }
   .sem-h h3 { font:600 15px var(--sans); }
-  .sem-h span { font:400 12px var(--sans); color:var(--dim); }
+  .sem-h span { font:400 12px var(--sans); color:var(--tinta3); }
   .sem-l ul { list-style:none; }
   .sem-l a { display:flex; justify-content:space-between; align-items:center;
-    gap:12px; min-height:44px; padding:8px 18px; border-top:1px solid var(--hover);
-    color:var(--bone); text-decoration:none; }
+    gap:12px; min-height:44px; padding:8px 0; border-top:1px solid var(--line);
+    color:var(--tinta); text-decoration:none; }
   .sem-l a:hover, .sem-l a:focus-visible { background:var(--hover); }
-  .sem-l .vacio { padding:12px 18px; border-top:1px solid var(--hover);
-    font:400 13px var(--sans); color:var(--ash); }
+  .sem-l .vacio { padding:12px 0; border-top:1px solid var(--line);
+    font:400 13px var(--sans); color:var(--tinta2); }
   .sn { display:flex; flex-wrap:wrap; align-items:baseline; gap:0 8px; min-width:0; }
   .sn b { font:500 14px var(--sans); }
-  .sn small { font:400 12px var(--sans); color:var(--dim); }
+  .sn small { font:400 12px var(--sans); color:var(--tinta3); }
   .sv { display:flex; align-items:baseline; gap:6px; font:400 14px var(--sans);
     white-space:nowrap; }
   .sv .f { font-size:11px; }
 
   /* ---- Productos ---- */
   .orden { display:flex; align-items:center; gap:10px; font:400 13px var(--sans);
-    color:var(--ash); }
+    color:var(--tinta2); }
   .orden select { height:36px; padding:0 10px; background:var(--panel);
-    color:var(--bone); border:1px solid var(--line); border-radius:9px;
+    color:var(--tinta); border:1px solid var(--line); border-radius:2px;
     font:400 13px var(--sans); }
   .chips { display:flex; flex-wrap:wrap; gap:8px; }
-  .chips button { min-height:36px; padding:0 14px; border-radius:999px;
+  .chips button { min-height:36px; padding:0 14px; border-radius:2px;
     cursor:pointer; font:500 13px var(--sans); background:transparent;
-    color:var(--ash); border:1px solid var(--line); }
-  .chips button:hover, .chips button:focus-visible { color:var(--bone);
-    border-color:var(--bone); }
-  .chips button[aria-pressed="true"] { background:var(--bone); color:var(--bg);
-    border-color:var(--bone); }
+    color:var(--tinta2); border:1px solid var(--line); }
+  .chips button:hover, .chips button:focus-visible { color:var(--tinta);
+    border-color:var(--tinta); }
+  .chips button[aria-pressed="true"] { background:var(--tinta); color:var(--bg);
+    border-color:var(--tinta); }
   /* sin JS no hay orden ni filtro: las filas igual quedan en el HTML */
   html:not(.js) .orden, html:not(.js) .chips { display:none; }
-  .tabla { background:var(--panel); border:1px solid var(--line);
-    border-radius:14px; overflow:hidden; }
-  .thead, .fila { display:grid; align-items:center; gap:12px; padding:0 16px;
+  /* la tabla, sin caja: regla de 2px en tinta arriba y de 1px entre filas */
+  .tabla { border-top:2px solid var(--tinta); }
+  .thead, .fila { display:grid; align-items:center; gap:12px; padding:0;
     grid-template-columns:minmax(0,2.4fr) minmax(0,1.1fr) minmax(0,.9fr)
       minmax(0,.9fr) minmax(0,.9fr) minmax(0,.9fr) minmax(0,1.7fr) 124px 24px; }
   .thead { border-bottom:1px solid var(--line); }
   .thead > * { display:flex; justify-content:flex-end; align-items:center; gap:4px;
     min-height:40px; padding:0; background:none; border:0; text-align:right;
-    font:500 12px var(--sans); color:var(--dim); }
+    font:500 12px var(--sans); color:var(--tinta3); }
   .thead > :first-child { justify-content:flex-start; text-align:left; }
   .thead button { cursor:pointer; }
   /* las cabeceras de cifras no se parten, ni con la flecha del orden */
   .thead button:not([data-k="c"]) { white-space:nowrap; }
   .thead button:hover, .thead button:focus-visible,
-  .thead button[aria-pressed="true"] { color:var(--bone); }
+  .thead button[aria-pressed="true"] { color:var(--tinta); }
   .fila { min-height:60px; padding-top:8px; padding-bottom:8px;
-    border-bottom:1px solid var(--hover); color:var(--bone); text-decoration:none; }
-  .fila:last-child { border-bottom:0; }
+    border-bottom:1px solid var(--line); color:var(--tinta); text-decoration:none; }
   .fila[hidden] { display:none; }
   .fila:hover, .fila:focus-visible { background:var(--hover); }
   /* la flecha de la fila: abre la ficha */
   .fila::after { content:""; justify-self:end; width:7px; height:7px;
-    margin-right:5px; border-top:2px solid var(--dim); border-right:2px solid var(--dim);
+    margin-right:5px; border-top:2px solid var(--tinta3); border-right:2px solid var(--tinta3);
     transform:rotate(45deg); }
   .c-n { display:flex; flex-direction:column; gap:2px; min-width:0; }
   .nm { font:500 15px/1.3 var(--sans); }
-  .mt { font:400 12px/1.4 var(--sans); color:var(--dim); }
+  .mt { font:400 12px/1.4 var(--sans); color:var(--tinta3); }
   .mp { display:none; }
   .c-p { text-align:right; font:500 15px var(--sans); }
-  .c-p small { display:block; font:400 11px var(--sans); color:var(--dim); }
+  .c-p small { display:block; font:400 11px var(--sans); color:var(--tinta3); }
   .c-v { text-align:right; font:400 14px var(--sans); white-space:nowrap; }
   .c-v .f { font-size:10px; }
   /* percentil en su historia: barra neutra, sin semáforo */
   .c-c { display:flex; align-items:center; justify-content:flex-end; gap:10px; }
   .bar { position:relative; flex:none; width:96px; height:4px;
     background:var(--line); border-radius:2px; }
-  .bar span { position:absolute; left:0; top:0; bottom:0; background:var(--ash);
+  .bar span { position:absolute; left:0; top:0; bottom:0; background:var(--tinta2);
     border-radius:2px; }
   .cn { width:28px; text-align:right; font:400 13px var(--sans); }
   .sp { justify-self:end; width:112px; height:28px; overflow:visible; }
-  .sp path { fill:none; stroke:var(--bone); stroke-width:1.5; stroke-linejoin:round;
+  .sp path { fill:none; stroke:var(--tinta); stroke-width:1.5; stroke-linejoin:round;
     stroke-linecap:round; vector-effect:non-scaling-stroke; }
   .ver-todos { align-self:center; display:flex; align-items:center;
     justify-content:center; min-height:44px; padding:0 20px;
-    border:1px solid var(--line); border-radius:10px;
-    font:500 14px var(--sans); color:var(--bone); text-decoration:none; }
-  .ver-todos:hover, .ver-todos:focus-visible { border-color:var(--bone);
+    border:1px solid var(--line); border-radius:2px;
+    font:500 14px var(--sans); color:var(--tinta); text-decoration:none; }
+  .ver-todos:hover, .ver-todos:focus-visible { border-color:var(--tinta);
     background:var(--hover); }
 
   /* ---- escritorio angosto: 2 índices por fila, la tabla sin "3 meses" ---- */
@@ -2063,23 +2091,23 @@ __CSS_CABECERA__
   @media (max-width:760px) {
     /* Esta semana: una tarjeta con tres pestañas (sin JS, las tres listas
        una bajo otra) */
-    .sem { background:var(--panel); border:1px solid var(--line);
-      border-radius:12px; overflow:hidden; }
+    .sem { border-top:2px solid var(--tinta); }
     .sem-listas { display:block; }
-    .sem-l { background:none; border:0; border-radius:0; }
-    .sem-l + .sem-l { border-top:1px solid var(--line); }
-    .js .sem-tabs { display:flex; gap:4px; padding:6px;
-      border-bottom:1px solid var(--hover); }
-    .sem-tabs button { flex:1 1 0; min-width:0; min-height:40px; border:0;
-      border-radius:8px; cursor:pointer; font:500 14px var(--sans);
-      background:transparent; color:var(--ash); }
-    .sem-tabs button[aria-pressed="true"] { background:var(--line); color:var(--bone); }
+    .sem-l { border-top:0; }
+    .sem-l + .sem-l { border-top:2px solid var(--tinta); }
+    .js .sem-tabs { display:flex; gap:4px; padding:0;
+      border-bottom:1px solid var(--line); }
+    .sem-tabs button { flex:1 1 0; min-width:0; min-height:44px; border:0;
+      border-bottom:3px solid transparent; border-radius:0; cursor:pointer;
+      font:500 14px var(--sans); background:transparent; color:var(--tinta2); }
+    .sem-tabs button[aria-pressed="true"] { border-bottom-color:var(--tinta);
+      color:var(--tinta); font-weight:600; }
     .js .sem-l:not(.on) { display:none; }
     .js .sem-l + .sem-l { border-top:0; }
     .js .sem-h { position:absolute; width:1px; height:1px; padding:0;
       overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
-    .sem-l a { min-height:48px; padding:8px 14px; border-top:0;
-      border-bottom:1px solid var(--hover); }
+    .sem-l a { min-height:48px; padding:8px 0; border-top:0;
+      border-bottom:1px solid var(--line); }
     .sem-l a .sn b, .sem-l a .sv { font-size:15px; }
 
     /* Productos: lista con nombre, unidad y percentil, sparkline, precio y
@@ -2106,10 +2134,10 @@ __CSS_CABECERA__
     /* en el celular no hay cabecera: el cambio de 4 semanas lleva su
        etiqueta (aquí y no en cada fila, por el peso de la página); sin dato
        no va */
-    .c-m::after { content:" 4 semanas"; font:400 11px var(--sans); color:var(--bone); }
+    .c-m::after { content:" 4 semanas"; font:400 11px var(--sans); color:var(--tinta); }
     .fila:not([data-m]) .c-m { display:none; }
     /* y la semanal, la suya, para no confundirlas */
-    .c-w::after { content:" sem."; font:400 11px var(--sans); color:var(--bone); }
+    .c-w::after { content:" sem."; font:400 11px var(--sans); color:var(--tinta); }
     .fila:not([data-w]) .c-w::after { content:none; }
     .c-t, .c-y, .c-c, .mg { display:none; }
     .mp { display:inline; }
@@ -2123,15 +2151,15 @@ __CSS_CABECERA__
     .ind-head .sec-tit p, .ind-head .sec-link { display:none; }
     /* Índices: 2 por fila, tarjeta compacta */
     .icards { gap:10px; }
-    .icard { gap:8px; padding:14px; border-radius:12px; }
+    .icard { gap:8px; padding:12px 0 4px; }
     .ic-ind, .ic-sub, .ic-pie { display:none; }
     .ic-fr { font-size:12px; }
-    .ic-ey { font-size:10px; letter-spacing:.12em; }
-    .ic-pill { font-size:10px; letter-spacing:.06em; padding:2px 7px; }
+    .ic-ey { font-size:10px; letter-spacing:.04em; }
+    .ic-pill { font-size:10px; letter-spacing:.04em; padding:2px 7px; }
     .ic-precio { font-size:24px; line-height:1.1; }
     .zonas { height:6px; }
     .zonas .marca { top:-3px; height:12px; }
-    .ic-m { display:block; font:400 11px/1.4 var(--sans); color:var(--bone); }
+    .ic-m { display:block; font:400 11px/1.4 var(--sans); color:var(--tinta); }
     .ic-nota { font-size:11px; line-height:1.4; }
   }
 __CSS_SITIO__
@@ -2368,27 +2396,35 @@ PIE_ATTR = ('Fuente: precios al consumidor de ODEPA (<a href="https://datos.odep
             'datos.odepa.gob.cl</a>, licencia CC-BY), deflactados con el IPC.')
 
 # ---------------- Identidad común: fuentes, tokens y base ----------------
-# Una sola llamada a Google Fonts, igual en todas las páginas, con los pesos
-# que se usan: IBM Plex Sans para la interfaz y el texto, IBM Plex Mono solo
-# para etiquetas cortas en mayúsculas y Space Grotesk solo para el wordmark,
-# los títulos de sección de la portada y las cifras grandes.
+# Una sola llamada a Google Fonts, igual en todas las páginas: Archivo
+# (Omnibus-Type, licencia OFL), la única familia del sitio, en los pesos que
+# se usan. 400 y 500 para el texto, 600 para las etiquetas cortas y los
+# controles, 700 para las cifras grandes y los títulos, 800 para el wordmark.
 FUENTES = """<link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">"""
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">"""
 
-# Favicon: el símbolo (la I en hueso y la línea de precio que sube, en brasa)
-# sobre el fondo. El ícono de iOS (apple-touch-icon.png, 180 x 180, a sangre:
-# iOS redondea las esquinas) lo dibuja tarjetas.icono en cada build.
-ICONO = ("<link rel=\"icon\" href=\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' "
-         "viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f0f0e'/%3E"
-         "%3Crect x='26' y='30' width='12' height='25' rx='2' fill='%23e4dacc'/%3E"
-         "%3Cpolyline points='16,26 25,17 31,21 47,7' fill='none' stroke='%23e8743b' "
+# Favicon: el símbolo (la I y la línea de precio que sube, en blanco) sobre
+# tinta: es la única pieza en negativo del sitio. El ícono de iOS
+# (apple-touch-icon.png, 180 x 180, a sangre: iOS redondea las esquinas) lo
+# dibuja tarjetas.icono en cada build. Va con el color de la barra del
+# navegador (theme-color), el fondo blanco de las páginas.
+ICONO = ("<meta name=\"theme-color\" content=\"#ffffff\" data-oscuro=\"#0f0f0e\">\n"
+         "<link rel=\"icon\" href=\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' "
+         "viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23111111'/%3E"
+         "%3Crect x='26' y='30' width='12' height='25' rx='2' fill='%23ffffff'/%3E"
+         "%3Cpolyline points='16,26 25,17 31,21 47,7' fill='none' stroke='%23ffffff' "
          "stroke-width='8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\">\n"
-         "<link rel=\"apple-touch-icon\" href=\"/apple-touch-icon.png\">")
+         "<link rel=\"apple-touch-icon\" href=\"/apple-touch-icon.png\">\n"
+         # el modo oscuro elegido, antes de pintar: sin destello del claro
+         "<script>try{if(localStorage.getItem('carestia-tema')==='oscuro'){"
+         "document.documentElement.dataset.tema='oscuro';"
+         "var m=document.querySelector('meta[name=theme-color]');"
+         "if(m)m.content=m.dataset.oscuro}}catch(e){}</script>")
 
 # Wordmark: la Í de CARESTÍA lleva, en vez de la tilde, la línea de precio
-# que sube (en brasa). Es la misma en todas las páginas; cada una fija solo el
-# tamaño del wordmark. La forma de la línea es la de la marca (caja de 52 por
+# que sube (en tinta, como las letras). Es la misma en todas las páginas;
+# cada una fija solo el tamaño del wordmark. La forma de la línea es la de la marca (caja de 52 por
 # 30) con trazo 10 en vez de 7 para que se lea a 20 y 26px; el viewBox se
 # agranda a -1 -3 54 34 para que entren los extremos redondeados.
 MASCARA_LINEA = ("url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' "
@@ -2398,22 +2434,27 @@ MASCARA_LINEA = ("url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/
 CSS_MARCA = r"""  /* la Í de la marca: el texto del nodo sigue siendo la Í única (innerText
      y copy-paste leen CARESTÍA). El clip-path del span interior recorta la
      tilde del glifo y el ::after del envoltorio dibuja la línea: el color es
-     el token --ember y la forma va como máscara. Envoltorio y span son
-     inline-block con line-height normal y un margen negativo que los deja
-     dentro de la línea: el wordmark no cambia de alto ni se mueve (CLS).
+     --marca (en el claro, la tinta de las letras; en el oscuro, la brasa) y
+     la forma va como máscara. Envoltorio y span
+     son inline-block con line-height normal y un margen negativo que los
+     deja dentro de la línea: el wordmark no cambia de alto ni se mueve (CLS).
      Inline-block y no inline: en un span inline, Chrome no mueve el recorte
      cuando llega la fuente web y la I queda fuera. El recorte y la línea se
-     miden desde la tapa de la I (1cap) sobre la línea base, que queda a
-     round(.292em, 1px) del borde de abajo: el descendente de Space Grotesk
-     y de su respaldo métrico, que el navegador redondea a px. Así el corte
-     cae entre la tapa y la tilde en cualquier tamaño, y la línea queda con
-     el aire que tenía la tilde sobre la I y cabe en los 22px de las fichas
-     (overflow:hidden). Sin round() ni cap, valen las medidas fijas en em */
+     miden desde la tapa de la I (1cap, .686em en Archivo) sobre la línea
+     base, que queda a round(.21em, 1px) del borde de abajo: el descendente
+     de Archivo y de su respaldo métrico, que el navegador redondea a px. En
+     Archivo 800 la tapa de la I llega a .687em y la tilde empieza en .745em:
+     el corte (.029em sobre la tapa) cae entre las dos en cualquier tamaño, y
+     la línea queda con el aire de .027em sobre la I y cabe en los 22px de
+     las fichas (overflow:hidden). La caja de la línea mide .26 por .164em,
+     corrida .035em a la derecha: queda centrada sobre el asta de la I
+     (.075 a .254em). Sin round() ni cap, valen las medidas fijas en em,
+     desde el tope del span (el ascendente, .878em) */
   .wordmark .i { position:relative; display:inline-block; line-height:normal;
     margin:-.25em 0; }
-  .wordmark .i > span { display:inline-block; clip-path:inset(.265em 0 0 0); }
-  .wordmark .i::after { content:""; position:absolute; left:0; top:.12em;
-    width:.243em; height:.153em; pointer-events:none; background:var(--ember);
+  .wordmark .i > span { display:inline-block; clip-path:inset(.163em 0 0 0); }
+  .wordmark .i::after { content:""; position:absolute; left:.035em; top:0;
+    width:.26em; height:.164em; pointer-events:none; background:var(--marca);
     --linea:__MASCARA__;
     -webkit-mask:var(--linea) 0 0/100% 100% no-repeat;
     mask:var(--linea) 0 0/100% 100% no-repeat;
@@ -2421,8 +2462,8 @@ CSS_MARCA = r"""  /* la Í de la marca: el texto del nodo sigue siendo la Í ún
     -webkit-print-color-adjust:exact; print-color-adjust:exact; }
   @supports (top:calc(round(1em, 1px) + 1cap)) {
     .wordmark .i > span {
-      clip-path:inset(calc(100% - round(.292em, 1px) - 1cap - .029em) 0 0 0); }
-    .wordmark .i::after { top:auto; bottom:calc(round(.292em, 1px) + 1cap + .027em); }
+      clip-path:inset(calc(100% - round(.21em, 1px) - 1cap - .029em) 0 0 0); }
+    .wordmark .i::after { top:auto; bottom:calc(round(.21em, 1px) + 1cap + .027em); }
   }
   /* temas de contraste: el fondo de la línea se forzaría al del lienzo y no
      se vería; va en el color de sistema del texto, como las letras */
@@ -2434,44 +2475,92 @@ CSS_MARCA = r"""  /* la Í de la marca: el texto del nodo sigue siendo la Í ún
 # Los tokens de color y de familia viven SOLO aquí (cada página los recibe en
 # su :root); los gráficos y la captura PNG los leen con getComputedStyle.
 CSS_BASE = r"""
-  /* fallbacks métricos: Arial ajustada a las métricas de cada webfont para
-     que el swap no reacomode el wordmark, las cifras ni el texto (CLS) */
-  @font-face { font-family:"Space Grotesk Fallback"; src:local("Arial");
-    size-adjust:101.7%; ascent-override:96.9%; descent-override:29.2%;
-    line-gap-override:0%; }
-  @font-face { font-family:"IBM Plex Sans Fallback"; src:local("Arial");
-    size-adjust:99.5%; ascent-override:103%; descent-override:27.6%;
-    line-gap-override:0%; }
+  /* respaldo métrico: Arial ajustada a las métricas de Archivo (1000
+     unidades por em, ascendente 878, descendente 210, sin interlineado
+     extra) para que el cambio de fuente no reacomode el wordmark, las cifras
+     ni el texto (CLS). size-adjust es el ancho de Archivo sobre el de Arial
+     en un texto de muestra del sitio (400 sobre Arial, 700 sobre Arial
+     Bold); los override son las métricas divididas por size-adjust */
+  @font-face { font-family:"Archivo Fallback"; src:local("Arial");
+    font-weight:100 500; size-adjust:98.8%; ascent-override:88.9%;
+    descent-override:21.3%; line-gap-override:0%; }
+  @font-face { font-family:"Archivo Fallback"; src:local("Arial Bold");
+    font-weight:600 900; size-adjust:99.2%; ascent-override:88.5%;
+    descent-override:21.2%; line-gap-override:0%; }
   :root {
-    /* base neutra. Sobre --bg, hueso 13,9:1, secundario 7,2:1 y
-       terciario 5,0:1 (AA); sobre --panel, 13,0, 6,7 y 4,6 */
-    --bg:#0f0f0e; --panel:#171716; --line:#2b2a27;
-    --bone:#e4dacc; --ash:#a39e95; --dim:#86817a;
+    color-scheme:light;
+    /* tinta sobre blanco, sin color de marca: el único color del sitio es
+       el dato. Sobre --bg, tinta 18,9:1, secundario 8,5:1 y terciario
+       5,3:1 (AA); sobre --panel, 17,3, 7,8 y 4,9 */
+    --bg:#ffffff; --panel:#f5f5f5; --line:#d9d9d9;
+    --tinta:#111111; --tinta2:#4d4d4d; --tinta3:#6b6b6b;
     /* derivados de la base: hover de los controles y grilla de gráficos */
-    --hover:#201f1d; --grid:#1c1c1a;
-    /* brasa: solo la í del wordmark y la línea de los índices oficiales */
-    --ember:#e8743b;
-    /* semáforo: solo el veredicto y las velas de los 4 índices */
-    --verde:#5bbf7a; --ambar:#e0a83c; --rojo:#e0552f; --verdict:var(--rojo);
+    --hover:#ebebeb; --grid:#ececec;
+    /* la línea de los índices oficiales y de los productos, en tinta */
+    --serie:#111111;
+    /* la línea de los productos: en el claro, la misma tinta */
+    --producto:#111111;
+    /* la línea de la Í del wordmark: en el claro, la tinta de las letras */
+    --marca:#111111;
+    /* canastas de usuario: la línea de Arma tu canasta y de las canastas
+       de ejemplo (4,5:1 sobre --bg) */
+    --canasta:#767676;
+    /* semáforo: el veredicto de los 4 índices (etiqueta rellena: blanco
+       sobre rojo 5,4:1 y sobre verde 5,0:1, tinta sobre ámbar 10,1:1), las
+       zonas del percentil y las velas. El ámbar no cumple como texto sobre
+       blanco (1,9:1): cuando va de texto o de trazo fino, --ambar-texto
+       (5,5:1 sobre --bg y 5,1:1 sobre --panel) */
+    --verde:#1a7f47; --ambar:#f0b429; --rojo:#c8321c; --verdict:var(--rojo);
+    --ambar-texto:#8a6100;
+    /* el texto de la etiqueta NORMAL, sobre el ámbar */
+    --sobre-ambar:#111111;
     /* variaciones de precio, con criterio de consumidor: el número va en
        rojo si el precio subió y en verde si bajó (ver .v-sube y .v-baja).
-       Sobre --bg, rojo 5,0:1 y verde 8,4:1; sobre --panel, 4,7 y 7,8 (AA) */
+       Sobre --bg, rojo 5,4:1 y verde 5,0:1; sobre --panel, 4,9 y 4,6 (AA) */
     --sube:var(--rojo); --baja:var(--verde);
     /* Comparar: cuatro tonos muy distintos, sin azules ni violetas
-       azulados, sin verde, naranjo ni rojo (rosa, magenta, mostaza y
-       amarillo); del 5º al 8º producto se repiten punteados. Entre sí quedan
-       a 18 o más (OKLab x100) con visión normal y con protanopía y
-       deuteranopía simuladas (con tritanopía, a 8 o más), y la mostaza a 28
-       o más del hueso de las fichas. Sobre --bg, 4,2:1 o más */
+       azulados, sin verdes ni rojos (magenta, morado, mostaza y café: tono
+       OKLCH de 304 a 8 y de 56 a 100); del 5º al 8º producto se repiten
+       punteados. Entre sí quedan a 20 o más (OKLab x100) con visión normal
+       y con protanopía y deuteranopía simuladas (con tritanopía, a 8 o más),
+       y a 28 o más de la línea de la ficha (--producto) con las cuatro. Las
+       distancias mínimas de cada par (normal, protan, deutan): 1-2 24,5,
+       20,7, 25,3; 1-3 30,0, 27,2, 22,4; 1-4 33,3, 27,1, 26,8; 2-3 38,3,
+       36,5, 35,6; 2-4 25,9, 22,8, 20,9; 3-4 20,9, 20,2, 21,2. Sobre --bg,
+       3,0:1 o más (1: 3,1; 2: 8,5; 3: 3,0; 4: 6,9) */
+    --cmp1:#e05ddf; --cmp2:#8101a4; --cmp3:#b4902e; --cmp4:#6d5732;
+    /* crosshair de los gráficos: tinta tenue */
+    --cruz:rgba(17,17,17,.35);
+    /* sombra de los menús y del buscador */
+    --sombra:rgba(17,17,17,.12);
+    /* el crosshair de Advanced Charts: en el claro, el mismo de Lightweight */
+    --cruz-tv:rgba(17,17,17,.35);
+    /* una sola familia: Archivo. Las cifras van con tabular-nums */
+    --sans:"Archivo","Archivo Fallback",system-ui,sans-serif;
+    --display:"Archivo","Archivo Fallback",system-ui,sans-serif;
+  }
+  /* modo oscuro, a pedido (el botón de la luna del encabezado, ver JS_TEMA):
+     solo cambia la paleta, a la anterior al look claro (carbón, hueso y
+     brasa); tipografía y forma son las mismas. Sobre --bg, hueso 13,9:1,
+     secundario 7,2:1 y terciario 5,0:1; sobre --panel, 13,0, 6,7 y 4,6 (AA).
+     Rojo 5,0:1 y verde 8,4:1 sobre --bg. Las etiquetas del veredicto llevan
+     el texto en el fondo (carbón) sobre rojo, verde y ámbar. Los tonos de
+     Comparar son los de antes, pensados para fondo oscuro. Como antes, la
+     brasa va solo en la línea de los índices y en la Í del wordmark; los
+     productos y las canastas, en hueso */
+  :root[data-tema="oscuro"] {
+    color-scheme:dark;
+    --bg:#0f0f0e; --panel:#171716; --line:#2b2a27;
+    --tinta:#e4dacc; --tinta2:#a39e95; --tinta3:#86817a;
+    --hover:#201f1d; --grid:#1c1c1a;
+    --serie:#e8743b; --producto:#e4dacc; --marca:#e8743b; --canasta:#e4dacc;
+    --verde:#5bbf7a; --ambar:#e0a83c; --rojo:#e0552f;
+    --ambar-texto:#e0a83c; --sobre-ambar:#0f0f0e;
     --cmp1:#f28cc0; --cmp2:#b04fb5; --cmp3:#9d8519; --cmp4:#f2d74e;
-    /* crosshair de los gráficos: hueso tenue */
-    --cruz:rgba(228,218,204,.35);
-    --sans:"IBM Plex Sans","IBM Plex Sans Fallback",system-ui,sans-serif;
-    --mono:"IBM Plex Mono",ui-monospace,monospace;
-    --display:"Space Grotesk","Space Grotesk Fallback",sans-serif;
+    --cruz:rgba(228,218,204,.35); --cruz-tv:#86817a; --sombra:rgba(0,0,0,.55);
   }
   * { box-sizing:border-box; margin:0; padding:0; }
-  body { background:var(--bg); color:var(--bone); font-family:var(--sans);
+  body { background:var(--bg); color:var(--tinta); font-family:var(--sans);
     font-variant-numeric:tabular-nums; min-height:100vh; }
   button, input { font-family:inherit; }
 """
@@ -2483,8 +2572,8 @@ CSS_CABECERA = r"""  /* ---- ticker ---- */
   .ticker { position:sticky; top:0; z-index:50; display:flex; align-items:stretch;
     background:var(--bg); border-bottom:1px solid var(--line); min-height:44px; }
   .ticker .tag { display:none; align-items:center; padding:0 18px;
-    border-right:1px solid var(--line); font:600 10px var(--mono);
-    letter-spacing:.18em; color:var(--ash); white-space:nowrap; }
+    border-right:1px solid var(--line); font:600 10px var(--sans);
+    letter-spacing:.04em; color:var(--tinta2); white-space:nowrap; }
   .ticker-scroll { flex:1; overflow-x:auto; overflow-y:hidden;
     scrollbar-width:none; -webkit-overflow-scrolling:touch; }
   .ticker-scroll::-webkit-scrollbar { display:none; }
@@ -2505,12 +2594,12 @@ CSS_CABECERA = r"""  /* ---- ticker ---- */
     white-space:nowrap; border-right:1px solid var(--grid); background:none; border-top:0;
     border-bottom:0; border-left:0; min-height:44px; }
   .titem:hover { background:var(--hover); }
-  .titem .tn { font:600 11px var(--mono); letter-spacing:.1em; color:var(--bone); }
-  .titem .tp { font:500 13px var(--sans); color:var(--bone); }
+  .titem .tn { font:600 11px var(--sans); letter-spacing:.04em; color:var(--tinta); }
+  .titem .tp { font:500 13px var(--sans); color:var(--tinta); }
   /* la variación semanal y la de 4 semanas: el número en color (ver
-     .v-sube y .v-baja) y su etiqueta en hueso */
-  .titem .td { font:500 12px var(--sans); color:var(--bone); }
-  .titem .tv, .titem .tv small { font:400 11px var(--sans); color:var(--bone); }
+     .v-sube y .v-baja) y su etiqueta en tinta */
+  .titem .td { font:500 12px var(--sans); color:var(--tinta); }
+  .titem .tv, .titem .tv small { font:400 11px var(--sans); color:var(--tinta); }
   @media (min-width:760px) {
     .ticker .tag { display:flex; }
     .ticker-scroll { overflow-x:hidden; }
@@ -2528,16 +2617,16 @@ CSS_CABECERA = r"""  /* ---- ticker ---- */
   .brand { display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 18px; }
   /* line-height y alto explícitos: el alto del wordmark depende solo del
      font-size, no de la métrica de la fuente que esté cargada (CLS) */
-  .wordmark { font:700 clamp(20px,4vw,26px)/1.15 var(--display);
-    letter-spacing:.06em; color:var(--bone); display:flex; align-items:baseline;
+  .wordmark { font:800 clamp(20px,4vw,26px)/1.15 var(--display);
+    letter-spacing:.06em; color:var(--tinta); display:flex; align-items:baseline;
     height:1.15em; }
 __CSS_MARCA__
   /* line-height fijo en el texto del encabezado: su alto no cambia con la
      tipografía y el encuadre del lienzo (calc más abajo) sigue exacto */
-  .tagline { font:400 13px/15.6px var(--sans); color:var(--ash); }
-  .semana { font:500 12px/14.3px var(--sans); color:var(--ash); }
-  .semana span { color:var(--dim); }
-  .semana .sin-nuevos { color:var(--bone); }
+  .tagline { font:400 13px/15.6px var(--sans); color:var(--tinta2); }
+  .semana { font:500 12px/14.3px var(--sans); color:var(--tinta2); }
+  .semana span { color:var(--tinta3); }
+  .semana .sin-nuevos { color:var(--tinta); }
   a.wordmark, a.titem { text-decoration:none; }
 """.replace("__CSS_MARCA__", CSS_MARCA)
 
@@ -2546,35 +2635,67 @@ CSS_SITIO = r"""
   .sitenav { flex-basis:100%; }
   .sitenav ul { list-style:none; }
   .snav-links { display:flex; flex-wrap:wrap; gap:0 22px; }
-  .snav-links a, .snav-panel a { font:500 11px var(--mono);
-    letter-spacing:.08em; text-transform:uppercase; text-decoration:none; }
-  .snav-links a { display:inline-block; padding:6px 0 5px; color:var(--ash);
+  .snav-links a, .snav-panel a { font:600 11px var(--sans);
+    letter-spacing:.04em; text-transform:uppercase; text-decoration:none; }
+  .snav-links a { display:inline-block; padding:6px 0 5px; color:var(--tinta2);
     border-bottom:1px solid transparent; }
-  .snav-links a:hover, .snav-links a:focus-visible { color:var(--bone);
-    border-bottom-color:var(--dim); }
-  .snav-links a[aria-current] { color:var(--bone); border-bottom-color:var(--bone); }
-  /* móvil: el <summary> mide 34px de alto (área táctil de las pills) pero
-     el margen negativo deja su caja en 22px, el alto de la fila del
+  .snav-links a:hover, .snav-links a:focus-visible { color:var(--tinta);
+    border-bottom-color:var(--tinta3); }
+  .snav-links a[aria-current] { color:var(--tinta); border-bottom-color:var(--tinta); }
+  /* móvil: el <summary> mide 44px de alto (el blanco de toque del celular)
+     pero el margen negativo deja su caja en 22px, el alto de la fila del
      wordmark: el encabezado no crece */
+  /* el botón del tema, en pantallas anchas: arriba a la derecha del
+     encabezado, a la altura del wordmark y fuera del flujo (no ocupa lugar
+     en la fila de los links ni hace crecer el encabezado) */
+  header { position:relative; }
+  .tema { display:flex; align-items:center; justify-content:center;
+    position:absolute; top:12px; right:clamp(16px,3vw,32px);
+    width:26px; height:26px; padding:0; cursor:pointer;
+    color:var(--tinta); background:var(--panel); border:1px solid var(--line);
+    border-radius:2px; }
+  /* centrado en el wordmark: el de 22px de las fichas y las páginas (arriba)
+     o el grande de la portada y /graficos.html (con .brand) */
+  header:has(.brand) .tema { top:18px; }
+  /* bajo 900px la lupa va al final de la fila de los links, debajo: el botón
+     se corre a su izquierda para no tocarla */
+  @media (max-width:899px) { .tema { right:calc(clamp(16px,3vw,32px) + 52px); } }
+  .tema[hidden] { display:none; }
+  .tema svg { width:14px; height:14px; fill:none; stroke:currentColor;
+    stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
+  .tema .sol, :root[data-tema="oscuro"] .tema .luna { display:none; }
+  :root[data-tema="oscuro"] .tema .sol { display:block; }
+  .tema:hover, .tema:focus-visible { border-color:var(--tinta); }
+  /* la opción del menú del celular, como los links del panel */
+  .tema-menu { display:flex; align-items:center; gap:10px; width:100%;
+    min-height:44px; padding:0 18px; cursor:pointer; background:none; border:0;
+    font:600 12px var(--sans); letter-spacing:.04em; text-transform:uppercase;
+    color:var(--tinta); text-align:left; }
+  .tema-menu[hidden] { display:none; }
+  .tema-menu svg { width:15px; height:15px; fill:none; stroke:currentColor;
+    stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
+  .tema-menu .sol, :root[data-tema="oscuro"] .tema-menu .luna { display:none; }
+  :root[data-tema="oscuro"] .tema-menu .sol { display:block; }
+  .tema-menu:hover, .tema-menu:focus-visible { background:var(--hover); }
   .snav-menu { display:none; position:relative; }
   .snav-menu > summary { display:flex; align-items:center; gap:8px;
-    min-height:34px; margin:-6px 0; padding:0 14px; cursor:pointer;
+    min-height:44px; margin:-11px 0; padding:0 14px; cursor:pointer;
     list-style:none; -webkit-user-select:none; user-select:none;
-    font:600 11px var(--mono); letter-spacing:.1em;
-    text-transform:uppercase; color:var(--bone); background:var(--panel);
-    border:1px solid var(--line); border-radius:999px; }
+    font:600 11px var(--sans); letter-spacing:.04em;
+    text-transform:uppercase; color:var(--tinta); background:var(--panel);
+    border:1px solid var(--line); border-radius:2px; }
   .snav-menu > summary::-webkit-details-marker { display:none; }
-  .snav-menu > summary::after { content:"▾"; content:"▾" / ""; color:var(--ash); }
-  .snav-menu[open] > summary { border-color:var(--bone); }
+  .snav-menu > summary::after { content:"▾"; content:"▾" / ""; color:var(--tinta2); }
+  .snav-menu[open] > summary { border-color:var(--tinta); }
   .snav-panel { position:absolute; right:0; top:calc(100% + 12px); z-index:60;
     min-width:230px; max-width:calc(100vw - 32px); padding:4px 0;
     background:var(--panel); border:1px solid var(--line);
-    box-shadow:0 14px 34px rgba(0,0,0,.55); }
+    box-shadow:0 8px 24px var(--sombra); }
   .snav-panel li + li { border-top:1px solid var(--line); }
   .snav-panel a { display:flex; align-items:center; min-height:44px;
-    padding:0 18px; font-size:12px; color:var(--bone); }
+    padding:0 18px; font-size:12px; color:var(--tinta); }
   .snav-panel a:hover, .snav-panel a:focus-visible { background:var(--hover); }
-  .snav-panel a[aria-current] { box-shadow:inset 3px 0 0 var(--bone); }
+  .snav-panel a[aria-current] { box-shadow:inset 3px 0 0 var(--tinta); }
   @media (max-width:640px) {
     header { display:grid; grid-template-columns:minmax(0,1fr) auto;
       align-items:center; column-gap:12px; row-gap:6px; }
@@ -2585,38 +2706,109 @@ CSS_SITIO = r"""
     header .semana { margin-top:2px; }
     .snav-links { display:none; }
     .snav-menu { display:block; }
+    .sitenav > .tema { display:none; }
   }
 
   /* ---- pie común ---- */
-  /* todo el texto del pie cumple AA sobre --bg: secundario 7,2:1 y
-     hueso 13,9:1 */
+  /* todo el texto del pie cumple AA sobre --bg: secundario 8,5:1 y
+     tinta 18,9:1 */
   .sitefoot { border-top:1px solid var(--line); background:var(--bg);
     padding:18px clamp(16px,3vw,32px) 24px; display:flex;
     flex-direction:column; gap:8px; }
-  .sitefoot p { font:400 12px/1.6 var(--sans); color:var(--ash);
+  .sitefoot p { font:400 12px/1.6 var(--sans); color:var(--tinta2);
     text-wrap:pretty; }
-  .sitefoot a { color:var(--bone); text-decoration:underline;
-    text-decoration-color:var(--dim); text-underline-offset:3px; }
-  .sitefoot a:hover, .sitefoot a:focus-visible { text-decoration-color:var(--bone); }
+  .sitefoot a { color:var(--tinta); text-decoration:underline;
+    text-decoration-color:var(--tinta3); text-underline-offset:3px; }
+  .sitefoot a:hover, .sitefoot a:focus-visible { text-decoration-color:var(--tinta); }
   .pie-links { display:flex; flex-wrap:wrap; gap:0 20px; list-style:none; }
   .pie-links a { display:inline-block; padding:6px 0;
     font:500 13px var(--sans); }
-  .pie-links a[aria-current] { text-decoration-color:var(--bone); }
+  .pie-links a[aria-current] { text-decoration-color:var(--tinta); }
   /* RUT y fechas (78.521.796-9, 22-07-2026) no se cortan en el guion */
   .nw { white-space:nowrap; }
 
   /* ---- variaciones de precio (todas las páginas) ---- */
   /* el número va en color con criterio de consumidor: rojo si el precio
      subió, verde si bajó y el color del texto si no cambió. La flecha va al
-     lado, en gris, y el resto del texto en hueso */
-  .f { font-style:normal; color:var(--dim); }
+     lado, en gris, y el resto del texto en tinta */
+  .f { font-style:normal; color:var(--tinta3); }
   .v-sube { color:var(--sube); }
   .v-baja { color:var(--baja); }
+
+  /* ---- blancos de toque: 44px o más en el celular ---- */
+  @media (max-width:759px) {
+    .chips button, .orden select, .pchip, .links a, .grupos a, .ccopy,
+    .ind-links a, .pc-cerrar, .ver-todos, .vbtn, .usel, .vtoggle .ubtn,
+    .otros-links a, .pg-head, .ci-btn { min-height:44px; }
+    .orden select { height:44px; }
+    .pc-lienzo { width:44px; height:44px; }
+  }
+
+  /* ---- veredicto de los 4 índices: etiqueta rellena ---- */
+  /* blanco sobre rojo (5,4:1) y sobre verde (5,0:1), tinta sobre ámbar
+     (10,1:1) */
+  .ver-rojo { background:var(--rojo); color:var(--bg); }
+  .ver-verde { background:var(--verde); color:var(--bg); }
+  .ver-ambar { background:var(--ambar); color:var(--sobre-ambar); }
 """
 
+# El botón del modo oscuro (la luna; en el oscuro, el sol). Va dos veces:
+# como ícono arriba a la derecha del encabezado (pantallas anchas, fuera de
+# la fila de los links: no le quita lugar) y como última opción del menú del
+# celular, donde la fila del wordmark no tiene lugar para un tercer botón.
+# Su nombre dice lo que hace ("Cambiar a modo claro" en el oscuro). Sin JS
+# no hace nada: van ocultos y JS_MENU los muestra.
+ICONOS_TEMA = ('<svg class="luna" viewBox="0 0 16 16" aria-hidden="true">'
+               '<path d="M13.5 9.6A5.6 5.6 0 0 1 6.4 2.5a5.6 5.6 0 1 0 7.1 7.1z"/></svg>'
+               '<svg class="sol" viewBox="0 0 16 16" aria-hidden="true">'
+               '<circle cx="8" cy="8" r="3"/><path d="M8 1v1.6M8 13.4V15M1 8h1.6M13.4 8H15'
+               'M3 3l1.1 1.1M11.9 11.9 13 13M3 13l1.1-1.1M11.9 4.1 13 3"/></svg>')
+BOTON_TEMA = ('<button class="tema" type="button" hidden '
+              f'aria-label="Cambiar a modo oscuro" title="Cambiar a modo oscuro">{ICONOS_TEMA}</button>')
+BOTON_TEMA_MENU = ('<button class="tema-menu" type="button" hidden>'
+                   f'{ICONOS_TEMA}<span>Modo oscuro</span></button>')
+
+
 # menú móvil: se cierra al tocar fuera o con Escape (sin JS abre y cierra
-# igual con su propio botón)
+# igual con su propio botón). El botón del tema: guarda la elección en el
+# navegador y la aplica; en una página con gráficos (<body data-graficos>:
+# /graficos.html, las fichas y la de prueba) la recarga, para que los
+# gráficos se monten con la paleta nueva (leen los colores al montarse).
+# Antes guarda en sessionStorage lo que la página da en CarestiaEstado (el
+# índice, el modo, lo comparado, la unidad), que la página repone al volver
+# (estadoPrevio).
 JS_MENU = """<script>
+  (function () {
+    var bs = [].slice.call(document.querySelectorAll('.tema, .tema-menu'));
+    var raiz = document.documentElement;
+    var meta = document.querySelector('meta[name="theme-color"]');
+    function pintar() {
+      var oscuro = raiz.dataset.tema === 'oscuro';
+      var txt = oscuro ? 'Modo claro' : 'Modo oscuro';
+      bs.forEach(function (b) {
+        var t = b.querySelector('span');
+        if (t) t.textContent = txt;
+        else { b.setAttribute('aria-label', 'Cambiar a ' + txt.toLowerCase()); b.title = b.getAttribute('aria-label'); }
+      });
+      if (meta) meta.content = getComputedStyle(raiz).getPropertyValue('--bg').trim() || '#ffffff';
+    }
+    pintar();
+    bs.forEach(function (b) { b.hidden = false; b.addEventListener('click', cambiar); });
+    function cambiar() {
+      var oscuro = raiz.dataset.tema !== 'oscuro';
+      if (oscuro) raiz.dataset.tema = 'oscuro'; else delete raiz.dataset.tema;
+      try { localStorage.setItem('carestia-tema', oscuro ? 'oscuro' : 'claro'); } catch (e) {}
+      pintar();
+      // una página con gráficos (data-graficos) se recarga, con lo que la
+      // persona estaba mirando guardado para la vuelta (CarestiaEstado)
+      if (!document.body.hasAttribute('data-graficos')) return;
+      try {
+        if (window.CarestiaEstado) sessionStorage.setItem('carestia-estado',
+          JSON.stringify({ ruta: location.pathname, estado: window.CarestiaEstado() }));
+      } catch (e) {}
+      location.reload();
+    }
+  })();
   (function () {
     var m = document.querySelector('.snav-menu');
     if (!m) return;
@@ -2655,43 +2847,43 @@ LUPA = ('<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.
         '<path d="M10.5 10.5 14 14"/></svg>')
 BUSCA_CSS = r"""  /* encabezado: en pantallas anchas, un campo al final de la fila del menú;
      bajo 900px, una lupa (al lado de "Menú" en el celular) que abre el campo
-     en un panel. El campo mide 30px con margen negativo y la lupa 34px, como
-     el botón del menú: el encabezado no crece */
+     en un panel. El campo mide 30px con margen negativo y la lupa 44px (el
+     blanco de toque), como el botón del menú: el encabezado no crece */
   .sitenav { display:flex; align-items:center; gap:0 22px; }
   .snav-links { flex:1 1 auto; }
   .sbusca { position:relative; order:3; flex:none; }
   .sbusca[hidden] { display:none; }
   .sb-abrir { display:flex; align-items:center; justify-content:center;
-    width:34px; height:34px; margin:-6px 0; padding:0; cursor:pointer;
-    color:var(--bone); background:var(--panel); border:1px solid var(--line);
-    border-radius:999px; }
+    width:44px; height:44px; margin:-11px 0; padding:0; cursor:pointer;
+    color:var(--tinta); background:var(--panel); border:1px solid var(--line);
+    border-radius:2px; }
   .sb-abrir svg { width:15px; height:15px; fill:none; stroke:currentColor;
     stroke-width:2; stroke-linecap:round; }
   .sb-abrir:hover, .sb-abrir:focus-visible,
-  .sbusca.abierta .sb-abrir { border-color:var(--bone); }
+  .sbusca.abierta .sb-abrir { border-color:var(--tinta); }
   .sb-caja { display:none; position:absolute; right:0; top:calc(100% + 12px);
     z-index:60; width:min(360px, calc(100vw - 32px)); padding:10px;
     background:var(--panel); border:1px solid var(--line);
-    box-shadow:0 14px 34px rgba(0,0,0,.55); }
+    box-shadow:0 8px 24px var(--sombra); }
   .sbusca.abierta .sb-caja { display:block; }
   /* 16px: con menos, Safari del iPhone acerca la página al enfocar el campo */
   .sb-q { display:block; width:100%; height:44px; padding:0 12px;
-    font:400 16px var(--sans); color:var(--bone); background:var(--bg);
+    font:400 16px var(--sans); color:var(--tinta); background:var(--bg);
     border:1px solid var(--line); border-radius:0; outline:none;
     -webkit-appearance:none; appearance:none; }
-  .sb-q::placeholder { color:var(--dim); }
-  .sb-q:focus { border-color:var(--bone); }
+  .sb-q::placeholder { color:var(--tinta3); }
+  .sb-q:focus { border-color:var(--tinta); }
   .sb-res { list-style:none; margin-top:8px; max-height:min(60vh, 420px);
     overflow-y:auto; overscroll-behavior:contain; }
   .sb-res[hidden] { display:none; }
   .sb-res li + li { border-top:1px solid var(--line); }
   .sb-res a { display:flex; align-items:center; justify-content:space-between;
-    gap:12px; min-height:44px; padding:6px 10px; color:var(--bone);
+    gap:12px; min-height:44px; padding:6px 10px; color:var(--tinta);
     text-decoration:none; font:500 14px var(--sans); }
   .sb-res a:hover, .sb-res a:focus-visible, .sb-res a.activo { background:var(--hover); }
-  .sb-res small { font:400 12px var(--sans); color:var(--dim); margin-left:6px; }
+  .sb-res small { font:400 12px var(--sans); color:var(--tinta3); margin-left:6px; }
   .sb-res .sb-p { flex:none; font:500 14px var(--sans); }
-  .sb-res .sb-vacio { padding:12px 10px; font:400 13px var(--sans); color:var(--ash); }
+  .sb-res .sb-vacio { padding:12px 10px; font:400 13px var(--sans); color:var(--tinta2); }
   @media (max-width:640px) {
     .sitenav { gap:8px; }
     .sbusca { position:static; order:0; }
@@ -2714,20 +2906,20 @@ BUSCA_CSS = r"""  /* encabezado: en pantallas anchas, un campo al final de la fi
       background:var(--panel); }
     .sb-res { position:absolute; right:0; top:calc(100% + 10px); z-index:60;
       width:340px; margin-top:0; background:var(--panel);
-      border:1px solid var(--line); box-shadow:0 14px 34px rgba(0,0,0,.55); }
+      border:1px solid var(--line); box-shadow:0 8px 24px var(--sombra); }
   }
   /* portada y /productos/: el campo sobre la tabla o la lista, en el alto
      que la página le reserva (#pbh) */
   .pbusca { display:block; width:100%; max-width:420px; height:44px;
-    padding:0 14px; font:400 16px var(--sans); color:var(--bone);
-    background:var(--panel); border:1px solid var(--line); border-radius:9px;
+    padding:0 14px; font:400 16px var(--sans); color:var(--tinta);
+    background:var(--panel); border:1px solid var(--line); border-radius:2px;
     outline:none; -webkit-appearance:none; appearance:none; }
-  .pbusca::placeholder { color:var(--dim); }
-  .pbusca:focus { border-color:var(--bone); }
-  .pvacio { padding:18px 16px; font:400 14px/1.5 var(--sans); color:var(--ash); }
+  .pbusca::placeholder { color:var(--tinta3); }
+  .pbusca:focus { border-color:var(--tinta); }
+  .pvacio { padding:18px 16px; font:400 14px/1.5 var(--sans); color:var(--tinta2); }
   .pvacio[hidden], .nb { display:none !important; }
-  .pvacio a { color:var(--bone); text-decoration:underline;
-    text-decoration-color:var(--dim); text-underline-offset:3px; }
+  .pvacio a { color:var(--tinta); text-decoration:underline;
+    text-decoration-color:var(--tinta3); text-underline-offset:3px; }
   main.catalogo .pbusca { border-radius:0; }
   main.catalogo .pvacio { padding:28px 0 0; }
   @media (max-width:760px) {
@@ -2969,9 +3161,11 @@ def nav_sitio(actual: str = "", exacto: bool = True) -> str:
     return (f'<nav class="sitenav" aria-label="Secciones del sitio">\n'
             f'      <details class="snav-menu">\n'
             f'        <summary>Menú</summary>\n'
-            f'        <ul class="snav-panel">\n        {lis}\n        </ul>\n'
+            f'        <ul class="snav-panel">\n        {lis}\n'
+            f'        <li>{BOTON_TEMA_MENU}</li>\n        </ul>\n'
             f'      </details>\n'
             f'      <ul class="snav-links">\n        {lis}\n      </ul>\n'
+            f'      {BOTON_TEMA}\n'
             f'    </nav>')
 
 
@@ -3002,7 +3196,7 @@ def pie_sitio(actual: str = "") -> str:
 # ---------------- Páginas estáticas por producto (SEO) ----------------
 # Una página liviana por producto del catálogo, generada en el build con los
 # datos de ESE producto inline (nunca el catálogo completo). Versión reducida
-# de la estética del sitio: carbón/hueso/ceniza/brasa, wordmark chico con la
+# de la estética del sitio: tinta sobre blanco, wordmark chico con la
 # tilde, sin ticker. La serie va compacta (t0 + enteros semanales) y se
 # expande en el navegador igual que en el index.
 PRODUCT_HTML = r"""<!DOCTYPE html>
@@ -3026,35 +3220,35 @@ __CSS_BASE__
   header { display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 14px;
     padding:14px clamp(16px,3vw,32px); border-bottom:1px solid var(--line);
     min-height:51px; }
-  .wordmark { font:700 20px/1.1 var(--display); letter-spacing:.06em;
-    color:var(--bone); text-decoration:none; display:inline-flex;
+  .wordmark { font:800 20px/1.1 var(--display); letter-spacing:.06em;
+    color:var(--tinta); text-decoration:none; display:inline-flex;
     align-items:baseline; height:22px; overflow:hidden; }
 __CSS_MARCA__
-  .tagline { font:400 12px/14.3px var(--sans); color:var(--ash); }
+  .tagline { font:400 12px/14.3px var(--sans); color:var(--tinta2); }
   /* el gráfico usa el ancho de la página, como en /graficos.html, y el texto
      se alinea con él (y con la marca y el pie) a la izquierda, en un ancho
      de lectura */
   main { margin:0 auto;
     padding:clamp(20px,4vw,36px) clamp(16px,3vw,32px) clamp(28px,4vw,44px); }
   main > * { max-width:916px; }
-  .miga { font:500 10px var(--mono); letter-spacing:.16em;
-    color:var(--ash); text-transform:uppercase; }
+  .miga { font:600 10px var(--sans); letter-spacing:.04em;
+    color:var(--tinta2); text-transform:uppercase; }
   h1 { font:600 clamp(26px,5vw,40px)/1.15 var(--sans);
     letter-spacing:-.005em; margin-top:6px; }
   .orow { display:flex; align-items:baseline; gap:clamp(10px,2vw,18px);
     flex-wrap:wrap; margin-top:14px; min-height:52px; }
   .oprice { font:700 clamp(38px,7vw,64px)/1 var(--display);
-    letter-spacing:-.01em; color:var(--bone); }
-  .ouni { font:400 13px var(--sans); color:var(--ash); }
+    letter-spacing:-.01em; color:var(--tinta); }
+  .ouni { font:400 13px var(--sans); color:var(--tinta2); }
   /* la variación semanal: el número en color (ver .v-sube y .v-baja) y el
-     resto en hueso */
-  .odelta { font:600 15px var(--sans); color:var(--bone); }
-  .odelta small { font:400 12px var(--sans); color:var(--bone); }
+     resto en tinta */
+  .odelta { font:600 15px var(--sans); color:var(--tinta); }
+  .odelta small { font:400 12px var(--sans); color:var(--tinta); }
   /* la frase del veredicto por temporada y, debajo, el percentil de toda la
      historia como dato secundario */
-  .pct { font:400 15px/1.6 var(--sans); color:var(--bone);
+  .pct { font:400 15px/1.6 var(--sans); color:var(--tinta);
     margin-top:12px; text-wrap:pretty; }
-  .pct2 { font:400 13px/1.6 var(--sans); color:var(--ash); margin-top:4px;
+  .pct2 { font:400 13px/1.6 var(--sans); color:var(--tinta2); margin-top:4px;
     text-wrap:pretty; }
   /* la unidad del gráfico: ajustado por inflación o precio de la época, en
      dos botones o, si no caben, en un desplegable (JS_UNIDAD). Su línea va
@@ -3066,13 +3260,13 @@ __CSS_MARCA__
   .fctrl .pc-abrir { margin-left:auto; }
   .vtoggle { display:inline-flex; border:1px solid var(--line); background:var(--bg); }
   .vbtn { font:500 13px var(--sans); padding:8px 14px; border:none; cursor:pointer;
-    background:transparent; color:var(--ash); min-height:34px; white-space:nowrap; }
+    background:transparent; color:var(--tinta2); min-height:34px; white-space:nowrap; }
   .vbtn + .vbtn { border-left:1px solid var(--line); }
-  .vbtn.active { background:var(--bone); color:var(--bg); }
+  .vbtn.active { background:var(--tinta); color:var(--bg); }
   .nomtoggle { border:1px solid var(--line); background:var(--bg); }
-  .usel { display:none; font:500 13px var(--sans); color:var(--bone);
+  .usel { display:none; font:500 13px var(--sans); color:var(--tinta);
     background:var(--bg); border:1px solid var(--line); border-radius:0;
-    min-height:34px; padding:0 6px; color-scheme:dark; cursor:pointer; }
+    min-height:34px; padding:0 6px; cursor:pointer; }
   .unidad.compacta .ubtns { display:none; }
   .unidad.compacta .usel { display:block; }
   /* alto reservado por CSS antes de que monte cualquiera de los dos
@@ -3098,7 +3292,7 @@ __CSS_MARCA__
   /* mientras se prepara la captura PNG, un velo tapa el gráfico */
   .velo { position:absolute; inset:0; z-index:6; display:flex; align-items:center;
     justify-content:center; padding:20px; background:var(--bg);
-    font:400 12px/1.5 var(--sans); color:var(--ash); }
+    font:400 12px/1.5 var(--sans); color:var(--tinta2); }
   .velo[hidden] { display:none; }
   /* el texto del producto (frente a su historia, el resumen y hace diez
      años) va al final de la ficha, después de "Comparar con" y de los otros
@@ -3110,20 +3304,20 @@ __CSS_MARCA__
      Prensa */
   .notas { margin-top:30px; padding-top:4px; border-top:1px solid var(--line); }
   .notas .pct2 { margin-top:14px; }
-  .fecha { font:500 12px/1.6 var(--sans); color:var(--ash); margin-top:14px; text-wrap:pretty; }
-  .fecha .sin-nuevos { color:var(--bone); }
+  .fecha { font:500 12px/1.6 var(--sans); color:var(--tinta2); margin-top:14px; text-wrap:pretty; }
+  .fecha .sin-nuevos { color:var(--tinta); }
   /* para citar: la frase con el precio de esta semana, antes de la línea de
      la semana (con la del precio de hace diez años en medio, si va), y la
      línea de cita (CSS_CITA), después */
-  .citable { font:400 13px/1.6 var(--sans); color:var(--ash); margin-top:14px;
+  .citable { font:400 13px/1.6 var(--sans); color:var(--tinta2); margin-top:14px;
     text-wrap:pretty; }
   .citable + .fecha { margin-top:4px; }
   /* bajo la frase citable, con su mismo aspecto, el precio de hace diez años
      (si la serie lo tiene); la línea de la semana queda igual de cerca */
-  .diez { font:400 13px/1.6 var(--sans); color:var(--ash); margin-top:4px;
+  .diez { font:400 13px/1.6 var(--sans); color:var(--tinta2); margin-top:4px;
     text-wrap:pretty; }
   .diez + .fecha { margin-top:4px; }
-  .ref-velas { font:400 12px/1.5 var(--sans); color:var(--dim); margin-top:10px; }
+  .ref-velas { font:400 12px/1.5 var(--sans); color:var(--tinta3); margin-top:10px; }
   /* Comparar con: el componente de Comparar de /graficos.html (CSS_COMPARAR)
      con las sugerencias del build, el buscador y, con algo elegido, la
      línea de la escala y la frase */
@@ -3132,48 +3326,48 @@ __CSS_COMPARAR__
   .comparar .pchips { margin-top:12px; }
   .comparar #cmp-res:empty { display:none; }
   .comparar .psearch { max-width:420px; margin:12px 0 0; display:block; }
-  .cmp-vacio { font:400 13px var(--sans); color:var(--ash); }
-  .cmp-nota { font:400 12px/1.5 var(--sans); color:var(--ash); margin-top:10px; }
-  .cmp-escala { font:400 12px/1.5 var(--sans); color:var(--ash); margin-top:16px;
+  .cmp-vacio { font:400 13px var(--sans); color:var(--tinta2); }
+  .cmp-nota { font:400 12px/1.5 var(--sans); color:var(--tinta2); margin-top:10px; }
+  .cmp-escala { font:400 12px/1.5 var(--sans); color:var(--tinta2); margin-top:16px;
     text-wrap:pretty; }
-  .cmp-frase { font:400 15px/1.6 var(--sans); color:var(--bone); margin-top:6px;
+  .cmp-frase { font:400 15px/1.6 var(--sans); color:var(--tinta); margin-top:6px;
     text-wrap:pretty; }
   /* el color de cada línea antes de su nombre: el punto de los botones */
   .cmp-frase .dot { display:inline-block; width:8px; height:8px; border-radius:50%;
-    margin:0 6px 0 2px; vertical-align:middle; background:var(--bone); }
+    margin:0 6px 0 2px; vertical-align:middle; background:var(--tinta); }
   .cmp-frase .serie { white-space:nowrap; }
   /* las series sin precio reciente, aparte de la frase */
-  .cmp-sin { font:400 13px/1.6 var(--sans); color:var(--ash); margin-top:4px;
+  .cmp-sin { font:400 13px/1.6 var(--sans); color:var(--tinta2); margin-top:4px;
     text-wrap:pretty; }
   .cmp-nota[hidden], .cmp-escala[hidden], .cmp-frase[hidden], .cmp-sin[hidden] { display:none; }
   /* otros productos del grupo: interlinking sobrio al pie, misma paleta
-     del sitio (panel/línea/hueso, hover con borde hueso como .links) */
+     del sitio (panel/línea/tinta, hover con borde en tinta como .links) */
   .otros { margin-top:26px; }
-  .otros-h { font:600 11px var(--mono); letter-spacing:.16em;
-    color:var(--ash); text-transform:uppercase; }
+  .otros-h { font:600 11px var(--sans); letter-spacing:.04em;
+    color:var(--tinta2); text-transform:uppercase; }
   .otros-links { display:flex; flex-wrap:wrap; gap:10px; margin-top:12px; }
   .otros-links a { font:500 13px var(--sans); padding:9px 14px;
     min-height:34px; display:inline-flex; align-items:center;
-    text-decoration:none; border:1px solid var(--line); color:var(--bone);
+    text-decoration:none; border:1px solid var(--line); color:var(--tinta);
     background:var(--panel); }
-  .otros-links a:hover { border-color:var(--bone); background:var(--hover); }
+  .otros-links a:hover { border-color:var(--tinta); background:var(--hover); }
   .links { display:flex; gap:12px; flex-wrap:wrap; margin-top:24px; }
   .links a { font:600 13px var(--sans);
     padding:9px 16px; min-height:34px; display:inline-flex; align-items:center;
-    text-decoration:none; border:1px solid var(--line); color:var(--bone);
-    background:var(--panel); border-radius:999px; }
-  .links a:hover { border-color:var(--bone); background:var(--hover); }
+    text-decoration:none; border:1px solid var(--line); color:var(--tinta);
+    background:var(--panel); border-radius:2px; }
+  .links a:hover { border-color:var(--tinta); background:var(--hover); }
   .nochart { display:flex; align-items:center; justify-content:center;
-    height:100%; color:var(--ash); font-size:13px; padding:20px; text-align:center; }
+    height:100%; color:var(--tinta2); font-size:13px; padding:20px; text-align:center; }
   /* el gráfico llega después del primer pantallazo: mientras, un aviso tenue
      en el alto ya reservado */
-  #grafico .cargando { color:var(--dim); }
+  #grafico .cargando { color:var(--tinta3); }
 __CSS_PANTALLA__
 __CSS_SITIO__
 </style>
 __JSONLD__
 </head>
-<body>
+<body data-graficos>
 
   <header>
     <!-- span único: un solo flex item para que innerText no parta el texto -->
@@ -3244,7 +3438,7 @@ FICHA_JS_TPL = r"""// carestia-ficha.js: el JS de las fichas de producto (produc
 // de cada ficha van en su página, antes de este archivo: T0, V, MIN, MAX,
 // REP, SLUG, NOMBRE, UNIDAD, VER, FECHA, AL_DIA y CAPTURA. La cifra y el
 // texto ya están en el HTML: el gráfico se arma después del primer
-// pantallazo, en Advanced Charts (en línea, en hueso; las velas a un clic) o,
+// pantallazo, en Advanced Charts (en línea, en --producto; las velas a un clic) o,
 // si la librería no está o no inicia en 8 segundos, en Lightweight como
 // siempre. En los dos, la unidad del selector y lo que se elija en "Comparar
 // con"
@@ -3302,7 +3496,7 @@ __JS_PANTALLA__
   const selector = selectorUnidad(ponerUnidad);
 
   /* ---------- Comparar con ---------- */
-  // hasta 4 series sobre el producto de la ficha, que sigue en hueso: las
+  // hasta 4 series sobre el producto de la ficha, que sigue en --producto: las
   // sugerencias del build (productos de su grupo e índices que lo llevan),
   // lo que se busque en el catálogo y lo que traiga el link
   // (#comparar=pera,asado). Es el componente de Comparar de /graficos.html
@@ -3631,7 +3825,7 @@ __JS_PANTALLA__
       setTimeout(programarFrase, 2000);
     } else if (t) reintentos = 0;
     const escala = $('cmp-escala'), frase = $('cmp-frase'), nota = $('cmp-sin');
-    const series = [{ nombre: NOMBRE, color: tok('bone') }].concat(ks.map(k =>
+    const series = [{ nombre: NOMBRE, color: tok('producto') }].concat(ks.map(k =>
       ({ nombre: nombres.get(k) || k, color: cmp.estilo(k).color })));
     escala.hidden = !e;
     if (e) escala.innerHTML = conFechas(esc(textoEscala(e, series.map(s => s.nombre))));
@@ -3677,8 +3871,8 @@ __JS_PANTALLA__
     if (una) { try { una.x.setPoints([punto]); return; } catch (e) {} }
     await Promise.resolve(c.createShape(punto, { shape: 'horizontal_line', lock: true,
       disableSelection: true, disableSave: true, disableUndo: true, showInObjectsTree: false,
-      text: IGUAL, overrides: { linecolor: tok('dim'), linestyle: 2, linewidth: 1,
-        showLabel: true, textcolor: tok('ash'), fontsize: 12, horzLabelsAlign: 'center',
+      text: IGUAL, overrides: { linecolor: tok('tinta3'), linestyle: 2, linewidth: 1,
+        showLabel: true, textcolor: tok('tinta2'), fontsize: 12, horzLabelsAlign: 'center',
         vertLabelsAlign: 'bottom' } })).catch(() => null);
   }
 
@@ -3697,7 +3891,7 @@ __JS_PANTALLA__
       });
       const chart = LightweightCharts.createChart(el, {
         autoSize: true,
-        layout: { background: { type: 'solid', color: 'transparent' }, textColor: tok('ash'),
+        layout: { background: { type: 'solid', color: 'transparent' }, textColor: tok('tinta2'),
           fontFamily: tok('sans') },
         grid: { vertLines: { color: tok('grid') }, horzLines: { color: tok('grid') } },
         rightPriceScale: { borderColor: tok('line') },
@@ -3714,9 +3908,8 @@ __JS_PANTALLA__
           vertLine: { color: tok('cruz'), labelBackgroundColor: tok('line') },
           horzLine: { color: tok('cruz'), labelBackgroundColor: tok('line') } },
       });
-      // un producto no es un índice oficial: su línea va en hueso (la brasa
-      // queda para los índices)
-      const linea = chart.addLineSeries({ color: tok('bone'), lineWidth: 2, priceLineVisible: false });
+      // la línea del producto, en --producto (en el claro, la tinta de los índices)
+      const linea = chart.addLineSeries({ color: tok('producto'), lineWidth: 2, priceLineVisible: false });
       linea.setData(serie);
       chart.timeScale().fitContent();
       lwChart = chart;
@@ -3758,7 +3951,7 @@ __JS_PANTALLA__
       LightweightCharts.PriceScaleMode.Normal });
     if (hay && u === 'real') {
       if (!lwRef) {
-        lwRef = lwChart.addLineSeries({ color: tok('dim'), lineWidth: 1,
+        lwRef = lwChart.addLineSeries({ color: tok('tinta3'), lineWidth: 1,
           lineStyle: LightweightCharts.LineStyle.Dashed, title: IGUAL, priceLineVisible: false,
           crosshairMarkerVisible: false });
       }
@@ -3794,7 +3987,7 @@ __JS_PANTALLA__
       o.titulo = NOMBRE.toUpperCase();
       o.precio = ONOTE[u];
       o.chico = true;
-      o.lineas = [{ texto: NOMBRE, color: tok('bone'), punteada: false }].concat(ks.map(k =>
+      o.lineas = [{ texto: NOMBRE, color: tok('producto'), punteada: false }].concat(ks.map(k =>
         Object.assign({ texto: nombres.get(k) || k }, cmp.estilo(k))));
       // la frase y, en otra línea, la nota de las que no tienen precio reciente
       o.frase = (ultimaFrase || []).filter(x => !x.muestra);
@@ -3812,6 +4005,16 @@ __JS_PANTALLA__
   // lo que traiga el link, ya con todo declarado
   window.addEventListener('hashchange', leerHash);
   leerHash();
+
+  // lo que la persona estaba mirando, para la recarga del cambio de tema
+  // (JS_MENU): la unidad (lo comparado ya va en #comparar=)
+  window.CarestiaEstado = () => ({ unidad });
+  let previo = null;
+  try {
+    previo = JSON.parse(sessionStorage.getItem('carestia-estado') || 'null');
+    sessionStorage.removeItem('carestia-estado');
+    previo = previo && previo.ruta === location.pathname ? previo.estado : null;
+  } catch (e) { previo = null; }
 
   window.addEventListener('load', () => {
     cargarScript('/__TV_JS__?v=__VER_TV__').then(() => {
@@ -3856,9 +4059,9 @@ __JS_PANTALLA__
       c.onVisibleRangeChanged().subscribe(null, programarFrase);
       c.onDataLoaded().subscribe(null, programarFrase);
       c.onSymbolChanged().subscribe(null, programarFrase);
-      // la unidad elegida mientras el gráfico cargaba, con lo que se haya
-      // elegido para comparar
-      ponerUnidad(unidad);
+      // la unidad elegida mientras el gráfico cargaba (o la de antes de la
+      // recarga del cambio de tema), con lo que se haya elegido para comparar
+      ponerUnidad(previo && previo.unidad && unidad === 'real' ? previo.unidad : unidad);
     }, () => { selector.limitar(unidadesHay()); lightweight(); });
   });
 """
@@ -4467,8 +4670,8 @@ def linea_cita(semana: datetime.date) -> str:
 
 
 # la línea de cita de las fichas y de las páginas de índice: texto chico,
-# ceniza, como .fecha
-CSS_CITA = """  .cita { font:400 12px/1.6 var(--sans); color:var(--ash); margin-top:4px; text-wrap:pretty; }"""
+# en el gris secundario, como .fecha
+CSS_CITA = """  .cita { font:400 12px/1.6 var(--sans); color:var(--tinta2); margin-top:4px; text-wrap:pretty; }"""
 
 
 # ---------------- Datos a demanda (datos/) ----------------
@@ -4485,8 +4688,10 @@ CSS_CITA = """  .cita { font:400 12px/1.6 var(--sans); color:var(--ash); margin-
 # [open, high, low, close]. El build verifica que se expanden sin pérdida.
 DATOS = "datos"
 SERIES_INDICE = ("real", "nominal", "velas")
+# sin el campo color de indices.json: el sitio toma el color del nombre del
+# veredicto (TONO_VEREDICTO en /graficos.html)
 RESUMEN_INDICE = ("nombre", "subtitulo", "fecha", "costo_real", "veredicto",
-                  "color", "percentil", "n", "vs_promedio")
+                  "percentil", "n", "vs_promedio")
 
 
 def _json(obj) -> str:
@@ -4855,17 +5060,17 @@ JS_UNIDAD = r"""  /* ---------- selector de unidad ---------- */
 # (la elección con los colores por orden de selección, los botones y el
 # dibujo en escala porcentual en los dos motores) viven solo aquí y van en
 # las dos páginas, como el selector de unidad.
-CSS_COMPARAR = r"""  .psearch { width:100%; font:400 14px var(--sans); color:var(--bone);
+CSS_COMPARAR = r"""  .psearch { width:100%; font:400 14px var(--sans); color:var(--tinta);
     background:var(--panel); border:1px solid var(--line); padding:10px 14px;
     margin-bottom:10px; border-radius:0; outline:none; -webkit-appearance:none; }
-  .psearch::placeholder { color:var(--dim); }
-  .psearch:focus { border-color:var(--dim); }
+  .psearch::placeholder { color:var(--tinta3); }
+  .psearch:focus { border-color:var(--tinta3); }
   .pchips { display:flex; flex-wrap:wrap; gap:8px; }
   .pchip { display:flex; align-items:center; gap:8px; font:500 13px var(--sans);
     padding:7px 12px; min-height:34px; cursor:pointer; background:transparent;
-    border:1px solid var(--line); color:var(--ash); }
-  .pchip .dot { width:8px; height:8px; border-radius:50%; background:var(--dim); flex:none; }
-  .pchip.active { background:var(--panel); color:var(--bone); }"""
+    border:1px solid var(--line); color:var(--tinta2); }
+  .pchip .dot { width:8px; height:8px; border-radius:50%; background:var(--tinta3); flex:none; }
+  .pchip.active { background:var(--panel); color:var(--tinta); }"""
 
 JS_COMPARAR = r"""  /* ---------- Comparar: el componente común ---------- */
   // Comparar productos de /graficos.html y la franja "Comparar con" de las
@@ -4910,7 +5115,7 @@ JS_COMPARAR = r"""  /* ---------- Comparar: el componente común ---------- */
       const dot = b.querySelector('.dot');
       b.classList.toggle('active', on);
       b.setAttribute('aria-pressed', on ? 'true' : 'false');
-      dot.style.background = !on ? 'var(--dim)' : e.punteada ? 'transparent' : e.color;
+      dot.style.background = !on ? 'var(--tinta3)' : e.punteada ? 'transparent' : e.color;
       dot.style.boxShadow = on && e.punteada ? 'inset 0 0 0 2px ' + e.color : '';
       b.style.borderColor = on ? e.color : 'var(--line)';
       b.style.borderStyle = on && e.punteada ? 'dashed' : '';
@@ -5270,11 +5475,11 @@ CSS_PANTALLA = r"""  /* ---- pantalla completa ---- */
     padding:0 clamp(8px,2vw,16px) 0 clamp(14px,3vw,24px);
     border-bottom:1px solid var(--line); background:var(--bg); }
   .pc-tit { min-width:0; overflow:hidden; text-overflow:ellipsis;
-    white-space:nowrap; font:600 14px var(--sans); color:var(--bone); }
+    white-space:nowrap; font:600 14px var(--sans); color:var(--tinta); }
   .pc-cerrar { flex:none; min-height:36px; padding:0 16px; cursor:pointer;
-    font:500 13px var(--sans); color:var(--bone); background:var(--panel);
-    border:1px solid var(--line); border-radius:999px; }
-  .pc-cerrar:hover, .pc-cerrar:focus-visible { border-color:var(--bone); }"""
+    font:500 13px var(--sans); color:var(--tinta); background:var(--panel);
+    border:1px solid var(--line); border-radius:2px; }
+  .pc-cerrar:hover, .pc-cerrar:focus-visible { border-color:var(--tinta); }"""
 JS_PANTALLA = r"""  /* ---------- pantalla completa ---------- */
   // Se cierra con su botón, con Escape o con "atrás": al abrir se agrega un
   // paso al historial, para que "atrás" cierre el gráfico y no salga de la
@@ -5337,17 +5542,21 @@ JS_CAPTURA = r"""  /* ---------- captura PNG: la composición común ---------- 
   // el título dice la unidad de la serie, en las dos: la imagen circula sola
   // y sin eso un gráfico ajustado por inflación se lee como precios de cada año
   const TITULO_UNIDAD = { real: ', PRECIO AJUSTADO POR INFLACIÓN', epoca: ', PRECIO DE LA ÉPOCA' };
-  // la marca va en tres segmentos medidos para pintar SOLO la í en brasa,
-  // en la tipografía del wordmark
+  // la marca, en la tipografía del wordmark: en el claro, toda en tinta; en
+  // el modo oscuro, como antes, en hueso tenue con la í en brasa (--marca)
   function marcaDeAgua(ctx, xDer, yBase, size) {
-    ctx.font = '700 ' + size + 'px "Space Grotesk", sans-serif';
+    ctx.font = '800 ' + size + 'px "Archivo", sans-serif';
     ctx.textBaseline = 'alphabetic';
+    const oscuro = document.documentElement.dataset.tema === 'oscuro';
     const seg = ['carest', 'í', 'a.cl'];
     const w = seg.map(s => ctx.measureText(s).width);
     let x = xDer - (w[0] + w[1] + w[2]);
-    ctx.globalAlpha = 0.4; ctx.fillStyle = tok('bone');  ctx.fillText(seg[0], x, yBase);
-    ctx.globalAlpha = 1;   ctx.fillStyle = tok('ember'); ctx.fillText(seg[1], x + w[0], yBase);
-    ctx.globalAlpha = 0.4; ctx.fillStyle = tok('bone');  ctx.fillText(seg[2], x + w[0] + w[1], yBase);
+    seg.forEach((s, i) => {
+      ctx.globalAlpha = oscuro && i !== 1 ? 0.4 : 1;
+      ctx.fillStyle = tok(i === 1 ? 'marca' : 'tinta');
+      ctx.fillText(s, x, yBase);
+      x += w[i];
+    });
     ctx.globalAlpha = 1;
   }
 
@@ -5431,9 +5640,10 @@ JS_CAPTURA = r"""  /* ---------- captura PNG: la composición común ---------- 
     // costo, fecha y marca de agua) antes de componer
     try {
       await Promise.all([
-        document.fonts.load('400 16px "IBM Plex Sans"'),
-        document.fonts.load('500 16px "IBM Plex Mono"'),
-        document.fonts.load('700 16px "Space Grotesk"'),
+        document.fonts.load('400 16px "Archivo"'),
+        document.fonts.load('600 16px "Archivo"'),
+        document.fonts.load('700 16px "Archivo"'),
+        document.fonts.load('800 16px "Archivo"'),
       ]);
       await document.fonts.ready;
     } catch (e) {}
@@ -5448,7 +5658,7 @@ JS_CAPTURA = r"""  /* ---------- captura PNG: la composición común ---------- 
     const muestra = Math.round(compSize * 1.8), hueco = Math.round(compSize * 0.5),
       entre = Math.round(compSize * 1.4);
     const mctx = document.createElement('canvas').getContext('2d');
-    mctx.font = '400 ' + compSize + 'px "IBM Plex Sans", sans-serif';
+    mctx.font = '400 ' + compSize + 'px "Archivo", sans-serif';
     let fila = [], ancho = 0;
     (o.lineas || []).forEach(it => {
       const w = muestra + hueco + mctx.measureText(it.texto).width;
@@ -5476,7 +5686,7 @@ JS_CAPTURA = r"""  /* ---------- captura PNG: la composición común ---------- 
     // la frase en las líneas que quepan: palabra por palabra, cada trozo
     // con su color (las cifras en rojo si subieron y en verde si bajaron; una
     // nota, en gris). { salto: true } pasa a la línea siguiente
-    const COLOR_CIFRA = { 'v-sube': tok('sube'), 'v-baja': tok('baja'), nota: tok('ash') };
+    const COLOR_CIFRA = { 'v-sube': tok('sube'), 'v-baja': tok('baja'), nota: tok('tinta2') };
     const espacio = mctx.measureText(' ').width;
     if (o.frase && o.frase.length) {
       const palabras = [];
@@ -5488,7 +5698,7 @@ JS_CAPTURA = r"""  /* ---------- captura PNG: la composición común ---------- 
           if (!p) return;
           if (!actual) { actual = { trozos: [], ancho: 0 }; palabras.push(actual); }
           const a = mctx.measureText(p).width;
-          actual.trozos.push({ texto: p, color: COLOR_CIFRA[t.clase] || tok('bone'), ancho: a });
+          actual.trozos.push({ texto: p, color: COLOR_CIFRA[t.clase] || tok('tinta'), ancho: a });
           actual.ancho += a;
         });
       });
@@ -5509,8 +5719,8 @@ JS_CAPTURA = r"""  /* ---------- captura PNG: la composición común ---------- 
     }
     // contexto arriba a la izquierda: qué es, cuánto vale (o un texto en vez
     // del monto), de cuándo
-    const precioFont = o.chico ? '400 ' + Math.round(W * 0.02) + 'px "IBM Plex Sans", sans-serif' :
-      '700 ' + Math.round(W * 0.037) + 'px "Space Grotesk", sans-serif';
+    const precioFont = o.chico ? '400 ' + Math.round(W * 0.02) + 'px "Archivo", sans-serif' :
+      '700 ' + Math.round(W * 0.037) + 'px "Archivo", sans-serif';
     const compH = (compLineas.length + prodLineas.length + fraseLineas.length) * compAlto;
     const headH = Math.round(W * 0.13) + compH, footH = Math.round(W * 0.07);
     const chartH = H - headH - footH;
@@ -5524,14 +5734,14 @@ JS_CAPTURA = r"""  /* ---------- captura PNG: la composición común ---------- 
     ctx.fillStyle = tok('bg');
     ctx.fillRect(0, 0, W, H);
     ctx.textBaseline = 'top';
-    ctx.fillStyle = tok('ash');
-    ctx.font = '500 ' + Math.round(W * 0.014) + 'px "IBM Plex Mono", monospace';
+    ctx.fillStyle = tok('tinta2');
+    ctx.font = '600 ' + Math.round(W * 0.014) + 'px "Archivo", sans-serif';
     ctx.fillText(o.titulo, pad, Math.round(W * 0.028));
-    ctx.fillStyle = tok('bone');
+    ctx.fillStyle = tok('tinta');
     ctx.font = precioFont;
     ctx.fillText(o.precio, pad, Math.round(W * 0.05));
-    ctx.fillStyle = tok('ash');
-    ctx.font = '400 ' + compSize + 'px "IBM Plex Sans", sans-serif';
+    ctx.fillStyle = tok('tinta2');
+    ctx.font = '400 ' + compSize + 'px "Archivo", sans-serif';
     const yLinea = i => Math.round(W * 0.098) + i * compAlto;
     compLineas.forEach((l, i) => ctx.fillText(l, pad, yLinea(i)));
     const grosor = Math.max(2, Math.round(compSize * 0.16));
@@ -5560,8 +5770,8 @@ JS_CAPTURA = r"""  /* ---------- captura PNG: la composición común ---------- 
         p.trozos.forEach(t => { ctx.fillStyle = t.color; ctx.fillText(t.texto, x, y); x += t.ancho; });
       });
     });
-    ctx.fillStyle = tok('ash');
-    ctx.font = '400 ' + Math.round(W * 0.012) + 'px "IBM Plex Sans", sans-serif';
+    ctx.fillStyle = tok('tinta2');
+    ctx.font = '400 ' + Math.round(W * 0.012) + 'px "Archivo", sans-serif';
     ctx.fillText('semana del ' + o.fecha, pad, Math.round(W * 0.098) + compH);
     // el gráfico entero en su recuadro, centrado si la proporción no quedó exacta
     const esc = Math.min(chartW / shot.width, chartH / shot.height);
@@ -5907,7 +6117,8 @@ def generar_productos(slugs: dict, catalogo: dict) -> None:
         sug = sugerencias_comparar(key, prods[key], tabla)
         with open(os.path.join("productos", f"{slug}.html"), "w",
                   encoding="utf-8") as fh:
-            fh.write(pagina_producto(key, prods[key], slug, otros, semana, og, sug))
+            fh.write(css_sin_comentarios(
+                pagina_producto(key, prods[key], slug, otros, semana, og, sug)))
 
 
 def tarjeta_producto(p: dict, slug: str, semana: datetime.date = None) -> str:
@@ -6582,7 +6793,8 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
   }
 
   // colores de la librería con los tokens del sitio: velas verde y rojo; la
-  // línea en brasa para los índices oficiales y en hueso para los productos.
+  // línea en --serie para los índices oficiales, en --producto para los
+  // productos y en --canasta para Tu canasta.
   // Todos los gráficos parten en línea; las velas quedan a un clic
   // la leyenda sin los parámetros de comparaciones e indicadores: el "close"
   // de cada comparada (la librería no lo traduce) y el largo de cada
@@ -6601,14 +6813,14 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
       'paneProperties.background': tok('bg'),
       'paneProperties.vertGridProperties.color': tok('grid'),
       'paneProperties.horzGridProperties.color': tok('grid'),
-      'paneProperties.crossHairProperties.color': tok('dim'),
+      'paneProperties.crossHairProperties.color': tok('cruz-tv'),
       'paneProperties.separatorColor': tok('line'),
-      'scalesProperties.textColor': tok('ash'),
+      'scalesProperties.textColor': tok('tinta2'),
       'scalesProperties.lineColor': tok('line'),
       'mainSeriesProperties.style': 2,
       // v32 dibuja la línea con degradé si no se pide un color sólido
       'mainSeriesProperties.lineStyle.colorType': 'solid',
-      'mainSeriesProperties.lineStyle.color': tok('ember'),
+      'mainSeriesProperties.lineStyle.color': tok('serie'),
       'mainSeriesProperties.lineStyle.linewidth': 2,
     });
     ['candleStyle', 'hollowCandleStyle', 'haStyle'].forEach(e => {
@@ -6623,8 +6835,8 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
     o['mainSeriesProperties.barStyle.downColor'] = rojo;
     return o;
   }
-  const colorLinea = (tok, indice) => {
-    const c = tok(indice ? 'ember' : 'bone');
+  const colorLinea = (tok, clase) => {
+    const c = tok(clase === 'canasta' ? 'canasta' : clase === 'indice' ? 'serie' : 'producto');
     return { 'mainSeriesProperties.lineStyle.colorType': 'solid', 'mainSeriesProperties.lineStyle.color': c };
   };
 
@@ -6644,6 +6856,10 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
   // acercan
   const FUERA_DEL_SITIO = ['header_symbol_search', 'symbol_search_hot_key', 'header_saveload',
     'vert_touch_drag_scroll'];
+
+  // el modo oscuro de la página (el botón de la luna)
+  const temaOscuro = () => typeof document !== 'undefined' && !!document.documentElement &&
+    document.documentElement.dataset.tema === 'oscuro';
 
   // la configuración común de todas las páginas.
   // o: { contenedor, libreria, simbolo, datafeed, tok, css, movil, sitio,
@@ -6665,11 +6881,12 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
       interval: RESOLUCION,
       timezone: ZONA,
       locale: 'es',
-      theme: 'dark',
+      // el tema de la librería sigue al de la página (data-tema)
+      theme: temaOscuro() ? 'dark' : 'light',
       autosize: true,
       custom_css_url: o.css,
-      custom_font_family: "'IBM Plex Sans', system-ui, sans-serif",
-      loading_screen: { backgroundColor: o.tok('bg'), foregroundColor: o.tok('ember') },
+      custom_font_family: "'Archivo', system-ui, sans-serif",
+      loading_screen: { backgroundColor: o.tok('bg'), foregroundColor: o.tok('serie') },
       toolbar_bg: o.tok('panel'),
       overrides: ov,
       custom_formatters: formateadores(),
@@ -6711,9 +6928,9 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
     return opciones;
   }
 
-  // con el gráfico listo: estilo según el símbolo (la línea en brasa para los
-  // índices y en hueso para los productos) y guardado automático en el
-  // navegador
+  // con el gráfico listo: estilo según el símbolo (la línea en --serie para
+  // los índices, en --producto para los productos y en --canasta para Tu
+  // canasta) y guardado automático en el navegador
   function alistarWidget(widget, feed, tok) {
     sinParametros(widget);
     estiloPorSimbolo(widget, feed, tok);
@@ -6729,7 +6946,7 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
     // el que elija la persona
     const estilo = () => feed.simbolo(chart.symbol()).then(s => {
       if (!s) return;
-      widget.applyOverrides(colorLinea(tok, s.clase === 'indice'));
+      widget.applyOverrides(colorLinea(tok, s.clase));
     });
     estilo();
     chart.onSymbolChanged().subscribe(null, estilo);
@@ -6867,7 +7084,7 @@ FEED_JS = r"""/* Carestía: datafeed de Advanced Charts sobre los archivos de da
   // informa la densidad de los lienzos, y después vuelve a la de siempre
   function capturaCliente(widget, tok, contenedor) {
     const foto = () => widget.takeClientScreenshot({ backgroundColor: tok('bg'),
-      borderColor: tok('line'), font: "'IBM Plex Sans', system-ui, sans-serif", fontSize: 12,
+      borderColor: tok('line'), font: "'Archivo', system-ui, sans-serif", fontSize: 12,
       legendMode: 'horizontal', hideResolution: true });
     let ventana = null, densidad = 1;
     try {
@@ -6916,18 +7133,18 @@ __CSS_BASE__
   header { display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 14px;
     padding:14px clamp(16px,3vw,32px); border-bottom:1px solid var(--line);
     min-height:51px; }
-  .wordmark { font:700 20px/1.1 var(--display); letter-spacing:.06em;
-    color:var(--bone); text-decoration:none; display:inline-flex;
+  .wordmark { font:800 20px/1.1 var(--display); letter-spacing:.06em;
+    color:var(--tinta); text-decoration:none; display:inline-flex;
     align-items:baseline; height:22px; overflow:hidden; }
 __CSS_MARCA__
-  .tagline { font:400 12px/14.3px var(--sans); color:var(--ash); }
+  .tagline { font:400 12px/14.3px var(--sans); color:var(--tinta2); }
   main { max-width:1280px; margin:0 auto;
     padding:clamp(20px,3vw,32px) clamp(16px,3vw,32px) clamp(28px,4vw,44px); }
-  .miga { font:500 10px var(--mono); letter-spacing:.16em;
-    color:var(--ash); text-transform:uppercase; }
+  .miga { font:600 10px var(--sans); letter-spacing:.04em;
+    color:var(--tinta2); text-transform:uppercase; }
   h1 { font:600 clamp(24px,4vw,34px)/1.15 var(--sans);
     letter-spacing:-.005em; margin-top:6px; text-wrap:balance; }
-  .intro { font:400 14px/1.6 var(--sans); color:var(--bone); margin-top:10px;
+  .intro { font:400 14px/1.6 var(--sans); color:var(--tinta); margin-top:10px;
     max-width:76ch; text-wrap:pretty; }
   /* el lienzo: alto reservado antes de que monte cualquiera de los dos
      motores (CLS); en svh, estable frente a la barra del navegador móvil.
@@ -6944,30 +7161,30 @@ __CSS_MARCA__
   body[data-motor="lightweight"] .lw-barra { display:flex; }
   body[data-motor="lightweight"] .marco { margin-top:10px; }
   .vtoggle { display:flex; border:1px solid var(--line); background:var(--bg); }
-  .vbtn { font:600 11px var(--mono); letter-spacing:.1em; padding:8px 14px;
-    border:none; cursor:pointer; background:transparent; color:var(--ash);
+  .vbtn { font:600 11px var(--sans); letter-spacing:.04em; padding:8px 14px;
+    border:none; cursor:pointer; background:transparent; color:var(--tinta2);
     min-height:34px; }
   .vbtn + .vbtn { border-left:1px solid var(--line); }
-  .vbtn.active { background:var(--bone); color:var(--bg); }
+  .vbtn.active { background:var(--tinta); color:var(--bg); }
   .nomtoggle { border:1px solid var(--line); background:var(--bg);
     font:500 13px var(--sans); letter-spacing:0; }
-  .lw-ref { font:400 11px/1.5 var(--sans); color:var(--dim); max-width:46ch; }
+  .lw-ref { font:400 11px/1.5 var(--sans); color:var(--tinta3); max-width:46ch; }
   .carga { position:absolute; inset:0; display:flex; align-items:center;
     justify-content:center; padding:20px; text-align:center;
-    font:400 12px/1.5 var(--sans); color:var(--ash); pointer-events:none; }
+    font:400 12px/1.5 var(--sans); color:var(--tinta2); pointer-events:none; }
   .carga[hidden] { display:none; }
   .nochart { display:flex; align-items:center; justify-content:center;
-    height:100%; color:var(--ash); font-size:13px; padding:20px; text-align:center; }
-  .motor { font:400 12px/1.6 var(--sans); color:var(--ash); margin-top:12px;
+    height:100%; color:var(--tinta2); font-size:13px; padding:20px; text-align:center; }
+  .motor { font:400 12px/1.6 var(--sans); color:var(--tinta2); margin-top:12px;
     text-wrap:pretty; }
   /* pista de gestos: solo en pantallas táctiles angostas */
-  .gestos { display:none; font:400 12px/1.6 var(--sans); color:var(--dim);
+  .gestos { display:none; font:400 12px/1.6 var(--sans); color:var(--tinta3);
     margin-top:4px; }
   @media (max-width:759px) { .gestos { display:block; } }
 __CSS_SITIO__
 </style>
 </head>
-<body data-motor="cargando">
+<body data-motor="cargando" data-graficos>
 
   <header>
     <!-- span único: un solo flex item para que innerText no parta el texto -->
@@ -7085,7 +7302,7 @@ __PIE__
         const fmt = v => '$' + TV.miles(v);
         const chart = LightweightCharts.createChart(lw, {
           autoSize: true,
-          layout: { background: { type: 'solid', color: 'transparent' }, textColor: tok('ash'),
+          layout: { background: { type: 'solid', color: 'transparent' }, textColor: tok('tinta2'),
             fontFamily: tok('sans') },
           grid: { vertLines: { color: tok('grid') }, horzLines: { color: tok('grid') } },
           rightPriceScale: { borderColor: tok('line') },
@@ -7100,10 +7317,10 @@ __PIE__
             horzLine: { color: tok('cruz'), labelBackgroundColor: tok('line') } },
           localization: { locale: 'es-CL', priceFormatter: fmt },
         });
-        const sNom = chart.addLineSeries({ color: tok('ash'), lineWidth: 1,
+        const sNom = chart.addLineSeries({ color: tok('tinta2'), lineWidth: 1,
           priceLineVisible: false, lastValueVisible: false, visible: false });
-        // la línea de los índices oficiales, en brasa
-        const sReal = chart.addLineSeries({ color: tok('ember'), lineWidth: 2,
+        // la línea de los índices oficiales, en --serie
+        const sReal = chart.addLineSeries({ color: tok('serie'), lineWidth: 2,
           priceLineVisible: false });
         const sVelas = chart.addCandlestickSeries({ upColor: tok('verde'),
           downColor: tok('rojo'), borderVisible: false, wickUpColor: tok('verde'),
@@ -7144,35 +7361,36 @@ __PIE__
 
 
 # variables de color de la interfaz de la librería (toolbars, menús y
-# diálogos) para el tema oscuro, con los tokens del sitio
-TV_COLORES = """.theme-dark:root {{
+# diálogos), con los tokens del sitio: una vez para el tema claro y otra
+# para el oscuro (el modo oscuro de la página)
+TV_COLORES = """{selector} {{
   --tv-color-platform-background: {bg};
   --tv-color-pane-background: {bg};
   --tv-color-toolbar-button-background-hover: {hover};
   --tv-color-toolbar-button-background-expanded: {hover};
   --tv-color-toolbar-button-background-active: {hover};
   --tv-color-toolbar-button-background-active-hover: {hover};
-  --tv-color-toolbar-button-text: {ash};
-  --tv-color-toolbar-button-text-hover: {bone};
-  --tv-color-toolbar-button-text-active: {bone};
-  --tv-color-toolbar-button-text-active-hover: {bone};
-  --tv-color-item-active-text: {bone};
+  --tv-color-toolbar-button-text: {tinta2};
+  --tv-color-toolbar-button-text-hover: {tinta};
+  --tv-color-toolbar-button-text-active: {tinta};
+  --tv-color-toolbar-button-text-active-hover: {tinta};
+  --tv-color-item-active-text: {tinta};
   --tv-color-toolbar-toggle-button-background-active: {line};
   --tv-color-toolbar-toggle-button-background-active-hover: {line};
   --tv-color-toolbar-divider-background: {line};
-  --tv-color-toolbar-save-layout-loader: {dim};
+  --tv-color-toolbar-save-layout-loader: {tinta3};
   --tv-color-popup-background: {panel};
-  --tv-color-popup-element-text: {bone};
-  --tv-color-popup-element-text-hover: {bone};
+  --tv-color-popup-element-text: {tinta};
+  --tv-color-popup-element-text-hover: {tinta};
   --tv-color-popup-element-background-hover: {hover};
   --tv-color-popup-element-divider-background: {line};
-  --tv-color-popup-element-secondary-text: {ash};
-  --tv-color-popup-element-hint-text: {dim};
-  --tv-color-popup-element-text-active: {bone};
+  --tv-color-popup-element-secondary-text: {tinta2};
+  --tv-color-popup-element-hint-text: {tinta3};
+  --tv-color-popup-element-text-active: {tinta};
   --tv-color-popup-element-background-active: {line};
-  --tv-color-popup-element-toolbox-text: {ash};
-  --tv-color-popup-element-toolbox-text-hover: {bone};
-  --tv-color-popup-element-toolbox-text-active-hover: {bone};
+  --tv-color-popup-element-toolbox-text: {tinta2};
+  --tv-color-popup-element-toolbox-text-hover: {tinta};
+  --tv-color-popup-element-toolbox-text-active-hover: {tinta};
   --tv-color-popup-element-toolbox-background-hover: {hover};
   --tv-color-popup-element-toolbox-background-active-hover: {hover};
 }}
@@ -7210,24 +7428,34 @@ def feed_js() -> str:
     return FEED_JS.replace("__PESOS__", pesos(corto=True))
 
 
-def tokens_css() -> dict:
-    """Los tokens de color de CSS_BASE ({nombre: valor}): el tema del iframe
+TEMA_OSCURO = ':root[data-tema="oscuro"] {'
+
+
+def tokens_css(oscuro: bool = False) -> dict:
+    """Los tokens de color de CSS_BASE ({nombre: valor}): los del claro (el
+    primer :root, el que usan las tarjetas y la captura por defecto) o, con
+    oscuro, los del claro pisados por los del modo oscuro. El tema del iframe
     de la librería sale de los mismos valores que el resto del sitio."""
-    return dict(re.findall(r"--([a-z0-9]+):(#[0-9a-f]{6}|rgba\([^)]*\))", CSS_BASE))
+    patron = r"--([a-z0-9]+):(#[0-9a-f]{6}|rgba\([^)]*\))"
+    i = CSS_BASE.index(TEMA_OSCURO)
+    t = dict(re.findall(patron, CSS_BASE[:i]))
+    if oscuro:
+        t.update(re.findall(patron, CSS_BASE[i:CSS_BASE.index("}", i)]))
+    return t
 
 
 def tv_css() -> str:
     """carestia-tv.css: el tema del sitio dentro del iframe de Advanced Charts
-    (custom_css_url). Plex Sans con la misma llamada a Google Fonts del sitio
+    (custom_css_url). Archivo con la misma llamada a Google Fonts del sitio
     (el iframe es otro documento: no hereda las fuentes de la página) y los
     colores de la interfaz de la librería con los tokens."""
-    t = tokens_css()
     fuentes = re.search(r'https://fonts\.googleapis\.com/css2\?[^"]+', FUENTES).group(0)
-    colores = TV_COLORES.format(**t)
+    colores = (TV_COLORES.format(selector=".theme-light:root", **tokens_css()) +
+               TV_COLORES.format(selector=".theme-dark:root", **tokens_css(oscuro=True)))
     return (f'/* Tema de Carestía para Advanced Charts: tokens de build_site.py */\n'
             f'@import url("{fuentes}");\n'
             f'{colores}'
-            # menús y diálogos en Plex Sans (el lienzo la toma de
+            # menús y diálogos en Archivo (el lienzo la toma de
             # custom_font_family)
             f'html, body {{ font-family: {t_sans()}; }}\n')
 
@@ -7241,6 +7469,17 @@ def indices_tv() -> str:
     """Los 4 índices para el datafeed (código y nombre), en JSON para el JS."""
     return _json([{"codigo": c, "nombre": d["nombre"]}
                   for c, d in DATA["indices"].items()]).replace("</", "<\\/")
+
+
+def css_sin_comentarios(pagina: str) -> str:
+    """La página sin los comentarios de su CSS (los <style>): explican el
+    código aquí, en build_site.py, pero no le sirven al navegador, y en la
+    portada pesan unos 9 KB de su tope de 200 KB. Se van también las líneas
+    que quedan vacías."""
+    def limpiar(m):
+        css = re.sub(r"/\*.*?\*/", "", m.group(1), flags=re.S)
+        return "<style>" + re.sub(r"\n[ \t]*(?=\n)", "", css) + "</style>"
+    return re.sub(r"<style>(.*?)</style>", limpiar, pagina, flags=re.S)
 
 
 def _ver(texto: str) -> str:
@@ -7277,7 +7516,7 @@ def generar_tradingview(app: dict, catalogo: dict) -> None:
     ]:
         out = out.replace(token, valor)
     with open(TV_PRUEBA, "w", encoding="utf-8") as fh:
-        fh.write(out)
+        fh.write(css_sin_comentarios(out))
 
 
 # ---------------- Páginas del sitio ----------------
@@ -7307,51 +7546,51 @@ __CSS_BASE__
   header { display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 14px;
     padding:14px clamp(16px,3vw,32px); border-bottom:1px solid var(--line);
     min-height:51px; }
-  .wordmark { font:700 20px/1.1 var(--display); letter-spacing:.06em;
-    color:var(--bone); text-decoration:none; display:inline-flex;
+  .wordmark { font:800 20px/1.1 var(--display); letter-spacing:.06em;
+    color:var(--tinta); text-decoration:none; display:inline-flex;
     align-items:baseline; height:22px; overflow:hidden; }
 __CSS_MARCA__
-  .tagline { font:400 12px/14.3px var(--sans); color:var(--ash); }
+  .tagline { font:400 12px/14.3px var(--sans); color:var(--tinta2); }
   /* el texto usa el mismo ancho y el mismo margen izquierdo que el pie (y
      que la marca): sin columna angosta centrada */
   main { padding:clamp(20px,4vw,36px) clamp(16px,3vw,32px) clamp(28px,4vw,44px); }
-  .miga { font:500 10px var(--mono); letter-spacing:.16em;
-    color:var(--ash); text-transform:uppercase; }
+  .miga { font:600 10px var(--sans); letter-spacing:.04em;
+    color:var(--tinta2); text-transform:uppercase; }
   h1 { font:600 clamp(26px,5vw,40px)/1.15 var(--sans);
     letter-spacing:-.005em; margin-top:6px; text-wrap:balance; }
 
   /* ---- textos: metodología, institucionales y legales ---- */
   .doc > h1:first-child { margin-top:0; }
-  .doc h2 { font:600 11px var(--mono); letter-spacing:.16em;
-    color:var(--ash); text-transform:uppercase; margin-top:40px; }
-  .doc h3 { font:600 16px var(--sans); color:var(--bone); }
-  .doc h3 span { font-weight:400; color:var(--ash); }
+  .doc h2 { font:600 11px var(--sans); letter-spacing:.04em;
+    color:var(--tinta2); text-transform:uppercase; margin-top:40px; }
+  .doc h3 { font:600 16px var(--sans); color:var(--tinta); }
+  .doc h3 span { font-weight:400; color:var(--tinta2); }
   .doc p, .doc li { font:400 15px/1.7 var(--sans);
-    color:var(--bone); text-wrap:pretty; }
+    color:var(--tinta); text-wrap:pretty; }
   .doc p { margin-top:14px; }
   .doc ul { margin-top:12px; padding-left:18px; }
   .doc li + li { margin-top:8px; }
-  .doc li::marker { color:var(--ash); }
+  .doc li::marker { color:var(--tinta2); }
   .doc strong { font-weight:600; }
   .doc code { font:inherit; font-size:.95em; background:var(--panel);
     border:1px solid var(--line); padding:0 5px;
     -webkit-box-decoration-break:clone; box-decoration-break:clone; }
-  .doc a { color:var(--bone); text-decoration:underline;
-    text-decoration-color:var(--dim); text-underline-offset:3px; }
-  .doc a:hover, .doc a:focus-visible { text-decoration-color:var(--bone); }
-  .doc .meta { font-size:13px; color:var(--ash); }
+  .doc a { color:var(--tinta); text-decoration:underline;
+    text-decoration-color:var(--tinta3); text-underline-offset:3px; }
+  .doc a:hover, .doc a:focus-visible { text-decoration-color:var(--tinta); }
+  .doc .meta { font-size:13px; color:var(--tinta2); }
   /* novedades: el título de cada nota como titular, no como etiqueta, y su
      fecha justo debajo */
-  .novedades h2 { font:600 20px/1.3 var(--sans); letter-spacing:0; color:var(--bone);
+  .novedades h2 { font:600 20px/1.3 var(--sans); letter-spacing:0; color:var(--tinta);
     text-transform:none; text-wrap:balance; }
   .novedades h2 + .meta { margin-top:6px; }
   .doc .sub { padding-left:3ch; }   /* sub-cláusulas: 4.1., 4.2., ... */
-  .doc .pendiente { border:1px dashed var(--dim); padding:12px 16px;
-    color:var(--ash); }
+  .doc .pendiente { border:1px dashed var(--tinta3); padding:12px 16px;
+    color:var(--tinta2); }
   /* las canastas: cantidades leídas de BASKETS (indices.py) */
   .canastas { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
     gap:26px 32px; margin-top:18px; }
-  .canastas .csub { font:400 13px/1.5 var(--sans); color:var(--ash);
+  .canastas .csub { font:400 13px/1.5 var(--sans); color:var(--tinta2);
     margin-top:4px; }
   .canastas ul { list-style:none; margin-top:10px; padding-left:0; }
   .canastas li { font:400 14px/1.5 var(--sans); padding:7px 0;
@@ -7359,52 +7598,52 @@ __CSS_MARCA__
   .canastas li + li { margin-top:0; }
 
   /* ---- /productos/: listado estático de fichas ---- */
-  .intro { font:400 15px/1.7 var(--sans); color:var(--bone);
+  .intro { font:400 15px/1.7 var(--sans); color:var(--tinta);
     margin-top:14px; text-wrap:pretty; }
   .grupos { display:flex; flex-wrap:wrap; gap:8px; margin-top:20px; list-style:none; }
   .grupos a { display:inline-flex; align-items:center; gap:8px; min-height:34px;
     padding:7px 12px; font:500 13px var(--sans);
-    text-decoration:none; color:var(--bone); background:var(--panel);
+    text-decoration:none; color:var(--tinta); background:var(--panel);
     border:1px solid var(--line); }
-  .grupos a span { color:var(--ash); }
-  .grupos a:hover, .grupos a:focus-visible { border-color:var(--bone); background:var(--hover); }
+  .grupos a span { color:var(--tinta2); }
+  .grupos a:hover, .grupos a:focus-visible { border-color:var(--tinta); background:var(--hover); }
   .pgrupo { margin-top:36px; scroll-margin-top:12px; }
-  .pgrupo h2 { font:600 11px var(--mono); letter-spacing:.16em;
-    color:var(--ash); text-transform:uppercase; }
+  .pgrupo h2 { font:600 11px var(--sans); letter-spacing:.04em;
+    color:var(--tinta2); text-transform:uppercase; }
   .pgrupo h2 span { letter-spacing:.04em; }
   .plista { list-style:none; margin-top:10px; display:grid;
     grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); column-gap:32px; }
   .plista a { display:flex; align-items:baseline; justify-content:space-between;
     gap:14px; min-height:44px; padding:11px 0; text-decoration:none;
-    color:var(--bone); border-bottom:1px solid var(--line); }
+    color:var(--tinta); border-bottom:1px solid var(--line); }
   .plista a:hover .pn, .plista a:focus-visible .pn { text-decoration:underline;
-    text-decoration-color:var(--bone); text-underline-offset:3px; }
+    text-decoration-color:var(--tinta); text-underline-offset:3px; }
   .pn { font:500 14px/1.4 var(--sans); }
-  .pf { display:block; font:400 12px var(--sans); color:var(--ash);
+  .pf { display:block; font:400 12px var(--sans); color:var(--tinta2);
     margin-top:2px; }
   .pp { font:600 14px var(--sans);
     white-space:nowrap; text-align:right; }
-  .pp small { font:400 12px var(--sans); color:var(--ash); }
+  .pp small { font:400 12px var(--sans); color:var(--tinta2); }
 
   /* ---- /indices/{codigo}.html: un índice para compartir ---- */
   .ind-cifra { display:flex; flex-wrap:wrap; align-items:baseline; gap:8px 16px;
     margin-top:18px; }
   .ind-precio { font:700 clamp(40px,7vw,64px)/1 var(--display); letter-spacing:-.01em; }
-  .ind-pill { align-self:center; font:500 12px var(--mono); letter-spacing:.08em;
-    padding:4px 11px; border-radius:999px; color:var(--bg); }
+  .ind-pill { align-self:center; font:600 12px var(--sans); letter-spacing:.04em;
+    padding:4px 11px; border-radius:2px; }
   .ind-links { display:flex; flex-wrap:wrap; gap:12px; margin-top:22px; }
   .ind-links a { display:inline-flex; align-items:center; min-height:40px; padding:0 16px;
-    font:600 13px var(--sans); color:var(--bone); text-decoration:none;
-    background:var(--panel); border:1px solid var(--line); border-radius:999px; }
-  .ind-links a:hover, .ind-links a:focus-visible { border-color:var(--bone);
+    font:600 13px var(--sans); color:var(--tinta); text-decoration:none;
+    background:var(--panel); border:1px solid var(--line); border-radius:2px; }
+  .ind-links a:hover, .ind-links a:focus-visible { border-color:var(--tinta);
     background:var(--hover); }
-  .indice .intro a { color:var(--bone); text-underline-offset:3px;
-    text-decoration-color:var(--dim); }
+  .indice .intro a { color:var(--tinta); text-underline-offset:3px;
+    text-decoration-color:var(--tinta3); }
   .comp { list-style:none; margin-top:10px; max-width:560px; }
   .comp li { display:flex; justify-content:space-between; align-items:baseline; gap:14px;
     min-height:44px; padding:11px 0; border-bottom:1px solid var(--line);
     font:500 14px/1.4 var(--sans); }
-  .comp small { font:400 12px var(--sans); color:var(--ash); margin-left:6px; }
+  .comp small { font:400 12px var(--sans); color:var(--tinta2); margin-left:6px; }
   .comp b { font-weight:600; white-space:nowrap; }
   .tarjeta { display:block; width:100%; max-width:600px; height:auto; margin-top:32px;
     border:1px solid var(--line); }
@@ -7467,7 +7706,7 @@ def escribir_pagina(archivo: str, url: str, titulo: str, desc: str, cuerpo: str,
     if carpeta:
         os.makedirs(carpeta, exist_ok=True)
     with open(archivo, "w", encoding="utf-8") as fh:
-        fh.write(out)
+        fh.write(css_sin_comentarios(out))
 
 
 def _orden(s: str) -> str:
@@ -7578,6 +7817,14 @@ TOP_SEMANA = 5
 SEMAFORO = {"BARATO": "var(--verde)", "NORMAL": "var(--ambar)", "CARO": "var(--rojo)"}
 
 
+def clase_veredicto(veredicto: str) -> str:
+    """La clase de la etiqueta del veredicto (ver .ver-rojo en CSS_SITIO):
+    el color sale de los tokens según el nombre del veredicto, no del campo
+    'color' de indices.json (ese campo sale de COLORES en indices.py, con los
+    mismos valores que los tokens, y el sitio no lo usa)."""
+    return "ver-" + COLOR_VEREDICTO.get(veredicto, "ambar")
+
+
 def cambio(x, sep: str = " ") -> str:
     """Variación con su flecha al lado (▲ sube, ▼ baja, = si redondea a 0,0)
     y el número en color (numero_variacion). Sin dato, el marcador "·"."""
@@ -7665,7 +7912,6 @@ def html_tarjetas(indices: dict) -> str:
         else:
             nota = ""
         corto = html.escape(d["nombre"].replace("Índice ", "").upper())
-        color = SEMAFORO.get(d["veredicto"], html.escape(d["color"]))
         pct = d["percentil"]
         t = d.get("temporada")
         marca, zonas = (t["percentil"], "zonas") if t else (pct, "zonas historia")
@@ -7685,7 +7931,7 @@ def html_tarjetas(indices: dict) -> str:
         out.append(
             f'        <a class="icard" href="/graficos.html#{code}">\n'
             f'          <div class="ic-top"><span class="ic-ey"><span class="ic-ind">ÍNDICE </span>{corto}</span>'
-            f'<span class="ic-pill" style="background:{color}">{html.escape(d["veredicto"])}</span></div>\n'
+            f'<span class="ic-pill {clase_veredicto(d["veredicto"])}">{html.escape(d["veredicto"])}</span></div>\n'
             f'          <div class="ic-mid"><span class="ic-sub">{html.escape(d["subtitulo"])}</span>'
             f'<span class="ic-precio">{fmt_clp(d["costo_real"])}</span></div>\n'
             f'          <div class="ic-niv"><p class="ic-fr">{html.escape(r["frase"])}</p>'
@@ -8061,7 +8307,7 @@ def generar_paginas_indices() -> list:
             f'    <p class="intro">{html.escape(d["subtitulo"])}, en la Región '
             f'Metropolitana. Semana del <span class="nw">{fecha}</span>.</p>\n'
             f'    <div class="ind-cifra"><span class="ind-precio">{fmt_clp(d["costo_real"])}</span>'
-            f'<span class="ind-pill" style="background:{SEMAFORO.get(d["veredicto"], "var(--ambar)")}">'
+            f'<span class="ind-pill {clase_veredicto(d["veredicto"])}">'
             f'{html.escape(d["veredicto"])}</span></div>\n'
             f'    <p class="intro">{html.escape(frase_indice(d))} Está en el percentil '
             f'{d["percentil"]} de su historia, {vs_txt} su promedio histórico.</p>\n'
@@ -8142,25 +8388,25 @@ COMPRAS = [
 # 4 semanas con su etiqueta y la frase. Sin scroll horizontal
 CSS_COMPRAS = r"""
   /* ---- /compras.html: los insumos de una minuta ---- */
-  .compras .meta .sin-nuevos { color:var(--bone); }
+  .compras .meta .sin-nuevos { color:var(--tinta); }
   .insumos { width:100%; max-width:1100px; margin-top:6px; border-collapse:collapse; }
   .insumos th, .insumos td { padding:11px 12px; text-align:left; vertical-align:baseline; }
   .insumos th:first-child { padding-left:0; }
   .insumos thead th:last-child, .insumos td:last-child { padding-left:24px; padding-right:0; }
-  .insumos thead th { padding-top:14px; font:500 12px var(--sans); color:var(--dim);
+  .insumos thead th { padding-top:14px; font:500 12px var(--sans); color:var(--tinta3);
     white-space:nowrap; border-bottom:1px solid var(--line); }
   .insumos .ins-p, .insumos .ins-4 { text-align:right; white-space:nowrap; }
   /* cada bloque abre con su subtítulo */
-  .insumos .ins-g th { padding-top:26px; font:600 16px var(--sans); color:var(--bone); }
+  .insumos .ins-g th { padding-top:26px; font:600 16px var(--sans); color:var(--tinta); }
   .insumos tr:not(.ins-g) { border-bottom:1px solid var(--line); }
   .ins-n { width:28%; font:500 15px/1.4 var(--sans); }
   .ins-p { font:500 15px var(--sans); }
-  .ins-p small { font:400 12px var(--sans); color:var(--ash); }
+  .ins-p small { font:400 12px var(--sans); color:var(--tinta2); }
   .ins-p .ins-sem { display:block; margin-top:2px; }
   .ins-4 { font:400 14px var(--sans); }
   .ins-4 .f { font-size:10px; }
-  .ins-f { font:400 14px/1.5 var(--sans); color:var(--bone); text-wrap:pretty; }
-  .doc .ins-nota { margin-top:12px; font-size:12px; color:var(--ash); }
+  .ins-f { font:400 14px/1.5 var(--sans); color:var(--tinta); text-wrap:pretty; }
+  .doc .ins-nota { margin-top:12px; font-size:12px; color:var(--tinta2); }
   @media (max-width:760px) {
     .insumos, .insumos tbody, .insumos tr, .insumos th, .insumos td { display:block; }
     .insumos thead { display:none; }
@@ -8172,7 +8418,7 @@ CSS_COMPRAS = r"""
     .insumos .ins-p, .insumos .ins-4 { text-align:left; }
     /* sin cabecera, el cambio de 4 semanas lleva su etiqueta; sin dato no va */
     .ins-4:not(:empty)::after { content:" 4 semanas"; font:400 12px var(--sans);
-      color:var(--bone); }
+      color:var(--tinta); }
   }
 """
 
@@ -8270,7 +8516,7 @@ def generar_compras(fichas: dict, catalogo: dict, canastas: list = ()) -> None:
 # Una canasta armada como en Arma tu canasta de /graficos.html, con su página
 # en HTML estático: un correo, los buscadores y los asistentes que no corren
 # JS ven su costo y las cifras de su franja, y la página tiene su link y su
-# tarjeta. No es un índice de Carestía: su línea va en hueso, el color de las
+# tarjeta. No es un índice de Carestía: su línea va en --canasta, el color de las
 # canastas de usuario. Las claves son las de indices.json (las de los links
 # de canasta) y cada cantidad va en la unidad del producto. 'compras' es la
 # frase de /compras.html antes del link a la página (sin ella, no va ahí)
@@ -8295,28 +8541,28 @@ CANASTA_LINEA = ("Canasta de ejemplo con precios de Santiago, ajustados por infl
 # precio y el aporte, con su etiqueta. Sin scroll horizontal
 CSS_CANASTA = r"""
   /* ---- /canastas/{slug}.html: una canasta de ejemplo ---- */
-  .can-sem { font:400 13px var(--sans); color:var(--ash); }
+  .can-sem { font:400 13px var(--sans); color:var(--tinta2); }
   /* las líneas de la franja de Arma tu canasta, como en /graficos.html */
-  .cstats { font:400 13px/1.5 var(--sans); color:var(--ash); margin-top:8px;
+  .cstats { font:400 13px/1.5 var(--sans); color:var(--tinta2); margin-top:8px;
     text-wrap:pretty; }
   .ctemporada { margin-top:2px; }
-  .caviso { font:400 12px/1.5 var(--sans); color:var(--ash); margin-top:4px; }
+  .caviso { font:400 12px/1.5 var(--sans); color:var(--tinta2); margin-top:4px; }
   .can-tabla { width:100%; max-width:760px; margin-top:6px; border-collapse:collapse; }
   .can-tabla th, .can-tabla td { padding:11px 12px; text-align:left; vertical-align:baseline; }
   .can-tabla th:first-child { padding-left:0; }
   .can-tabla td:last-child { padding-right:0; }
-  .can-tabla thead th { font:500 12px var(--sans); color:var(--dim); white-space:nowrap;
+  .can-tabla thead th { font:500 12px var(--sans); color:var(--tinta3); white-space:nowrap;
     border-bottom:1px solid var(--line); }
   .can-tabla tbody tr { border-bottom:1px solid var(--line); }
   .can-tabla tbody th { font:500 15px/1.4 var(--sans); }
-  .can-tabla a { color:var(--bone); text-decoration:underline;
-    text-decoration-color:var(--dim); text-underline-offset:3px; }
-  .can-tabla a:hover, .can-tabla a:focus-visible { text-decoration-color:var(--bone); }
+  .can-tabla a { color:var(--tinta); text-decoration:underline;
+    text-decoration-color:var(--tinta3); text-underline-offset:3px; }
+  .can-tabla a:hover, .can-tabla a:focus-visible { text-decoration-color:var(--tinta); }
   .can-tabla .can-n { text-align:right; white-space:nowrap; }
   .can-q, .can-p { font:400 14px var(--sans); }
-  .can-p small { font:400 12px var(--sans); color:var(--ash); }
+  .can-p small { font:400 12px var(--sans); color:var(--tinta2); }
   .can-a { font:600 14px var(--sans); }
-  .can-nota { font:400 12px/1.6 var(--sans); color:var(--ash); margin-top:12px;
+  .can-nota { font:400 12px/1.6 var(--sans); color:var(--tinta2); margin-top:12px;
     text-wrap:pretty; }
   @media (max-width:760px) {
     .can-tabla, .can-tabla tbody, .can-tabla tr, .can-tabla th, .can-tabla td { display:block; }
@@ -8328,7 +8574,7 @@ CSS_CANASTA = r"""
     .can-tabla .can-n { text-align:left; }
     .can-tabla .can-a { text-align:right; }
     /* sin cabecera, el aporte lleva su etiqueta */
-    .can-a::before { content:"aporta "; font:400 12px var(--sans); color:var(--ash); }
+    .can-a::before { content:"aporta "; font:400 12px var(--sans); color:var(--tinta2); }
   }
 """
 
@@ -8489,7 +8735,7 @@ def oracion(s: str) -> str:
 def tarjeta_canasta(c: dict, r: dict, lineas: dict, ruta: str) -> str:
     """og/canastas/{slug}.png, como la de un producto: el título, el costo,
     la frase de temporada (sin ella, la del percentil) y el gráfico de la
-    serie, con la línea en hueso. Devuelve las etiquetas og."""
+    serie, con la línea en --canasta. Devuelve las etiquetas og."""
     fin = datetime.date.fromisoformat(r["serie"][-1][0])
     datos = {
         "antetitulo": "Canasta de ejemplo en Santiago",
@@ -8504,7 +8750,7 @@ def tarjeta_canasta(c: dict, r: dict, lineas: dict, ruta: str) -> str:
         "serie": serie_tarjeta([datetime.date.fromisoformat(t) for t, _v in r["serie"]],
                                [v for _t, v in r["serie"]]),
         "leyenda": TARJETA_LEYENDA,
-        "linea": "bone",
+        "linea": "canasta",
     }
     dibujar(tarjetas.ficha, ruta, datos)
     alt = (f"{c['titulo']}: {datos['precio']}, {datos['fecha'][0].lower()}{datos['fecha'][1:]}. "
@@ -8667,7 +8913,7 @@ def generar_portada(catalogo: dict, fichas: dict) -> None:
     ]:
         out = out.replace(token, valor)
     with open("index.html", "w", encoding="utf-8") as fh:
-        fh.write(out)
+        fh.write(css_sin_comentarios(out))
 
 
 # ---- textos/*.md (del dueño) ----
@@ -8985,12 +9231,13 @@ CATALOGO = generar_catalogo(DATA.get("productos", {}), SLUGS)
 APP = generar_datos(SLUGS, CATALOGO)
 
 with open("graficos.html", "w", encoding="utf-8") as fh:
-    fh.write(GRAFICOS_HTML.replace("__ICONO__", ICONO)
+    fh.write(css_sin_comentarios(GRAFICOS_HTML.replace("__ICONO__", ICONO)
                           .replace("__FUENTES__", FUENTES)
                           .replace("__CSS_BASE__", CSS_BASE)
                           .replace("__CSS_CABECERA__", CSS_CABECERA)
                           .replace("__CSS_SITIO__", CSS_SITIO)
                           .replace("__GRUPOS__", json.dumps(GRUPO_TXT, ensure_ascii=False))
+                          .replace("__TONO_VEREDICTO__", _json(COLOR_VEREDICTO))
                           .replace("__NAV__", nav_sitio("indices"))
                           .replace("__PIE__", pie_sitio())
                           # de qué semana son los precios y la próxima actualización
@@ -9022,7 +9269,7 @@ with open("graficos.html", "w", encoding="utf-8") as fh:
                           .replace("__AJUSTADOS__", ajustado("os"))
                           .replace("__PESOS_CORTO__", pesos(corto=True))
                           # "</" escapado: un label nunca puede cerrar el <script>
-                          .replace("__DATA__", _json(APP).replace("</", "<\\/")))
+                          .replace("__DATA__", _json(APP).replace("</", "<\\/"))))
 
 generar_portada(CATALOGO, FICHAS)
 

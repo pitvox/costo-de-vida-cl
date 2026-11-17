@@ -62,7 +62,7 @@ def test_pagina_de_novedades(sitio):
     assert main.startswith('<main class="doc novedades">')
     assert "<h1>Novedades</h1>" in main
     # el título de cada nota, como titular
-    assert ".novedades h2 { font:600 20px/1.3 var(--sans); letter-spacing:0; color:var(--bone);" in h
+    assert ".novedades h2 { font:600 20px/1.3 var(--sans); letter-spacing:0; color:var(--tinta);" in h
     assert f"<h2>{TITULO}</h2>" in main
     # la fecha de la nota, legible y en la etiqueta
     assert f'<p class="meta"><time datetime="2026-10-07">{FECHA}</time></p>' in main

@@ -43,7 +43,7 @@ def _producto(label, grupo, v, unidad="kg", propio=None, fin=FIN):
 def sintetico() -> dict:
     out = {"generado": "2026-09-26", "ipc_mes": "2026-08", "indices": {}, "productos": {},
            "descartes": []}
-    colores = {"BARATO": "#5bbf7a", "NORMAL": "#e0a83c", "CARO": "#e0552f"}
+    colores = {"BARATO": "#1a7f47", "NORMAL": "#f0b429", "CARO": "#c8321c"}
     for k, (code, meta) in enumerate(BASKETS.items()):
         fechas = [(FIN - datetime.timedelta(weeks=99 - i)).isoformat() for i in range(100)]
         # el último valor es mayor que 81 de las 100 semanas: 8 de cada 10
@@ -314,13 +314,13 @@ def test_portada_avisa_si_odepa_no_publico(tmp_path):
              "</span> Próxima actualización: viernes 9 de octubre en la tarde.")
     h = _leer(d, "index.html")
     assert f'<div class="semana">{linea}</div>' in h
-    assert ".semana .sin-nuevos { color:var(--bone); }" in h
+    assert ".semana .sin-nuevos { color:var(--tinta); }" in h
     assert f'<div class="semana">{linea}</div>' in _leer(d, "graficos.html")
     # en las fichas la línea de la semana va solo para dar este aviso
     f = _leer(d, "productos/tomate.html")
     assert f'<div class="fecha">{linea} Serie desde ' in f
     assert f.index('<div class="notas">') < f.index('<div class="fecha">') < f.index('<nav class="links">')
-    assert ".fecha .sin-nuevos { color:var(--bone); }" in f
+    assert ".fecha .sin-nuevos { color:var(--tinta); }" in f
 
 
 # ---------- 5. tarjetas para WhatsApp ----------
@@ -362,7 +362,7 @@ def test_la_marca_y_los_iconos_en_todas_las_paginas(sitio):
         h = _leer(sitio, p)
         assert re.search(r"__[A-Z][A-Z_]*__", h) is None, p
         assert h.count('CAREST<span class="i"><span>Í</span></span>A') == 1, p
-        for regla in [".wordmark .i > span { display:inline-block; clip-path:inset(.265em 0 0 0); }",
+        for regla in [".wordmark .i > span { display:inline-block; clip-path:inset(.163em 0 0 0); }",
                       "-webkit-print-color-adjust:exact; print-color-adjust:exact;",
                       ".wordmark .i::after { forced-color-adjust:none; background:CanvasText; }"]:
             assert regla in h, (p, regla)
@@ -372,15 +372,15 @@ def test_la_marca_y_los_iconos_en_todas_las_paginas(sitio):
 
 def test_las_tarjetas_llevan_el_grafico_de_su_serie(sitio):
     # con al menos 26 semanas con precio, el gráfico de la serie ajustada por
-    # inflación va a la derecha (hay brasa en su caja); con menos (maracuyá,
+    # inflación va a la derecha (hay --serie en su caja); con menos (maracuyá,
     # 10 semanas) la tarjeta queda como antes, sin gráfico
-    def brasa(png):
+    def serie(png):
         with Image.open(sitio / png) as im:
             colores = im.convert("RGB").crop(tarjetas.GRAFICO).getcolors(1 << 24)
-            return dict((c, n) for n, c in colores).get((0xe8, 0x74, 0x3b), 0)
-    assert brasa("og/productos/tomate.png") > 500
-    assert brasa("og/indices/asado.png") > 500
-    assert brasa("og/productos/maracuya.png") == 0
+            return dict((c, n) for n, c in colores).get((0x11, 0x11, 0x11), 0)
+    assert serie("og/productos/tomate.png") > 500
+    assert serie("og/indices/asado.png") > 500
+    assert serie("og/productos/maracuya.png") == 0
 
 
 def test_un_grafico_que_falla_no_frena_la_tarjeta(tmp_path, capsys):
@@ -388,8 +388,8 @@ def test_un_grafico_que_falla_no_frena_la_tarjeta(tmp_path, capsys):
     # sin gráfico, como antes, y queda el aviso; el build sigue
     serie = [[f"2026-01-{d:02d}", 1000] for d in range(1, 27)] + [["no-es-fecha", 1000]]
     ruta = str(tmp_path / "rota.png")
-    tok = {"bg": "#0f0f0e", "bone": "#e4dacc", "ash": "#a39e95", "dim": "#86817a",
-           "line": "#2b2a27", "ember": "#e8743b", "rojo": "#e0552f"}
+    tok = {"bg": "#0f0f0e", "tinta": "#e4dacc", "tinta2": "#a39e95", "tinta3": "#86817a",
+           "line": "#2b2a27", "serie": "#e8743b", "rojo": "#c8321c"}
     tarjetas.ficha(ruta, tok, antetitulo="Precio en Santiago", nombre="Prueba", precio="$1.000",
                    unidad="por kilo", frase="Frase.", fecha="Semana del 19-10-2026",
                    fuente_txt="Fuente", sitio="carestia.cl", serie=serie, leyenda="Ajustado por inflación")
@@ -431,10 +431,10 @@ def test_og_generica_e_icono_de_ios(sitio):
         assert im.size == (180, 180) and im.format == "PNG"
         px = im.convert("RGB").load()
         # a sangre (iOS redondea las esquinas): el fondo llega al borde
-        assert px[0, 0] == px[179, 179] == (0x0f, 0x0f, 0x0e)
-        # el centro de la barra en hueso y un punto de la línea en brasa
-        assert px[a_px(32, 42)] == (0xe4, 0xda, 0xcc)
-        assert px[a_px(25, 17)] == (0xe8, 0x74, 0x3b)
+        # en negativo: fondo en tinta, barra y línea en blanco
+        assert px[0, 0] == px[179, 179] == (0x11, 0x11, 0x11)
+        assert px[a_px(32, 42)] == (0xff, 0xff, 0xff)
+        assert px[a_px(25, 17)] == (0xff, 0xff, 0xff)
 
 
 def test_la_frase_y_el_alt_de_las_tarjetas(sitio):
@@ -459,7 +459,7 @@ def test_pagina_de_cada_indice(sitio):
     assert "<title>Índice Asado: asado para 4 personas en Santiago | Carestía</title>" in h
     assert "<h1>Índice Asado</h1>" in h
     assert '<span class="ind-precio">$10.815</span>' in h
-    assert 'style="background:var(--rojo)">CARO</span>' in h
+    assert '<span class="ind-pill ver-rojo">CARO</span>' in h
     assert "Más caro que en 8 de cada 10 semanas desde 2024, descontada la inflación." in h
     assert "+14% sobre su promedio histórico" in h
     assert '<a href="https://carestia.cl/graficos.html#asado">Ver el gráfico</a>' in h
@@ -563,9 +563,16 @@ def test_workflow_publica_tarjetas_indices_y_prensa():
 
 
 def test_fuentes_de_las_tarjetas_con_su_licencia():
-    for ttf in ["SpaceGrotesk-Bold.ttf", "IBMPlexSans-Regular.ttf", "IBMPlexSans-SemiBold.ttf",
-                "IBMPlexMono-Medium.ttf"]:
-        assert os.path.exists(os.path.join(RAIZ, "fuentes", ttf)), ttf
-    for lic in ["OFL-SpaceGrotesk.txt", "OFL-IBMPlex.txt"]:
-        with open(os.path.join(RAIZ, "fuentes", lic), encoding="utf-8") as fh:
-            assert "SIL Open Font License" in fh.read(), lic
+    # Archivo, la familia del sitio, en el TTF variable de google/fonts, con
+    # su licencia; Space Grotesk y Plex Mono ya no van
+    assert os.path.exists(os.path.join(RAIZ, "fuentes", tarjetas.ARCHIVO))
+    with open(os.path.join(RAIZ, "fuentes", "OFL-Archivo.txt"), encoding="utf-8") as fh:
+        texto = fh.read()
+    assert "SIL Open Font License" in texto and "Archivo Project Authors" in texto
+    for viejo in ["SpaceGrotesk-Bold.ttf", "IBMPlexMono-Medium.ttf", "OFL-SpaceGrotesk.txt"]:
+        assert not os.path.exists(os.path.join(RAIZ, "fuentes", viejo)), viejo
+    # cada uso con su peso en el eje wght
+    assert tarjetas.PESOS == {"display": 800, "cifra": 700, "sans": 400, "sans-semi": 600,
+                              "etiqueta": 600}
+    f = tarjetas.fuente("display", 40)
+    assert [e["name"] for e in f.get_variation_axes()] == [b"Weight", b"Width"]
