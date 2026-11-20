@@ -15,8 +15,11 @@ name: Prueba de lectura de supermercados
 #
 # La única corrida fue la 44823116967, del 20 de noviembre de 2026, con un
 # disparo por push a la rama de la prueba que ya se quitó: queda solo
-# workflow_dispatch, que funciona solo desde la rama principal. Un Re-run no
-# vuelve a pedir nada: el job corre solo en el primer intento de cada corrida.
+# workflow_dispatch, como pide el encargo. GitHub ya conoce este workflow por
+# esa corrida, así que un disparo por la API con esta rama como ref
+# probablemente correría otra lectura real: para cerrar esa puerta, se
+# desactiva el workflow en Actions o se borra la rama. Un Re-run no vuelve a
+# pedir nada: el job corre solo en el primer intento de cada corrida.
 on:
   workflow_dispatch: {}
 
