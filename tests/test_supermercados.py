@@ -199,6 +199,34 @@ def test_categorias_de_los_filtros_no_son_etiqueta():
             (2890, 3990, "x 1 kg", etiqueta), etiqueta
 
 
+def test_formatos_vistos_en_la_corrida():
+    # tal como salieron en el texto de la corrida 44823116967
+    # una promoción por cantidad trae su propio precio por unidad antes del precio normal
+    t = una("Oferta\n\nLleva 2 por $1.290\n$3.225 x kg\n$840\n$4.200 x kg\n\nPomarola\n\n"
+            "Salsa de Tomate Pomarola Italiana 200 g\nAgregar")
+    assert (t["precio"], t["precio_unidad"], t["unidad"]) == (840, 4200, "kg")
+    assert (t["marca"], t["nombre"]) == ("Pomarola", "Salsa de Tomate Pomarola Italiana 200 g")
+    assert t["oferta"] == "Lleva 2 por $1.290 ($3.225 x kg)"
+    # precio por 10 g
+    t = una("$1.660\n$166 x 10g\n\nSpecia\n\nCebolla Apanada Specia Doypack 100 g\nAgregar")
+    assert (t["precio"], t["precio_unidad"], t["unidad"], t["nombre"]) == \
+        (1660, 166, "10 g", "Cebolla Apanada Specia Doypack 100 g")
+    # "Paga $X": el precio con un medio de pago va en la oferta; el precio es el normal
+    t = una("Prime Week\n\n$5.390\n$275 x 10g\nPaga $4.312\n$220 x 10g\n\nCarmencita\n\n"
+            "Cebolla en Polvo Carmencita 196 g\nAgregar")
+    assert (t["precio"], t["precio_unidad"], t["unidad"]) == (5390, 275, "10 g")
+    assert (t["marca"], t["nombre"]) == ("Carmencita", "Cebolla en Polvo Carmencita 196 g")
+    assert t["oferta"] == "Prime Week, Paga $4.312 ($220 x 10 g)"
+    t = una("Oferta\n\n$3.590$4.250\n$5.279 x kg\nPaga $3.290\n$4.838 x kg\n\nCuisine & Co\n\n"
+            "Salsa de Tomate Cuisine & Co American Dream Marinara 680 g\nAgregar")
+    assert (t["precio"], t["precio_anterior"], t["precio_unidad"]) == (3590, 4250, 5279)
+    assert t["oferta"] == "Oferta, Paga $3.290 ($4.838 x kg), antes $4.250"
+    # "20% dcto." antes de los precios no se lleva el precio vigente
+    t = una("Oferta\n\n20% dcto.\n$1.912$2.390\n$3.824 x kg\n\nLa Molisana\n\n"
+            "Gnocchi de Papa La Molisana 500 g\nAgregar")
+    assert (t["precio"], t["precio_anterior"], t["etiqueta"]) == (1912, 2390, "20% dcto.")
+
+
 def test_marca_y_nombre_sin_textos_de_estado():
     t = una("$3.890\n$1.945 x kg\nPapa Malla 2 kg\nAgotado\nAgregar")
     assert (t["marca"], t["nombre"]) == ("", "Papa Malla 2 kg")

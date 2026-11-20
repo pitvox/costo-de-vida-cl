@@ -397,11 +397,16 @@ _PRESENTACION = re.compile(r"(?:x|por)\s*(" + _NUM + r")\s*(" + _UNI + r")" + _F
 _UNIDAD_SOLA = re.compile(r"(?:x|por|/)\s*(" + _UNI + r")\.?", re.I)
 # "Lleva 2 por $3.000", "3 x $5.000", "2x$5.000", "Ahorra $360": el precio es de la etiqueta.
 # "dcto." no: en "20% dcto." el precio que sigue es el de la tarjeta
-_CONECTOR = re.compile(r"(?:(?:^|\s)(?:por|x|a|desde|hasta|de|con|en|ahorr[ae]s?|ahorro)"
+_CONECTOR = re.compile(r"(?:(?:^|\s)(?:por|x|a|desde|hasta|de|con|en|ahorr[ae]s?|ahorro|paga)"
                        r"|\dx)\s*:?\s*$", re.I)
 # "Normal: $1.350", "Antes $1.350", "Precio normal $1.350": ese precio es el anterior
 _ANTES = re.compile(r"(?:^|\s)(?:precio\s+)?(?:normal|antes|anterior|regular)\s*:?\s*$", re.I)
 _PORCENTAJE = re.compile(r"^-?\d+\s*%(?:\s*\w+)?$")
+# una promoción por cantidad: "Lleva 2 por $1.290", "3 x $5.000", "2x$5.000"
+_PROMO = re.compile(r"lleva\s*\d+\s*(?:por|x)\s*\$|\d+\s*x\s*\$", re.I)
+# "Paga $4.312": el precio con un medio de pago o una membresía, que va después
+# del precio normal de la tarjeta, con su propio precio por unidad
+_PAGA = re.compile(r"paga\s*\$", re.I)
 # un rango de los filtros ("$5.000 - $20.000", "$0 a $5.000") no es un precio de tarjeta
 _RANGO = re.compile(r"\$\s?(?:" + _NUM + r")\s*(?:-|\u2013|a|hasta)\s*\$\s?(?:" + _NUM + r")", re.I)
 # textos de la tarjeta que no son marca ni nombre
@@ -411,7 +416,8 @@ _AGREGAR = re.compile(r"(.*?)\s*(Agregar|AGREGAR)(?: al carro| AL CARRO)?")
 _ETIQUETA = re.compile(
     r"ofert|imbatible|lleva\s*\d|ll[eé]vate|\d+\s*(?:x|por)\s*\$|descuento|dcto|promo"
     r"|precio\s+especial|liquidaci|\d+\s*%|ahorra|exclusivo\b|cyber|black|\b2do\b|segunda"
-    r"|club|tarjeta|cencosud|rebaja|nuevo\s+precio|baj[oó]\s+de\s+precio", re.I)
+    r"|club|tarjeta|cencosud|rebaja|nuevo\s+precio|baj[oó]\s+de\s+precio|paga\s*\$|\bprime\b",
+    re.I)
 
 
 def a_numero(s: str):
@@ -523,7 +529,27 @@ def piezas(texto: str) -> list:
                 juntas[-1] = ("pu", (juntas[-1][1], p[1]))
             continue
         juntas.append(p)
-    return juntas
+    final = []
+    for k, p in enumerate(juntas):
+        siguiente = juntas[k + 1][0] if k + 1 < len(juntas) else None
+        # "$1.660" y "$166 x 10g": tras el precio de la tarjeta (o tras "Paga
+        # $X"), un precio con cantidad que no tiene otro precio por unidad
+        # después es el precio por esa cantidad (por 10 g), no la presentación
+        # ("$995x 500 g" y "$1.990 x kg")
+        if (p[0] == "pres" and len(final) >= 2 and final[-1][0] == "precio"
+                and (final[-2][0] == "precio" or final[-2][0] == "texto"
+                     and _PAGA.match(final[-2][1]))
+                and siguiente not in ("precio", "pu")):
+            p = ("pu", (final.pop()[1], p[1][2:]))
+        # el precio por unidad de "Paga $4.312", o el de "Lleva 2 por $1.290"
+        # que va antes del precio normal, es de esa etiqueta, no otra tarjeta
+        if p[0] == "pu" and final and final[-1][0] == "texto" and (
+                _PAGA.match(final[-1][1]) or _PROMO.search(final[-1][1]) and siguiente == "precio"):
+            v, u = p[1]
+            final[-1] = ("texto", f"{final[-1][1]} ({pesos(v)} x {u})")
+            continue
+        final.append(p)
+    return final
 
 
 def _suelta(texto: str) -> bool:
@@ -572,11 +598,15 @@ def _tarjeta(ps: list, i: int):
         etiqueta = next((t for n, t in sueltas if _ETIQUETA.search(t)
                          and (n == 0 or n < len(precios))), "")
     k = i + 1
-    # tras el precio por unidad pueden venir el anterior ("Normal: $1.350") o un "-20%"
-    while k < len(ps) and (ps[k][0] == "ant" or ps[k][0] == "texto" and len(ps[k][1]) <= 40
-                           and (_ANTES.search(ps[k][1]) or _PORCENTAJE.match(ps[k][1]))):
+    # tras el precio por unidad pueden venir el anterior ("Normal: $1.350"), un
+    # "-20%" o el precio con un medio de pago ("Paga $4.312")
+    while k < len(ps) and (ps[k][0] == "ant" or ps[k][0] == "texto" and (
+            _PAGA.match(ps[k][1]) or len(ps[k][1]) <= 40
+            and (_ANTES.search(ps[k][1]) or _PORCENTAJE.match(ps[k][1])))):
         if ps[k][0] == "ant" and explicito is None:
             explicito = ps[k][1]
+        elif ps[k][0] == "texto" and _PAGA.match(ps[k][1]):
+            etiqueta = f"{etiqueta}, {ps[k][1]}" if etiqueta else ps[k][1]
         k += 1
     textos = []
     while k < len(ps) and ps[k][0] == "texto":
@@ -588,7 +618,8 @@ def _tarjeta(ps: list, i: int):
         textos.pop()
     textos = [t for t in textos if not _NO_NOMBRE.fullmatch(t)]
     while len(textos) > 2 and len(textos[0]) <= 40 and _ETIQUETA.search(textos[0]):
-        etiqueta = etiqueta or textos[0]    # una etiqueta antes de la marca
+        if textos[0] not in etiqueta:       # una etiqueta antes de la marca
+            etiqueta = f"{etiqueta}, {textos[0]}" if etiqueta else textos[0]
         textos.pop(0)
     marca, nombre = (textos[0], textos[1]) if len(textos) >= 2 else ("", textos[0] if textos else "")
     if not precios and precio_unidad is not None:
