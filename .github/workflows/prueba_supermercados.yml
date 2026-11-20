@@ -1,0 +1,73 @@
+name: Prueba de lectura de supermercados
+
+# Prueba técnica aislada (claude/Prompt_prueba_supermercados.md): saber si las
+# páginas de búsqueda de jumbo.cl y santaisabel.cl se pueden leer desde
+# Actions igual que desde un navegador normal. Corre
+# analisis/supermercados/prueba_lectura.py: como máximo 32 pedidos de búsqueda
+# (8 términos, 2 sitios, 2 fases) más un robots.txt por sitio, uno a la vez y
+# con 5 segundos o más entre pedidos al mismo sitio. Sube resultado.csv y
+# resumen.md (con corrida.json y el texto leído, crudo/) como artifact de 3
+# días e imprime resumen.md en el log. Sin commit, sin deploy, sin calendario:
+# no toca el sitio ni Pages.
+#
+# El disparo por push es solo mientras dura la prueba: se quita al terminar y
+# queda solo workflow_dispatch.
+on:
+  workflow_dispatch: {}
+  push:
+    branches:
+      - claude/prueba-supermercados
+
+permissions:
+  contents: read
+
+# nunca dos corridas a la vez: una espera a la otra
+concurrency:
+  group: prueba-supermercados
+  cancel-in-progress: false
+
+jobs:
+  prueba:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Clonar repo
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Instalar Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependencias
+        run: pip install "requests==2.34.2" "playwright==1.63.0"
+
+      # solo el Chromium sin interfaz (headless shell), con sus dependencias
+      - name: Instalar Chromium
+        run: python -m playwright install --with-deps --only-shell chromium
+
+      - name: Leer los supermercados
+        run: python analisis/supermercados/prueba_lectura.py --salida salida
+
+      # si el script se cortó, rehace resumen.md desde corrida.json, sin red
+      - name: Resumen en el log
+        if: always()
+        run: |
+          if [ ! -f salida/resumen.md ] && [ -f salida/corrida.json ]; then
+            python analisis/supermercados/prueba_lectura.py --desde-crudo salida
+          fi
+          cat salida/resumen.md || echo "No hay resumen.md"
+          echo
+          echo "----- resultado.csv -----"
+          cat salida/resultado.csv || echo "No hay resultado.csv"
+
+      - name: Subir resultados
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: prueba-supermercados
+          path: salida/
+          retention-days: 3
+          if-no-files-found: warn
