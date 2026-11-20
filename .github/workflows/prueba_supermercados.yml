@@ -4,19 +4,26 @@ name: Prueba de lectura de supermercados
 # páginas de búsqueda de jumbo.cl y santaisabel.cl se pueden leer desde
 # Actions igual que desde un navegador normal. Corre
 # analisis/supermercados/prueba_lectura.py: como máximo 32 pedidos de búsqueda
-# (8 términos, 2 sitios, 2 fases) más un robots.txt por sitio, uno a la vez y
-# con 5 segundos o más entre pedidos al mismo sitio. Sube resultado.csv y
-# resumen.md (con corrida.json y el texto leído, crudo/) como artifact de 3
-# días e imprime resumen.md en el log. Sin commit, sin deploy, sin calendario:
-# no toca el sitio ni Pages.
+# (8 términos, 2 sitios, 2 fases; cada salto de redirección cuenta) más el
+# robots.txt de cada sitio, uno a la vez y con 5 segundos o más entre pedidos
+# al mismo sitio. Sube resultado.csv y resumen.md como artifact de 3 días e
+# imprime resumen.md en el log. Aparte, en otro artifact de 3 días, van
+# corrida.json y crudo/ (el texto leído y el HTML de cada página, sin el
+# contenido de sus scripts), y el log lleva corrida.json y el texto leído,
+# para releer las tarjetas sin pedir nada otra vez. Sin commit, sin deploy,
+# sin calendario: no toca el sitio ni Pages.
 #
 # El disparo por push es solo mientras dura la prueba: se quita al terminar y
-# queda solo workflow_dispatch.
+# queda solo workflow_dispatch. Un Re-run no vuelve a pedir nada: el job
+# corre solo en el primer intento de cada corrida.
 on:
   workflow_dispatch: {}
   push:
     branches:
       - claude/prueba-supermercados
+    paths:
+      - analisis/supermercados/prueba_lectura.py
+      - .github/workflows/prueba_supermercados.yml
 
 permissions:
   contents: read
@@ -28,6 +35,7 @@ concurrency:
 
 jobs:
   prueba:
+    if: github.run_attempt == '1'
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
@@ -48,16 +56,37 @@ jobs:
       - name: Instalar Chromium
         run: python -m playwright install --with-deps --only-shell chromium
 
+      # Chromium se prueba antes de pedir nada: si no parte, no se pide nada
       - name: Leer los supermercados
         run: python analisis/supermercados/prueba_lectura.py --salida salida
 
       # si el script se cortó, rehace resumen.md desde corrida.json, sin red
-      - name: Resumen en el log
+      - name: Rehacer el resumen si hizo falta
         if: always()
         run: |
           if [ ! -f salida/resumen.md ] && [ -f salida/corrida.json ]; then
             python analisis/supermercados/prueba_lectura.py --desde-crudo salida
           fi
+
+      # corrida.json y el texto leído de cada página, entre marcas, para
+      # rearmar salida/ y releer sin pedir nada (el HTML va solo en el artifact)
+      - name: Texto leído en el log
+        if: always()
+        run: |
+          cd salida 2>/dev/null || { echo "No hay salida/"; exit 0; }
+          for f in corrida.json crudo/*.txt; do
+            [ -f "$f" ] || continue
+            echo "::group::$f"
+            echo "===== $f ====="
+            cat "$f"
+            echo
+            echo "===== fin ====="
+            echo "::endgroup::"
+          done
+
+      - name: Resumen en el log
+        if: always()
+        run: |
           cat salida/resumen.md || echo "No hay resumen.md"
           echo
           echo "----- resultado.csv -----"
@@ -68,6 +97,19 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: prueba-supermercados
-          path: salida/
+          path: |
+            salida/resultado.csv
+            salida/resumen.md
+          retention-days: 3
+          if-no-files-found: warn
+
+      - name: Subir el detalle
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: prueba-supermercados-detalle
+          path: |
+            salida/corrida.json
+            salida/crudo/
           retention-days: 3
           if-no-files-found: warn
