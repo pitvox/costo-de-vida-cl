@@ -183,6 +183,22 @@ def test_numero_que_no_se_lee_no_rompe_el_lector():
     assert (t["precio"], t["precio_unidad"]) == (3890, 1945)
 
 
+def test_categorias_de_los_filtros_no_son_etiqueta():
+    # el texto real de santaisabel.cl en la corrida: antes de la primera tarjeta
+    # va la tira de categorías ("Marcas Exclusivas" es una categoría, no una oferta)
+    for tira in ("Chocolates, Galletas y SnacksLácteos, Huevos y CongeladosMarcas ExclusivasFrutas "
+                 "y VerdurasProductos ImportadosMypes", "DespensaMarcas Exclusivas",
+                 "Carnes y PescadosMarcas Exclusivas"):
+        t = una(f"Aplicar\n{tira}\n{tira}\n$3.950\n$1.975 x kg\nFrutas y Verduras Propias\n"
+                "Papa Malla 2 kg\nAgregar")
+        assert (t["precio"], t["etiqueta"], t["oferta"]) == (3950, "", ""), tira
+    # las etiquetas reales de la corrida siguen contando
+    for etiqueta in ("Exclusivo online", "Exclusivo Jumbo", "20% dcto.", "Los Imbatibles", "Oferta"):
+        t = una(f"Agregar\n{etiqueta}\n$2.890$3.990x 1 kg\n$2.890 x kg\nGranel\nTrutro Entero de Pollo kg\nAgregar")
+        assert (t["precio"], t["precio_anterior"], t["presentacion"], t["etiqueta"]) == \
+            (2890, 3990, "x 1 kg", etiqueta), etiqueta
+
+
 def test_marca_y_nombre_sin_textos_de_estado():
     t = una("$3.890\n$1.945 x kg\nPapa Malla 2 kg\nAgotado\nAgregar")
     assert (t["marca"], t["nombre"]) == ("", "Papa Malla 2 kg")

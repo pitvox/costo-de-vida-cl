@@ -395,9 +395,10 @@ _FIN_UNIDAD = r"\.?(?-i:(?![a-zà-ÿ0-9_/])(?![A-ZÀ-Þ]{2}))"
 _TRAS_PRECIO = re.compile(r"\s*(?:x|por|/)\s*(?:(" + _NUM + r")\s*)?(" + _UNI + r")" + _FIN_UNIDAD, re.I)
 _PRESENTACION = re.compile(r"(?:x|por)\s*(" + _NUM + r")\s*(" + _UNI + r")" + _FIN_UNIDAD, re.I)
 _UNIDAD_SOLA = re.compile(r"(?:x|por|/)\s*(" + _UNI + r")\.?", re.I)
-# "Lleva 2 por $3.000", "3 x $5.000", "2x$5.000", "Ahorra $360": el precio es de la etiqueta
-_CONECTOR = re.compile(r"(?:(?:^|\s)(?:por|x|a|desde|hasta|de|con|en|ahorr[ae]s?|ahorro|dcto\.?"
-                       r"|descuento)|\dx)\s*:?\s*$", re.I)
+# "Lleva 2 por $3.000", "3 x $5.000", "2x$5.000", "Ahorra $360": el precio es de la etiqueta.
+# "dcto." no: en "20% dcto." el precio que sigue es el de la tarjeta
+_CONECTOR = re.compile(r"(?:(?:^|\s)(?:por|x|a|desde|hasta|de|con|en|ahorr[ae]s?|ahorro)"
+                       r"|\dx)\s*:?\s*$", re.I)
 # "Normal: $1.350", "Antes $1.350", "Precio normal $1.350": ese precio es el anterior
 _ANTES = re.compile(r"(?:^|\s)(?:precio\s+)?(?:normal|antes|anterior|regular)\s*:?\s*$", re.I)
 _PORCENTAJE = re.compile(r"^-?\d+\s*%(?:\s*\w+)?$")
@@ -409,7 +410,7 @@ _NO_NOMBRE = re.compile(r"(?:agotado|sin stock|av[ií]same|patrocinado|nuevo|des
 _AGREGAR = re.compile(r"(.*?)\s*(Agregar|AGREGAR)(?: al carro| AL CARRO)?")
 _ETIQUETA = re.compile(
     r"ofert|imbatible|lleva\s*\d|ll[eé]vate|\d+\s*(?:x|por)\s*\$|descuento|dcto|promo"
-    r"|precio\s+especial|liquidaci|\d+\s*%|ahorra|exclusiv|cyber|black|\b2do\b|segunda"
+    r"|precio\s+especial|liquidaci|\d+\s*%|ahorra|exclusivo\b|cyber|black|\b2do\b|segunda"
     r"|club|tarjeta|cencosud|rebaja|nuevo\s+precio|baj[oó]\s+de\s+precio", re.I)
 
 
@@ -562,8 +563,10 @@ def _tarjeta(ps: list, i: int):
             break
         j -= 1
     etiqueta = ""
+    # la etiqueta es un texto corto: lo que va antes de la primera tarjeta puede
+    # ser la tira de categorías de los filtros ("DespensaMarcas Exclusivas...")
     if primero is not None and primero > 0 and ps[primero - 1][0] == "texto" \
-            and _ETIQUETA.search(ps[primero - 1][1]):
+            and len(ps[primero - 1][1]) <= 40 and _ETIQUETA.search(ps[primero - 1][1]):
         etiqueta = ps[primero - 1][1]
     if not etiqueta:                        # una etiqueta entre los precios o antes del ancla
         etiqueta = next((t for n, t in sueltas if _ETIQUETA.search(t)
