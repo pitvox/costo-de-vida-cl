@@ -1,0 +1,113 @@
+name: Prueba de lectura de supermercados
+
+# Prueba técnica aislada (claude/Prompt_prueba_supermercados.md): saber si las
+# páginas de búsqueda de jumbo.cl y santaisabel.cl se pueden leer desde
+# Actions igual que desde un navegador normal. Corre
+# analisis/supermercados/prueba_lectura.py: como máximo 32 pedidos de búsqueda
+# (8 términos, 2 sitios, 2 fases; cada salto de redirección cuenta) más el
+# robots.txt de cada sitio, uno a la vez y con 5 segundos o más entre pedidos
+# al mismo sitio. Sube resultado.csv y resumen.md como artifact de 3 días e
+# imprime resumen.md en el log. Aparte, en otro artifact de 3 días, van
+# corrida.json y crudo/ (el texto leído y el HTML de cada página, sin el
+# contenido de sus scripts), y el log lleva corrida.json y el texto leído,
+# para releer las tarjetas sin pedir nada otra vez. Sin commit, sin deploy,
+# sin calendario: no toca el sitio ni Pages.
+#
+# La única corrida fue la 44823116967, del 20 de noviembre de 2026, con un
+# disparo por push a la rama de la prueba que ya se quitó: queda solo
+# workflow_dispatch, como pide el encargo. GitHub ya conoce este workflow por
+# esa corrida, así que un disparo por la API con esta rama como ref
+# probablemente correría otra lectura real: para cerrar esa puerta, se
+# desactiva el workflow en Actions o se borra la rama. Un Re-run no vuelve a
+# pedir nada: el job corre solo en el primer intento de cada corrida.
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+# nunca dos corridas a la vez: una espera a la otra
+concurrency:
+  group: prueba-supermercados
+  cancel-in-progress: false
+
+jobs:
+  prueba:
+    if: github.run_attempt == '1'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Clonar repo
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Instalar Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependencias
+        run: pip install "requests==2.34.2" "playwright==1.63.0"
+
+      # solo el Chromium sin interfaz (headless shell), con sus dependencias
+      - name: Instalar Chromium
+        run: python -m playwright install --with-deps --only-shell chromium
+
+      # Chromium se prueba antes de pedir nada: si no parte, no se pide nada
+      - name: Leer los supermercados
+        run: python analisis/supermercados/prueba_lectura.py --salida salida
+
+      # si el script se cortó, rehace resumen.md desde corrida.json, sin red
+      - name: Rehacer el resumen si hizo falta
+        if: always()
+        run: |
+          if [ ! -f salida/resumen.md ] && [ -f salida/corrida.json ]; then
+            python analisis/supermercados/prueba_lectura.py --desde-crudo salida
+          fi
+
+      # corrida.json y el texto leído de cada página, entre marcas, para
+      # rearmar salida/ y releer sin pedir nada (el HTML va solo en el artifact)
+      - name: Texto leído en el log
+        if: always()
+        run: |
+          cd salida 2>/dev/null || { echo "No hay salida/"; exit 0; }
+          for f in corrida.json crudo/*.txt; do
+            [ -f "$f" ] || continue
+            echo "::group::$f"
+            echo "===== $f ====="
+            cat "$f"
+            echo
+            echo "===== fin ====="
+            echo "::endgroup::"
+          done
+
+      - name: Resumen en el log
+        if: always()
+        run: |
+          cat salida/resumen.md || echo "No hay resumen.md"
+          echo
+          echo "----- resultado.csv -----"
+          cat salida/resultado.csv || echo "No hay resultado.csv"
+
+      - name: Subir resultados
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: prueba-supermercados
+          path: |
+            salida/resultado.csv
+            salida/resumen.md
+          retention-days: 3
+          if-no-files-found: warn
+
+      - name: Subir el detalle
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: prueba-supermercados-detalle
+          path: |
+            salida/corrida.json
+            salida/crudo/
+          retention-days: 3
+          if-no-files-found: warn
