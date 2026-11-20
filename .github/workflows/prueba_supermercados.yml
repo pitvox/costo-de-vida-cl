@@ -13,17 +13,12 @@ name: Prueba de lectura de supermercados
 # para releer las tarjetas sin pedir nada otra vez. Sin commit, sin deploy,
 # sin calendario: no toca el sitio ni Pages.
 #
-# El disparo por push es solo mientras dura la prueba: se quita al terminar y
-# queda solo workflow_dispatch. Un Re-run no vuelve a pedir nada: el job
-# corre solo en el primer intento de cada corrida.
+# La única corrida fue la 44823116967, del 20 de noviembre de 2026, con un
+# disparo por push a la rama de la prueba que ya se quitó: queda solo
+# workflow_dispatch, que funciona solo desde la rama principal. Un Re-run no
+# vuelve a pedir nada: el job corre solo en el primer intento de cada corrida.
 on:
   workflow_dispatch: {}
-  push:
-    branches:
-      - claude/prueba-supermercados
-    paths:
-      - analisis/supermercados/prueba_lectura.py
-      - .github/workflows/prueba_supermercados.yml
 
 permissions:
   contents: read
